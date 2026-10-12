@@ -7,6 +7,7 @@ pub mod audit;
 pub mod banc;
 pub mod bascule;
 pub mod build;
+pub mod codes;
 pub mod colophon;
 pub mod commande;
 pub mod couleur;

@@ -99,6 +99,9 @@ export type VarianteResume = {
   id: string;
   nom: string;
   about: string;
+  /** The pace it was composed at, by id: what the English screen words
+   *  « autre-rythme » from (`moteur.ts`). Absent from an older engine. */
+  densite?: string;
   planches: number;
   photos: number;
   /** Three photo sources spread across the book, for the thumbnails. */
@@ -212,6 +215,7 @@ async function devBuild(): Promise<BuiltAlbum> {
       {
         id: "autre-rythme",
         nom: "Aérée",
+        densite: "aeree",
         about:
           "Une ou deux photos par double page, souvent une seule en grand. Moins de photos retenues, chacune plus grande.",
         planches: opened.album.spreads.length,
@@ -221,6 +225,7 @@ async function devBuild(): Promise<BuiltAlbum> {
       {
         id: "resserree",
         nom: "Plus court",
+        densite: "equilibree",
         about:
           "Un tiers de planches en moins, donc moins de photos retenues. Un livre qui se feuillette d’un trait, et qui coûte moins cher à imprimer.",
         planches: Math.round(opened.album.spreads.length * 0.68),
@@ -737,6 +742,16 @@ export type Defaut = {
   src?: string;
   cause: string;
   remede: string;
+  /** The same thing in codes, for the English screen (`moteur.ts`): the
+   *  engine writes French, and never has to be read back for a number. */
+  phrase?: PhraseDefaut;
+};
+
+/** Codes and already formatted values: `prevol.rs::Phrase`. */
+export type PhraseDefaut = {
+  cause: string;
+  remede: string;
+  valeurs?: Record<string, string>;
 };
 
 /** The sheet handed to whoever receives the PDF. */

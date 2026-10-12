@@ -21,6 +21,7 @@ import { BasculeBilan, FormatPreset, PoliceEtat, PoliceOfferte } from "./bridge"
 import { Dialogue } from "./Dialogue";
 import { t } from "./i18n";
 import { ListePolices } from "./ListePolices";
+import { aboutFormat } from "./moteur";
 import { nomLisible } from "./police";
 
 export function BasculeView({
@@ -77,7 +78,7 @@ export function BasculeView({
                 disabled={memeFormat(f) || enCours}
                 aria-pressed={choisi === f.name}
               >
-                <span className="bascule-format-nom">{f.about}</span>
+                <span className="bascule-format-nom">{aboutFormat(f)}</span>
                 <span className="bascule-format-mm">
                   {f.w} × {f.h} mm
                   {memeFormat(f) ? ` · ${t("bascule.format.courant")}` : ""}

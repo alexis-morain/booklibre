@@ -10,6 +10,9 @@
 // à un fichier de log ; l'application parle à quelqu'un qui fabrique un
 // album. Quand une commande Rust échoue, l'application fournit la phrase
 // humaine (traduite) et le message du moteur voyage derrière, tel quel.
+// Ce que le moteur **rédige pour l'écran** — défauts du prévol, formats,
+// rythmes, propositions — est une autre affaire : il le rédige en français, et
+// `moteur.ts` en écrit l'anglais depuis des codes.
 //
 // Les clés sont nommées par écran (`bar.*`, `envoi.*`) : une clé orpheline se
 // voit, et le test de parité ci-dessous refuse qu'une des deux langues ait

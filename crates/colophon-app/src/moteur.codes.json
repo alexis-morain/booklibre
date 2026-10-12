@@ -1,0 +1,176 @@
+{
+  "densites": [
+    "aeree",
+    "equilibree",
+    "dense"
+  ],
+  "formats": [
+    "carre-21",
+    "carre-30",
+    "portrait-a4",
+    "paysage-a4",
+    "paysage-28x21",
+    "portrait-20x25"
+  ],
+  "notes": [
+    "conformité PDF/X-4 déclarée : polices incorporées, OutputIntent sRGB avec profil ICC, XMP et TrimBox vérifiés à chaque export. Le contrôle indépendant disponible est PDF/A-2b (veraPDF), qui couvre le même socle ; le verdict PDF/X-4 lui-même revient au prévol de l'imprimeur.",
+    "dossier de photos introuvable : la résolution effective n'a pas pu être vérifiée"
+  ],
+  "phrases": {
+    "conformite": [
+      "imprimeur"
+    ],
+    "conformite.choisir": [],
+    "couverture_resolution": [
+      "src",
+      "ppi",
+      "w_mm",
+      "h_mm",
+      "imprimeur",
+      "min_ppi"
+    ],
+    "couverture_resolution.choisir": [],
+    "couverture_vide.choisir": [],
+    "couverture_vide.dossier": [],
+    "couverture_vide.titre": [],
+    "dos": [
+      "dos_mm",
+      "imprimeur"
+    ],
+    "dos.confirmer": [],
+    "dos_nu": [
+      "dos_mm",
+      "min_mm"
+    ],
+    "dos_nu.ajouter": [],
+    "espace": [
+      "imprimeur",
+      "intent"
+    ],
+    "espace.choisir": [],
+    "fichier.illisible": [
+      "fichier",
+      "pourquoi"
+    ],
+    "fichier.page": [
+      "fichier",
+      "n",
+      "imprimeur",
+      "attendues"
+    ],
+    "fichier.pages": [
+      "fichier",
+      "n",
+      "imprimeur",
+      "attendues"
+    ],
+    "fichier.refaire": [
+      "commande",
+      "profil"
+    ],
+    "fichier.taille": [
+      "fichier",
+      "page",
+      "w_mm",
+      "h_mm",
+      "imprimeur",
+      "attendu_w_mm",
+      "attendu_h_mm"
+    ],
+    "fichier_perime.album": [
+      "fichier",
+      "avant",
+      "maintenant"
+    ],
+    "fichier_perime.octets": [
+      "fichier",
+      "octets",
+      "rendu"
+    ],
+    "fichier_profil": [
+      "fichier",
+      "rendu",
+      "profil",
+      "imprimeur"
+    ],
+    "fond_perdu": [
+      "album_mm",
+      "imprimeur",
+      "requis_mm"
+    ],
+    "fond_perdu.recomposer": [],
+    "imposition.garde": [],
+    "imposition.objet": [
+      "imprimeur"
+    ],
+    "imposition.objets": [
+      "imprimeur",
+      "objets"
+    ],
+    "objet_coupe": [
+      "n",
+      "depasse_mm"
+    ],
+    "objet_coupe.deplacer": [],
+    "objet_pli": [
+      "n"
+    ],
+    "objet_pli.glisser": [],
+    "pagination.ajouter": [
+      "planches_min"
+    ],
+    "pagination.ajuster": [
+      "planches_min",
+      "planches_max"
+    ],
+    "pagination.bornes": [
+      "pages",
+      "imprimeur",
+      "min",
+      "max"
+    ],
+    "pagination.decocher_colophon": [],
+    "pagination.decocher_garde": [],
+    "pagination.multiple": [
+      "pages",
+      "imprimeur",
+      "pas"
+    ],
+    "resolution": [
+      "src",
+      "ppi",
+      "imprimeur",
+      "min_ppi"
+    ],
+    "resolution.case": [],
+    "zone_sure": [
+      "marge_mm",
+      "imprimeur",
+      "sure_mm"
+    ],
+    "zone_sure.retirer": []
+  },
+  "propositions": [
+    "demandee",
+    "autre-rythme",
+    "resserree"
+  ],
+  "reserves": {
+    "cloudprinter": [
+      "leur documentation prévient que la main du papier et le format du carton varient d'un imprimeur à l'autre : le dos calculé ici est une moyenne",
+      "et ils ont répondu qu'on ne peut ni épingler un site de production, ni interroger le dos d'un produit avant commande : l'écart se mesurera au pied à coulisse sur l'album reçu",
+      "leur zone sûre est une recommandation à fourchette, « at least 7-10 mm », donnée à propos de la couverture : les 7 mm retenus en sont le bas, et aucun de leurs deux gabarits n'en dessine une"
+    ],
+    "generique": [],
+    "lulu": [
+      "profil non testé : aucune commande passée chez eux",
+      "cotes du cartonné inconnues : rempli, débord et mors sont à zéro faute de gabarit, donc la feuille sortie ici est une couverture souple à plat et non un boîtier"
+    ],
+    "prodigi": [
+      "bornes du SKU carré 210 × 210 : le 294 × 294 s'arrête à 298 pages, un autre produit aura d'autres bornes",
+      "profil de repli, jamais commandé : l'intérieur sort désormais page par page, mais aucun album n'est encore passé par leur presse",
+      "ils refusent tout fond perdu et l'album en porte trois millimètres sur les bords extérieurs : leur massicot les prendra, la page finie est la même",
+      "ils recommandent un contrôle X-4 en FOGRA39 tout en demandant des images RVB : notre intention de sortie reste sRGB"
+    ]
+  }
+}

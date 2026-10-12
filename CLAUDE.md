@@ -1088,9 +1088,19 @@ faire taire une règle est le défaut que cette frontière existe pour empêcher
 
 ## Pièges connus
 
-**Les chaînes nées dans le moteur restent françaises sur l'écran anglais** (défauts du
-prévol, fiches, rythmes, formats, variantes) : le jour où ça compte, des codes côté
-moteur et le libellé côté app. **Vitest tourne sans `navigator`**, langue par défaut
+**Ce que le moteur rédige reste en français, et l'app l'écrit en anglais depuis des
+codes** (`moteur.ts`) : les défauts du prévol portent `phrase` (codes et valeurs déjà
+formatées, table `prevol::PHRASES`), un format, un rythme et une proposition leur
+identifiant (`VarianteResume.densite` pour « autre-rythme »), et les textes fixes —
+notes du rapport, réserves des profils — se reconnaissent à leur français exact.
+L'écran français affiche le français du moteur tel quel, aucune copie dans l'app. La
+liste est `moteur.codes.json`, tenue fraîche par `codes.rs` (régénérer :
+`cargo test -p colophon-core ecrire_la_liste_des_codes -- --ignored`) ; `moteur.test.ts`
+exige une phrase anglaise par code et aucun trou sans valeur, et un mot changé dans une
+réserve ou une note rougit jusqu'à ce que l'anglais suive. Un code inconnu rend le
+français, jamais un trou. **Une nouvelle règle de prévol = un code dans `PHRASES`, la
+phrase dans `moteur.ts`.** Restent tels quels : ce que la fiche d'une photo cite
+(appareil, lieu), qui est de la donnée, et la raison brute d'un PDF illisible. **Vitest tourne sans `navigator`**, langue par défaut
 anglaise : un test qui affirme du français pose `setLangue("fr")`. Sous
 `pipeline::PETIT_DOSSIER` (25 photos), la curation se limite aux rejets certains. **Et
 le filtre parasite ne s'arme que si l'empreinte d'appareil est majoritaire**
