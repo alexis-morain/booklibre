@@ -127,7 +127,7 @@ describe("formats, rythmes et propositions", () => {
 
   it("l'anglais suit l'identifiant, et l'autre rythme suit son rythme", () => {
     setLangue("en");
-    expect(aboutFormat({ name: "portrait-20x25", about: "x" })).toBe("portrait 20 × 25, the 8 × 10 inch");
+    expect(aboutFormat({ name: "portrait-20x25", about: "x" })).toBe("portrait 20 × 25, close to 8 × 10 inches");
     expect(nomProposition(autre)).toBe("Airy");
     expect(aboutProposition(autre)).toBe(DENSITES_EN.aeree.about);
     expect(nomProposition({ ...autre, densite: "equilibree" })).toBe("Balanced");

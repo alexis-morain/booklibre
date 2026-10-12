@@ -26,14 +26,14 @@ export const FORMATS_EN: Record<string, string> = {
   "portrait-a4": "A4 portrait",
   "paysage-a4": "A4 landscape",
   "paysage-28x21": "landscape 28 × 21",
-  "portrait-20x25": "portrait 20 × 25, the 8 × 10 inch",
+  "portrait-20x25": "portrait 20 × 25, close to 8 × 10 inches",
 };
 
 export const DENSITES_EN: Record<string, { nom: string; about: string }> = {
   aeree: {
     nom: "Airy",
     about:
-      "One or two photos per spread, often a single one large. Fewer photos kept, each one bigger.",
+      "One or two photos per spread, often a single large one. Fewer photos kept, each one bigger.",
   },
   equilibree: {
     nom: "Balanced",
@@ -61,7 +61,7 @@ export const PROPOSITIONS_EN: Record<string, { nom: string; about: string }> = {
  *  le français du moteur : l'écran les pose après « Spread 4 ». */
 export const PHRASES_EN: Record<string, string> = {
   "pagination.multiple":
-    "the file has {pages} pages, and {imprimeur} only binds multiples of {pas}",
+    "the file has {pages} pages, and {imprimeur} only binds page counts in multiples of {pas}",
   "pagination.bornes":
     "the file has {pages} pages, outside {imprimeur}’s range ({min} to {max})",
   "pagination.decocher_colophon":
@@ -69,7 +69,7 @@ export const PHRASES_EN: Record<string, string> = {
   "pagination.decocher_garde":
     "untick the half-title in Send: it counts as two pages, and without it the count comes out right",
   "pagination.ajouter":
-    "add spreads or choose a more airy pace: a spread counts as two pages, and at least {planches_min} are needed",
+    "add spreads or choose an airier pace: a spread counts as two pages, and at least {planches_min} are needed",
   "pagination.ajuster":
     "add or remove spreads: a spread counts as two pages, and between {planches_min} and {planches_max} are needed",
   "imposition.objet":
@@ -93,7 +93,7 @@ export const PHRASES_EN: Record<string, string> = {
   zone_sure:
     "the caption sits {marge_mm} mm from the trim, {imprimeur} keeps {sure_mm} mm clear",
   "zone_sure.retirer":
-    "remove this spread’s caption if the risk does not suit you: its baseline comes from the format’s margin, and neither shortening it nor changing the layout moves it",
+    "remove this spread’s caption if you would rather not take the risk: its baseline comes from the format’s margin, and neither shortening it nor changing the layout moves it",
   objet_coupe: "free object no. {n} runs {depasse_mm} mm past the trim: the cut goes through it",
   "objet_coupe.deplacer": "move the object inside the page, or make it smaller",
   objet_pli: "free object no. {n} straddles the fold: the binding will cut it in two",
@@ -102,17 +102,17 @@ export const PHRASES_EN: Record<string, string> = {
   couverture_resolution:
     "{src} would print at {ppi} ppi on the {w_mm} × {h_mm} mm cover, {imprimeur} requires {min_ppi}",
   "couverture_resolution.choisir":
-    "choose a higher-resolution photo for the cover: the sheet is larger than a page, and asks for more",
+    "choose a higher-resolution photo for the cover: the sheet is larger than a page, so it needs more pixels",
   "couverture_vide.titre":
-    "the cover has no photo, it would come out blank with only its title",
+    "the cover has no photo: it would print blank, with only its title",
   "couverture_vide.dossier":
-    "the cover has no photo, it would come out blank with the folder’s name",
+    "the cover has no photo: it would print blank, with only the folder’s name",
   "couverture_vide.choisir": "choose a photo in Cover",
   dos_nu:
-    "the spine is {dos_mm} mm: under {min_mm} mm it carries no title, and it will come out bare",
+    "the spine is {dos_mm} mm wide: under {min_mm} mm it carries no title, so it will come out bare",
   "dos_nu.ajouter":
-    "add spreads: the spine thickens with the book, and the title sets itself on it",
-  dos: "spine calculated at {dos_mm} mm with a provisional coefficient, not confirmed by {imprimeur}",
+    "add spreads: the spine thickens with the book, and the title goes on it by itself",
+  dos: "spine width calculated at {dos_mm} mm with a provisional coefficient, not confirmed by {imprimeur}",
   "dos.confirmer":
     "confirm the formula with the printer before a print run, or measure it on the first album received",
   "fichier.illisible": "{fichier} sits next to the album and cannot be read: {pourquoi}",
@@ -121,11 +121,11 @@ export const PHRASES_EN: Record<string, string> = {
   "fichier.taille":
     "{fichier}: page {page} measures {w_mm} × {h_mm} mm, {imprimeur} expects {attendu_w_mm} × {attendu_h_mm}",
   fichier_profil:
-    "{fichier} was rendered for the {rendu} profile, and {profil} ({imprimeur}) is the one expecting it: it is another printer’s book",
+    "{fichier} was rendered for the {rendu} profile, but the file is expected by {profil} ({imprimeur}): it is another printer’s book",
   "fichier_perime.album":
     "{fichier} was rendered from another version of the album: fingerprint {avant} at render time, {maintenant} today",
   "fichier_perime.octets":
-    "{fichier} weighs {octets} bytes, the render wrote {rendu}: the file has been replaced since",
+    "{fichier} is {octets} bytes, the render wrote {rendu}: the file has been replaced since",
   "fichier.refaire":
     "run {commande} --profil {profil} again to remake it, or remove it from the folder",
 };
@@ -154,7 +154,7 @@ export const TEXTES_EN: Record<string, string> = {
   "profil de repli, jamais commandé : l'intérieur sort désormais page par page, mais aucun album n'est encore passé par leur presse":
     "fallback profile, never ordered: the interior now comes out page by page, but no album has gone through their press yet",
   "ils refusent tout fond perdu et l'album en porte trois millimètres sur les bords extérieurs : leur massicot les prendra, la page finie est la même":
-    "they refuse any bleed and the album carries three millimetres on the outer edges: their guillotine will take them off, the finished page is the same",
+    "they refuse any bleed and the album carries three millimetres on the outer edges: their guillotine will trim them off, and the finished page is the same",
   "ils recommandent un contrôle X-4 en FOGRA39 tout en demandant des images RVB : notre intention de sortie reste sRGB":
     "they recommend an X-4 check in FOGRA39 while asking for RGB images: our output intent stays sRGB",
 };
