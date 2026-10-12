@@ -596,12 +596,14 @@ export const FR = {
   "commandes.payer": "Payer",
   "commandes.abandonner": "Abandonner",
   "commandes.abandonner.note":
-    "Abandonner demande d’abord au relais si quelque chose a été payé, puis l’oublie sur cet ordinateur.",
+    "Abandonner demande au relais de fermer la page de paiement, s’il n’est pas trop tard, puis l’oublie sur cet ordinateur.",
   "commandes.abandonnee": "Abandonnée : le relais confirme que rien n’a été payé, et l’efface sous 24 h.",
-  "commandes.abandonner.des": "Abandon possible à partir de {heure}, à la fin de la page de paiement ouverte.",
   "commande.abandon.envoi": "Les fichiers de cette commande partent encore : elle s’abandonnera une fois l’envoi fini.",
   "commande.abandon.injoignable": "Le relais ne répond pas : rien ne prouve que rien n’a été payé, la commande est gardée.",
   "commande.abandon.refuse": "Le relais dit que cette commande a avancé : elle est gardée, son état est à jour.",
+  "commande.abandon.double": "Cette commande est déjà en train d’être abandonnée : attendez la réponse du relais.",
+  "commande.paiement.etat":
+    "Cette commande ne peut plus être payée : elle a été abandonnée, ou elle a déjà avancé. Recommencez-la au besoin.",
   "commande.fermer": "Fermer",
   "commandes.titre": "Commandes",
   "commandes.ligne": "{reference} · {mode}",
@@ -619,6 +621,7 @@ export const FR = {
   "commande.relais.annulation_en_cours": "Annulation en cours.",
   "commande.relais.annulee": "Annulée, et remboursée.",
   "commande.relais.purgee": "Abandonnée avant le paiement : rien n’a été débité.",
+  "commande.relais.abandonnee": "Abandonnée : la page de paiement est fermée, rien n’a été débité.",
   "commande.relais.inconnu": "Le relais rend l’état « {etat} », que cette version ne connaît pas.",
   "commande.devis.expire": "Le prix a expiré : recommencez la commande pour en obtenir un nouveau.",
   "commande.confirmer.sandbox":
@@ -1553,12 +1556,14 @@ export const EN: Record<Cle, string> = {
   "commandes.payer": "Pay",
   "commandes.abandonner": "Give up",
   "commandes.abandonner.note":
-    "Giving up first asks the relay whether anything was paid, then forgets it on this computer.",
+    "Giving up asks the relay to close the payment page, if it is not too late, then forgets it on this computer.",
   "commandes.abandonnee": "Given up: the relay confirms nothing was paid, and deletes it within 24 hours.",
-  "commandes.abandonner.des": "You can give up from {heure}, once the open payment page has expired.",
   "commande.abandon.envoi": "This order’s files are still being sent: it can be given up once that is done.",
   "commande.abandon.injoignable": "The relay does not answer: nothing proves nothing was paid, so the order is kept.",
   "commande.abandon.refuse": "The relay says this order has moved on: it is kept, and its state is up to date.",
+  "commande.abandon.double": "This order is already being given up: wait for the relay’s answer.",
+  "commande.paiement.etat":
+    "This order can no longer be paid: it was given up, or it has already moved on. Start it again if needed.",
   "commande.fermer": "Close",
   "commandes.titre": "Orders",
   "commandes.ligne": "{reference} · {mode}",
@@ -1576,6 +1581,7 @@ export const EN: Record<Cle, string> = {
   "commande.relais.annulation_en_cours": "Cancellation in progress.",
   "commande.relais.annulee": "Cancelled, and refunded.",
   "commande.relais.purgee": "Abandoned before payment: nothing was charged.",
+  "commande.relais.abandonnee": "Given up: the payment page is closed, nothing was charged.",
   "commande.relais.inconnu": "The relay returns the state “{etat}”, which this version does not know.",
   "commande.devis.expire": "The price has expired: start the order again to get a new one.",
   "commande.confirmer.sandbox":

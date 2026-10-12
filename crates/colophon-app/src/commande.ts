@@ -13,7 +13,7 @@
 // fichiers, rien ne s'affiche : « Préparer » reste la porte.
 
 import type { Preparation } from "./bridge";
-import { Cle, Lang, langue, t } from "./i18n";
+import { Cle, Lang, t } from "./i18n";
 
 /** Sandbox ou réel : le relais le déclare dans chaque réponse. */
 export type Mode = "sandbox" | "reel";
@@ -43,9 +43,6 @@ export type IntentionVue = {
   dernier_code: number | null;
   /** Le niveau d'expédition choisi, gardé dès le choix. */
   niveau: string | null;
-  /** Quand « Abandonner » redevient possible (RFC 3339) : la fin de la
-   *  dernière page de paiement ouverte. */
-  abandon_des: string | null;
 };
 
 export type Quel = "interieur" | "couverture";
@@ -116,7 +113,7 @@ export function phraseEtat(code: number | null): string {
   return t("commande.etat.inconnu", { code });
 }
 
-/** Les neuf états du relais. */
+/** Les dix états du relais. */
 const ETATS: Record<string, Cle> = {
   attente_fichiers: "commande.relais.attente_fichiers",
   attente_paiement: "commande.relais.attente_paiement",
@@ -127,6 +124,7 @@ const ETATS: Record<string, Cle> = {
   annulation_en_cours: "commande.relais.annulation_en_cours",
   annulee: "commande.relais.annulee",
   purgee: "commande.relais.purgee",
+  abandonnee: "commande.relais.abandonnee",
 };
 
 /** La phrase d'une intention : son état au relais, et, une fois commandée,
@@ -172,28 +170,12 @@ export function payable(i: IntentionVue): boolean {
   return i.etat === "attente_paiement" && !!i.niveau;
 }
 
-/** « Abandonner » s'offre tant que rien n'est payé, et pas avant la fin de
- *  la dernière page de paiement ouverte. Le moteur relit le relais avant
- *  d'oublier quoi que ce soit ; le relais purge à 24 h. */
-export function abandonnable(i: IntentionVue, maintenant: Date): boolean {
-  return avantPaiement(i) && abandonAttendu(i, maintenant) === null;
-}
-
-function avantPaiement(i: IntentionVue): boolean {
-  return i.etat === "attente_fichiers" || i.etat === "attente_paiement";
-}
-
-/** L'heure à laquelle « Abandonner » sera offert, quand une page de
- *  paiement ouverte vit encore ; null sinon. */
-export function abandonAttendu(i: IntentionVue, maintenant: Date): Date | null {
-  if (!avantPaiement(i) || !i.abandon_des) return null;
-  const des = new Date(i.abandon_des);
-  return des > maintenant ? des : null;
-}
-
-/** Une heure, dans la langue de l'écran. */
-export function heure(d: Date): string {
-  return d.toLocaleTimeString(langue() === "fr" ? "fr-FR" : "en-GB", { hour: "2-digit", minute: "2-digit" });
+/** « Abandonner » s'offre tant que rien n'est payé, sans heure : le moteur
+ *  demande au relais, qui expire chez Stripe toute page de paiement ouverte
+ *  avant d'abandonner, et n'oublie que sur sa réponse. Une intention que le
+ *  relais a déjà abandonnée s'oublie par le même geste. */
+export function abandonnable(i: IntentionVue): boolean {
+  return ["attente_fichiers", "attente_paiement", "abandonnee"].includes(i.etat);
 }
 
 /** La confirmation : le prix et le mode en toutes lettres. */
@@ -206,9 +188,11 @@ export function phraseConfirmation(prix: string, mode: Mode): string {
 /** Les codes du relais qui ont leur phrase ; le reste voyage tel quel. */
 const ERREURS: [string, Cle][] = [
   ["abandon_envoi_en_cours", "commande.abandon.envoi"],
+  ["abandon_en_cours", "commande.abandon.double"],
   ["abandon_injoignable", "commande.abandon.injoignable"],
   ["abandon_refuse", "commande.abandon.refuse"],
   ["trop_tard", "commande.annuler.tard"],
+  ["etat (409)", "commande.paiement.etat"],
   ["devis_expire", "commande.devis.expire"],
   ["intention_expiree", "commande.devis.expire"],
   ["trop_de_sessions", "commande.sessions"],
@@ -221,7 +205,7 @@ const ERREURS: [string, Cle][] = [
  *  doit recommencer. */
 export function refusDefinitif(e: unknown): boolean {
   const s = String(e);
-  return ["devis_expire", "intention_expiree", "trop_de_sessions"].some((c) => s.includes(c));
+  return ["devis_expire", "intention_expiree", "trop_de_sessions", "etat (409)"].some((c) => s.includes(c));
 }
 
 /** Le second envoi d'une intention dont les fichiers partent déjà : le
@@ -233,8 +217,6 @@ export function ignorable(e: unknown): boolean {
 /** Une erreur de commande, dite. */
 export function phraseErreur(e: unknown): string {
   const s = String(e);
-  const tot = /abandon_trop_tot (\S+)/.exec(s);
-  if (tot) return t("commandes.abandonner.des", { heure: heure(new Date(tot[1])) });
   for (const [code, cle] of ERREURS) if (s.includes(code)) return t(cle);
   return t("commande.erreur", { erreur: s.replace(/^Error: /, "") });
 }
