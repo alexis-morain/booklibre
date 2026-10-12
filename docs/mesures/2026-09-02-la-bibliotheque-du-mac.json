@@ -30,9 +30,9 @@
   },
   "photokit_ne_lit_que_la_bibliotheque_systeme": {
    "quoi": "Pas la bibliothèque ouverte dans Photos.app : celle que group.com.apple.photolibraryd.private déclare en SystemLibraryPath. Sur ce Mac elle pointait un chemin supprimé.",
-   "chemin_designe": "/Users/alex-pack/Pictures/Photos Library.photoslibrary",
+   "chemin_designe": "~/Pictures/Photos Library.photoslibrary",
    "chemin_designe_existe": false,
-   "chemin_reel": "/Users/alex-pack/Pictures/Photothèque.photoslibrary",
+   "chemin_reel": "~/Pictures/Photothèque.photoslibrary",
    "symptome": "CoreData: error: Failed to create NSXPCConnection, en boucle, puis liste vide",
    "consequence": "C'est un état d'utilisateur réel, pas un accident de machine de développement : quiconque a renommé ou déplacé sa photothèque le rencontre."
   },

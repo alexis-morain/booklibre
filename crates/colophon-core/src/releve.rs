@@ -13,6 +13,7 @@
 //! would diverge the first time the analysis grows a field.
 
 use crate::pipeline::Photo;
+use crate::places;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -112,6 +113,7 @@ impl Releve {
                 .map(|p| {
                     let mut p = p.clone();
                     p.path = relatif(&p.path, &self.racine);
+                    p.meta.gps = p.meta.gps.map(gps_public);
                     p
                 })
                 .collect(),
@@ -159,6 +161,40 @@ impl Releve {
         }
         Self::lire(&path).map(Some)
     }
+}
+
+/// A GPS fix as a fiche keeps it: the coarsest rounding — one decimal, a
+/// cell of about eleven kilometres, then two, then three — under which the
+/// gazetteer still names the same town. To the metre, with its time, a fix
+/// in a versioned file says where somebody sleeps, and the reference sets
+/// are somebody's holidays in a public repository.
+///
+/// Rounding blindly would not do. A town is all composition ever asks of a
+/// coordinate — chapter titles, the colophon, the caption proposal and the
+/// photo sheet all go through [`places::nearest`] — but at a flat kilometre
+/// two photos near Roissy changed towns and a chapter in Crozon lost its
+/// name, and the gate's identity between the two composition paths turned
+/// red. Keeping the town, point by point, keeps that identity by
+/// construction: a composition from fiches sees the towns a composition from
+/// photographs sees. Only the file is rounded; the photographs' path reads
+/// the camera's own figure, as before.
+fn gps_public((lat, lon): (f64, f64)) -> (f64, f64) {
+    let ville = places::nearest(lat, lon).map(|(c, _)| c);
+    for decimales in 1..=6 {
+        let k = 10f64.powi(decimales);
+        let arrondi = ((lat * k).round() / k, (lon * k).round() / k);
+        let la = places::nearest(arrondi.0, arrondi.1).map(|(c, _)| c);
+        let meme = match (ville, la) {
+            (Some(a), Some(b)) => std::ptr::eq(a, b),
+            (None, None) => true,
+            _ => false,
+        };
+        if meme {
+            return arrondi;
+        }
+    }
+    // Six decimals is a tenth of a metre: past that, the camera's figure.
+    (lat, lon)
 }
 
 fn est_zero(n: &usize) -> bool {
@@ -259,7 +295,15 @@ mod tests {
         let (a, b) = (&releve.photos[0], &relu.photos[0]);
         assert_eq!(a.analysis.sharpness.to_bits(), b.analysis.sharpness.to_bits());
         assert_eq!(a.focal.unwrap()[0].to_bits(), b.focal.unwrap()[0].to_bits());
-        assert_eq!(a.meta.gps.unwrap().1.to_bits(), b.meta.gps.unwrap().1.to_bits());
+        // The one float that does not come back whole, on purpose: a fix
+        // leaves as coarse as its town allows, and the metre stays on the
+        // machine.
+        assert_eq!(b.meta.gps, Some((42.6, 8.7)));
+        assert_eq!(
+            places::nearest(42.6, 8.7).map(|(c, _)| c.name),
+            places::nearest(42.5623, 8.741866999924259).map(|(c, _)| c.name)
+        );
+        assert!(!texte.contains("8.741866999924259"), "le GPS au mètre ne sort pas");
         assert_eq!(a.meta.taken, b.meta.taken);
         assert_eq!(a.orig, b.orig);
 
@@ -270,6 +314,31 @@ mod tests {
         assert_eq!(fs::read(&fichier).unwrap(), fs::read(&refichier).unwrap());
 
         fs::remove_dir_all(&tmp).ok();
+    }
+
+    /// The rounding keeps the town, point by point, and around Roissy too,
+    /// where a flat kilometre moved two photos from Goussainville to
+    /// Villepinte. A sweep rather than a sample: the cases that bite are the
+    /// ones nobody would think to write down.
+    #[test]
+    fn le_gps_d_une_fiche_garde_sa_ville() {
+        let nom = |(lat, lon): (f64, f64)| places::nearest(lat, lon).map(|(c, _)| c.name);
+        let mut grossiers = 0;
+        for i in 0..60 {
+            for j in 0..60 {
+                let p = (48.80 + i as f64 * 0.0071, 2.20 + j as f64 * 0.0093);
+                let q = gps_public(p);
+                assert_eq!(nom(q), nom(p), "{p:?} arrondi en {q:?}");
+                if q.0 == (q.0 * 10.0).round() / 10.0 && q.1 == (q.1 * 10.0).round() / 10.0 {
+                    grossiers += 1;
+                }
+            }
+        }
+        // Not a precision kept for its own sake: most points leave at a
+        // tenth of a degree even in the densest suburb of the country.
+        assert!(grossiers > 0, "aucun point à une décimale");
+        // And far from any town, a tenth of a degree is still nowhere.
+        assert_eq!(nom(gps_public((20.1234, -14.5678))), nom((20.1234, -14.5678)));
     }
 
     /// A relevé from another era is refused whole: half-read fiches would

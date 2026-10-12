@@ -55,7 +55,7 @@ même harnais, si.
    trompent en silence ailleurs.
 
    ```bash
-   COLOPHON_ALBUM=/Users/alex-pack/Developer/colophon/.albums/mesure-200 npm --prefix /Users/alex-pack/Developer/colophon/crates/colophon-app run dev
+   COLOPHON_ALBUM=$HOME/Developer/colophon/.albums/mesure-200 npm --prefix $HOME/Developer/colophon/crates/colophon-app run dev
    ```
 
 3. Dans la page, faire exactement ceci, dans cet ordre :

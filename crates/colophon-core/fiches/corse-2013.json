@@ -12,8 +12,8 @@
         "taken_reliable": false,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": null,
         "rating": null
@@ -54,8 +54,8 @@
         "taken_reliable": false,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": null,
         "rating": null
@@ -106,8 +106,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -154,8 +154,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          48.85252222222223,
-          2.3603222222222224
+          48.9,
+          2.4
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -201,8 +201,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -249,8 +249,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -297,8 +297,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -345,8 +345,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -393,8 +393,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -441,8 +441,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          48.85252222222223,
-          2.3603222222222224
+          48.9,
+          2.4
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -488,8 +488,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          48.85252222222223,
-          2.3603222222222224
+          48.9,
+          2.4
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -535,8 +535,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -583,8 +583,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56565833333333,
-          8.757047222222223
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -630,8 +630,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56565833333333,
-          8.757047222222223
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -677,8 +677,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562213888888884,
-          8.741858333333333
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -724,8 +724,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562213888888884,
-          8.741858333333333
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -771,8 +771,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56231666666666,
-          8.741838888888887
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -828,8 +828,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56231666666666,
-          8.741838888888887
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -885,8 +885,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56231666666666,
-          8.741838888888887
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -942,8 +942,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562236111111105,
-          8.741838888888887
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -989,8 +989,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562236111111105,
-          8.741838888888887
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1036,8 +1036,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562236111111105,
-          8.741838888888887
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1083,8 +1083,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562236111111105,
-          8.741838888888887
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1130,8 +1130,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562216666666664,
-          8.741830555555556
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1177,8 +1177,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562216666666664,
-          8.741830555555556
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1240,8 +1240,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562216666666664,
-          8.741830555555556
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1287,8 +1287,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562216666666664,
-          8.741830555555556
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1362,8 +1362,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562216666666664,
-          8.741830555555556
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1437,8 +1437,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58106388888889,
-          8.71191111111111
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1484,8 +1484,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58106388888889,
-          8.71191111111111
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1531,8 +1531,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58106388888889,
-          8.71191111111111
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1578,8 +1578,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58106388888889,
-          8.71191111111111
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1625,8 +1625,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58106388888889,
-          8.71191111111111
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1672,8 +1672,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58106388888889,
-          8.71191111111111
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1719,8 +1719,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5882,
-          8.740991666666666
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1766,8 +1766,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5882,
-          8.740991666666666
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1823,8 +1823,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.556352777777775,
-          8.767441666666668
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1870,8 +1870,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.556352777777775,
-          8.767441666666668
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1927,8 +1927,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55635833333333,
-          8.767455555555557
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -1974,8 +1974,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55635833333333,
-          8.767455555555557
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -2031,8 +2031,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55635833333333,
-          8.767455555555557
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -2078,8 +2078,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55635833333333,
-          8.767455555555557
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -2135,8 +2135,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55635833333333,
-          8.767455555555557
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -2192,8 +2192,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.55635833333333,
-          8.767455555555557
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -2239,8 +2239,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -2297,8 +2297,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -2355,8 +2355,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -2413,8 +2413,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -2471,8 +2471,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -2529,8 +2529,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56658888888889,
-          8.758844444444444
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -2576,8 +2576,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.565619444444444,
-          8.758980555555556
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -2623,8 +2623,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.565619444444444,
-          8.758980555555556
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -2670,8 +2670,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.565619444444444,
-          8.758980555555556
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -2717,8 +2717,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.565619444444444,
-          8.758980555555556
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -2764,8 +2764,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56534444444444,
-          8.76255
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -2811,8 +2811,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56534444444444,
-          8.76255
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -2858,8 +2858,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56534444444444,
-          8.76255
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -2905,8 +2905,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56534444444444,
-          8.76255
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -2952,8 +2952,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56534444444444,
-          8.76255
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -2999,8 +2999,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56534444444444,
-          8.76255
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -3046,8 +3046,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.59800555555556,
-          8.80196388888889
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -3093,8 +3093,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.59800555555556,
-          8.80196388888889
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -3140,8 +3140,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.59800555555556,
-          8.80196388888889
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -3187,8 +3187,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.59800555555556,
-          8.80196388888889
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -3234,8 +3234,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -3282,8 +3282,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -3330,8 +3330,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -3378,8 +3378,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -3426,8 +3426,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -3474,8 +3474,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562063888888886,
-          8.741972222222222
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -3537,8 +3537,8 @@
         "taken_reliable": true,
         "orientation": 8,
         "gps": [
-          42.562063888888886,
-          8.741972222222222
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -3594,8 +3594,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562063888888886,
-          8.741972222222222
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -3641,8 +3641,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.562063888888886,
-          8.741972222222222
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -3688,8 +3688,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.562063888888886,
-          8.741972222222222
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -3745,8 +3745,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.562063888888886,
-          8.741972222222222
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -3802,8 +3802,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.562063888888886,
-          8.741972222222222
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -3859,8 +3859,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.562063888888886,
-          8.741972222222222
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -3906,8 +3906,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.562063888888886,
-          8.741972222222222
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -3963,8 +3963,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.69119166666666,
-          9.02335
+          42.7,
+          9.0
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -4010,8 +4010,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.69119166666666,
-          9.02335
+          42.7,
+          9.0
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -4067,8 +4067,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.69119166666666,
-          9.02335
+          42.7,
+          9.0
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -4114,8 +4114,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.69119166666666,
-          9.02335
+          42.7,
+          9.0
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -4171,8 +4171,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.691325,
-          9.023755555555557
+          42.7,
+          9.0
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -4218,8 +4218,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.69119166666666,
-          9.02335
+          42.7,
+          9.0
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -4265,8 +4265,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.691069444444445,
-          9.026861111111112
+          42.7,
+          9.0
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -4312,8 +4312,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.699797222222216,
-          9.043791666666667
+          42.7,
+          9.0
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -4359,8 +4359,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.699797222222216,
-          9.043791666666667
+          42.7,
+          9.0
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -4416,8 +4416,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.69989722222222,
-          9.043955555555556
+          42.7,
+          9.0
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -4473,8 +4473,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.69989722222222,
-          9.043955555555556
+          42.7,
+          9.0
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -4530,8 +4530,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.69989722222222,
-          9.043955555555556
+          42.7,
+          9.0
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -4587,8 +4587,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.69989722222222,
-          9.043955555555556
+          42.7,
+          9.0
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -4644,8 +4644,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.716858333333334,
-          9.080966666666667
+          42.7,
+          9.1
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -4691,8 +4691,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.716858333333334,
-          9.080966666666667
+          42.7,
+          9.1
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -4738,8 +4738,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -4796,8 +4796,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -4854,8 +4854,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -4918,8 +4918,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -4988,8 +4988,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -5045,8 +5045,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -5103,8 +5103,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -5151,8 +5151,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -5199,8 +5199,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -5257,8 +5257,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -5315,8 +5315,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -5363,8 +5363,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -5421,8 +5421,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -5469,8 +5469,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -5527,8 +5527,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -5585,8 +5585,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.72598333333333,
-          9.202988888888887
+          42.7,
+          9.2
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -5632,8 +5632,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.72642777777778,
-          9.20295
+          42.7,
+          9.2
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -5695,8 +5695,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.72642777777778,
-          9.20295
+          42.7,
+          9.2
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -5752,8 +5752,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.72642777777778,
-          9.20295
+          42.7,
+          9.2
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -5799,8 +5799,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.72642777777778,
-          9.20295
+          42.7,
+          9.2
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -5846,8 +5846,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.72642777777778,
-          9.20295
+          42.7,
+          9.2
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -5893,8 +5893,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.72439444444445,
-          9.246708333333332
+          42.7,
+          9.2
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -5940,8 +5940,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.72439444444445,
-          9.246708333333332
+          42.7,
+          9.2
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -5987,8 +5987,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.72439444444445,
-          9.246708333333332
+          42.7,
+          9.2
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -6034,8 +6034,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.72439444444445,
-          9.246708333333332
+          42.7,
+          9.2
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -6097,8 +6097,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.72439444444445,
-          9.246708333333332
+          42.7,
+          9.2
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -6144,8 +6144,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.72439444444445,
-          9.246708333333332
+          42.7,
+          9.2
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -6191,8 +6191,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.71002222222223,
-          9.267394444444445
+          42.7,
+          9.3
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -6248,8 +6248,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.69580833333333,
-          9.277958333333334
+          42.7,
+          9.3
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -6311,8 +6311,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.69580833333333,
-          9.277958333333334
+          42.7,
+          9.3
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -6380,8 +6380,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.69580833333333,
-          9.277958333333334
+          42.7,
+          9.3
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -6449,8 +6449,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.69580833333333,
-          9.277958333333334
+          42.7,
+          9.3
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -6496,8 +6496,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.69580833333333,
-          9.277958333333334
+          42.7,
+          9.3
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -6553,8 +6553,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.69580833333333,
-          9.277958333333334
+          42.7,
+          9.3
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -6622,8 +6622,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.691088888888885,
-          9.281908333333334
+          42.7,
+          9.3
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -6685,8 +6685,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.68098888888888,
-          9.29935
+          42.68,
+          9.3
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -6732,8 +6732,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.68098888888888,
-          9.29935
+          42.68,
+          9.3
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -6779,8 +6779,8 @@
         "taken_reliable": false,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": null,
         "rating": null
@@ -6843,8 +6843,8 @@
         "taken_reliable": false,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": null,
         "rating": null
@@ -6895,8 +6895,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -6943,8 +6943,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -6991,8 +6991,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -7039,8 +7039,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -7087,8 +7087,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -7135,8 +7135,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -7183,8 +7183,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562238888888885,
-          8.741813888888888
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -7230,8 +7230,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562238888888885,
-          8.741813888888888
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -7277,8 +7277,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.562238888888885,
-          8.741813888888888
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -7324,8 +7324,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562238888888885,
-          8.741813888888888
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -7381,8 +7381,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562238888888885,
-          8.741813888888888
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -7438,8 +7438,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562238888888885,
-          8.741813888888888
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -7485,8 +7485,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562238888888885,
-          8.741813888888888
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -7532,8 +7532,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562238888888885,
-          8.741813888888888
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -7579,8 +7579,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56814722222222,
-          8.753255555555555
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -7626,8 +7626,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56780555555556,
-          8.754261111111111
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -7673,8 +7673,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56780555555556,
-          8.754261111111111
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -7720,8 +7720,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56780555555556,
-          8.754261111111111
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -7767,8 +7767,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56780555555556,
-          8.754261111111111
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -7814,8 +7814,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56780555555556,
-          8.754261111111111
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -7861,8 +7861,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -7919,8 +7919,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -7977,8 +7977,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8041,8 +8041,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8089,8 +8089,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8137,8 +8137,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8185,8 +8185,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8233,8 +8233,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8281,8 +8281,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8329,8 +8329,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8377,8 +8377,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8425,8 +8425,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8473,8 +8473,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8521,8 +8521,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8569,8 +8569,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8627,8 +8627,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8675,8 +8675,8 @@
         "taken_reliable": false,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": null,
         "rating": null
@@ -8717,8 +8717,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8765,8 +8765,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8823,8 +8823,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8871,8 +8871,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8919,8 +8919,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -8983,8 +8983,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -9041,8 +9041,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -9099,8 +9099,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -9157,8 +9157,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -9205,8 +9205,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -9263,8 +9263,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -9311,8 +9311,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -9359,8 +9359,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -9407,8 +9407,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -9455,8 +9455,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -9502,8 +9502,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -9577,8 +9577,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -9624,8 +9624,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -9671,8 +9671,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -9718,8 +9718,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -9765,8 +9765,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -9822,8 +9822,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -9879,8 +9879,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -9936,8 +9936,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -9984,8 +9984,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -10032,8 +10032,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -10101,8 +10101,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -10170,8 +10170,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -10245,8 +10245,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -10320,8 +10320,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -10395,8 +10395,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -10470,8 +10470,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -10527,8 +10527,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -10602,8 +10602,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -10659,8 +10659,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -10707,8 +10707,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -10755,8 +10755,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -10802,8 +10802,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -10849,8 +10849,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.74165
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -10896,8 +10896,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -10954,8 +10954,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -11002,8 +11002,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -11066,8 +11066,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -11130,8 +11130,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -11178,8 +11178,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -11226,8 +11226,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -11274,8 +11274,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.60590555555556,
-          8.827730555555556
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -11321,8 +11321,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.60590555555556,
-          8.827730555555556
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -11368,8 +11368,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.60353055555556,
-          8.826747222222222
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -11415,8 +11415,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.60353055555556,
-          8.826747222222222
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -11462,8 +11462,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.60939166666667,
-          8.861497222222221
+          42.6,
+          8.9
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -11509,8 +11509,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.60939166666667,
-          8.861497222222221
+          42.6,
+          8.9
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -11556,8 +11556,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.60939166666667,
-          8.861497222222221
+          42.6,
+          8.9
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -11603,8 +11603,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.60911388888889,
-          8.860988888888889
+          42.6,
+          8.9
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -11666,8 +11666,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.60911388888889,
-          8.860988888888889
+          42.6,
+          8.9
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -11723,8 +11723,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.60911388888889,
-          8.860988888888889
+          42.6,
+          8.9
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -11786,8 +11786,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.6085,
-          8.862325
+          42.6,
+          8.9
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -11843,8 +11843,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.6085,
-          8.862325
+          42.6,
+          8.9
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -11900,8 +11900,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.6085,
-          8.862325
+          42.6,
+          8.9
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -11957,8 +11957,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.60842777777778,
-          8.862241666666666
+          42.6,
+          8.9
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -12004,8 +12004,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.607975,
-          8.864641666666666
+          42.6,
+          8.9
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -12051,8 +12051,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.607975,
-          8.864641666666666
+          42.6,
+          8.9
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -12098,8 +12098,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.607975,
-          8.864641666666666
+          42.6,
+          8.9
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -12145,8 +12145,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.607725,
-          8.866161111111111
+          42.6,
+          8.9
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -12192,8 +12192,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.607725,
-          8.866161111111111
+          42.6,
+          8.9
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -12239,8 +12239,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -12287,8 +12287,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -12335,8 +12335,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -12383,8 +12383,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -12431,8 +12431,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -12479,8 +12479,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -12527,8 +12527,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -12575,8 +12575,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -12623,8 +12623,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -12671,8 +12671,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -12719,8 +12719,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -12767,8 +12767,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -12815,8 +12815,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -12873,8 +12873,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -12921,8 +12921,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -12969,8 +12969,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -13017,8 +13017,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -13065,8 +13065,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -13113,8 +13113,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -13161,8 +13161,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -13209,8 +13209,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -13257,8 +13257,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -13305,8 +13305,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -13353,8 +13353,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56225277777777,
-          8.741902777777778
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -13400,8 +13400,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56225277777777,
-          8.741902777777778
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -13447,8 +13447,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56225277777777,
-          8.741902777777778
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -13494,8 +13494,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -13542,8 +13542,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.56225277777777,
-          8.741902777777778
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -13599,8 +13599,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56225277777777,
-          8.741902777777778
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -13646,8 +13646,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -13694,8 +13694,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56225277777777,
-          8.741902777777778
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -13741,8 +13741,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56225277777777,
-          8.741902777777778
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -13788,8 +13788,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56225277777777,
-          8.741902777777778
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -13835,8 +13835,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56225277777777,
-          8.741902777777778
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -13892,8 +13892,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56225277777777,
-          8.741902777777778
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -13939,8 +13939,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55587777777777,
-          8.73635
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -13986,8 +13986,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55587777777777,
-          8.73635
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -14033,8 +14033,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.555875,
-          8.736666666666666
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -14080,8 +14080,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.555875,
-          8.736666666666666
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -14127,8 +14127,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55580277777778,
-          8.73665
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -14174,8 +14174,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.555838888888886,
-          8.736613888888888
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -14221,8 +14221,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.554805555555554,
-          8.735669444444444
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -14268,8 +14268,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.554805555555554,
-          8.735669444444444
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -14315,8 +14315,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.554805555555554,
-          8.735669444444444
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -14362,8 +14362,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55359166666666,
-          8.737077777777777
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -14409,8 +14409,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55261944444444,
-          8.73664722222222
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -14456,8 +14456,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55261944444444,
-          8.73664722222222
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -14503,8 +14503,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55215277777778,
-          8.738830555555555
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -14550,8 +14550,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55215277777778,
-          8.738830555555555
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -14597,8 +14597,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55183333333333,
-          8.731383333333333
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -14644,8 +14644,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55183333333333,
-          8.731383333333333
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -14691,8 +14691,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55309166666667,
-          8.725452777777777
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -14738,8 +14738,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -14786,8 +14786,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -14834,8 +14834,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -14892,8 +14892,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -14950,8 +14950,8 @@
         "taken_reliable": false,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": null,
         "rating": null
@@ -15002,8 +15002,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15050,8 +15050,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15098,8 +15098,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15146,8 +15146,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15194,8 +15194,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15242,8 +15242,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15290,8 +15290,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15338,8 +15338,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15386,8 +15386,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15434,8 +15434,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15492,8 +15492,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15540,8 +15540,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15588,8 +15588,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15636,8 +15636,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15706,8 +15706,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15754,8 +15754,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15824,8 +15824,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15882,8 +15882,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15930,8 +15930,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -15988,8 +15988,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -16036,8 +16036,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -16084,8 +16084,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -16132,8 +16132,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -16180,8 +16180,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.54837222222222,
-          8.726166666666666
+          42.5,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -16227,8 +16227,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.54837222222222,
-          8.726166666666666
+          42.5,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -16274,8 +16274,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -16322,8 +16322,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -16370,8 +16370,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -16418,8 +16418,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -16476,8 +16476,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -16524,8 +16524,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -16582,8 +16582,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -16630,8 +16630,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -16688,8 +16688,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -16736,8 +16736,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -16794,8 +16794,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.565869444444445,
-          8.72001388888889
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -16841,8 +16841,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56913333333333,
-          8.719069444444445
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -16888,8 +16888,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56913333333333,
-          8.719069444444445
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -16935,8 +16935,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -16983,8 +16983,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -17031,8 +17031,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -17079,8 +17079,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56913333333333,
-          8.719069444444445
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -17126,8 +17126,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56913333333333,
-          8.719069444444445
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -17173,8 +17173,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.57092777777778,
-          8.720561111111111
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -17220,8 +17220,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.57149444444445,
-          8.720466666666667
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -17267,8 +17267,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.57172222222223,
-          8.719333333333333
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -17314,8 +17314,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.57506111111111,
-          8.720577777777779
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -17361,8 +17361,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -17409,8 +17409,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -17457,8 +17457,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.57522777777778,
-          8.72081388888889
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -17504,8 +17504,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -17552,8 +17552,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -17600,8 +17600,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -17648,8 +17648,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -17696,8 +17696,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -17744,8 +17744,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -17792,8 +17792,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -17840,8 +17840,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -17888,8 +17888,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.57775277777778,
-          8.721644444444445
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -17935,8 +17935,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.57775277777778,
-          8.721644444444445
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -17982,8 +17982,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.57775277777778,
-          8.721644444444445
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -18029,8 +18029,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -18077,8 +18077,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -18125,8 +18125,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -18173,8 +18173,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -18221,8 +18221,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58171666666667,
-          8.723555555555556
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -18268,8 +18268,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.58171666666667,
-          8.723555555555556
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -18325,8 +18325,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.58171666666667,
-          8.723555555555556
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -18382,8 +18382,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.58171666666667,
-          8.723555555555556
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -18439,8 +18439,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.58171666666667,
-          8.723555555555556
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -18496,8 +18496,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.58171666666667,
-          8.723555555555556
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -18553,8 +18553,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58171666666667,
-          8.723555555555556
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -18600,8 +18600,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58331666666667,
-          8.725152777777778
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -18657,8 +18657,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58331666666667,
-          8.725152777777778
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -18714,8 +18714,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58331666666667,
-          8.725152777777778
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -18761,8 +18761,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.58331666666667,
-          8.725152777777778
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -18818,8 +18818,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58331666666667,
-          8.725152777777778
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -18875,8 +18875,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.582875,
-          8.724083333333333
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -18932,8 +18932,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.582875,
-          8.724083333333333
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -18989,8 +18989,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58209444444445,
-          8.723541666666668
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -19036,8 +19036,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58209444444445,
-          8.723541666666668
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -19083,8 +19083,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.57474166666667,
-          8.720002777777777
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -19130,8 +19130,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.57474166666667,
-          8.720002777777777
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -19177,8 +19177,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5717,
-          8.71888888888889
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -19224,8 +19224,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.57171666666667,
-          8.71931111111111
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -19271,8 +19271,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.57171666666667,
-          8.71931111111111
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -19318,8 +19318,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.57171666666667,
-          8.71931111111111
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -19365,8 +19365,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.57171666666667,
-          8.71931111111111
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -19412,8 +19412,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.57171666666667,
-          8.71931111111111
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -19459,8 +19459,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.57171666666667,
-          8.71931111111111
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -19506,8 +19506,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.57171666666667,
-          8.71931111111111
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -19553,8 +19553,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.57171666666667,
-          8.71931111111111
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -19616,8 +19616,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -19680,8 +19680,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -19728,8 +19728,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -19776,8 +19776,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -19824,8 +19824,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -19882,8 +19882,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -19930,8 +19930,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -19978,8 +19978,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -20036,8 +20036,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -20100,8 +20100,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -20164,8 +20164,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -20212,8 +20212,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.574580555555556,
-          8.820775
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -20259,8 +20259,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.574580555555556,
-          8.820775
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -20306,8 +20306,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.576322222222224,
-          8.805227777777779
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -20353,8 +20353,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.576322222222224,
-          8.805227777777779
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -20400,8 +20400,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.57896388888889,
-          8.803772222222223
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -20447,8 +20447,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.57896388888889,
-          8.803772222222223
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -20494,8 +20494,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58125555555556,
-          8.802852777777778
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -20541,8 +20541,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58125555555556,
-          8.802852777777778
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -20588,8 +20588,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58150833333334,
-          8.802983333333334
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -20635,8 +20635,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58238611111111,
-          8.801933333333334
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -20682,8 +20682,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58307777777778,
-          8.800011111111111
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -20729,8 +20729,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.583111111111116,
-          8.800147222222224
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -20776,8 +20776,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.583111111111116,
-          8.800147222222224
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -20823,8 +20823,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.583111111111116,
-          8.800147222222224
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -20870,8 +20870,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.583111111111116,
-          8.800147222222224
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -20917,8 +20917,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.58011944444445,
-          8.803177777777778
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -20964,8 +20964,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -21012,8 +21012,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -21060,8 +21060,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -21108,8 +21108,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -21156,8 +21156,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -21204,8 +21204,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -21252,8 +21252,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -21300,8 +21300,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -21348,8 +21348,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -21396,8 +21396,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -21444,8 +21444,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -21492,8 +21492,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -21540,8 +21540,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -21588,8 +21588,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -21636,8 +21636,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562172222222216,
-          8.741924999999998
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -21683,8 +21683,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562172222222216,
-          8.741924999999998
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -21730,8 +21730,8 @@
         "taken_reliable": true,
         "orientation": 8,
         "gps": [
-          42.562172222222216,
-          8.741924999999998
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -21777,8 +21777,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.562172222222216,
-          8.741924999999998
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -21834,8 +21834,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562172222222216,
-          8.741924999999998
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -21881,8 +21881,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.562172222222216,
-          8.741924999999998
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -21928,8 +21928,8 @@
         "taken_reliable": true,
         "orientation": 8,
         "gps": [
-          42.562172222222216,
-          8.741924999999998
+          42.6,
+          8.7
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -21985,8 +21985,8 @@
         "taken_reliable": true,
         "orientation": 8,
         "gps": [
-          42.55835833333333,
-          8.760805555555555
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22042,8 +22042,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55855,
-          8.760602777777779
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22089,8 +22089,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.558502777777775,
-          8.760530555555556
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22136,8 +22136,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -22184,8 +22184,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -22232,8 +22232,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.558505555555556,
-          8.760591666666667
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22279,8 +22279,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.558505555555556,
-          8.760591666666667
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22326,8 +22326,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56116111111111,
-          8.75741111111111
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22373,8 +22373,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56116111111111,
-          8.75741111111111
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22420,8 +22420,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56253333333333,
-          8.756380555555555
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22467,8 +22467,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.557525,
-          8.762533333333334
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22514,8 +22514,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.557525,
-          8.762533333333334
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22561,8 +22561,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.557525,
-          8.762533333333334
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22608,8 +22608,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55695,
-          8.763988888888889
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22655,8 +22655,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55695,
-          8.763988888888889
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22702,8 +22702,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.557380555555554,
-          8.764455555555555
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22749,8 +22749,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.557380555555554,
-          8.764455555555555
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22796,8 +22796,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.557380555555554,
-          8.764455555555555
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22853,8 +22853,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.557380555555554,
-          8.764455555555555
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22910,8 +22910,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.557380555555554,
-          8.764455555555555
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -22967,8 +22967,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.557380555555554,
-          8.764455555555555
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -23024,8 +23024,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.557380555555554,
-          8.764455555555555
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -23081,8 +23081,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.557380555555554,
-          8.764455555555555
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -23138,8 +23138,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.557380555555554,
-          8.764455555555555
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -23195,8 +23195,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.557380555555554,
-          8.764455555555555
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -23242,8 +23242,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55676666666666,
-          8.764375
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -23289,8 +23289,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.556066666666666,
-          8.766530555555555
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -23336,8 +23336,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.556038888888885,
-          8.767463888888889
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -23383,8 +23383,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.55586388888889,
-          8.768680555555557
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -23430,8 +23430,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.556327777777774,
-          8.764958333333333
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -23477,8 +23477,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.56861944444445,
-          8.751377777777778
+          42.6,
+          8.8
         ],
         "model": "V-LUX 20",
         "make": "LEICA",
@@ -23524,8 +23524,8 @@
         "taken_reliable": false,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": null,
         "rating": null
@@ -23566,8 +23566,8 @@
         "taken_reliable": true,
         "orientation": 3,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -23614,8 +23614,8 @@
         "taken_reliable": true,
         "orientation": 3,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -23662,8 +23662,8 @@
         "taken_reliable": true,
         "orientation": 3,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -23710,8 +23710,8 @@
         "taken_reliable": true,
         "orientation": 3,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -23758,8 +23758,8 @@
         "taken_reliable": true,
         "orientation": 3,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -23806,8 +23806,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -23854,8 +23854,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -23902,8 +23902,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -23960,8 +23960,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24018,8 +24018,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24076,8 +24076,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24134,8 +24134,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24192,8 +24192,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24250,8 +24250,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24308,8 +24308,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24366,8 +24366,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24424,8 +24424,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24472,8 +24472,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24520,8 +24520,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24578,8 +24578,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24636,8 +24636,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24694,8 +24694,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24752,8 +24752,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24810,8 +24810,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24868,8 +24868,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24926,8 +24926,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -24984,8 +24984,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25042,8 +25042,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25100,8 +25100,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25158,8 +25158,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25206,8 +25206,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25254,8 +25254,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25302,8 +25302,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25360,8 +25360,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25418,8 +25418,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25476,8 +25476,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25534,8 +25534,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25592,8 +25592,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25650,8 +25650,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25708,8 +25708,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25766,8 +25766,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25824,8 +25824,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25882,8 +25882,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25940,8 +25940,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -25988,8 +25988,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26036,8 +26036,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26084,8 +26084,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26142,8 +26142,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26200,8 +26200,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26258,8 +26258,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26316,8 +26316,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26374,8 +26374,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26422,8 +26422,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26470,8 +26470,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26518,8 +26518,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26576,8 +26576,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26634,8 +26634,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26692,8 +26692,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26750,8 +26750,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26798,8 +26798,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26846,8 +26846,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26894,8 +26894,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26942,8 +26942,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -26990,8 +26990,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27038,8 +27038,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27086,8 +27086,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27134,8 +27134,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27182,8 +27182,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27230,8 +27230,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27278,8 +27278,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27326,8 +27326,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27374,8 +27374,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27422,8 +27422,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27470,8 +27470,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27518,8 +27518,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27566,8 +27566,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27614,8 +27614,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27662,8 +27662,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27710,8 +27710,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27758,8 +27758,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27806,8 +27806,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27854,8 +27854,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27902,8 +27902,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27950,8 +27950,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -27998,8 +27998,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28046,8 +28046,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28094,8 +28094,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28142,8 +28142,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28190,8 +28190,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28238,8 +28238,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28286,8 +28286,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28334,8 +28334,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28382,8 +28382,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28440,8 +28440,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28498,8 +28498,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28556,8 +28556,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28614,8 +28614,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28672,8 +28672,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28720,8 +28720,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28768,8 +28768,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28816,8 +28816,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28864,8 +28864,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28912,8 +28912,8 @@
         "taken_reliable": true,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -28970,8 +28970,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -29018,8 +29018,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -29076,8 +29076,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -29134,8 +29134,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -29192,8 +29192,8 @@
         "taken_reliable": true,
         "orientation": 6,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": "iPhone 5",
         "make": "Apple",
@@ -29240,8 +29240,8 @@
         "taken_reliable": false,
         "orientation": 1,
         "gps": [
-          42.5623,
-          8.741866999924259
+          42.6,
+          8.7
         ],
         "model": null,
         "rating": null

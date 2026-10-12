@@ -55,6 +55,13 @@ change. Sans les photos, `check.sh` compose depuis les fiches (`--depuis-fiches`
 s'arrête avant les pixels et le dit : ni vignettes, ni PDF, ni couverture) et audite
 pareil — l'audit lit le `releve.json` posé à côté de l'album, et **refuse de noter**
 quand il n'a ni photos ni relevé, plutôt que de laisser le compteur de résolution muet.
+**Le GPS sort des fiches arrondi** (`releve::gps_public`, dans `Releve::ecrire`) : la
+décimale la plus grossière sous laquelle `places::nearest` nomme encore la même ville,
+une décimale (≈ 11 km) pour 99 % des points, jamais le mètre. Les fiches sont publiques
+et ce sont des vacances. Un arrondi aveugle au kilomètre changeait deux titres de
+chapitre (Roissy, Crozon) et rougissait l'identité ; garder la ville point par point la
+tient par construction, parce que tout ce que la composition demande à une coordonnée
+passe par `nearest`. Le chemin des photos lit toujours le chiffre de l'appareil.
 
 Sur le Mac, `check.sh` prouve à chaque passage que les deux chemins rendent le même
 `album.json` à l'octet (`root` excepté, normalisé par `scripts/identite-fiches.py`), la
