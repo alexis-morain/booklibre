@@ -79,7 +79,7 @@ Cloudprinter seul avec le dossier préparé et la couverture composée (K-s1), l
 d'un export bloqué par la résolution et le glisser depuis la réserve (L-s1), lopdf 0.42
 (#41) et le passe-plat JPEG vérifié (#52). Le code de commande de K-s2 reste dans le
 moteur et la CLI ; l'écran de K-s3 est retiré de l'app (S-s3a), et Commander revient par le
-relais (S-s3), inerte dans un build de release.
+relais (S-s3), inerte dans un build de release publié.
 Ce qui suit est l'état laissé par les vagues 2 à 6.
 
 **2.6, la page qui tourne, est close — et la vague 2 avec elle (28/08).** Session 1
@@ -491,11 +491,18 @@ une ligne dont la case ne porte plus la photo du rapport se tait.
 
 **L'app ne tient aucune clé.** Le relais d'Alexis (`colophon-relais`, dépôt privé, un
 Worker) devise, encaisse par Stripe Checkout et commande chez Cloudprinter. L'app ne
-connaît qu'une adresse compilée, **`relais::RELAIS_URL`** = `url_pour(cfg!(debug_assertions))` :
-le sandbox `workers.dev` en debug, **rien en release** (le gate tourne en debug, d'où la
-fonction : son test tient aussi la valeur de la release) tant que S-s4 n'a pas posé le domaine du relais réel. Sans
-adresse, `relais_pays` rend `null` sans un appel et Commander ne s'affiche pas (jamais
-grisé) : la 1.0 embarque ce code inerte.
+connaît qu'une adresse compilée, **`relais::RELAIS_URL`** = `url_pour(cfg!(debug_assertions), REEL)` :
+le sandbox `workers.dev` en debug ; en release, **`REEL`**, lu par
+`option_env!("COLOPHON_RELAIS_REEL")`, et rien sans lui (le gate tourne en debug, d'où la
+fonction : son test tient aussi la valeur de la release). La CI publique ne la pose pas : la
+release publiée reste inerte. Posée, elle doit être `https://` puis un hôte seul
+(`reel_valide`, `const`) : un chemin, un port, des identifiants ou une requête font
+**échouer le build** à l'évaluation de la constante, et changer la variable recompile le
+moteur (mesuré le 12/10, `option_env!` entre dans les dépendances de cargo, pas de
+`build.rs`). Sans adresse, `relais_pays` rend `null` sans un appel et Commander ne s'affiche
+pas (jamais grisé). **Un bundle contre le relais réel** :
+`COLOPHON_RELAIS_REEL=https://<hôte> npm run tauri build` dans `crates/colophon-app` (l'hôte
+seul, sans `/` final), puis `install-app.sh` comme d'habitude.
 
 **Le client vit dans le moteur** (`core::relais`), derrière son trait `Transport` (GET,
 POST JSON avec `Authorization: Bearer`, PUT d'un fichier en flux), écrit sur le modèle de
@@ -535,19 +542,25 @@ TTC par niveau, envoi à deux barres, confirmation en toutes lettres
 (`phraseConfirmation`), navigateur, attente. Ce qui bouge seul (`enAttente` :
 `attente_paiement`, `payee`, et les deux états de remboursement et d'annulation) se
 relit toutes les cinq secondes tant qu'Envoi est ouvert, tout le reste à chaque
-ouverture. Les neuf états du relais ont leur phrase (`phraseIntention`), un état inconnu
+ouverture. Les dix états du relais ont leur phrase (`phraseIntention`), un état inconnu
 une phrase neutre. La liste offre « Payer » (niveau gardé) et « Abandonner » avant tout
-paiement. **Abandonner relit le relais d'abord** (`commande::abandonner`) et n'oublie que
-sur `attente_fichiers`, `attente_paiement`, `purgee` ou un 404 ; injoignable ou au-delà,
-l'intention reste. Il attend aussi trente minutes après le dernier `ouvrir_paiement`
-(`paiement_ouvert_le`), la vie d'une session Checkout, et se refuse pendant l'envoi des
-fichiers. L'attente se referme par « Fermer » sans rien oublier ; un refus définitif du paiement
+paiement. **Abandonner demande au relais** (`POST /abandon`, `relais::Relais::abandonner`,
+S-s4b) : le relais expire chez Stripe toute session Checkout ouverte, puis abandonne.
+`commande::abandonner` n'oublie que sur son 200 (`abandonnee`, `purgee`) ou son 404, dans
+la fermeture de `modifier` et seulement si l'état local n'a pas bougé depuis l'appel ; sur
+409 `avancee` l'intention reste avec l'état relu, sur 502, une panne ou une réponse hors
+contrat elle reste telle quelle. **Aucune horloge dans la décision** : ni durée de session
+ni date d'ouverture côté app. Refusé pendant l'envoi des fichiers (`abandon_envoi_en_cours`)
+et pendant un autre abandon de la même intention (`abandon_en_cours`, marqueur
+`AppState.abandons`, libéré par `Drop`). Un paiement rouvert après l'abandon reçoit le 409
+`etat` du relais, refus définitif. `abandonnee` est terminal. L'attente se referme par « Fermer » sans rien oublier ; un refus définitif du paiement
 (`devis_expire`, `intention_expiree`, `trop_de_sessions`) mène à une étape d'erreur
 d'où l'on recommence au pays ; un second envoi de la même intention rend
 `envoi_en_cours` et l'écran l'ignore. « Commander » ne s'offre que sur un dossier préparé **dans cette
 ouverture** d'Envoi : la vue retient la préparation trouvée à son montage. Au harnais,
-`/__dev/relais/*` rejoue le relais en mémoire, et `POST /__dev/relais/suivant` force
-l'état suivant. Banc : `banc_relais_sandbox` (`#[ignore]`, en debug, aucune clé),
+`/__dev/relais/*` rejoue le relais en mémoire, `POST /__dev/relais/suivant` force
+l'état suivant, et `POST /__dev/relais/abandon {"reponse": 200|404|409|502}` la réponse du
+prochain abandon. Banc : `banc_relais_sandbox` (`#[ignore]`, en debug, aucune clé),
 `docs/mesures/2026-10-09-commander-sandbox.json`.
 
 **Le moteur et la CLI gardent CloudCore et S3.** `core::commande` parle à CloudCore
