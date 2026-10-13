@@ -150,6 +150,12 @@ fn phrase(
 pub struct Fiche {
     pub imprimeur: &'static str,
     pub format_page_mm: [f64; 2],
+    /// Le produit de l'imprimeur pour ce format, quand l'app sait le
+    /// commander (Cloudprinter seul, `commande::produit_pour`). Absent sinon :
+    /// un 28 × 21 se prépare, mais aucun produit ne l'imprime à ses cotes, et
+    /// l'écran ne propose pas Commander.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub produit: Option<&'static str>,
     pub planches: usize,
     pub pages_interieur: usize,
     /// Pages in the delivered PDF: the interior, plus the two cover leaves
@@ -1032,6 +1038,7 @@ pub fn check(
         fiche: Fiche {
             imprimeur: profil.nom,
             format_page_mm: [album.trim_mm.w, album.trim_mm.h],
+            produit: profil.commande.and_then(|_| crate::commande::produit_pour(&crate::format::nom(album.trim_mm))),
             planches: album.spreads.len(),
             pages_interieur: pages,
             pages_fichier,
@@ -1327,6 +1334,26 @@ mod tests {
             });
         }
         a
+    }
+
+    /// La fiche nomme le produit Cloudprinter du format, et rien quand
+    /// l'imprimeur n'en a pas : c'est elle qui dit à l'écran si Commander a
+    /// un sens. Un 28 × 21 se prépare pour Cloudprinter, mais ne se vend pas.
+    #[test]
+    fn la_fiche_nomme_le_produit_du_format_ou_rien() {
+        let dims: HashMap<String, (u32, u32)> = (0..24).map(|i| (format!("{i}.jpg"), (5000u32, 5000u32))).collect();
+        let cp = PrinterProfile::par_id("cloudprinter").unwrap();
+        let carre = album_de(12, 3.0);
+        assert_eq!(check(&carre, cp, &dims, &FichiersPoses::default()).fiche.produit, Some("photobook_cw_s210_s_fc"));
+        let mut paysage = album_de(12, 3.0);
+        paysage.trim_mm = Size { w: 280.0, h: 210.0 };
+        assert_eq!(check(&paysage, cp, &dims, &FichiersPoses::default()).fiche.produit, None);
+        let mut libre = album_de(12, 3.0);
+        libre.trim_mm = Size { w: 211.0, h: 211.0 };
+        assert_eq!(check(&libre, cp, &dims, &FichiersPoses::default()).fiche.produit, None);
+        // Prodigi ne se commande pas depuis l'app : pas de produit, même carré.
+        let pr = PrinterProfile::par_id("prodigi").unwrap();
+        assert_eq!(check(&carre, pr, &dims, &FichiersPoses::default()).fiche.produit, None);
     }
 
     /// Un fichier posé dont on ne juge que la géométrie : le manifeste des
@@ -1826,12 +1853,13 @@ mod tests {
         assert_eq!(avant.notes, apres.notes);
 
         // The whole fiche, compared as data, with the legitimate moves
-        // asserted then masked. There are two, and the second is the first:
-        // a bascule changes the page, and the cover sheet is built around the
-        // page, so a sheet that did **not** move would be the bug.
+        // asserted then masked. There are three, and all follow the page:
+        // a bascule changes the page, the cover sheet is built around the
+        // page, so a sheet that did **not** move would be the bug ; and the
+        // printer's product is the page's, which a 28 × 21 does not have.
         let mut fa = serde_json::to_value(&avant.fiche).unwrap();
         let mut fp = serde_json::to_value(&apres.fiche).unwrap();
-        for champ in ["format_page_mm", "feuille_couverture_mm"] {
+        for champ in ["format_page_mm", "feuille_couverture_mm", "produit"] {
             assert_ne!(fa[champ], fp[champ], "{champ}");
             fa[champ] = serde_json::Value::Null;
             fp[champ] = serde_json::Value::Null;

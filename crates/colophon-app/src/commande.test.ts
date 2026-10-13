@@ -15,6 +15,7 @@ import {
   annulableIntention,
   avancer,
   commandePossible,
+  formatInvendable,
   formatPrix,
   ignorable,
   niveauChoisi,
@@ -36,7 +37,12 @@ afterEach(() => setLangue("en"));
 const preparation = (ok: boolean): Preparation => ({
   dossier: "Album – Cloudprinter",
   fichiers: ["album-print.pdf", "album-cover.pdf"],
-  rapport: { ok, bloquants: ok ? 0 : 1, defauts: [] } as unknown as PrevolReport,
+  rapport: {
+    ok,
+    bloquants: ok ? 0 : 1,
+    defauts: [],
+    fiche: { produit: "photobook_cw_s210_s_fc" },
+  } as unknown as PrevolReport,
 });
 
 const intention = (
@@ -82,6 +88,16 @@ describe("commandePossible", () => {
   it("reste faux avec un relais, sans dossier neuf ou sur un contrôle rouge", () => {
     expect(commandePossible(true, null)).toBe(false);
     expect(commandePossible(true, preparation(false))).toBe(false);
+  });
+
+  it("reste faux sur un format que l'imprimeur ne vend pas, même vert", () => {
+    const p = preparation(true);
+    const sansProduit = { ...p, rapport: { ...p.rapport, fiche: { ...p.rapport.fiche, produit: undefined } } };
+    expect(commandePossible(true, sansProduit)).toBe(false);
+    expect(formatInvendable(true, sansProduit)).toBe(true);
+    expect(formatInvendable(true, p)).toBe(false);
+    expect(formatInvendable(false, sansProduit)).toBe(false);
+    expect(formatInvendable(true, null)).toBe(false);
   });
 });
 

@@ -60,6 +60,9 @@ struct Prepare {
     pages: u32,
     /// Le prévol relu sur ces fichiers est vert.
     ok: bool,
+    /// L'imprimeur a un produit à ces cotes (`Fiche::produit`) : sans lui, le
+    /// relais refuserait le format.
+    vendu: bool,
     /// `PrinterProfile::commande` ; aucun chez un profil sans codes de
     /// commande. Le relais n'imprime que `relais::PAPIER`.
     papier: Option<&'static str>,
@@ -1390,6 +1393,7 @@ async fn preparer_dossier(
         }),
         pages: u32::try_from(fiche.pages_fichier).unwrap_or(0),
         ok: p.rapport.ok,
+        vendu: fiche.produit.is_some(),
         papier: profil.commande.map(|c| c.papier),
     });
     *state.envoi.lock().unwrap() = None;
@@ -1619,6 +1623,9 @@ async fn relais_creer(
     let p = state.prepare.lock().unwrap().clone().ok_or("aucun dossier préparé")?;
     if !p.ok {
         return Err("le contrôle relu sur le dossier préparé n'est pas vert".into());
+    }
+    if !p.vendu {
+        return Err("ce format ne se commande pas : l'imprimeur n'a aucun produit à ses cotes".into());
     }
     let dir = donnees(&app)?;
     let dossier = p.dossier.clone();

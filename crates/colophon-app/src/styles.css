@@ -4652,6 +4652,13 @@ button.envoi-defaut:focus-visible {
   max-width: 62ch;
 }
 
+/* Un format sans produit chez l'imprimeur : une explication, pas une erreur. */
+.commande-format {
+  margin: 10px 0 0;
+  max-width: 62ch;
+  line-height: var(--lh-ui);
+}
+
 .commande-confirmation {
   width: min(460px, 92vw);
 }
