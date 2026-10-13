@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { BuildBilan, VarianteResume } from "./bridge";
 import { Album, Discard } from "./album";
 import { t } from "./i18n";
+import { aboutProposition, nomProposition } from "./moteur";
 import { REASON_KEYS, reasonLabel } from "./reasons";
 import { filtreDe, useReglages } from "./reglages";
 import { cachedThumb, loadThumb } from "./thumbs";
@@ -118,14 +119,14 @@ export function BilanView({
                           <Vignette key={src} src={src} />
                         ))}
                       </span>
-                      <span className="bilan-carte-nom">{v.nom}</span>
+                      <span className="bilan-carte-nom">{nomProposition(v)}</span>
                       <span className="bilan-carte-chiffres">
                         {t("bilan.carte.chiffres", {
                           planches: v.planches,
                           photos: v.photos,
                         })}
                       </span>
-                      <span className="bilan-carte-about">{v.about}</span>
+                      <span className="bilan-carte-about">{aboutProposition(v)}</span>
                     </button>
                   </li>
                 ))}

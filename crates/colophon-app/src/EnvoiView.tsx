@@ -20,6 +20,7 @@
 import { useEffect, useState } from "react";
 import { phraseAbsents } from "./BasculeView";
 import { CommandeView } from "./CommandeView";
+import { phraseDefaut, texteMoteur } from "./moteur";
 import { Album } from "./album";
 import {
   Defaut,
@@ -247,7 +248,7 @@ export function EnvoiView({
               · {chosen.dos.mode === "calcule" ? t("envoi.dos.fournir") : t("envoi.dos.non")}
             </span>
             {chosen.certitude === "provisoire" && (
-              <span className="envoi-provisoire" title={chosen.reserves.join(" · ")}>
+              <span className="envoi-provisoire" title={chosen.reserves.map(texteMoteur).join(" · ")}>
                 {t("envoi.provisoire")}
               </span>
             )}
@@ -316,7 +317,7 @@ export function EnvoiView({
               <h4>{t("envoi.reserves")}</h4>
               <ul>
                 {report.reserves!.map((r, i) => (
-                  <li key={i}>{r}</li>
+                  <li key={i}>{texteMoteur(r)}</li>
                 ))}
               </ul>
             </div>
@@ -324,7 +325,7 @@ export function EnvoiView({
           {(report.notes?.length ?? 0) > 0 && (
             <div className="envoi-notes">
               {report.notes!.map((n, i) => (
-                <p key={i}>{n}</p>
+                <p key={i}>{texteMoteur(n)}</p>
               ))}
             </div>
           )}
@@ -428,8 +429,8 @@ function DefautLigne({ d, onJump }: { d: Defaut; onJump: (n: number) => void }) 
           ? t("envoi.defaut.planche", { n: d.planche })
           : t("envoi.defaut.album")}
       </span>
-      <span className="envoi-defaut-cause">{d.cause}</span>
-      <span className="envoi-defaut-remede">{d.remede}</span>
+      <span className="envoi-defaut-cause">{phraseDefaut(d, "cause")}</span>
+      <span className="envoi-defaut-remede">{phraseDefaut(d, "remede")}</span>
     </>
   );
   const cls = "envoi-defaut" + (d.bloquant ? " bloquant" : "");
@@ -462,7 +463,7 @@ function ResolutionLigne({
   const cell = d.case!;
   const ppi = ppiDe(d);
   return (
-    <div className="envoi-defaut bloquant envoi-resolution" title={d.cause}>
+    <div className="envoi-defaut bloquant envoi-resolution" title={phraseDefaut(d, "cause")}>
       <span className="envoi-resolution-vignette">
         <LazyThumb src={d.src!} />
       </span>

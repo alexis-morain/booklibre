@@ -145,6 +145,7 @@ import { CoverView } from "./CoverView";
 import { EnvoiView } from "./EnvoiView";
 import { Cle, FR, langue, t, useLangue } from "./i18n";
 import { jusquAuRendu } from "./mesure";
+import { aboutDensite, aboutFormat, nomDensite } from "./moteur";
 import { RaccourcisView } from "./Raccourcis";
 import { BasculeView } from "./BasculeView";
 import { chargerFace, chargerFacesObjet, oublierFacesObjet, setAbsents } from "./font";
@@ -3884,8 +3885,8 @@ function Empty({
                         onClick={() => setDensite(d.id)}
                         aria-pressed={d.id === densite}
                       >
-                        <span className="densite-nom">{d.nom}</span>
-                        <span className="densite-about">{d.about}</span>
+                        <span className="densite-nom">{nomDensite(d)}</span>
+                        <span className="densite-about">{aboutDensite(d)}</span>
                         <DensiteApercu photos={d.photos_par_planche} />
                       </button>
                     ))}
@@ -3978,7 +3979,7 @@ function FormatCard({
       type="button"
       className={"format-card" + (active ? " active" : "")}
       onClick={onPick}
-      title={f.about}
+      title={aboutFormat(f)}
     >
       <span className="format-preview">
         <span className="format-page" style={{ width: pageW, height: pageH }} />
@@ -4029,7 +4030,7 @@ function FormatSpreadPreview({ f }: { f: FormatPreset }) {
         <strong>
           {cm(f.w)} × {cm(f.h)} cm
         </strong>{" "}
-        {t("setup.la.page")} · {f.about}
+        {t("setup.la.page")} · {aboutFormat(f)}
       </figcaption>
     </figure>
   );

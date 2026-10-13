@@ -107,6 +107,10 @@ pub struct VarianteResume {
     pub id: String,
     pub nom: String,
     pub about: String,
+    /// Le rythme de la proposition, par son identifiant : `nom` et `about` de
+    /// « autre-rythme » sont ceux du rythme, et l'app les écrit en anglais
+    /// depuis lui, pas depuis la phrase française.
+    pub densite: &'static str,
     pub planches: usize,
     pub photos: usize,
     /// Sources of one photo from three spreads spread across the book, for
@@ -130,6 +134,7 @@ impl VarianteResume {
             id: spec.id.clone(),
             nom: spec.nom.clone(),
             about: spec.about.clone(),
+            densite: spec.densite.id(),
             planches: album.spreads.len(),
             photos,
             apercu,

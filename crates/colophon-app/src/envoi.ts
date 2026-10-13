@@ -66,10 +66,12 @@ export function actionsDefaut(d: Defaut, album: Album, reserveVide: boolean): Ac
   return reserveVide ? ["voir", "retirer"] : ["voir", "remplacer", "retirer"];
 }
 
-/** La résolution qu'un défaut `resolution` mesure, lue dans sa cause : le
- *  moteur ne la porte pas en champ, et le prévol n'est pas à toucher pour
- *  ça. Null quand la cause ne la dit pas. */
+/** La résolution qu'un défaut `resolution` mesure : la valeur que le moteur
+ *  donne avec sa phrase, sinon lue dans la cause, pour un moteur plus ancien
+ *  que la fenêtre. Null quand ni l'une ni l'autre ne la dit. */
 export function ppiDe(d: Defaut): number | null {
+  const valeur = d.phrase?.valeurs?.ppi;
+  if (valeur !== undefined && /^\d+$/.test(valeur)) return Number(valeur);
   const m = / (\d+) ppi /.exec(d.cause);
   return m ? Number(m[1]) : null;
 }

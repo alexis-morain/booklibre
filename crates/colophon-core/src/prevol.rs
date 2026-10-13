@@ -16,7 +16,7 @@ use crate::{cover, heic, imposition, meta, pdf, print, scene};
 use anyhow::{Context, Result};
 use rayon::prelude::*;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -37,6 +37,111 @@ pub struct Defaut {
     pub cause: String,
     /// The gesture that fixes it, in the editor.
     pub remede: String,
+    /// La même chose en codes, pour qui écrit dans une autre langue.
+    pub phrase: Phrase,
+}
+
+/// Ce que disent `cause` et `remede`, en codes et en valeurs.
+///
+/// Le français du moteur reste la phrase de référence, celle que lisent la
+/// ligne de commande et les tests ; l'application en écrit l'anglais depuis
+/// ces codes (`moteur.ts`), sans jamais relire une phrase française pour en
+/// tirer un nombre. Les valeurs sont **déjà formatées**, à la précision de la
+/// phrase française : un nombre arrondi deux fois, une fois par langue, finit
+/// par ne pas dire la même chose dans les deux.
+#[derive(Debug, Serialize)]
+pub struct Phrase {
+    pub cause: &'static str,
+    pub remede: &'static str,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub valeurs: BTreeMap<&'static str, String>,
+}
+
+/// Chaque code de phrase, et les valeurs qu'il lit. La table est la seule
+/// liste : [`phrase`] refuse en test un code qu'elle ne porte pas ou une
+/// valeur qu'elle n'annonce pas, et `codes::codes_json` la donne à l'app, dont
+/// un test exige une phrase anglaise par code et aucun trou sans valeur.
+pub const PHRASES: &[(&str, &[&str])] = &[
+    ("pagination.multiple", &["pages", "imprimeur", "pas"]),
+    ("pagination.bornes", &["pages", "imprimeur", "min", "max"]),
+    ("pagination.decocher_colophon", &[]),
+    ("pagination.decocher_garde", &[]),
+    ("pagination.ajouter", &["planches_min"]),
+    ("pagination.ajuster", &["planches_min", "planches_max"]),
+    ("imposition.objet", &["imprimeur"]),
+    ("imposition.objets", &["imprimeur", "objets"]),
+    ("imposition.garde", &[]),
+    ("fond_perdu", &["album_mm", "imprimeur", "requis_mm"]),
+    ("fond_perdu.recomposer", &[]),
+    ("espace", &["imprimeur", "intent"]),
+    ("espace.choisir", &[]),
+    ("conformite", &["imprimeur"]),
+    ("conformite.choisir", &[]),
+    ("resolution", &["src", "ppi", "imprimeur", "min_ppi"]),
+    ("resolution.case", &[]),
+    ("zone_sure", &["marge_mm", "imprimeur", "sure_mm"]),
+    ("zone_sure.retirer", &[]),
+    ("objet_coupe", &["n", "depasse_mm"]),
+    ("objet_coupe.deplacer", &[]),
+    ("objet_pli", &["n"]),
+    ("objet_pli.glisser", &[]),
+    ("couverture_resolution", &["src", "ppi", "w_mm", "h_mm", "imprimeur", "min_ppi"]),
+    ("couverture_resolution.choisir", &[]),
+    ("couverture_vide.titre", &[]),
+    ("couverture_vide.dossier", &[]),
+    ("couverture_vide.choisir", &[]),
+    ("dos_nu", &["dos_mm", "min_mm"]),
+    ("dos_nu.ajouter", &[]),
+    ("dos", &["dos_mm", "imprimeur"]),
+    ("dos.confirmer", &[]),
+    ("fichier.illisible", &["fichier", "pourquoi"]),
+    ("fichier.page", &["fichier", "n", "imprimeur", "attendues"]),
+    ("fichier.pages", &["fichier", "n", "imprimeur", "attendues"]),
+    ("fichier.taille", &["fichier", "page", "w_mm", "h_mm", "imprimeur", "attendu_w_mm", "attendu_h_mm"]),
+    ("fichier_profil", &["fichier", "rendu", "profil", "imprimeur"]),
+    ("fichier_perime.album", &["fichier", "avant", "maintenant"]),
+    ("fichier_perime.octets", &["fichier", "octets", "rendu"]),
+    ("fichier.refaire", &["commande", "profil"]),
+];
+
+/// Les deux notes du rapport. Des textes fixes : l'app les écrit en anglais
+/// en les reconnaissant mot pour mot, et `codes::codes_json` les lui donne
+/// pour qu'un mot changé ici rougisse là-bas.
+pub const NOTE_PDF_X4: &str = "conformité PDF/X-4 déclarée : polices incorporées, OutputIntent \
+     sRGB avec profil ICC, XMP et TrimBox vérifiés à chaque export. Le contrôle indépendant \
+     disponible est PDF/A-2b (veraPDF), qui couvre le même socle ; le verdict PDF/X-4 lui-même \
+     revient au prévol de l'imprimeur.";
+pub const NOTE_PHOTOS_INTROUVABLES: &str =
+    "dossier de photos introuvable : la résolution effective n'a pas pu être vérifiée";
+
+/// Une phrase, ses valeurs vérifiées contre [`PHRASES`] en test : une valeur
+/// oubliée laisserait un trou dans l'anglais, une valeur de trop n'irait nulle
+/// part.
+fn phrase(
+    cause: &'static str,
+    remede: &'static str,
+    valeurs: Vec<(&'static str, String)>,
+) -> Phrase {
+    let valeurs: BTreeMap<&'static str, String> = valeurs.into_iter().collect();
+    if cfg!(debug_assertions) {
+        let mut attendues: Vec<&str> = [cause, remede]
+            .iter()
+            .flat_map(|code| {
+                PHRASES
+                    .iter()
+                    .find(|(c, _)| c == code)
+                    .unwrap_or_else(|| panic!("code de phrase inconnu : {code}"))
+                    .1
+                    .iter()
+                    .copied()
+            })
+            .collect();
+        attendues.sort_unstable();
+        attendues.dedup();
+        let portees: Vec<&str> = valeurs.keys().copied().collect();
+        assert_eq!(portees, attendues, "valeurs de {cause} / {remede}");
+    }
+    Phrase { cause, remede, valeurs }
 }
 
 /// The sheet handed to whoever receives the PDF. Everything a printer asks
@@ -304,7 +409,32 @@ pub fn check(
     // 1. Pagination. A binding folds sheets: an odd count does not exist, and
     // every press has a range it will not leave.
     if !profil.pagination_ok(pages_fichier) {
-        let cause = if pages_fichier % profil.pas_pagination != 0 {
+        let multiple = pages_fichier % profil.pas_pagination != 0;
+        let decochable =
+            page_decochable(album).filter(|_| profil.pagination_ok(pages_fichier - 2));
+        let mut valeurs = vec![("pages", pages_fichier.to_string()), ("imprimeur", profil.nom.into())];
+        let code_cause = if multiple {
+            valeurs.push(("pas", profil.pas_pagination.to_string()));
+            "pagination.multiple"
+        } else {
+            valeurs.push(("min", profil.pages_min.to_string()));
+            valeurs.push(("max", profil.pages_max.to_string()));
+            "pagination.bornes"
+        };
+        let code_remede = match decochable {
+            Some("de colophon") => "pagination.decocher_colophon",
+            Some(_) => "pagination.decocher_garde",
+            None if pages_fichier < profil.pages_min => {
+                valeurs.push(("planches_min", profil.pages_min.div_ceil(2).to_string()));
+                "pagination.ajouter"
+            }
+            None => {
+                valeurs.push(("planches_min", (profil.pages_min / 2).to_string()));
+                valeurs.push(("planches_max", (profil.pages_max / 2).to_string()));
+                "pagination.ajuster"
+            }
+        };
+        let cause = if multiple {
             format!(
                 "le fichier fait {pages_fichier} pages, or {} ne relie que des multiples de {}",
                 profil.nom, profil.pas_pagination
@@ -326,9 +456,7 @@ pub fn check(
             // exactly on the upper bound is pushed over by it. Say so where
             // it is read, rather than letting somebody hunt for two pages
             // through a book of a hundred spreads.
-            remede: if let Some(page) = page_decochable(album)
-                .filter(|_| profil.pagination_ok(pages_fichier - 2))
-            {
+            remede: if let Some(page) = decochable {
                 format!("décochez la page {page} dans l'écran Envoi : elle vaut deux pages, et sans elle le compte tombe juste")
             } else if pages_fichier < profil.pages_min {
                 // Sous le plancher, retirer n'a aucun sens. Un rythme plus
@@ -345,6 +473,7 @@ pub fn check(
                     profil.pages_max / 2
                 )
             },
+            phrase: phrase(code_cause, code_remede, valeurs),
         });
     }
 
@@ -375,6 +504,19 @@ pub fn check(
                     remede: "cochez la page de garde dans l'écran Envoi : elle se pose en tête et \
                              sa page de gauche reste blanche"
                         .into(),
+                    phrase: if objets > 1 {
+                        phrase(
+                            "imposition.objets",
+                            "imposition.garde",
+                            vec![("imprimeur", profil.nom.into()), ("objets", objets.to_string())],
+                        )
+                    } else {
+                        phrase(
+                            "imposition.objet",
+                            "imposition.garde",
+                            vec![("imprimeur", profil.nom.into())],
+                        )
+                    },
                 });
             }
         }
@@ -395,6 +537,15 @@ pub fn check(
                 album.bleed_mm, profil.nom, requis
             ),
             remede: "recomposez l'album au fond perdu du profil : le fond perdu est fixé à la composition".into(),
+            phrase: phrase(
+                "fond_perdu",
+                "fond_perdu.recomposer",
+                vec![
+                    ("album_mm", format!("{:.1}", album.bleed_mm)),
+                    ("imprimeur", profil.nom.into()),
+                    ("requis_mm", format!("{requis:.1}")),
+                ],
+            ),
         });
     }
 
@@ -413,6 +564,14 @@ pub fn check(
                 profil.espace.output_intent()
             ),
             remede: "choisissez un profil qui accepte le RVB, ou demandez à l'imprimeur de convertir".into(),
+            phrase: phrase(
+                "espace",
+                "espace.choisir",
+                vec![
+                    ("imprimeur", profil.nom.into()),
+                    ("intent", profil.espace.output_intent().into()),
+                ],
+            ),
         });
     }
 
@@ -431,28 +590,20 @@ pub fn check(
                 profil.nom
             ),
             remede: "choisissez un profil sans conformité PDF/X, ou demandez à l'imprimeur s'il accepte un PDF simple en RVB".into(),
+            phrase: phrase("conformite", "conformite.choisir", vec![("imprimeur", profil.nom.into())]),
         });
     } else if profil.pdf_x == PdfX::X4 {
         // The declaration is there and measured, but no free validator
         // certifies PDF/X-4: veraPDF ships PDF/A profiles only. Saying which
         // is which here costs one line and stops the spec sheet from
         // promising a verdict nobody delivered.
-        notes.push(
-            "conformité PDF/X-4 déclarée : polices incorporées, OutputIntent sRGB avec profil ICC, \
-             XMP et TrimBox vérifiés à chaque export. Le contrôle indépendant disponible est \
-             PDF/A-2b (veraPDF), qui couvre le même socle ; le verdict PDF/X-4 lui-même revient au \
-             prévol de l'imprimeur."
-                .into(),
-        );
+        notes.push(NOTE_PDF_X4.into());
     }
 
     // 5. Resolution, cell by cell. The one defect nobody sees on screen and
     // everybody sees on paper.
     if dims.is_empty() && album.spreads.iter().any(|s| !s.slots.is_empty()) {
-        notes.push(
-            "dossier de photos introuvable : la résolution effective n'a pas pu être vérifiée"
-                .into(),
-        );
+        notes.push(NOTE_PHOTOS_INTROUVABLES.into());
     }
     for (si, spread) in album.spreads.iter().enumerate() {
         let scene = scene::Scene::of(spread, &g);
@@ -480,6 +631,16 @@ pub fn check(
                         slot.src, profil.nom, profil.min_ppi
                     ),
                     remede: "mettez-la dans une case plus petite, remplacez-la, ou retirez-la".into(),
+                    phrase: phrase(
+                        "resolution",
+                        "resolution.case",
+                        vec![
+                            ("src", slot.src.clone()),
+                            ("ppi", format!("{ppi:.0}")),
+                            ("imprimeur", profil.nom.into()),
+                            ("min_ppi", format!("{:.0}", profil.min_ppi)),
+                        ],
+                    ),
                 });
             }
         }
@@ -537,6 +698,15 @@ pub fn check(
                          convient pas : sa ligne de base vient de la marge du format, ni la \
                          raccourcir ni changer de gabarit ne la déplace"
                     .into(),
+                phrase: phrase(
+                    "zone_sure",
+                    "zone_sure.retirer",
+                    vec![
+                        ("marge_mm", format!("{marge:.1}")),
+                        ("imprimeur", profil.nom.into()),
+                        ("sure_mm", format!("{:.1}", profil.safe_mm)),
+                    ],
+                ),
             });
         }
     }
@@ -570,6 +740,11 @@ pub fn check(
                         -marge
                     ),
                     remede: "déplacez l'objet vers l'intérieur de la page, ou réduisez-le".into(),
+                    phrase: phrase(
+                        "objet_coupe",
+                        "objet_coupe.deplacer",
+                        vec![("n", (index + 1).to_string()), ("depasse_mm", format!("{:.1}", -marge))],
+                    ),
                 });
             }
             if scene::traverse_le_pli(&objet.rect, objet.angle, &g) {
@@ -585,6 +760,7 @@ pub fn check(
                         index + 1
                     ),
                     remede: "glissez l'objet d'un seul côté du pli : l'éditeur y bute tout seul".into(),
+                    phrase: phrase("objet_pli", "objet_pli.glisser", vec![("n", (index + 1).to_string())]),
                 });
             }
         }
@@ -625,6 +801,18 @@ pub fn check(
                     remede: "choisissez une photo plus définie pour la couverture : la \
                              feuille est plus grande que la page, elle en demande davantage"
                         .into(),
+                    phrase: phrase(
+                        "couverture_resolution",
+                        "couverture_resolution.choisir",
+                        vec![
+                            ("src", slot.src.clone()),
+                            ("ppi", format!("{ppi:.0}")),
+                            ("w_mm", format!("{:.0}", rect.w)),
+                            ("h_mm", format!("{:.0}", rect.h)),
+                            ("imprimeur", profil.nom.into()),
+                            ("min_ppi", format!("{:.0}", profil.min_ppi)),
+                        ],
+                    ),
                 });
             }
         }
@@ -656,6 +844,11 @@ pub fn check(
                         .into()
                 },
                 remede: "choisissez une photo dans Couverture".into(),
+                phrase: phrase(
+                    if titree { "couverture_vide.titre" } else { "couverture_vide.dossier" },
+                    "couverture_vide.choisir",
+                    vec![],
+                ),
             });
         }
     }
@@ -683,6 +876,14 @@ pub fn check(
                     remede: "ajoutez des planches : le dos s'épaissit avec le livre, et le \
                              titre s'y pose tout seul"
                         .into(),
+                    phrase: phrase(
+                        "dos_nu",
+                        "dos_nu.ajouter",
+                        vec![
+                            ("dos_mm", format!("{:.1}", spine.w)),
+                            ("min_mm", format!("{:.0}", cover::SPINE_TEXT_MIN_MM)),
+                        ],
+                    ),
                 });
             }
         }
@@ -704,6 +905,11 @@ pub fn check(
                     profil.nom
                 ),
                 remede: "confirmez la formule auprès de l'imprimeur avant un tirage, ou mesurez sur le premier album reçu".into(),
+                phrase: phrase(
+                    "dos",
+                    "dos.confirmer",
+                    vec![("dos_mm", format!("{d:.1}")), ("imprimeur", profil.nom.into())],
+                ),
             });
         }
     }
@@ -725,7 +931,7 @@ pub fn check(
     // ce qu'un fournisseur préfère avertit.
     if let Some(pose) = &poses.interieur {
         let attendues = pages_attendues(album, profil, &g);
-        if let Some((cause, remede)) =
+        if let Some((cause, remede, phrase)) =
             confronter(&pose.lecture, &attendues, LIVRAISON_INTERIEUR, "--print", profil)
         {
             defauts.push(Defaut {
@@ -736,6 +942,7 @@ pub fn check(
                 src: None,
                 cause,
                 remede,
+                phrase,
             });
         }
     }
@@ -747,7 +954,7 @@ pub fn check(
     if profil.fichiers == Fichiers::Deux {
         if let Some(pose) = &poses.couverture {
             let attendues = vec![[cg.media_w, cg.media_h]];
-            if let Some((cause, remede)) =
+            if let Some((cause, remede, phrase)) =
                 confronter(&pose.lecture, &attendues, LIVRAISON_COUVERTURE, "--cover", profil)
             {
                 defauts.push(Defaut {
@@ -758,6 +965,7 @@ pub fn check(
                     src: None,
                     cause,
                     remede,
+                    phrase,
                 });
             }
         }
@@ -796,7 +1004,7 @@ pub fn check(
         // manifeste garde le souvenir d'un rendu.
         let Some(pose) = pose else { continue };
         let Some(note) = poses.manifeste.artefact(fichier) else { continue };
-        if let Some((regle, cause, remede)) =
+        if let Some((regle, cause, remede, phrase)) =
             confronter_manifeste(pose, note, &empreinte, fichier, commande, profil)
         {
             defauts.push(Defaut {
@@ -807,6 +1015,7 @@ pub fn check(
                 src: None,
                 cause,
                 remede,
+                phrase,
             });
         }
     }
@@ -925,14 +1134,21 @@ fn confronter(
     fichier: &str,
     commande: &str,
     profil: &PrinterProfile,
-) -> Option<(String, String)> {
+) -> Option<(String, String, Phrase)> {
     let repare =
         || format!("relancez {commande} --profil {} pour le refaire, ou retirez-le du dossier", profil.id);
+    let refaire = |code, mut valeurs: Vec<(&'static str, String)>| {
+        valeurs.push(("fichier", fichier.to_string()));
+        valeurs.push(("commande", commande.to_string()));
+        valeurs.push(("profil", profil.id.to_string()));
+        phrase(code, "fichier.refaire", valeurs)
+    };
     let pages = match lecture {
         Lecture::Illisible(pourquoi) => {
             return Some((
                 format!("{fichier} est posé à côté de l'album et ne se lit pas : {pourquoi}"),
                 repare(),
+                refaire("fichier.illisible", vec![("pourquoi", pourquoi.clone())]),
             ))
         }
         Lecture::Pages(pages) => pages,
@@ -947,6 +1163,25 @@ fn confronter(
                 attendues.len()
             ),
             repare(),
+            if pages.len() > 1 {
+                refaire(
+                    "fichier.pages",
+                    vec![
+                        ("n", pages.len().to_string()),
+                        ("imprimeur", profil.nom.into()),
+                        ("attendues", attendues.len().to_string()),
+                    ],
+                )
+            } else {
+                refaire(
+                    "fichier.page",
+                    vec![
+                        ("n", pages.len().to_string()),
+                        ("imprimeur", profil.nom.into()),
+                        ("attendues", attendues.len().to_string()),
+                    ],
+                )
+            },
         ));
     }
     let (i, page) = pages
@@ -968,6 +1203,17 @@ fn confronter(
             a[1]
         ),
         repare(),
+        refaire(
+            "fichier.taille",
+            vec![
+                ("page", (i + 1).to_string()),
+                ("w_mm", format!("{:.2}", page[0])),
+                ("h_mm", format!("{:.2}", page[1])),
+                ("imprimeur", profil.nom.into()),
+                ("attendu_w_mm", format!("{:.2}", a[0])),
+                ("attendu_h_mm", format!("{:.2}", a[1])),
+            ],
+        ),
     ))
 }
 
@@ -989,12 +1235,18 @@ fn confronter_manifeste(
     fichier: &str,
     commande: &str,
     profil: &PrinterProfile,
-) -> Option<(&'static str, String, String)> {
+) -> Option<(&'static str, String, String, Phrase)> {
     let repare = || {
         format!(
             "relancez {commande} --profil {} pour le refaire, ou retirez-le du dossier",
             profil.id
         )
+    };
+    let refaire = |code, mut valeurs: Vec<(&'static str, String)>| {
+        valeurs.push(("fichier", fichier.to_string()));
+        valeurs.push(("commande", commande.to_string()));
+        valeurs.push(("profil", profil.id.to_string()));
+        phrase(code, "fichier.refaire", valeurs)
     };
     if note.profil != profil.id {
         return Some((
@@ -1005,6 +1257,10 @@ fn confronter_manifeste(
                 note.profil, profil.id, profil.nom
             ),
             repare(),
+            refaire(
+                "fichier_profil",
+                vec![("rendu", note.profil.clone()), ("imprimeur", profil.nom.into())],
+            ),
         ));
     }
     if note.album != empreinte {
@@ -1016,6 +1272,10 @@ fn confronter_manifeste(
                 note.album
             ),
             repare(),
+            refaire(
+                "fichier_perime.album",
+                vec![("avant", note.album.clone()), ("maintenant", empreinte.to_string())],
+            ),
         ));
     }
     if note.octets != pose.octets {
@@ -1027,6 +1287,10 @@ fn confronter_manifeste(
                 pose.octets, note.octets
             ),
             repare(),
+            refaire(
+                "fichier_perime.octets",
+                vec![("octets", pose.octets.to_string()), ("rendu", note.octets.to_string())],
+            ),
         ));
     }
     None
