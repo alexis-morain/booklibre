@@ -36,9 +36,12 @@ nothing in these notes will say otherwise until a release announces it. A
 debug build points at a test relay; a release built from source with
 `COLOPHON_RELAIS_REEL` set points at that address.
 
-A build that carries a relay sends nothing to it until you click Order, on a
-folder you prepared for Cloudprinter, in the Send panel. From then on, and
-from the Rust process, never from the interface: the delivery country (and
+A build that carries a relay asks it for the list of countries it delivers
+to each time you open the Send panel: an HTTPS request from the Rust
+process, of which the relay sees the IP address and user agent, nothing of
+your album and no identifier. Nothing else goes until you click Order, on a
+folder you prepared for Cloudprinter. From then on, and from the Rust
+process, never from the interface: the delivery country (and
 its state or region where the address requires one), the MD5 checksum and
 the size of each of the two PDFs, the book format and its page count; then
 the two PDFs themselves, `album-print.pdf` and `album-cover.pdf`, uploaded
