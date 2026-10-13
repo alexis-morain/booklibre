@@ -14,8 +14,7 @@
 //! réseau, elle relit le fichier sous le verrou et ne pose que les champs de
 //! l'intention relue ([`relire`]).
 
-use colophon_core::chrono::{DateTime, Duration, Utc};
-use colophon_core::relais::{Erreur, Mode, Relais, Secret};
+use colophon_core::relais::{Abandon, Mode, Relais, Secret};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::Path;
@@ -42,14 +41,7 @@ pub struct IntentionGardee {
     /// le paiement avec lui. Ce n'est pas un secret.
     #[serde(default)]
     pub niveau: Option<String>,
-    /// Le dernier `ouvrir_paiement`, en RFC 3339 : tant que sa session
-    /// Checkout peut encore être payée, l'intention ne s'abandonne pas.
-    #[serde(default)]
-    pub paiement_ouvert_le: Option<String>,
 }
-
-/// La vie d'une session Checkout, que le relais fixe (`DUREE_SESSION_S`).
-pub const DUREE_CHECKOUT_MIN: i64 = 30;
 
 /// Le contenu de `commande.json`.
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -66,14 +58,11 @@ pub struct IntentionVue {
     pub etat: String,
     pub dernier_code: Option<i64>,
     pub niveau: Option<String>,
-    /// Quand « Abandonner » redevient possible, en RFC 3339 : la fin de la
-    /// dernière session de paiement ouverte. Aucune quand rien n'a été ouvert.
-    pub abandon_des: Option<String>,
 }
 
-/// Les trois états que plus rien ne fait bouger (la machine du relais).
+/// Les quatre états que plus rien ne fait bouger (la machine du relais).
 pub fn terminal(etat: &str) -> bool {
-    matches!(etat, "echec_remboursee" | "annulee" | "purgee")
+    matches!(etat, "echec_remboursee" | "annulee" | "purgee" | "abandonnee")
 }
 
 impl Stock {
@@ -150,7 +139,6 @@ impl Stock {
                 etat: i.etat.clone(),
                 dernier_code: i.dernier_code,
                 niveau: i.niveau.clone(),
-                abandon_des: abandon_des(i).map(|d| d.to_rfc3339()),
             })
             .collect()
     }
@@ -213,24 +201,19 @@ pub fn relire(
     Ok(erreur)
 }
 
-/// La fin de la dernière session de paiement ouverte pour `i`.
-fn abandon_des(i: &IntentionGardee) -> Option<DateTime<Utc>> {
-    let ouvert = DateTime::parse_from_rfc3339(i.paiement_ouvert_le.as_deref()?).ok()?;
-    Some(ouvert.with_timezone(&Utc) + Duration::minutes(DUREE_CHECKOUT_MIN))
-}
-
 /// Pourquoi « Abandonner » est refusé. Les codes voyagent jusqu'à l'écran,
 /// qui les dit avec sa phrase.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RefusAbandon {
     /// Les fichiers de l'intention partent en ce moment.
     EnvoiEnCours,
-    /// Une session de paiement ouverte peut encore être payée, jusqu'à cette
-    /// date.
-    TropTot(DateTime<Utc>),
-    /// Le relais ne répond pas : rien ne prouve que rien n'a été payé.
+    /// Un autre abandon de la même intention attend le relais.
+    AbandonEnCours,
+    /// Le relais ou Stripe ne répond pas, ou hors contrat : rien ne prouve
+    /// que la session ne peut plus être payée.
     Injoignable,
-    /// Le relais rend un état payé ou au-delà.
+    /// Le relais rend un état payé ou au-delà, ou l'état a bougé ici pendant
+    /// l'appel.
     Avancee(String),
     Inconnue,
 }
@@ -239,7 +222,7 @@ impl std::fmt::Display for RefusAbandon {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             RefusAbandon::EnvoiEnCours => f.write_str("abandon_envoi_en_cours"),
-            RefusAbandon::TropTot(d) => write!(f, "abandon_trop_tot {}", d.to_rfc3339()),
+            RefusAbandon::AbandonEnCours => f.write_str("abandon_en_cours"),
             RefusAbandon::Injoignable => f.write_str("abandon_injoignable"),
             RefusAbandon::Avancee(e) => write!(f, "abandon_refuse {e}"),
             RefusAbandon::Inconnue => f.write_str("commande inconnue"),
@@ -247,23 +230,32 @@ impl std::fmt::Display for RefusAbandon {
     }
 }
 
-/// « Abandonner » : oublie l'intention `id` localement, **après** que le
-/// relais a confirmé qu'elle n'est pas payée. Refusé pendant l'envoi de ses
-/// fichiers, tant qu'une session de paiement ouverte vit encore, quand le
-/// relais ne répond pas, et quand il rend un état payé ou au-delà, qu'on
-/// garde alors. Le relais ne purge que des intentions non payées : `purgee`
-/// et un 404 permettent l'oubli.
+/// « Abandonner » : demande au relais d'abandonner l'intention `id`
+/// (`POST /abandon`, qui expire d'abord chez Stripe toute session ouverte),
+/// puis l'oublie localement sur son 200 ou son 404. Aucune horloge : seul le
+/// relais dit qu'une session ne peut plus être payée. Sur 409, l'intention
+/// reste avec l'état relu ; sur 502, une panne ou une réponse hors contrat,
+/// elle reste telle quelle. Refusé avant tout appel pendant l'envoi de ses
+/// fichiers, et pendant un autre abandon d'elle.
+///
+/// L'oubli se fait dans la fermeture de [`modifier`], sous le verrou, et
+/// seulement si l'état local n'a pas bougé depuis la lecture d'avant l'appel :
+/// une relecture qui a posé `payee` entre-temps garde l'intention.
 pub fn abandonner(
     verrou: &Mutex<()>,
     dir: &Path,
     relais: &Relais<'_>,
     mode: Option<Mode>,
-    envois: &EnvoisEnCours,
+    envois: &EnCours,
+    abandons: &EnCours,
     id: &str,
-    maintenant: DateTime<Utc>,
 ) -> Result<(), RefusAbandon> {
-    // Le marqueur reste pris jusqu'à l'oubli : aucun envoi ne démarre entre.
-    let Some(_jeton) = envois.prendre(id) else {
+    let Some(_abandon) = abandons.prendre(id) else {
+        return Err(RefusAbandon::AbandonEnCours);
+    };
+    // Le marqueur d'envoi reste pris jusqu'à l'oubli : aucun envoi ne
+    // démarre entre.
+    let Some(_envoi) = envois.prendre(id) else {
         return Err(RefusAbandon::EnvoiEnCours);
     };
     let i = {
@@ -273,50 +265,50 @@ pub fn abandonner(
             .and_then(|s| s.intentions.into_iter().find(|i| i.id == id && Some(i.mode) == mode))
             .ok_or(RefusAbandon::Inconnue)?
     };
-    if let Some(des) = abandon_des(&i) {
-        if maintenant < des {
-            return Err(RefusAbandon::TropTot(des));
+    match relais.abandonner(&i.id, &i.secret) {
+        Ok(Abandon::Fait(_) | Abandon::Inconnue) => modifier(verrou, dir, |s| {
+            Ok(match s.intentions.iter().find(|x| x.id == id) {
+                Some(x) if x.etat != i.etat => Err(RefusAbandon::Avancee(x.etat.clone())),
+                _ => {
+                    s.oublier(id);
+                    Ok(())
+                }
+            })
+        })
+        .map_err(|_| RefusAbandon::Injoignable)?,
+        Ok(Abandon::Avancee(etat)) => {
+            let _ = modifier(verrou, dir, |s| {
+                s.poser(id, &etat, None);
+                Ok(())
+            });
+            Err(RefusAbandon::Avancee(etat))
         }
+        Ok(Abandon::StripeInjoignable) | Err(_) => Err(RefusAbandon::Injoignable),
     }
-    let lu = relais.etat(&i.id, &i.secret);
-    let oubliable = match &lu {
-        Ok(e) => matches!(e.etat.as_str(), "attente_fichiers" | "attente_paiement" | "purgee"),
-        Err(Erreur::Relais { statut: 404, .. }) => true,
-        Err(_) => return Err(RefusAbandon::Injoignable),
-    };
-    let r = modifier(verrou, dir, |s| {
-        if oubliable {
-            s.oublier(id);
-            return Ok(Ok(()));
-        }
-        let e = lu.as_ref().expect("un état lu");
-        s.poser(id, &e.etat, e.dernier_code);
-        Ok(Err(RefusAbandon::Avancee(e.etat.clone())))
-    });
-    r.map_err(|_| RefusAbandon::Injoignable)?
 }
 
-/// Les intentions dont les fichiers partent en ce moment : un second envoi
-/// de la même intention est refusé (`envoi_en_cours`) sans rien toucher.
+/// Les intentions sur lesquelles un geste est en cours : l'envoi de leurs
+/// fichiers, ou leur abandon. Un second geste de la même sorte sur la même
+/// intention est refusé sans rien toucher.
 #[derive(Default)]
-pub struct EnvoisEnCours(Mutex<HashSet<String>>);
+pub struct EnCours(Mutex<HashSet<String>>);
 
-/// Le marqueur d'un envoi ; il se retire en tombant.
+/// Le marqueur d'un geste en cours ; il se retire en tombant.
 pub struct Jeton<'a> {
-    envois: &'a EnvoisEnCours,
+    en_cours: &'a EnCours,
     id: String,
 }
 
-impl EnvoisEnCours {
+impl EnCours {
     pub fn prendre(&self, id: &str) -> Option<Jeton<'_>> {
         let mut g = self.0.lock().unwrap_or_else(|e| e.into_inner());
-        g.insert(id.to_string()).then(|| Jeton { envois: self, id: id.to_string() })
+        g.insert(id.to_string()).then(|| Jeton { en_cours: self, id: id.to_string() })
     }
 }
 
 impl Drop for Jeton<'_> {
     fn drop(&mut self) {
-        self.envois.0.lock().unwrap_or_else(|e| e.into_inner()).remove(&self.id);
+        self.en_cours.0.lock().unwrap_or_else(|e| e.into_inner()).remove(&self.id);
     }
 }
 
@@ -359,7 +351,6 @@ mod tests {
             etat: etat.into(),
             dernier_code: None,
             niveau: None,
-            paiement_ouvert_le: None,
         }
     }
 
@@ -400,8 +391,8 @@ mod tests {
     }
 
     #[test]
-    fn trois_etats_sont_terminaux() {
-        for e in ["echec_remboursee", "annulee", "purgee"] {
+    fn quatre_etats_sont_terminaux() {
+        for e in ["echec_remboursee", "annulee", "purgee", "abandonnee"] {
             assert!(terminal(e), "{e}");
         }
         for e in ["attente_fichiers", "attente_paiement", "payee", "commandee", "remboursement_en_cours", "annulation_en_cours", "inconnu"] {
@@ -513,7 +504,7 @@ mod tests {
 
     #[test]
     fn un_second_envoi_de_la_meme_intention_est_refuse() {
-        let envois = EnvoisEnCours::default();
+        let envois = EnCours::default();
         let premier = envois.prendre("a").expect("le premier passe");
         assert!(envois.prendre("a").is_none(), "le second est refusé");
         assert!(envois.prendre("b").is_some(), "une autre intention passe");
@@ -521,10 +512,12 @@ mod tests {
         assert!(envois.prendre("a").is_some(), "le marqueur tombe avec l'envoi");
     }
 
-    /// Un relais qui rend un état fixé, ou rien, et compte ses appels.
+    /// Un relais qui rend une réponse fixée, ou rien, et compte ses appels :
+    /// les relectures (GET) et les abandons (POST) à part.
     struct Fixe {
         reponse: Result<(u16, String), String>,
         appels: std::cell::Cell<u32>,
+        abandons: std::cell::Cell<u32>,
     }
 
     impl Fixe {
@@ -532,7 +525,7 @@ mod tests {
             Fixe::rend(Ok((200, format!(r#"{{"etat": "{etat}", "mode": "sandbox"}}"#))))
         }
         fn rend(reponse: Result<(u16, String), String>) -> Fixe {
-            Fixe { reponse, appels: std::cell::Cell::new(0) }
+            Fixe { reponse, appels: std::cell::Cell::new(0), abandons: std::cell::Cell::new(0) }
         }
     }
 
@@ -541,8 +534,10 @@ mod tests {
             self.appels.set(self.appels.get() + 1);
             self.reponse.clone()
         }
-        fn post_json(&self, _: &str, _: Option<&Secret>, _: &serde_json::Value) -> Result<(u16, String), String> {
-            unreachable!()
+        fn post_json(&self, url: &str, _: Option<&Secret>, _: &serde_json::Value) -> Result<(u16, String), String> {
+            assert!(url.ends_with("/v1/intentions/a/abandon"), "{url}");
+            self.abandons.set(self.abandons.get() + 1);
+            self.reponse.clone()
         }
         fn put_fichier(
             &self,
@@ -553,22 +548,20 @@ mod tests {
         }
     }
 
-    fn maintenant() -> DateTime<Utc> {
-        DateTime::parse_from_rfc3339("2026-10-10T12:00:00Z").unwrap().with_timezone(&Utc)
-    }
-
     /// Un stock d'une intention `a` dans l'état local `etat`, et son dossier.
-    fn stock_a(nom: &str, etat: &str, ouvert_il_y_a_min: Option<i64>) -> std::path::PathBuf {
+    fn stock_a(nom: &str, etat: &str) -> std::path::PathBuf {
         let dir = dossier(nom);
-        let mut a = gardee("a", etat);
-        a.paiement_ouvert_le = ouvert_il_y_a_min.map(|m| (maintenant() - Duration::minutes(m)).to_rfc3339());
-        Stock { intentions: vec![a] }.ecrire(&dir).unwrap();
+        Stock { intentions: vec![gardee("a", etat)] }.ecrire(&dir).unwrap();
         dir
     }
 
-    fn abandon(dir: &Path, t: &Fixe, envois: &EnvoisEnCours) -> Result<(), RefusAbandon> {
+    fn abandon_avec(dir: &Path, t: &dyn Transport, envois: &EnCours, abandons: &EnCours) -> Result<(), RefusAbandon> {
         let relais = Relais { base: "https://relais.exemple", transport: t };
-        abandonner(&Mutex::new(()), dir, &relais, Some(Mode::Sandbox), envois, "a", maintenant())
+        abandonner(&Mutex::new(()), dir, &relais, Some(Mode::Sandbox), envois, abandons, "a")
+    }
+
+    fn abandon(dir: &Path, t: &Fixe) -> Result<(), RefusAbandon> {
+        abandon_avec(dir, t, &EnCours::default(), &EnCours::default())
     }
 
     fn reste(dir: &Path) -> Option<String> {
@@ -576,63 +569,152 @@ mod tests {
     }
 
     #[test]
-    fn abandonner_relit_le_relais_et_n_oublie_jamais_une_intention_payee() {
-        let envois = EnvoisEnCours::default();
-        // Payée entre deux relectures : refusé, gardée, état local mis à jour.
-        let dir = stock_a("abandon-payee", "attente_paiement", None);
-        let t = Fixe::etat("payee");
-        assert_eq!(abandon(&dir, &t, &envois), Err(RefusAbandon::Avancee("payee".into())));
-        assert_eq!(t.appels.get(), 1, "le relais est relu avant l'oubli");
-        assert_eq!(reste(&dir).as_deref(), Some("payee"));
-        // Injoignable : refusé, gardée telle quelle.
-        let dir = stock_a("abandon-injoignable", "attente_paiement", None);
-        assert_eq!(abandon(&dir, &Fixe::rend(Err("dns".into())), &envois), Err(RefusAbandon::Injoignable));
-        assert_eq!(reste(&dir).as_deref(), Some("attente_paiement"));
-        // Une erreur du relais autre que 404 ne prouve rien non plus.
-        let dir = stock_a("abandon-502", "attente_paiement", None);
-        let t = Fixe::rend(Ok((502, r#"{"erreur": "interne"}"#.into())));
-        assert_eq!(abandon(&dir, &t, &envois), Err(RefusAbandon::Injoignable));
-        // 404 : le relais l'a purgée, l'oubli est permis.
-        let dir = stock_a("abandon-404", "attente_paiement", None);
-        let t = Fixe::rend(Ok((404, r#"{"erreur": "introuvable"}"#.into())));
-        assert_eq!(abandon(&dir, &t, &envois), Ok(()));
-        assert_eq!(reste(&dir), None);
-        // `purgee` et `attente_fichiers` aussi.
-        for etat in ["purgee", "attente_fichiers", "attente_paiement"] {
-            let dir = stock_a(&format!("abandon-{etat}"), "attente_paiement", None);
-            assert_eq!(abandon(&dir, &Fixe::etat(etat), &envois), Ok(()), "{etat}");
-            assert_eq!(reste(&dir), None, "{etat}");
+    fn abandonner_demande_au_relais_et_n_oublie_que_sur_200_ou_404() {
+        // 200 : la session ne peut plus être payée, l'intention quitte le
+        // stock. 404 : le relais ne la connaît plus.
+        for (nom, reponse) in [
+            ("abandonnee", (200, r#"{"etat": "abandonnee"}"#)),
+            ("purgee", (200, r#"{"etat": "purgee"}"#)),
+            ("404", (404, r#"{"erreur": "introuvable"}"#)),
+        ] {
+            let dir = stock_a(&format!("abandon-{nom}"), "attente_paiement");
+            let t = Fixe::rend(Ok((reponse.0, reponse.1.into())));
+            assert_eq!(abandon(&dir, &t), Ok(()), "{nom}");
+            assert_eq!((t.abandons.get(), t.appels.get()), (1, 0), "la route, et aucune relecture");
+            assert_eq!(reste(&dir), None, "{nom}");
         }
+        // 409 : payée ou au-delà, gardée, avec l'état relu posé.
+        let dir = stock_a("abandon-409", "attente_paiement");
+        let t = Fixe::rend(Ok((409, r#"{"erreur": "avancee", "etat": "payee"}"#.into())));
+        assert_eq!(abandon(&dir, &t), Err(RefusAbandon::Avancee("payee".into())));
+        assert_eq!(reste(&dir).as_deref(), Some("payee"));
+        // 502, le réseau, tout le reste : rien n'est prouvé, gardée telle quelle.
+        for (nom, reponse) in [
+            ("502", Ok((502, r#"{"erreur": "stripe_injoignable"}"#.to_string()))),
+            ("502-html", Ok((502, "<html>Bad gateway</html>".to_string()))),
+            ("500", Ok((500, r#"{"erreur": "interne"}"#.to_string()))),
+            ("200-hors-contrat", Ok((200, r#"{"etat": "attente_paiement"}"#.to_string()))),
+            ("dns", Err("dns".to_string())),
+        ] {
+            let dir = stock_a(&format!("abandon-{nom}"), "attente_paiement");
+            assert_eq!(abandon(&dir, &Fixe::rend(reponse)), Err(RefusAbandon::Injoignable), "{nom}");
+            assert_eq!(reste(&dir).as_deref(), Some("attente_paiement"), "{nom}");
+        }
+        assert_eq!(RefusAbandon::Injoignable.to_string(), "abandon_injoignable");
+        assert_eq!(RefusAbandon::Avancee("payee".into()).to_string(), "abandon_refuse payee");
     }
 
     #[test]
-    fn abandonner_attend_la_fin_de_la_session_de_paiement() {
-        let envois = EnvoisEnCours::default();
-        let dir = stock_a("abandon-29", "attente_paiement", Some(29));
-        let t = Fixe::etat("attente_paiement");
-        let attendu = maintenant() + Duration::minutes(1);
-        assert_eq!(abandon(&dir, &t, &envois), Err(RefusAbandon::TropTot(attendu)));
-        assert_eq!(t.appels.get(), 0, "trop tôt, le relais n'est même pas appelé");
-        assert_eq!(reste(&dir).as_deref(), Some("attente_paiement"));
-        // La vue donne la même heure à l'écran.
-        let v = Stock::lire(&dir).unwrap().vue(Some(Mode::Sandbox));
-        assert_eq!(v[0].abandon_des.as_deref(), Some(attendu.to_rfc3339().as_str()));
-        let dir = stock_a("abandon-31", "attente_paiement", Some(31));
-        assert_eq!(abandon(&dir, &Fixe::etat("attente_paiement"), &envois), Ok(()));
-        assert_eq!(reste(&dir), None);
+    fn un_stock_de_s_s3_se_relit_et_la_fenetre_ne_recoit_plus_d_heure() {
+        // `paiement_ouvert_le` n'existe plus : un fichier qui le porte se
+        // relit, et la réécriture le perd.
+        let dir = dossier("s-s3");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join(FICHIER),
+            format!(
+                r#"{{"intentions": [{{"id": "a", "secret": "{SECRET}", "mode": "sandbox", "date": "2026-10-10",
+                    "etat": "attente_paiement", "niveau": "cp_ground", "paiement_ouvert_le": "2026-10-10T12:00:00+00:00"}}]}}"#
+            ),
+        )
+        .unwrap();
+        let s = Stock::lire(&dir).unwrap();
+        assert_eq!(s.intentions[0].niveau.as_deref(), Some("cp_ground"));
+        let vue = serde_json::to_value(s.vue(Some(Mode::Sandbox))).unwrap();
+        assert_eq!(
+            vue,
+            serde_json::json!([{"id": "a", "mode": "sandbox", "etat": "attente_paiement", "dernier_code": null, "niveau": "cp_ground"}])
+        );
+        s.ecrire(&dir).unwrap();
+        assert!(!std::fs::read_to_string(dir.join(FICHIER)).unwrap().contains("paiement_ouvert_le"));
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
     fn abandonner_est_refuse_pendant_l_envoi_des_fichiers() {
-        let envois = EnvoisEnCours::default();
-        let dir = stock_a("abandon-envoi", "attente_fichiers", None);
+        let envois = EnCours::default();
+        let dir = stock_a("abandon-envoi", "attente_fichiers");
         let jeton = envois.prendre("a").unwrap();
-        let t = Fixe::etat("attente_fichiers");
-        assert_eq!(abandon(&dir, &t, &envois), Err(RefusAbandon::EnvoiEnCours));
-        assert_eq!(t.appels.get(), 0);
+        let t = Fixe::rend(Ok((200, r#"{"etat": "abandonnee"}"#.into())));
+        assert_eq!(abandon_avec(&dir, &t, &envois, &EnCours::default()), Err(RefusAbandon::EnvoiEnCours));
+        assert_eq!(t.abandons.get(), 0);
         assert_eq!(reste(&dir).as_deref(), Some("attente_fichiers"));
         drop(jeton);
-        assert_eq!(abandon(&dir, &t, &envois), Ok(()));
+        assert_eq!(abandon_avec(&dir, &t, &envois, &EnCours::default()), Ok(()));
+    }
+
+    #[test]
+    fn un_second_abandon_concurrent_dit_son_propre_refus() {
+        let abandons = EnCours::default();
+        let envois = EnCours::default();
+        let dir = stock_a("abandon-double", "attente_paiement");
+        let premier = abandons.prendre("a").unwrap();
+        let t = Fixe::rend(Ok((200, r#"{"etat": "abandonnee"}"#.into())));
+        let refus = abandon_avec(&dir, &t, &envois, &abandons).unwrap_err();
+        assert_eq!(refus, RefusAbandon::AbandonEnCours);
+        assert_eq!(refus.to_string(), "abandon_en_cours");
+        assert_eq!(t.abandons.get(), 0, "le second ne part pas au relais");
+        assert!(envois.prendre("a").is_some(), "il ne tient pas le marqueur d'envoi");
+        drop(premier);
+        assert_eq!(abandon_avec(&dir, &t, &envois, &abandons), Ok(()));
+        assert!(abandons.prendre("a").is_some(), "le marqueur tombe avec l'abandon");
+    }
+
+    /// Un relais qui tient l'abandon : il signale qu'il est entré, attend le
+    /// feu vert, puis rend 200.
+    struct AbandonTenu {
+        entre: std::sync::mpsc::Sender<()>,
+        feu: std::sync::mpsc::Receiver<()>,
+    }
+
+    impl Transport for AbandonTenu {
+        fn get(&self, _: &str, _: Option<&Secret>) -> Result<(u16, String), String> {
+            unreachable!()
+        }
+        fn post_json(&self, _: &str, _: Option<&Secret>, _: &serde_json::Value) -> Result<(u16, String), String> {
+            self.entre.send(()).unwrap();
+            self.feu.recv().unwrap();
+            Ok((200, r#"{"etat": "abandonnee"}"#.into()))
+        }
+        fn put_fichier(
+            &self,
+            _: &colophon_core::relais::Envoi<'_>,
+            _: &dyn Fn(u64),
+        ) -> Result<(u16, Option<String>), String> {
+            unreachable!()
+        }
+    }
+
+    /// L'oubli se fait sous le verrou, et seulement si l'intention n'a pas
+    /// changé d'état depuis l'appel. Le relais est tenu pendant que ce test
+    /// prend le verrou : l'abandon ne peut pas finir tant qu'il le tient, et
+    /// ce qui s'écrit pendant (une relecture qui pose `payee`) est vu.
+    #[test]
+    fn l_oubli_se_fait_sous_le_verrou_et_jamais_sur_un_etat_qui_a_bouge() {
+        let dir = stock_a("abandon-verrou", "attente_paiement");
+        let verrou = Mutex::new(());
+        let (entre_tx, entre_rx) = std::sync::mpsc::channel();
+        let (feu_tx, feu_rx) = std::sync::mpsc::channel();
+        let tenu = AbandonTenu { entre: entre_tx, feu: feu_rx };
+        std::thread::scope(|sc| {
+            let (verrou, dir) = (&verrou, &dir);
+            let abandon = sc.spawn(move || {
+                let relais = Relais { base: "https://relais.exemple", transport: &tenu };
+                abandonner(verrou, dir, &relais, Some(Mode::Sandbox), &EnCours::default(), &EnCours::default(), "a")
+            });
+            entre_rx.recv().unwrap();
+            let garde = verrou.lock().unwrap();
+            feu_tx.send(()).unwrap();
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            assert!(!abandon.is_finished(), "l'oubli n'attend pas le verrou");
+            let mut s = Stock::lire(dir).unwrap();
+            s.poser("a", "payee", None);
+            s.ecrire(dir).unwrap();
+            drop(garde);
+            assert_eq!(abandon.join().unwrap(), Err(RefusAbandon::Avancee("payee".into())));
+        });
+        assert_eq!(reste(&dir).as_deref(), Some("payee"), "gardée");
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

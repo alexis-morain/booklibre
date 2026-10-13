@@ -28,9 +28,7 @@ import {
   IntentionVue,
   Pays,
   aRelire,
-  abandonAttendu,
   abandonnable,
-  heure,
   ignorable,
   payable,
   refusDefinitif,
@@ -173,8 +171,9 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
       recevoir((await relaisRelire(i.id)).intentions);
     });
 
-  // Le moteur relit le relais avant d'oublier : la phrase de confirmation ne
-  // vient qu'après lui. Un refus garde l'intention, et la liste se relit.
+  // Le moteur demande l'abandon au relais avant d'oublier : la phrase de
+  // confirmation ne vient qu'après lui. Un refus garde l'intention, et la
+  // liste se relit.
   const abandonner = (id: string) => {
     setMessage(null);
     void tenter(
@@ -197,7 +196,6 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
     );
 
   const liste = visibles(intentions, "offre" in parcours ? parcours.offre.id : null);
-  const maintenant = new Date();
 
   return (
     <>
@@ -419,7 +417,7 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
                 <span className="commandes-etat" role="status">
                   {phraseIntention(i)}
                 </span>
-                {(annulableIntention(i) || payable(i) || abandonnable(i, maintenant)) && (
+                {(annulableIntention(i) || payable(i) || abandonnable(i)) && (
                   <span className="commandes-gestes">
                     {payable(i) && (
                       <button className="link" disabled={occupe !== null} onClick={() => payerDepuisLaListe(i)}>
@@ -431,7 +429,7 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
                         {t("commandes.annuler")}
                       </button>
                     )}
-                    {abandonnable(i, maintenant) && (
+                    {abandonnable(i) && (
                       <button
                         className="link"
                         disabled={occupe !== null}
@@ -443,12 +441,7 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
                     )}
                   </span>
                 )}
-                {abandonnable(i, maintenant) && <span className="commandes-note">{t("commandes.abandonner.note")}</span>}
-                {abandonAttendu(i, maintenant) && (
-                  <span className="commandes-note">
-                    {t("commandes.abandonner.des", { heure: heure(abandonAttendu(i, maintenant)!) })}
-                  </span>
-                )}
+                {abandonnable(i) && <span className="commandes-note">{t("commandes.abandonner.note")}</span>}
               </li>
             ))}
           </ul>

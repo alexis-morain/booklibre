@@ -1258,7 +1258,9 @@ export const ouvrirPaiement = (id: string, niveau: string) =>
 export const relaisNiveau = (id: string, niveau: string) =>
   relaisAppel<void>("relais_niveau", "niveau", { id, niveau });
 
-/** Oublie une intention non payée, localement : aucun appel au relais. */
+/** « Abandonner » : le moteur demande l'abandon au relais (`/abandon`, qui
+ *  expire chez Stripe toute page de paiement ouverte), puis oublie
+ *  l'intention sur son 200 ou son 404. Rend la liste, ou le code du refus. */
 export const relaisOublier = (id: string) => relaisAppel<IntentionVue[]>("relais_oublier", "oublier", { id });
 
 /** Relit l'état d'une intention, ou de toutes celles qui bougent encore. */

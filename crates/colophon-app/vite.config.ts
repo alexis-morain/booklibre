@@ -447,7 +447,11 @@ function geometryParity(): Plugin {
  * sur le disque : `commande.json` n'existe pas au harnais. Le paiement
  * n'ouvre rien. `POST /__dev/relais/suivant` force l'état suivant de la
  * dernière intention (ou celui que le corps nomme : `{etat, dernier_code}`),
- * pour piloter l'écran jusqu'à `commandee`.
+ * pour piloter l'écran jusqu'à `commandee`. « Abandonner » rejoue la route
+ * `/abandon` du relais : 200 sur `attente_fichiers`, `attente_paiement` ou
+ * `abandonnee`, 409 `avancee` au-delà. `POST /__dev/relais/abandon` force la
+ * réponse du prochain abandon (`{reponse: 200 | 404 | 409 | 502}`), et le
+ * paiement d'une intention qui n'attend plus le sien rend le 409 `etat`.
  */
 function relaisDev() {
   type Intention = {
@@ -456,9 +460,10 @@ function relaisDev() {
     etat: string;
     dernier_code: number | null;
     niveau: string | null;
-    abandon_des: string | null;
   };
   const intentions: Intention[] = [];
+  // La réponse forcée du prochain abandon, puis la route reprend la main.
+  let abandonForce: 200 | 404 | 409 | 502 | null = null;
   const vue = () => [...intentions].reverse();
   const trouver = (id: string) => {
     const i = intentions.find((x) => x.id === id);
@@ -473,7 +478,7 @@ function relaisDev() {
     pays: () => [{ code: "FR", nom: "France", require_state: false }],
     creer: () => {
       const id = `faux${Date.now().toString(36)}`;
-      intentions.push({ id, mode: "sandbox", etat: "attente_fichiers", dernier_code: null, niveau: null, abandon_des: null });
+      intentions.push({ id, mode: "sandbox", etat: "attente_fichiers", dernier_code: null, niveau: null });
       return {
         id,
         mode: "sandbox",
@@ -491,19 +496,31 @@ function relaisDev() {
     },
     payer: (b) => {
       const i = trouver(b.id);
+      // Comme le relais : `/paiement` refuse une intention abandonnée.
+      if (i.etat !== "attente_paiement") throw new Error("relais : etat (409)");
       i.niveau = b.niveau;
-      // Comme le moteur : pas d'abandon avant la fin de la session Checkout.
-      i.abandon_des = new Date(Date.now() + 30 * 60 * 1000).toISOString();
       return null;
     },
     niveau: (b) => {
       trouver(b.id).niveau = b.niveau;
       return null;
     },
+    abandon: (b) => {
+      if (![200, 404, 409, 502, null].includes(b.reponse ?? null)) throw new Error("reponse : 200, 404, 409 ou 502");
+      abandonForce = b.reponse ?? null;
+      return { reponse: abandonForce };
+    },
     oublier: (b) => {
       const i = trouver(b.id);
-      if (i.abandon_des && new Date(i.abandon_des) > new Date()) throw new Error(`abandon_trop_tot ${i.abandon_des}`);
-      if (i.etat !== "attente_fichiers" && i.etat !== "attente_paiement") throw new Error(`abandon_refuse ${i.etat}`);
+      const reponse =
+        abandonForce ?? (["attente_fichiers", "attente_paiement", "abandonnee"].includes(i.etat) ? 200 : 409);
+      abandonForce = null;
+      // Ce que `commande::abandonner` fait de chaque réponse de la route.
+      if (reponse === 502) throw new Error("abandon_injoignable");
+      if (reponse === 409) {
+        if (i.etat === "attente_fichiers" || i.etat === "attente_paiement") i.etat = "payee";
+        throw new Error(`abandon_refuse ${i.etat}`);
+      }
       intentions.splice(intentions.indexOf(i), 1);
       return vue();
     },

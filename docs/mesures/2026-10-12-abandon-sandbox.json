@@ -1,0 +1,128 @@
+{
+  "abandon": {
+    "etat_relu": "abandonnee",
+    "premier": {
+      "ms": 620,
+      "rendu": "Ok(Fait(\"abandonnee\"))"
+    },
+    "second": {
+      "ms": 186,
+      "rendu": "Ok(Fait(\"abandonnee\"))"
+    }
+  },
+  "client": "colophon_core::relais, transport Reseau (ureq, rustls), comme l'app",
+  "date_utc": "2026-10-12",
+  "duree_s": 45,
+  "etat_apres": {
+    "etat": {
+      "dernier_code": null,
+      "etat": "attente_paiement",
+      "mode": "sandbox"
+    },
+    "ms": 174
+  },
+  "expurgation": "aucun secret, aucune URL présignée ni de session ; seul l'hôte de l'URL de paiement est gardé ; l'identifiant d'intention reste (référence sandbox)",
+  "fichiers": {
+    "etat": "attente_paiement",
+    "ms": 8991
+  },
+  "intention": {
+    "demande": {
+      "couverture": {
+        "md5": "4eb4a8769a7ecc552c53ea6bb051a1a8",
+        "octets": 4870674
+      },
+      "format": "carre-21",
+      "interieur": {
+        "md5": "275947b4f9a7958287828b9f6470d3ec",
+        "octets": 94980105
+      },
+      "pages": 96,
+      "pays": "FR"
+    },
+    "entetes_a_envoyer": [
+      "content-md5"
+    ],
+    "expire": "2026-10-14T15:52:08.630017Z",
+    "grille": [
+      {
+        "delai_jours": 4,
+        "niveau": "cp_ground",
+        "prix_ttc_centimes": 4700,
+        "transporteur": "Fedex - Regional Economy"
+      },
+      {
+        "delai_jours": 4,
+        "niveau": "cp_fast",
+        "prix_ttc_centimes": 5350,
+        "transporteur": "FedEx - International Priority"
+      }
+    ],
+    "id": "wGmWyCty-CrM-i8tl_1geg",
+    "mode": "sandbox",
+    "ms": 1882
+  },
+  "md5_ms": 2056,
+  "paiement": {
+    "hote": "checkout.stripe.com",
+    "ms": 1052,
+    "niveau": "cp_ground",
+    "ouverte": false,
+    "payee": false,
+    "url_https": true
+  },
+  "pays": {
+    "codes": [
+      "AT",
+      "BE",
+      "BG",
+      "CY",
+      "CZ",
+      "DE",
+      "DK",
+      "EE",
+      "ES",
+      "FI",
+      "FR",
+      "GB",
+      "GR",
+      "HR",
+      "HU",
+      "IE",
+      "IT",
+      "LT",
+      "LU",
+      "LV",
+      "MT",
+      "NL",
+      "PL",
+      "PT",
+      "RO",
+      "SE",
+      "SI",
+      "SK",
+      "US"
+    ],
+    "ms": 1889
+  },
+  "puts": {
+    "album-cover.pdf": {
+      "duree_s": 1.236442084,
+      "etag_egal_md5": true,
+      "md5": "4eb4a8769a7ecc552c53ea6bb051a1a8",
+      "octets": 4870674,
+      "octets_signales": 4870674,
+      "progressions": 5
+    },
+    "album-print.pdf": {
+      "duree_s": 27.399575833,
+      "etag_egal_md5": true,
+      "md5": "275947b4f9a7958287828b9f6470d3ec",
+      "octets": 94980105,
+      "octets_signales": 94980105,
+      "progressions": 91
+    }
+  },
+  "relais": "https://colophon-relais-sandbox.alexis-c1f.workers.dev",
+  "session": "S-s4b, Commander dans l'app puis Abandonner (banc_relais_sandbox)"
+}

@@ -10,7 +10,6 @@ import {
   Parcours,
   Pays,
   aRelire,
-  abandonAttendu,
   abandonnable,
   annulable,
   annulableIntention,
@@ -44,17 +43,13 @@ const intention = (
   etat: string,
   dernier_code: number | null = null,
   niveau: string | null = null,
-  abandon_des: string | null = null,
 ): IntentionVue => ({
   id: "zNRsXsjGDfnOhog10i579Q",
   mode: "sandbox",
   etat,
   dernier_code,
   niveau,
-  abandon_des,
 });
-
-const MIDI = new Date("2026-10-10T12:00:00Z");
 
 // La grille de la mesure S-s1 du 09/10.
 const OFFRE: Offre = {
@@ -145,13 +140,14 @@ describe("les états du relais", () => {
     "annulation_en_cours",
     "annulee",
     "purgee",
+    "abandonnee",
   ];
 
   it("ont chacun leur phrase, en français et en anglais", () => {
     for (const langue of ["fr", "en"] as const) {
       setLangue(langue);
       const phrases = ETATS.map((e) => phraseIntention(intention(e)));
-      expect(new Set(phrases).size, langue).toBe(9);
+      expect(new Set(phrases).size, langue).toBe(10);
       for (const p of phrases) expect(p, langue).not.toMatch(/^commande\./);
     }
   });
@@ -189,9 +185,9 @@ describe("les états du relais", () => {
   it("se relisent tant qu'elles bougent seules, et la liste tait celle que le parcours tient", () => {
     const toutes = ETATS.map((e, i) => ({ ...intention(e), id: String(i) }));
     expect(aRelire(toutes)).toEqual(["1", "2", "4", "6"]);
-    expect(visibles(toutes, null)).toHaveLength(9);
+    expect(visibles(toutes, null)).toHaveLength(10);
     expect(visibles(toutes, "0").map((i) => i.id)).not.toContain("0");
-    expect(visibles(toutes, "0")).toHaveLength(8);
+    expect(visibles(toutes, "0")).toHaveLength(9);
   });
 
   it("offrent Payer en attente de paiement avec un niveau, et Abandonner avant tout paiement", () => {
@@ -200,19 +196,23 @@ describe("les états du relais", () => {
     for (const e of ETATS.filter((x) => x !== "attente_paiement")) {
       expect(payable(intention(e, null, "cp_ground")), e).toBe(false);
     }
-    expect(ETATS.filter((e) => abandonnable(intention(e), MIDI))).toEqual(["attente_fichiers", "attente_paiement"]);
+    // Aucune heure : le relais seul dit si la page de paiement peut encore
+    // être payée. Une intention que le relais a abandonnée sans que l'app
+    // l'ait oubliée s'oublie par le même geste (la route rend 200 de nouveau).
+    expect(ETATS.filter((e) => abandonnable(intention(e)))).toEqual([
+      "attente_fichiers",
+      "attente_paiement",
+      "abandonnee",
+    ]);
   });
 
-  it("n'offrent Abandonner qu'à la fin de la page de paiement ouverte, et disent quand", () => {
-    const ouverte = intention("attente_paiement", null, "cp_ground", "2026-10-10T12:01:00Z");
-    expect(abandonnable(ouverte, MIDI)).toBe(false);
-    expect(abandonAttendu(ouverte, MIDI)).toEqual(new Date("2026-10-10T12:01:00Z"));
-    const passee = new Date("2026-10-10T12:02:00Z");
-    expect(abandonnable(ouverte, passee)).toBe(true);
-    expect(abandonAttendu(ouverte, passee)).toBeNull();
-    // Payée, l'heure ne compte plus : ni bouton, ni promesse.
-    expect(abandonAttendu({ ...ouverte, etat: "payee" }, MIDI)).toBeNull();
-    expect(abandonnable({ ...ouverte, etat: "payee" }, passee)).toBe(false);
+  it("disent l'état abandonnée en deux langues, sans promettre plus que le relais", () => {
+    setLangue("fr");
+    expect(phraseIntention(intention("abandonnee"))).toMatch(/^Abandonnée/);
+    expect(phraseIntention(intention("abandonnee"))).toContain("fermée");
+    setLangue("en");
+    expect(phraseIntention(intention("abandonnee"))).toMatch(/^Given up/);
+    expect(phraseIntention(intention("abandonnee"))).toContain("closed");
   });
 
   it("ne promettent « rien n'a été payé » qu'après la confirmation du relais", () => {
@@ -222,10 +222,14 @@ describe("les états du relais", () => {
     expect(phraseErreur("abandon_injoignable")).toContain("gardée");
     expect(phraseErreur("abandon_refuse payee")).toContain("gardée");
     expect(phraseErreur("abandon_envoi_en_cours")).toContain("partent encore");
-    expect(phraseErreur("abandon_trop_tot 2026-10-10T12:30:00+00:00")).toMatch(/à partir de \d\d:\d\d/);
+    // Le second abandon concurrent a sa phrase, pas celle de l'envoi.
+    expect(phraseErreur("abandon_en_cours")).toContain("déjà");
+    expect(phraseErreur("abandon_en_cours")).not.toContain("fichiers");
     setLangue("en");
     expect(t("commandes.abandonnee")).toContain("confirms");
     expect(phraseErreur("abandon_injoignable")).toContain("kept");
+    expect(phraseErreur("abandon_en_cours")).toContain("already");
+    expect(phraseErreur("abandon_en_cours")).not.toContain("files");
   });
 
   it("disent en deux langues qu'abandonner demande d'abord au relais", () => {
@@ -265,6 +269,13 @@ describe("la confirmation", () => {
     for (const c of ["devis_expire", "intention_expiree", "trop_de_sessions"]) {
       expect(refusDefinitif(new Error(`relais : ${c} (409)`)), c).toBe(true);
     }
+    // Un paiement rouvert sur une intention abandonnée entre-temps : le
+    // relais répond 409 `etat`, et le parcours recommence au pays.
+    expect(refusDefinitif(new Error("relais : etat (409)"))).toBe(true);
+    setLangue("fr");
+    expect(phraseErreur(new Error("relais : etat (409)"))).toContain("ne peut plus être payée");
+    setLangue("en");
+    expect(phraseErreur(new Error("relais : etat (409)"))).toContain("can no longer be paid");
     expect(refusDefinitif("relais : stripe (502)")).toBe(false);
     expect(refusDefinitif("relais injoignable : dns")).toBe(false);
     expect(ignorable("envoi_en_cours")).toBe(true);

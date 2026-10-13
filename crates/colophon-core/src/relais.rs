@@ -29,34 +29,88 @@ use std::time::Duration;
 const SANDBOX: &str = "https://colophon-relais-sandbox.alexis-c1f.workers.dev";
 
 /// L'adresse du relais pour un build de debug ou de release : le sandbox en
-/// debug ; **rien** en release tant que S-s4 n'a pas posé le domaine du relais
-/// réel. Une fonction plutôt que deux `cfg` : le gate tourne en debug, et
-/// c'est ainsi qu'un test y tient aussi la valeur de la release.
-pub const fn url_pour(debug: bool) -> Option<&'static str> {
+/// debug ; en release, le relais réel `reel` que la compilation a reçu, et
+/// **rien** sans lui. Une fonction plutôt que deux `cfg` : le gate tourne en
+/// debug, et c'est ainsi qu'un test y tient aussi la valeur de la release.
+pub const fn url_pour(debug: bool, reel: Option<&'static str>) -> Option<&'static str> {
     if debug {
         Some(SANDBOX)
     } else {
-        None
+        reel
     }
 }
 
 /// Le mode des intentions que ce relais rend : sandbox en debug, réel en
 /// release, aucun sans relais. L'app ne liste que celles-là : debug et
 /// release partagent `commande.json`.
-pub const fn mode_pour(debug: bool) -> Option<Mode> {
-    match url_pour(debug) {
+pub const fn mode_pour(debug: bool, reel: Option<&'static str>) -> Option<Mode> {
+    match url_pour(debug, reel) {
         None => None,
         Some(_) if debug => Some(Mode::Sandbox),
         Some(_) => Some(Mode::Reel),
     }
 }
 
+/// Une adresse de relais réel : `https://` puis un hôte seul, sans chemin
+/// (pas même `/`), port, identifiants, requête ni fragment ; des étiquettes
+/// non vides de lettres, chiffres et tirets. Une fonction `const` : la
+/// compilation la juge, et une adresse refusée arrête le build ([`REEL`]).
+pub const fn reel_valide(reel: Option<&'static str>) -> Result<Option<&'static str>, &'static str> {
+    let Some(url) = reel else {
+        return Ok(None);
+    };
+    let o = url.as_bytes();
+    let prefixe = b"https://";
+    if o.len() <= prefixe.len() {
+        return Err("COLOPHON_RELAIS_REEL : https:// suivi d'un hôte");
+    }
+    let mut i = 0;
+    while i < prefixe.len() {
+        if o[i] != prefixe[i] {
+            return Err("COLOPHON_RELAIS_REEL : https:// suivi d'un hôte");
+        }
+        i += 1;
+    }
+    // `i` est au premier octet de l'hôte. Un point ne commence ni ne finit
+    // l'hôte, et ne suit pas un autre point.
+    let mut precedent_point = true;
+    while i < o.len() {
+        let c = o[i];
+        if c == b'.' {
+            if precedent_point {
+                return Err("COLOPHON_RELAIS_REEL : étiquette vide dans l'hôte");
+            }
+            precedent_point = true;
+        } else if c.is_ascii_alphanumeric() || c == b'-' {
+            precedent_point = false;
+        } else {
+            return Err("COLOPHON_RELAIS_REEL : un hôte seul, sans chemin, port, identifiants ni requête");
+        }
+        i += 1;
+    }
+    if precedent_point {
+        return Err("COLOPHON_RELAIS_REEL : étiquette vide dans l'hôte");
+    }
+    Ok(Some(url))
+}
+
+/// Le relais réel que la compilation a reçu par `COLOPHON_RELAIS_REEL`, jugé
+/// par [`reel_valide`] : une adresse refusée fait échouer le build, ici, à
+/// l'évaluation de la constante. La CI publique ne la pose pas : les builds
+/// publiés n'ont aucun relais. Cargo relit la variable à chaque build
+/// (`option_env!` entre dans les dépendances du crate) : la changer
+/// recompile le moteur.
+pub const REEL: Option<&str> = match reel_valide(option_env!("COLOPHON_RELAIS_REEL")) {
+    Ok(r) => r,
+    Err(raison) => panic!("{}", raison),
+};
+
 /// L'adresse du relais compilé (décision 3). Sans adresse, l'app n'offre pas
 /// Commander.
-pub const RELAIS_URL: Option<&str> = url_pour(cfg!(debug_assertions));
+pub const RELAIS_URL: Option<&str> = url_pour(cfg!(debug_assertions), REEL);
 
 /// Le mode du relais compilé.
-pub const RELAIS_MODE: Option<Mode> = mode_pour(cfg!(debug_assertions));
+pub const RELAIS_MODE: Option<Mode> = mode_pour(cfg!(debug_assertions), REEL);
 
 /// Les seuls en-têtes de la réponse de création que le PUT recopie. Le relais
 /// n'est pas cru sur parole : `Host`, `Authorization`, `Cookie`,
@@ -376,6 +430,27 @@ pub struct Etat {
     pub dernier_code: Option<i64>,
 }
 
+/// Ce que `POST /v1/intentions/{id}/abandon` rend, réponse par réponse du
+/// contrat. Tout le reste est une [`Erreur`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Abandon {
+    /// 200 : chaque session Checkout de l'intention est expirée chez Stripe,
+    /// elle ne peut plus être payée. L'état rendu, `abandonnee` ou `purgee`.
+    Fait(String),
+    /// 409 `avancee` : payée ou au-delà, avec l'état que le relais a relu.
+    Avancee(String),
+    /// 502 `stripe_injoignable` : Stripe ne répond pas, rien n'est prouvé.
+    StripeInjoignable,
+    /// 404 : intention inconnue du relais (ou secret faux).
+    Inconnue,
+}
+
+/// Un état venu du relais, tel qu'il peut entrer dans `commande.json` et
+/// dans une phrase : court, en minuscules ASCII et tirets bas.
+fn etat_lisible(etat: &str) -> bool {
+    !etat.is_empty() && etat.len() <= 64 && etat.chars().all(|c| c.is_ascii_lowercase() || c == '_')
+}
+
 // ---- ce que l'app demande ----------------------------------------------------
 
 /// Un fichier déclaré : son MD5 et sa taille.
@@ -543,6 +618,43 @@ impl Relais<'_> {
         }
         let texte = self.post(&format!("/v1/intentions/{id}/annulation"), Some(secret), &json!({}))?;
         Ok(lire::<R>(&texte, Some(secret))?.etat)
+    }
+
+    /// `POST /v1/intentions/{id}/abandon` : le relais expire chez Stripe
+    /// toute session ouverte de l'intention, puis l'abandonne. Les quatre
+    /// réponses du contrat deviennent un [`Abandon`] ; un 200 qui ne dit ni
+    /// `abandonnee` ni `purgee`, un 409 qui n'est pas `avancee` avec un état
+    /// lisible, tout autre statut, sont des erreurs : rien n'y permet l'oubli.
+    pub fn abandonner(&self, id: &str, secret: &Secret) -> Result<Abandon, Erreur> {
+        #[derive(Deserialize)]
+        struct R {
+            etat: String,
+        }
+        let masque = |t: &str| secret.masquer(t);
+        let (statut, texte) = self
+            .transport
+            .post_json(&self.url(&format!("/v1/intentions/{id}/abandon")), Some(secret), &json!({}))
+            .map_err(|e| Erreur::Reseau(masque(&e)))?;
+        let hors_contrat = || Erreur::Reponse(format!("abandon : réponse hors contrat ({statut})"));
+        match statut {
+            200 => {
+                let etat = lire::<R>(&texte, Some(secret))?.etat;
+                match etat.as_str() {
+                    "abandonnee" | "purgee" => Ok(Abandon::Fait(etat)),
+                    _ => Err(hors_contrat()),
+                }
+            }
+            409 if code_d_erreur(&texte) == "avancee" => {
+                let v: Value = serde_json::from_str(&texte).map_err(|_| hors_contrat())?;
+                match v["etat"].as_str() {
+                    Some(e) if etat_lisible(e) => Ok(Abandon::Avancee(e.to_string())),
+                    _ => Err(hors_contrat()),
+                }
+            }
+            502 if code_d_erreur(&texte) == "stripe_injoignable" => Ok(Abandon::StripeInjoignable),
+            404 => Ok(Abandon::Inconnue),
+            _ => Err(Erreur::Relais { statut, erreur: masque(&code_d_erreur(&texte)) }),
+        }
     }
 }
 
@@ -716,13 +828,98 @@ mod tests {
     }
 
     #[test]
-    fn l_adresse_du_relais_est_le_sandbox_en_debug_seulement() {
-        // La release ne porte rien : c'est ce qui rend Commander inerte dans
-        // le bundle (décision 3). Le gate tourne en debug, d'où `url_pour`.
-        assert_eq!(url_pour(false), None);
-        assert_eq!(url_pour(true), Some("https://colophon-relais-sandbox.alexis-c1f.workers.dev"));
-        assert_eq!(RELAIS_URL, url_pour(cfg!(debug_assertions)));
-        assert_eq!((mode_pour(true), mode_pour(false)), (Some(Mode::Sandbox), None));
+    fn l_adresse_du_relais_est_le_sandbox_en_debug_et_le_reel_compile_en_release() {
+        // Sans `COLOPHON_RELAIS_REEL`, la release ne porte rien : c'est ce qui
+        // rend Commander inerte dans le bundle publié (décision 3). Le gate
+        // tourne en debug, d'où `url_pour`.
+        assert_eq!(url_pour(false, None), None);
+        assert_eq!(mode_pour(false, None), None);
+        // Avec, la release parle au relais réel, et à lui seul.
+        assert_eq!(url_pour(false, Some("https://relais.exemple.fr")), Some("https://relais.exemple.fr"));
+        assert_eq!(mode_pour(false, Some("https://relais.exemple.fr")), Some(Mode::Reel));
+        // Le debug reste au sandbox, variable posée ou non.
+        for reel in [None, Some("https://relais.exemple.fr")] {
+            assert_eq!(url_pour(true, reel), Some("https://colophon-relais-sandbox.alexis-c1f.workers.dev"));
+            assert_eq!(mode_pour(true, reel), Some(Mode::Sandbox));
+        }
+        assert_eq!(RELAIS_URL, url_pour(cfg!(debug_assertions), REEL));
+    }
+
+    #[test]
+    fn le_relais_reel_compile_est_https_et_un_hote_seul() {
+        assert_eq!(reel_valide(None), Ok(None));
+        assert_eq!(reel_valide(Some("https://relais.colophon.fr")), Ok(Some("https://relais.colophon.fr")));
+        assert_eq!(reel_valide(Some("https://relais-1.exemple")), Ok(Some("https://relais-1.exemple")));
+        for refusee in [
+            "http://relais.colophon.fr",
+            "https://relais.colophon.fr/",
+            "https://relais.colophon.fr/v1",
+            "https://relais.colophon.fr:8443",
+            "https://moi:mdp@relais.colophon.fr",
+            "https://relais.colophon.fr?x=1",
+            "https://relais.colophon.fr#x",
+            "https://",
+            "https://.colophon.fr",
+            "https://relais..colophon.fr",
+            "https://relais.colophon.fr.",
+            " https://relais.colophon.fr",
+            "relais.colophon.fr",
+        ] {
+            assert!(reel_valide(Some(refusee)).is_err(), "{refusee:?} est acceptée");
+        }
+    }
+
+    #[test]
+    fn abandonner_rend_les_quatre_reponses_de_la_route_et_une_erreur_pour_le_reste() {
+        let t = Faux::new(&[
+            (200, r#"{"etat": "abandonnee"}"#),
+            (200, r#"{"etat": "purgee"}"#),
+            (409, r#"{"erreur": "avancee", "etat": "payee"}"#),
+            // Stripe refuse d'expirer une session complète : le webhook n'est
+            // pas encore passé, l'état rendu est encore `attente_paiement`.
+            (409, r#"{"erreur": "avancee", "etat": "attente_paiement"}"#),
+            (502, r#"{"erreur": "stripe_injoignable"}"#),
+            (404, r#"{"erreur": "introuvable"}"#),
+            (404, "pas de corps lisible"),
+        ]);
+        let r = Relais { base: BASE, transport: &t };
+        let s = secret();
+        assert_eq!(r.abandonner("abc", &s), Ok(Abandon::Fait("abandonnee".into())));
+        assert_eq!(r.abandonner("abc", &s), Ok(Abandon::Fait("purgee".into())));
+        assert_eq!(r.abandonner("abc", &s), Ok(Abandon::Avancee("payee".into())));
+        assert_eq!(r.abandonner("abc", &s), Ok(Abandon::Avancee("attente_paiement".into())));
+        assert_eq!(r.abandonner("abc", &s), Ok(Abandon::StripeInjoignable));
+        assert_eq!(r.abandonner("abc", &s), Ok(Abandon::Inconnue));
+        assert_eq!(r.abandonner("abc", &s), Ok(Abandon::Inconnue));
+        let recu = t.recu.borrow();
+        assert_eq!((recu[0].0.as_str(), recu[0].1.as_str()), ("POST", "https://relais.exemple/v1/intentions/abc/abandon"));
+        assert_eq!(recu[0].2.as_deref(), Some(SECRET), "le secret part en bearer");
+        assert_eq!(recu[0].3, json!({}), "corps vide");
+        drop(recu);
+
+        // Hors contrat : une erreur typée, jamais une variante qui permettrait
+        // l'oubli.
+        let t = Faux::new(&[
+            (200, r#"{"etat": "attente_paiement"}"#),
+            (200, r#"{"etat": 3}"#),
+            (409, r#"{"erreur": "etat", "etat": "payee"}"#),
+            (409, r#"{"erreur": "avancee"}"#),
+            (409, r#"{"erreur": "avancee", "etat": "payée <b>"}"#),
+            (502, "<html>Bad gateway</html>"),
+            (500, r#"{"erreur": "interne"}"#),
+        ]);
+        let r = Relais { base: BASE, transport: &t };
+        assert!(matches!(r.abandonner("a", &s), Err(Erreur::Reponse(_))));
+        assert!(matches!(r.abandonner("a", &s), Err(Erreur::Reponse(_))));
+        assert_eq!(r.abandonner("a", &s), Err(Erreur::Relais { statut: 409, erreur: "etat".into() }));
+        assert!(matches!(r.abandonner("a", &s), Err(Erreur::Reponse(_))));
+        assert!(matches!(r.abandonner("a", &s), Err(Erreur::Reponse(_))));
+        assert_eq!(r.abandonner("a", &s), Err(Erreur::Relais { statut: 502, erreur: "illisible".into() }));
+        assert_eq!(r.abandonner("a", &s), Err(Erreur::Relais { statut: 500, erreur: "interne".into() }));
+        let coupe = Relais { base: BASE, transport: &Coupe };
+        let e = coupe.abandonner("a", &s).unwrap_err();
+        assert!(matches!(e, Erreur::Reseau(_)));
+        assert!(!e.to_string().contains(SECRET), "{e}");
     }
 
     #[test]
@@ -1047,13 +1244,61 @@ mod tests {
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
+    /// Le transport réel pose ce que la route `/abandon` exige, comme toute
+    /// route POST du relais : `Content-Type: application/json` (415 sinon),
+    /// le corps `{}` (tout autre champ est un 400), et le secret en bearer.
+    #[test]
+    fn l_abandon_reel_part_en_json_avec_un_corps_vide_et_le_bearer() {
+        use std::io::{BufRead, BufReader, Read, Write};
+        let ecoute = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = ecoute.local_addr().unwrap().port();
+        let serveur = std::thread::spawn(move || {
+            let (flux, _) = ecoute.accept().unwrap();
+            let mut lecteur = BufReader::new(flux.try_clone().unwrap());
+            let mut entetes = vec![];
+            loop {
+                let mut l = String::new();
+                lecteur.read_line(&mut l).unwrap();
+                if l == "\r\n" {
+                    break;
+                }
+                entetes.push(l.trim_end().to_string());
+            }
+            let longueur: usize = entetes
+                .iter()
+                .find_map(|l| l.to_ascii_lowercase().strip_prefix("content-length: ").map(|v| v.parse().unwrap()))
+                .unwrap_or(0);
+            let mut corps = vec![0u8; longueur];
+            lecteur.read_exact(&mut corps).unwrap();
+            let reponse = r#"{"etat":"abandonnee"}"#;
+            let mut flux = flux;
+            write!(
+                flux,
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{reponse}",
+                reponse.len()
+            )
+            .unwrap();
+            (entetes, String::from_utf8(corps).unwrap())
+        });
+        let base = format!("http://127.0.0.1:{port}");
+        let reseau = Reseau::default();
+        let rendu = Relais { base: &base, transport: &reseau }.abandonner("abc", &secret());
+        let (recu, corps) = serveur.join().unwrap();
+        assert_eq!(rendu, Ok(Abandon::Fait("abandonnee".into())));
+        assert!(recu[0].starts_with("POST /v1/intentions/abc/abandon "), "{recu:?}");
+        assert!(recu.iter().any(|l| l.eq_ignore_ascii_case("content-type: application/json")), "{recu:?}");
+        assert!(recu.iter().any(|l| l == &format!("authorization: Bearer {SECRET}") || l == &format!("Authorization: Bearer {SECRET}")), "{recu:?}");
+        assert_eq!(corps, "{}");
+    }
+
     /// Le banc du sandbox (`#[ignore]`), à la main : le parcours de l'app
     /// contre le relais sandbox déployé, sur les deux PDF vérifiés de
     /// `.albums/papier` (`COLOPHON_PAPIER` pour un autre dossier). Intention,
     /// les deux PUT (le gros d'abord) avec durée, octets et ETag, `fichiers`,
     /// puis `paiement`, dont on ne garde que l'hôte de l'URL : la session
-    /// n'est **ni payée ni ouverte**, elle expire en trente minutes et le
-    /// balayage du relais purge l'intention à 24 h. Aucune clé n'est lue.
+    /// n'est **ni payée ni ouverte**. Puis deux abandons (S-s4b) : le relais
+    /// expire la session chez Stripe, rend 200 deux fois, et l'intention se
+    /// relit `abandonnee`. Aucune clé n'est lue.
     /// La mesure, expurgée (ni secret ni URL), va dans `COLOPHON_MESURE`.
     #[test]
     #[ignore]
@@ -1078,7 +1323,7 @@ mod tests {
         let debut = Instant::now();
         let mut mesure = json!({
             "date_utc": chrono::Utc::now().format("%Y-%m-%d").to_string(),
-            "session": "S-s3, Commander dans l'app (banc_relais_sandbox)",
+            "session": "S-s4b, Commander dans l'app puis Abandonner (banc_relais_sandbox)",
             "relais": base,
             "client": "colophon_core::relais, transport Reseau (ureq, rustls), comme l'app",
             "expurgation": "aucun secret, aucune URL présignée ni de session ; seul l'hôte de l'URL de paiement est gardé ; l'identifiant d'intention reste (référence sandbox)",
@@ -1145,6 +1390,23 @@ mod tests {
         let t = Instant::now();
         let apres = r.etat(&i.id, &i.secret).unwrap();
         mesure["etat_apres"] = json!({"ms": ms(t), "etat": apres});
+
+        // L'abandon après le paiement ouvert (S-s4b) : le relais expire la
+        // session chez Stripe et rend 200 ; un second abandon rend 200 de
+        // nouveau ; l'état relu est `abandonnee`. Un 404 ici dit que la
+        // route n'est pas déployée : l'intention vient d'être créée.
+        let t = Instant::now();
+        let premier = r.abandonner(&i.id, &i.secret);
+        let premier_ms = ms(t);
+        let t = Instant::now();
+        let second = r.abandonner(&i.id, &i.secret);
+        let second_ms = ms(t);
+        let fin = r.etat(&i.id, &i.secret).unwrap();
+        mesure["abandon"] = json!({
+            "premier": {"ms": premier_ms, "rendu": format!("{premier:?}")},
+            "second": {"ms": second_ms, "rendu": format!("{second:?}")},
+            "etat_relu": fin.etat,
+        });
         mesure["duree_s"] = json!(debut.elapsed().as_secs());
 
         let mut texte = serde_json::to_string_pretty(&mesure).unwrap();
@@ -1154,5 +1416,8 @@ mod tests {
         std::fs::write(&sortie, texte + "\n").unwrap();
         assert_eq!(etat, "attente_paiement");
         assert_eq!(hote, "checkout.stripe.com");
+        assert_eq!(premier, Ok(Abandon::Fait("abandonnee".into())));
+        assert_eq!(second, Ok(Abandon::Fait("abandonnee".into())));
+        assert_eq!(fin.etat, "abandonnee");
     }
 }
