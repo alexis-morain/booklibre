@@ -758,6 +758,8 @@ export type PhraseDefaut = {
 export type Fiche = {
   imprimeur: string;
   format_page_mm: [number, number];
+  /** Le produit de l'imprimeur à ces cotes, quand l'app sait le commander. */
+  produit?: string;
   planches: number;
   pages_interieur: number;
   /** Pages in the delivered PDF, cover leaves included when there is one

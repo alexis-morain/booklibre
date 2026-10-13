@@ -507,7 +507,10 @@ release publiée reste inerte. Posée, elle doit être `https://` puis un hôte 
 **échouer le build** à l'évaluation de la constante, et changer la variable recompile le
 moteur (mesuré le 12/10, `option_env!` entre dans les dépendances de cargo, pas de
 `build.rs`). Sans adresse, `relais_pays` rend `null` sans un appel et Commander ne s'affiche
-pas (jamais grisé). **Un bundle contre le relais réel** :
+pas (jamais grisé). Commander demande aussi un dossier préparé dans cette ouverture, vert, et
+**un produit à ses cotes** (`Fiche::produit`, `commande::produit_pour`, Cloudprinter seul) :
+un 28 × 21 ou une taille libre affichent `commande.format.invendable` à la place, et
+`relais_creer` les refuse avant le réseau. **Un bundle contre le relais réel** :
 `COLOPHON_RELAIS_REEL=https://<hôte> npm run tauri build` dans `crates/colophon-app` (l'hôte
 seul, sans `/` final), puis `install-app.sh` comme d'habitude.
 

@@ -35,6 +35,7 @@ import {
   annulableIntention,
   avancer,
   commandePossible,
+  formatInvendable,
   niveauChoisi,
   nomNiveau,
   part,
@@ -101,6 +102,7 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
 
   const joignable = (pays?.length ?? 0) > 0;
   const possible = commandePossible(joignable, preparationNeuve);
+  const invendable = formatInvendable(joignable, preparationNeuve);
   const prix = (c: number) => prixDeCentimes(c, langue);
 
   const tenter = async (quoi: string, geste: () => Promise<void>, sinon?: (e: unknown) => void) => {
@@ -199,6 +201,12 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
 
   return (
     <>
+      {invendable && parcours.etape === "repos" && (
+        <p className="commande-format" role="status">
+          {t("commande.format.invendable")}
+        </p>
+      )}
+
       {possible && parcours.etape === "repos" && (
         <div className="commande-ouvrir">
           <button

@@ -58,7 +58,17 @@ export function commandePossible(
   relaisJoignable: boolean,
   preparationNeuve: Preparation | null,
 ): boolean {
-  return relaisJoignable && !!preparationNeuve && preparationNeuve.rapport.ok;
+  return relaisJoignable && !!preparationNeuve && preparationNeuve.rapport.ok && !!preparationNeuve.rapport.fiche?.produit;
+}
+
+/** Le relais répond et le dossier est vert, mais l'imprimeur n'a aucun
+ *  produit à ces cotes (un 28 × 21, une taille libre) : l'écran le dit au
+ *  lieu de proposer Commander, qui finirait sur un refus du relais. */
+export function formatInvendable(
+  relaisJoignable: boolean,
+  preparationNeuve: Preparation | null,
+): boolean {
+  return relaisJoignable && !!preparationNeuve && preparationNeuve.rapport.ok && !preparationNeuve.rapport.fiche?.produit;
 }
 
 /** Un montant de l'API (« 11.8333 ») en dix-millièmes, sans flottant qui
