@@ -60,6 +60,9 @@ export const PROPOSITIONS_EN: Record<string, { nom: string; about: string }> = {
  *  pose dans `phrase.valeurs`, déjà formatées. En minuscule initiale comme
  *  le français du moteur : l'écran les pose après « Spread 4 ». */
 export const PHRASES_EN: Record<string, string> = {
+  format_sans_produit:
+    "{imprimeur} does not print this format: none of its books measures {w_mm} × {h_mm} mm",
+  "format_sans_produit.choisir": "choose one of the formats it prints in Format",
   "pagination.multiple":
     "the file has {pages} pages, and {imprimeur} only binds page counts in multiples of {pas}",
   "pagination.bornes":

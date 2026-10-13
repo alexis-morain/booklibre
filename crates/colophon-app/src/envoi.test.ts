@@ -5,14 +5,19 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { Album } from "./album";
 import type { Defaut, Preparation, Printer, PrevolReport } from "./bridge";
-import { setLangue } from "./i18n";
+import { FR, EN, setLangue } from "./i18n";
+import codes from "./moteur.codes.json";
 import {
+  DESTINATIONS,
   PROFIL_ENVOI,
   PROFIL_LIBRE,
   actionEnvoi,
   actionsDefaut,
+  destinationDe,
   imprimeurAffiche,
+  libelleDestination,
   phrasePreparation,
+  phraseSimple,
   ppiDe,
 } from "./envoi";
 
@@ -174,5 +179,102 @@ describe("ppiDe", () => {
     };
     expect(ppiDe(d)).toBe(130);
     expect(ppiDe({ ...d, cause: "autre chose" })).toBeNull();
+  });
+});
+
+const defaut = (regle: string, extra: Partial<Defaut> = {}): Defaut => ({
+  regle,
+  bloquant: true,
+  cause: "la cause du moteur",
+  remede: "le remède du moteur",
+  ...extra,
+});
+
+describe("une destination par règle", () => {
+  it("chaque règle du moteur mène quelque part, et la table n'en invente aucune", () => {
+    expect(Object.keys(DESTINATIONS).sort()).toEqual([...codes.regles].sort());
+  });
+
+  it("une planche mène à la planche, la couverture à la couverture", () => {
+    expect(destinationDe(defaut("resolution", { planche: 4, case: 1 }))).toBe("planche");
+    expect(destinationDe(defaut("objet_pli", { planche: 2 }))).toBe("planche");
+    for (const r of ["couverture_resolution", "couverture_vide", "dos", "dos_nu"]) {
+      expect(destinationDe(defaut(r)), r).toBe("couverture");
+    }
+  });
+
+  it("le format et la pagination mènent au panneau Format", () => {
+    expect(destinationDe(defaut("format_sans_produit"))).toBe("format");
+    expect(destinationDe(defaut("pagination"))).toBe("format");
+  });
+
+  it("une page à décocher se décoche ici, plus bas dans Envoi", () => {
+    const d = defaut("pagination", {
+      phrase: { cause: "pagination.bornes", remede: "pagination.decocher_colophon" },
+    });
+    expect(destinationDe(d)).toBe("ici");
+  });
+
+  it("les fichiers se refont en préparant à nouveau", () => {
+    for (const r of ["fichier_couverture", "fichier_interieur", "fichier_profil", "fichier_perime", "conformite", "espace"]) {
+      expect(destinationDe(defaut(r)), r).toBe("preparer");
+    }
+  });
+
+  it("une règle d'un moteur plus récent n'a pas de destination inventée", () => {
+    expect(destinationDe(defaut("regle_future"))).toBeNull();
+  });
+
+  it("une ligne sans planche se nomme par sa destination, plus jamais « L'album »", () => {
+    setLangue("fr");
+    expect(libelleDestination(defaut("couverture_resolution"))).toBe("Couverture");
+    expect(libelleDestination(defaut("format_sans_produit"))).toBe("Format");
+    expect(libelleDestination(defaut("fichier_couverture"))).toBe("Fichiers");
+    expect(libelleDestination(defaut("resolution", { planche: 4 }))).toBe("Planche 4");
+    // Une règle de planche nomme toujours la sienne.
+    for (const r of codes.regles) {
+      const d = defaut(r, DESTINATIONS[r] === "planche" ? { planche: 1 } : {});
+      expect(libelleDestination(d), r).not.toBe("L’album");
+    }
+    setLangue("en");
+    expect(libelleDestination(defaut("couverture_resolution"))).toBe("Cover");
+  });
+});
+
+describe("la phrase simple", () => {
+  it("chaque règle a la sienne, en français et en anglais, sans trou à remplir", () => {
+    for (const r of codes.regles) {
+      const cle = `envoi.simple.${r}`;
+      expect(FR, cle).toHaveProperty([cle]);
+      expect(EN, cle).toHaveProperty([cle]);
+      expect((FR as Record<string, string>)[cle]).not.toMatch(/\{/);
+    }
+  });
+
+  it("dit le geste, et laisse les ppi, les millimètres et les fichiers aux détails", () => {
+    setLangue("fr");
+    const d = defaut("couverture_resolution", {
+      src: "IMG_1148.heic",
+      cause: "IMG_1148.heic imprimerait à 221 ppi sur la couverture de 329 × 348 mm, Cloudprinter exige 250",
+    });
+    expect(phraseSimple(d)).toBe("Cette photo est trop petite pour la couverture : choisissez-en une autre.");
+    for (const r of codes.regles) {
+      const p = phraseSimple(defaut(r))!;
+      expect(p, r).not.toMatch(/\d|ppi|mm\b|\.pdf|--/);
+    }
+    setLangue("en");
+    expect(phraseSimple(d)).toBe("This photo is too small for the cover: choose another one.");
+  });
+
+  it("une page décochable se dit pour ce qu'elle est", () => {
+    setLangue("fr");
+    const d = defaut("pagination", {
+      phrase: { cause: "pagination.bornes", remede: "pagination.decocher_colophon" },
+    });
+    expect(phraseSimple(d)).toContain("colophon");
+  });
+
+  it("une règle inconnue n'a pas de phrase simple : l'écran garde celle du moteur", () => {
+    expect(phraseSimple(defaut("regle_future"))).toBeNull();
   });
 });

@@ -62,6 +62,8 @@ pub struct Phrase {
 /// valeur qu'elle n'annonce pas, et `codes::codes_json` la donne à l'app, dont
 /// un test exige une phrase anglaise par code et aucun trou sans valeur.
 pub const PHRASES: &[(&str, &[&str])] = &[
+    ("format_sans_produit", &["imprimeur", "w_mm", "h_mm"]),
+    ("format_sans_produit.choisir", &[]),
     ("pagination.multiple", &["pages", "imprimeur", "pas"]),
     ("pagination.bornes", &["pages", "imprimeur", "min", "max"]),
     ("pagination.decocher_colophon", &[]),
@@ -102,6 +104,31 @@ pub const PHRASES: &[(&str, &[&str])] = &[
     ("fichier_perime.album", &["fichier", "avant", "maintenant"]),
     ("fichier_perime.octets", &["fichier", "octets", "rendu"]),
     ("fichier.refaire", &["commande", "profil"]),
+];
+
+/// Chaque règle du prévol, sous le nom que porte `Defaut::regle`. La liste
+/// est fermée : `check` refuse en debug un défaut d'une règle qu'elle ne porte
+/// pas, et `codes::codes_json` la donne à l'app, dont un test exige une
+/// destination à l'écran par règle (`envoi.ts::DESTINATIONS`).
+pub const REGLES: &[&str] = &[
+    "conformite",
+    "couverture_resolution",
+    "couverture_vide",
+    "dos",
+    "dos_nu",
+    "espace",
+    "fichier_couverture",
+    "fichier_interieur",
+    "fichier_perime",
+    "fichier_profil",
+    "fond_perdu",
+    "format_sans_produit",
+    "imposition",
+    "objet_coupe",
+    "objet_pli",
+    "pagination",
+    "resolution",
+    "zone_sure",
 ];
 
 /// Les deux notes du rapport. Des textes fixes : l'app les écrit en anglais
@@ -320,6 +347,31 @@ pub fn prevol(dir: &Path, profil: &'static PrinterProfile) -> Result<PrevolRepor
     prevol_dossier(dir, dir, profil)
 }
 
+/// Le prévol de l'album seul, sans regarder un seul fichier posé : celui de
+/// la fenêtre.
+///
+/// Les PDF restés à côté d'`album.json` sont ceux d'un export d'avant, peut-être
+/// d'un autre format ou d'un autre imprimeur, et personne ne les envoie depuis
+/// l'app : elle prépare un dossier neuf et le relit (`prevol_dossier`). Les
+/// juger ici refusait un album juste pour un fichier oublié, avec un conseil
+/// de ligne de commande dans la fenêtre. La CLI garde [`prevol`] : dans un
+/// terminal, ce dossier est celui qu'on envoie.
+pub fn prevol_album(dir: &Path, profil: &'static PrinterProfile) -> Result<PrevolReport> {
+    let (album, dims) = lire_album(dir)?;
+    Ok(check(&album, profil, &dims, &FichiersPoses::default()))
+}
+
+/// `album.json` et les tailles de ses originaux.
+fn lire_album(dir: &Path) -> Result<(Album, HashMap<String, (u32, u32)>)> {
+    let json = dir.join("album.json");
+    let album: Album = serde_json::from_str(
+        &fs::read_to_string(&json).with_context(|| format!("lecture de {}", json.display()))?,
+    )
+    .context("album.json illisible")?;
+    let dims = original_dimensions(&album);
+    Ok((album, dims))
+}
+
 /// Le même prévol, les fichiers lus dans `fichiers` plutôt qu'à côté
 /// d'`album.json`.
 ///
@@ -334,12 +386,7 @@ pub fn prevol_dossier(
     fichiers: &Path,
     profil: &'static PrinterProfile,
 ) -> Result<PrevolReport> {
-    let json = dir.join("album.json");
-    let album: Album = serde_json::from_str(
-        &fs::read_to_string(&json).with_context(|| format!("lecture de {}", json.display()))?,
-    )
-    .context("album.json illisible")?;
-    let dims = original_dimensions(&album);
+    let (album, dims) = lire_album(dir)?;
     Ok(check(&album, profil, &dims, &FichiersPoses::lire(fichiers)))
 }
 
@@ -411,6 +458,36 @@ pub fn check(
     // the number that has to be declared at the order, and Prodigi puts an
     // order on hold when it disagrees with the file.
     let pages_fichier = pages + if profil.fichiers == Fichiers::Un { 2 } else { 0 };
+
+    // 0. Le format. Chez qui l'app commande, un format sans produit ne se
+    // relie nulle part : le 13/10 un 28 × 21 se préparait vert pour
+    // Cloudprinter, puis le relais refusait la commande. Rien à recadrer, rien
+    // à retirer : le seul geste est de changer de format, et il se dit avant
+    // tout le reste. Ailleurs on ne sait pas quels produits existent, donc on
+    // se tait plutôt que d'inventer un refus.
+    let produit = profil
+        .commande
+        .and_then(|_| crate::commande::produit_pour(&crate::format::nom(album.trim_mm)));
+    if profil.commande.is_some() && produit.is_none() {
+        let (w, h) = (format!("{:.0}", album.trim_mm.w), format!("{:.0}", album.trim_mm.h));
+        defauts.push(Defaut {
+            regle: "format_sans_produit",
+            bloquant: true,
+            planche: None,
+            case_idx: None,
+            src: None,
+            cause: format!(
+                "{} n'imprime pas ce format : aucun de ses livres ne mesure {w} × {h} mm",
+                profil.nom
+            ),
+            remede: "choisissez un des formats qu'il imprime dans Format".into(),
+            phrase: phrase(
+                "format_sans_produit",
+                "format_sans_produit.choisir",
+                vec![("imprimeur", profil.nom.into()), ("w_mm", w), ("h_mm", h)],
+            ),
+        });
+    }
 
     // 1. Pagination. A binding folds sheets: an odd count does not exist, and
     // every press has a range it will not leave.
@@ -1026,6 +1103,11 @@ pub fn check(
         }
     }
 
+    if cfg!(debug_assertions) {
+        for d in &defauts {
+            assert!(REGLES.contains(&d.regle), "règle absente de REGLES : {}", d.regle);
+        }
+    }
     let bloquants = defauts.iter().filter(|d| d.bloquant).count();
     let avertissements = defauts.len() - bloquants;
 
@@ -1038,7 +1120,7 @@ pub fn check(
         fiche: Fiche {
             imprimeur: profil.nom,
             format_page_mm: [album.trim_mm.w, album.trim_mm.h],
-            produit: profil.commande.and_then(|_| crate::commande::produit_pour(&crate::format::nom(album.trim_mm))),
+            produit,
             planches: album.spreads.len(),
             pages_interieur: pages,
             pages_fichier,
@@ -1354,6 +1436,82 @@ mod tests {
         // Prodigi ne se commande pas depuis l'app : pas de produit, même carré.
         let pr = PrinterProfile::par_id("prodigi").unwrap();
         assert_eq!(check(&carre, pr, &dims, &FichiersPoses::default()).fiche.produit, None);
+    }
+
+    /// Un format que l'imprimeur commandé ne relie pas se dit au prévol, et
+    /// bloque. Le 13/10 un 28 × 21 se préparait vert pour Cloudprinter, puis
+    /// la commande tombait sur un refus du relais : aucun de ses livres n'a
+    /// ces cotes, même commandé à la main. Chez qui l'app ne commande pas, la
+    /// règle se tait — leurs produits ne sont pas listés ici, et un silence
+    /// vaut mieux qu'un refus inventé.
+    #[test]
+    fn un_format_sans_produit_bloque_chez_qui_se_commande() {
+        let dims: HashMap<String, (u32, u32)> = (0..24).map(|i| (format!("{i}.jpg"), (5000u32, 5000u32))).collect();
+        let cp = PrinterProfile::par_id("cloudprinter").unwrap();
+        let regle = |a: &Album, p: &'static PrinterProfile| {
+            check(a, p, &dims, &FichiersPoses::default())
+                .defauts
+                .into_iter()
+                .filter(|d| d.regle == "format_sans_produit")
+                .collect::<Vec<_>>()
+        };
+
+        let mut paysage = album_de(12, 3.0);
+        paysage.trim_mm = Size { w: 280.0, h: 210.0 };
+        let d = regle(&paysage, cp);
+        assert_eq!(d.len(), 1, "{d:?}");
+        assert!(d[0].bloquant);
+        assert_eq!(d[0].planche, None);
+        assert!(d[0].cause.starts_with("Cloudprinter n'imprime pas ce format"), "{}", d[0].cause);
+        assert!(d[0].cause.contains("280 × 210 mm"), "{}", d[0].cause);
+        assert_eq!(d[0].remede, "choisissez un des formats qu'il imprime dans Format");
+        assert_eq!(d[0].phrase.cause, "format_sans_produit");
+        assert_eq!(d[0].phrase.remede, "format_sans_produit.choisir");
+        assert!(!check(&paysage, cp, &dims, &FichiersPoses::default()).ok);
+
+        // Une taille libre n'a pas de produit non plus.
+        let mut libre = album_de(12, 3.0);
+        libre.trim_mm = Size { w: 211.0, h: 211.0 };
+        assert_eq!(regle(&libre, cp).len(), 1);
+
+        // Le carré se commande, et Prodigi ne se commande pas depuis l'app.
+        assert!(regle(&album_de(12, 3.0), cp).is_empty());
+        let pr = PrinterProfile::par_id("prodigi").unwrap();
+        assert!(regle(&paysage, pr).is_empty());
+    }
+
+    /// La fenêtre ne juge que l'album. Le 13/10 un 30 × 30 refusait la
+    /// commande sur un `album-cover.pdf` resté à côté de l'album d'un export
+    /// d'un autre format, avec un conseil de ligne de commande à l'écran. Les
+    /// fichiers se jugent là où on les envoie, dans le dossier préparé
+    /// (`prevol_dossier`) ; la CLI garde `prevol`, qui les lit à côté.
+    #[test]
+    fn le_prevol_de_l_album_ne_juge_pas_les_fichiers_d_a_cote() {
+        let dir = std::env::temp_dir()
+            .join(format!("colophon-prevol-album-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let a = album_de(24, 3.0);
+        fs::write(dir.join("album.json"), serde_json::to_string(&a).unwrap()).unwrap();
+        // La feuille d'un autre format, sous le nom de la livraison.
+        pdf_d_une_page(&dir.join("album-cover.pdf"), 622.2, 306.0);
+        let cp = PrinterProfile::par_id("cloudprinter").unwrap();
+
+        let cli = prevol(&dir, cp).unwrap();
+        assert!(cli.defauts.iter().any(|d| d.regle == "fichier_couverture"), "{:?}", cli.defauts);
+
+        let app = prevol_album(&dir, cp).unwrap();
+        assert!(!app.defauts.iter().any(|d| d.regle.starts_with("fichier")), "{:?}", app.defauts);
+        let sans_fichiers = |r: &PrevolReport| {
+            r.defauts
+                .iter()
+                .filter(|d| !d.regle.starts_with("fichier"))
+                .map(|d| (d.regle, d.cause.clone()))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(sans_fichiers(&cli), sans_fichiers(&app));
+
+        let _ = fs::remove_dir_all(&dir);
     }
 
     /// Un fichier posé dont on ne juge que la géométrie : le manifeste des
@@ -1835,8 +1993,11 @@ mod tests {
         let avant = check(&a, profil, &dims, &FichiersPoses::default());
         assert!(!avant.ok, "le cas doit avoir quelque chose à dire");
 
+        // Vers le paysage A4, que Cloudprinter imprime : un 28 × 21 n'a pas de
+        // produit chez lui, et `format_sans_produit` y ajouterait un défaut
+        // qui ne vient pas de la bascule mais du format visé.
         let (basculee, _) =
-            crate::bascule::bascule(&a, Size { w: 280.0, h: 210.0 }, &dims, profil);
+            crate::bascule::bascule(&a, Size { w: 297.0, h: 210.0 }, &dims, profil);
         let apres = check(&basculee, profil, &dims, &FichiersPoses::default());
 
         // Same defects, matched by what they are and where they are.
@@ -1856,7 +2017,7 @@ mod tests {
         // asserted then masked. There are three, and all follow the page:
         // a bascule changes the page, the cover sheet is built around the
         // page, so a sheet that did **not** move would be the bug ; and the
-        // printer's product is the page's, which a 28 × 21 does not have.
+        // printer's product is the page's, so it changes with it.
         let mut fa = serde_json::to_value(&avant.fiche).unwrap();
         let mut fp = serde_json::to_value(&apres.fiche).unwrap();
         for champ in ["format_page_mm", "feuille_couverture_mm", "produit"] {

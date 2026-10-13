@@ -127,6 +127,11 @@ struct Cli {
     #[arg(long)]
     prevol: bool,
 
+    /// Avec --prevol : l'album seul, sans juger les PDF posés à côté, comme
+    /// le fait la fenêtre. Pour le serveur de dev, qui la remplace au harnais.
+    #[arg(long, hide = true, requires = "prevol")]
+    sans_fichiers: bool,
+
     /// Prépare le dossier de la commande pour --profil, comme le bouton de
     /// l'écran Envoi : album-print.pdf, album-cover.pdf, export.json et
     /// fiche.txt dans DOSSIER, jamais à côté de l'album, puis le prévol relu
@@ -438,7 +443,11 @@ fn main() -> Result<()> {
     }
 
     if cli.prevol {
-        let report = colophon_core::prevol::prevol(&cli.out, profil(&cli.profil)?)?;
+        let report = if cli.sans_fichiers {
+            colophon_core::prevol::prevol_album(&cli.out, profil(&cli.profil)?)?
+        } else {
+            colophon_core::prevol::prevol(&cli.out, profil(&cli.profil)?)?
+        };
         println!("{}", serde_json::to_string_pretty(&report)?);
         if !report.ok {
             std::process::exit(1);

@@ -2278,6 +2278,10 @@ fn reveal_data_dir(app: tauri::AppHandle) -> Result<(), String> {
 /// Preflight the album as it stands on disk against one profile. Reads every
 /// original's dimensions, so it is seconds on a big album: off the main
 /// thread, like the renders.
+///
+/// L'album seul (`prevol_album`), jamais les PDF restés à côté : la fenêtre
+/// n'envoie que le dossier qu'elle prépare, et c'est là qu'ils se jugent
+/// (`preparer_dossier`, par `prevol_dossier`).
 #[tauri::command]
 async fn preflight(
     profil: String,
@@ -2288,7 +2292,7 @@ async fn preflight(
         guard.as_ref().ok_or("aucun album ouvert")?.dir.clone()
     };
     let profil = printer_profile(&profil)?;
-    tauri::async_runtime::spawn_blocking(move || colophon_core::prevol::prevol(&dir, profil))
+    tauri::async_runtime::spawn_blocking(move || colophon_core::prevol::prevol_album(&dir, profil))
         .await
         .map_err(|e| e.to_string())?
         .map_err(|e| format!("{e:#}"))

@@ -1684,6 +1684,9 @@ export default function App() {
   // The selection belongs to one spread only. « Voir », dans Envoi, ouvre une
   // planche sur une case : celle-là survit au changement de planche.
   const caseALOuverture = useRef<number | null>(null);
+  // Envoi demande la couverture avec son choix de photo ouvert : l'éditeur
+  // le lit à son arrivée, puis l'oublie.
+  const [choixCouverture, setChoixCouverture] = useState(false);
   useEffect(() => {
     setSelected(caseALOuverture.current);
     caseALOuverture.current = null;
@@ -2553,6 +2556,11 @@ export default function App() {
             setSelected(null);
             setView("livre");
           }}
+          onCouverture={(choisir) => {
+            setChoixCouverture(choisir);
+            raw.couverture();
+          }}
+          onFormat={() => void ouvrirBascule()}
           onVoir={(planche, cell) => {
             // Sur la planche déjà ouverte, l'effet ne repasse pas : rien à
             // garder pour lui.
@@ -2625,6 +2633,8 @@ export default function App() {
                 printer={printers?.find((p) => p.id === profil) ?? null}
                 onCover={(c) => apply((a) => setCover(a, c))}
                 onReglage={(src, r) => apply((a) => setReglage(a, src, r))}
+                choixALOuverture={choixCouverture}
+                onChoixOuvert={() => setChoixCouverture(false)}
               />
             ) : (
               spread && (

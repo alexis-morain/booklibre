@@ -99,6 +99,12 @@
       "requis_mm"
     ],
     "fond_perdu.recomposer": [],
+    "format_sans_produit": [
+      "imprimeur",
+      "w_mm",
+      "h_mm"
+    ],
+    "format_sans_produit.choisir": [],
     "imposition.garde": [],
     "imposition.objet": [
       "imprimeur"
@@ -154,6 +160,26 @@
     "demandee",
     "autre-rythme",
     "resserree"
+  ],
+  "regles": [
+    "conformite",
+    "couverture_resolution",
+    "couverture_vide",
+    "dos",
+    "dos_nu",
+    "espace",
+    "fichier_couverture",
+    "fichier_interieur",
+    "fichier_perime",
+    "fichier_profil",
+    "fond_perdu",
+    "format_sans_produit",
+    "imposition",
+    "objet_coupe",
+    "objet_pli",
+    "pagination",
+    "resolution",
+    "zone_sure"
   ],
   "reserves": {
     "cloudprinter": [

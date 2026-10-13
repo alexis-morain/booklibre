@@ -61,6 +61,25 @@ export function commandePossible(
   return relaisJoignable && !!preparationNeuve && preparationNeuve.rapport.ok && !!preparationNeuve.rapport.fiche?.produit;
 }
 
+/** Ce que l'écran sait du relais. `absent` : ce build n'en porte aucun
+ *  (`relaisPays` rend null sans un appel), rien ne s'affiche. `injoignable` :
+ *  il y en a un, et il n'a pas répondu, ou répondu sans un pays où vendre ;
+ *  l'écran le dit au lieu de se taire. */
+export type Relais = { etat: "absent" } | { etat: "joignable"; pays: Pays[] } | { etat: "injoignable" };
+
+/** La réponse de `relaisPays`, rangée. Son échec est `{ etat: "injoignable" }`,
+ *  que l'appelant pose lui-même. */
+export function relaisDe(pays: Pays[] | null): Relais {
+  if (pays === null) return { etat: "absent" };
+  return pays.length > 0 ? { etat: "joignable", pays } : { etat: "injoignable" };
+}
+
+/** La panne se dit là où Commander se serait offert, et seulement là : un
+ *  dossier de cette ouverture, vert, d'un format que l'imprimeur vend. */
+export function relaisIndisponible(relais: Relais, preparationNeuve: Preparation | null): boolean {
+  return relais.etat === "injoignable" && commandePossible(true, preparationNeuve);
+}
+
 /** Le relais répond et le dossier est vert, mais l'imprimeur n'a aucun
  *  produit à ces cotes (un 28 × 21, une taille libre) : l'écran le dit au
  *  lieu de proposer Commander, qui finirait sur un refus du relais. */

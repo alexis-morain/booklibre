@@ -36,9 +36,13 @@ import {
   PROFIL_LIBRE,
   actionEnvoi,
   ActionDefaut,
+  Destination,
   actionsDefaut,
+  destinationDe,
   imprimeurAffiche,
+  libelleDestination,
   phrasePreparation,
+  phraseSimple,
   ppiDe,
 } from "./envoi";
 import { t } from "./i18n";
@@ -53,6 +57,8 @@ export function EnvoiView({
   profil,
   onProfil,
   onJump,
+  onCouverture,
+  onFormat,
   onVoir,
   onRemplacer,
   onRetirer,
@@ -79,6 +85,10 @@ export function EnvoiView({
   onProfil: (id: string) => void;
   /** Show spread `n` (1-based) in the book view. */
   onJump: (planche: number) => void;
+  /** L'éditeur de couverture ; `choisir` ouvre aussi le choix de sa photo. */
+  onCouverture: (choisir: boolean) => void;
+  /** Le panneau Format. */
+  onFormat: () => void;
   /** Une photo trop petite pour sa case : la planche ouverte sur la case. */
   onVoir: (planche: number, cell: number) => void;
   /** Le choix de la réserve pour cette case, ouvert sous le bouton. */
@@ -147,6 +157,15 @@ export function EnvoiView({
   const action = chosen ? actionEnvoi(chosen) : null;
   const bloquants = report?.defauts.filter((d) => d.bloquant) ?? [];
   const avertissements = report?.defauts.filter((d) => !d.bloquant) ?? [];
+  // Ce que chaque destination fait d'un clic. « Préparer à nouveau » ne
+  // s'offre que sous le dossier préparé : les fichiers ne se jugent plus
+  // ailleurs, et avant lui le bouton du bas est déjà la porte.
+  const gestes = (preparer?: () => void): Gestes => ({
+    planche: onJump,
+    couverture: onCouverture,
+    format: onFormat,
+    preparer,
+  });
   const ligne = (d: Defaut, key: string) => {
     const actions = actionsDefaut(d, album, reserveVide);
     return actions.length > 0 ? (
@@ -159,7 +178,7 @@ export function EnvoiView({
         onRetirer={onRetirer}
       />
     ) : (
-      <DefautLigne key={key} d={d} onJump={onJump} />
+      <DefautLigne key={key} d={d} gestes={gestes()} />
     );
   };
 
@@ -374,7 +393,7 @@ export function EnvoiView({
                 {preparation.rapport.defauts
                   .filter((d) => d.bloquant)
                   .map((d, i) => (
-                    <DefautLigne key={i} d={d} onJump={onJump} />
+                    <DefautLigne key={i} d={d} gestes={gestes(onPrepare)} />
                   ))}
               </div>
             )}
@@ -419,27 +438,77 @@ function Ligne({ k, children }: { k: string; children: React.ReactNode }) {
   );
 }
 
-/** One defect, clickable when it belongs to a spread. The cause is what the
- *  user reads; the remedy is the gesture that fixes it. */
-function DefautLigne({ d, onJump }: { d: Defaut; onJump: (n: number) => void }) {
-  const body = (
+/** Ce qu'une ligne de défaut sait faire d'un clic, par destination. */
+type Gestes = {
+  planche: (n: number) => void;
+  couverture: (choisir: boolean) => void;
+  format: () => void;
+  /** Absent hors du dossier préparé. */
+  preparer?: () => void;
+};
+
+/** Le bouton d'une destination, ou rien quand le geste est ailleurs sur cet
+ *  écran (une page à décocher), ou nulle part dans la fenêtre. */
+function GesteDefaut({ d, dest, gestes }: { d: Defaut; dest: Destination | null; gestes: Gestes }) {
+  const bouton = (texte: string, faire: () => void) => (
+    <button type="button" className="link" onClick={faire}>
+      {texte}
+    </button>
+  );
+  switch (dest) {
+    case "couverture":
+      return d.regle === "couverture_resolution" || d.regle === "couverture_vide"
+        ? bouton(t("envoi.geste.couverture.photo"), () => gestes.couverture(true))
+        : bouton(t("envoi.geste.couverture"), () => gestes.couverture(false));
+    case "format":
+      return bouton(t("envoi.geste.format"), gestes.format);
+    case "preparer":
+      return gestes.preparer ? bouton(t("envoi.geste.preparer"), gestes.preparer) : null;
+    default:
+      return null;
+  }
+}
+
+/** One defect. What the user reads first is the app's plain sentence, the
+ *  gesture beside it; the engine's sentence, with its ppi, millimetres and
+ *  file names, waits under « Détails », closed. A rule the window does not
+ *  know keeps the engine's sentence in full. A defect on a spread names it
+ *  with a button that jumps there, as the whole line used to: a fold inside
+ *  a button would be a control inside a control. */
+function DefautLigne({ d, gestes }: { d: Defaut; gestes: Gestes }) {
+  const dest = destinationDe(d);
+  const simple = phraseSimple(d);
+  const moteur = (
     <>
-      <span className="envoi-defaut-ou">
-        {d.planche
-          ? t("envoi.defaut.planche", { n: d.planche })
-          : t("envoi.defaut.album")}
-      </span>
       <span className="envoi-defaut-cause">{phraseDefaut(d, "cause")}</span>
       <span className="envoi-defaut-remede">{phraseDefaut(d, "remede")}</span>
     </>
   );
   const cls = "envoi-defaut" + (d.bloquant ? " bloquant" : "");
-  return d.planche ? (
-    <button className={cls} onClick={() => onJump(d.planche!)}>
-      {body}
-    </button>
-  ) : (
-    <div className={cls}>{body}</div>
+  return (
+    <div className={cls}>
+      {dest === "planche" ? (
+        <button type="button" className="envoi-defaut-ou" onClick={() => gestes.planche(d.planche!)}>
+          {libelleDestination(d)}
+        </button>
+      ) : (
+        <span className="envoi-defaut-ou">{libelleDestination(d)}</span>
+      )}
+      {simple === null ? (
+        moteur
+      ) : (
+        <>
+          <span className="envoi-defaut-simple">{simple}</span>
+          <span className="envoi-defaut-geste">
+            <GesteDefaut d={d} dest={dest} gestes={gestes} />
+          </span>
+          <details className="envoi-defaut-details">
+            <summary>{t("envoi.details")}</summary>
+            {moteur}
+          </details>
+        </>
+      )}
+    </div>
   );
 }
 

@@ -499,8 +499,63 @@ export const FR = {
   "envoi.ko.un": "Un défaut arrête l’envoi.",
   "envoi.ko": "{n} défauts arrêtent l’envoi.",
   "envoi.ko.sub":
-    "Chaque ligne mène à sa planche. Corrigez, revenez, le contrôle se refait tout seul.",
+    "Chaque ligne mène à ce qui la répare. Corrigez, revenez, le contrôle se refait tout seul.",
   "envoi.defaut.album": "L’album",
+  "envoi.ou.couverture": "Couverture",
+  "envoi.ou.format": "Format",
+  "envoi.ou.fichiers": "Fichiers",
+  "envoi.ou.pages": "Pages",
+  "envoi.ou.composition": "Composition",
+  "envoi.geste.couverture": "Ouvrir la couverture",
+  "envoi.geste.couverture.photo": "Choisir une autre photo",
+  "envoi.geste.format": "Ouvrir Format",
+  "envoi.geste.preparer": "Préparer à nouveau",
+  "envoi.details": "Détails",
+  // Les phrases simples d'Envoi, une par règle du prévol (`envoi.ts`) : ce
+  // qui ne va pas et le geste, sans un chiffre. Le détail reste la phrase du
+  // moteur, sous « Détails ».
+  "envoi.simple.conformite":
+    "Cet imprimeur exige une norme de fichier que Colophon ne déclare pas encore : demandez-lui s’il accepte un PDF simple.",
+  "envoi.simple.couverture_resolution":
+    "Cette photo est trop petite pour la couverture : choisissez-en une autre.",
+  "envoi.simple.couverture_vide":
+    "La couverture n’a pas de photo et sortirait blanche : choisissez-en une.",
+  "envoi.simple.dos":
+    "La largeur du dos est une estimation que l’imprimeur n’a pas confirmée : vérifiez-la sur le premier livre reçu.",
+  "envoi.simple.dos_nu":
+    "Le dos est trop mince pour porter le titre : la tranche sortira nue, à moins d’ajouter des planches.",
+  "envoi.simple.espace":
+    "Cet imprimeur n’accepte que des fichiers en CMJN, et Colophon exporte en RVB : demandez-lui s’il convertit lui-même.",
+  "envoi.simple.fichier_couverture":
+    "La couverture préparée n’a pas les dimensions que l’imprimeur attend : préparez le dossier à nouveau.",
+  "envoi.simple.fichier_interieur":
+    "L’intérieur préparé n’a pas les pages que l’imprimeur attend : préparez le dossier à nouveau.",
+  "envoi.simple.fichier_perime":
+    "L’album a changé depuis que ce fichier a été préparé : préparez le dossier à nouveau.",
+  "envoi.simple.fichier_profil":
+    "Ce fichier a été préparé pour un autre imprimeur : préparez le dossier à nouveau.",
+  "envoi.simple.fond_perdu":
+    "Cet album a été composé avec trop peu de marge de coupe pour cet imprimeur : composez-le à nouveau depuis ses photos.",
+  "envoi.simple.format_sans_produit":
+    "Cet imprimeur n’imprime pas ce format : choisissez-en un autre dans Format.",
+  "envoi.simple.imposition":
+    "La première page de gauche ne s’imprime pas chez cet imprimeur, et elle porte quelque chose : cochez la page de garde plus bas.",
+  "envoi.simple.objet_coupe":
+    "Un objet posé à la main dépasse la coupe : rentrez-le dans la page, ou réduisez-le.",
+  "envoi.simple.objet_pli":
+    "Un objet posé à la main est à cheval sur le pli : glissez-le d’un seul côté.",
+  "envoi.simple.pagination":
+    "Le nombre de pages ne convient pas à cet imprimeur : ajoutez ou retirez des planches.",
+  "envoi.simple.pagination.ajouter":
+    "Le livre est trop court pour cet imprimeur : ajoutez des planches, ou choisissez un rythme plus aéré.",
+  "envoi.simple.pagination.decocher_colophon":
+    "Le livre a deux pages de trop pour cet imprimeur : décochez la page de colophon plus bas.",
+  "envoi.simple.pagination.decocher_garde":
+    "Le livre a deux pages de trop pour cet imprimeur : décochez la page de garde plus bas.",
+  "envoi.simple.resolution":
+    "Cette photo est trop petite pour sa case : mettez-la dans une case plus petite, remplacez-la ou retirez-la.",
+  "envoi.simple.zone_sure":
+    "Une légende est près de la coupe : elle risque d’être rognée.",
   "envoi.defaut.planche": "Planche {n}",
   "envoi.resolution.tete":
     "Ces photos sont trop petites pour leur case. Colophon n’imprime jamais sous 250 ppi.",
@@ -614,6 +669,7 @@ export const FR = {
   "commande.mode.sandbox": "sandbox",
   "commande.mode.reel": "réel",
   "commande.indisponible": "La commande est indisponible pour le moment. Réessayez plus tard ; l’export PDF, lui, marche toujours.",
+  "commande.reessayer": "Réessayer",
   "commande.format.invendable": "Ce format ne se commande pas depuis Colophon : Cloudprinter n’imprime que le carré 21 ou 30, l’A4 portrait ou paysage et le 20 × 25. Changez-le dans Format, ou envoyez ce dossier à un autre imprimeur.",
   "commande.papier": "Ce dossier est préparé pour un autre papier que celui de l’imprimeur : préparez-le pour Cloudprinter.",
   "commande.relais.attente_fichiers": "Les fichiers ne sont pas encore partis.",
@@ -1461,8 +1517,54 @@ export const EN: Record<Cle, string> = {
   "envoi.ko.un": "One defect stops the send.",
   "envoi.ko": "{n} defects stop the send.",
   "envoi.ko.sub":
-    "Each line leads to its spread. Fix, come back, the check reruns on its own.",
+    "Each line leads to what fixes it. Fix, come back, the check reruns on its own.",
   "envoi.defaut.album": "The album",
+  "envoi.ou.couverture": "Cover",
+  "envoi.ou.format": "Format",
+  "envoi.ou.fichiers": "Files",
+  "envoi.ou.pages": "Pages",
+  "envoi.ou.composition": "Composition",
+  "envoi.geste.couverture": "Open the cover",
+  "envoi.geste.couverture.photo": "Choose another photo",
+  "envoi.geste.format": "Open Format",
+  "envoi.geste.preparer": "Prepare again",
+  "envoi.details": "Details",
+  "envoi.simple.conformite":
+    "This printer requires a file standard Colophon does not declare yet: ask them whether they accept a plain PDF.",
+  "envoi.simple.couverture_resolution": "This photo is too small for the cover: choose another one.",
+  "envoi.simple.couverture_vide": "The cover has no photo and would print blank: choose one.",
+  "envoi.simple.dos":
+    "The spine width is an estimate the printer has not confirmed: check it on the first book you receive.",
+  "envoi.simple.dos_nu":
+    "The spine is too thin to carry the title: it will come out bare, unless you add spreads.",
+  "envoi.simple.espace":
+    "This printer only accepts CMYK files, and Colophon exports RGB: ask them whether they convert it themselves.",
+  "envoi.simple.fichier_couverture":
+    "The prepared cover does not have the size the printer expects: prepare the folder again.",
+  "envoi.simple.fichier_interieur":
+    "The prepared interior does not have the pages the printer expects: prepare the folder again.",
+  "envoi.simple.fichier_perime":
+    "The album has changed since this file was prepared: prepare the folder again.",
+  "envoi.simple.fichier_profil": "This file was prepared for another printer: prepare the folder again.",
+  "envoi.simple.fond_perdu":
+    "This album was composed with too little trim margin for this printer: compose it again from its photos.",
+  "envoi.simple.format_sans_produit":
+    "This printer does not print this format: choose another one in Format.",
+  "envoi.simple.imposition":
+    "The first left page is not printed at this printer, and it holds something: tick the half-title below.",
+  "envoi.simple.objet_coupe": "An object placed by hand runs past the trim: bring it inside the page, or make it smaller.",
+  "envoi.simple.objet_pli": "An object placed by hand straddles the fold: slide it to one side.",
+  "envoi.simple.pagination":
+    "The page count does not suit this printer: add or remove spreads.",
+  "envoi.simple.pagination.ajouter":
+    "The book is too short for this printer: add spreads, or choose an airier pace.",
+  "envoi.simple.pagination.decocher_colophon":
+    "The book has two pages too many for this printer: untick the colophon page below.",
+  "envoi.simple.pagination.decocher_garde":
+    "The book has two pages too many for this printer: untick the half-title below.",
+  "envoi.simple.resolution":
+    "This photo is too small for its cell: put it in a smaller cell, replace it or remove it.",
+  "envoi.simple.zone_sure": "A caption sits close to the trim: it may be cut off.",
   "envoi.defaut.planche": "Spread {n}",
   "envoi.resolution.tete":
     "These photos are too small for their cell. Colophon never prints below 250 ppi.",
@@ -1575,6 +1677,7 @@ export const EN: Record<Cle, string> = {
   "commande.mode.sandbox": "sandbox",
   "commande.mode.reel": "live",
   "commande.indisponible": "Ordering is unavailable for now. Try again later; the PDF export always works.",
+  "commande.reessayer": "Try again",
   "commande.format.invendable": "This size can’t be ordered from Colophon: Cloudprinter only prints the 21 or 30 cm square, A4 portrait or landscape, and 8 × 10 in. Change it in Format, or send this folder to another printer.",
   "commande.papier": "This folder was prepared for another paper than the printer’s: prepare it for Cloudprinter.",
   "commande.relais.attente_fichiers": "The files have not left yet.",

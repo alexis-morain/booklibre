@@ -28,6 +28,8 @@ import {
   phraseIntention,
   prixDeCentimes,
   refusDefinitif,
+  relaisDe,
+  relaisIndisponible,
   visibles,
 } from "./commande";
 import { setLangue, t } from "./i18n";
@@ -73,6 +75,40 @@ const PAYS: Pays[] = [
   { code: "FR", nom: "France", require_state: false },
   { code: "ES", nom: "Spain", require_state: true, etats: [{ code: "M", nom: "Madrid" }] },
 ];
+
+describe("le relais", () => {
+  // Le 13/10, le sandbox a rendu 502 en 25,8 s pendant une heure, et l'écran
+  // n'affichait rien : un échec de `relaisPays` se rangeait avec l'absence de
+  // relais compilé.
+  it("sépare l'absence de relais compilé d'un relais qui ne répond pas", () => {
+    expect(relaisDe(null)).toEqual({ etat: "absent" });
+    expect(relaisDe(PAYS)).toEqual({ etat: "joignable", pays: PAYS });
+    // Un relais qui répond sans aucun pays ne sait rien vendre : comme une panne.
+    expect(relaisDe([])).toEqual({ etat: "injoignable" });
+  });
+
+  it("dit la panne là où Commander se serait offert, et seulement là", () => {
+    const panne = { etat: "injoignable" } as const;
+    expect(relaisIndisponible(panne, preparation(true))).toBe(true);
+    expect(relaisIndisponible(panne, preparation(false))).toBe(false);
+    expect(relaisIndisponible(panne, null)).toBe(false);
+    // Sans relais compilé, rien, comme avant.
+    expect(relaisIndisponible({ etat: "absent" }, preparation(true))).toBe(false);
+    expect(relaisIndisponible({ etat: "joignable", pays: PAYS }, preparation(true))).toBe(false);
+    // Un format sans produit ne se commande pas, panne ou non.
+    const sansProduit = preparation(true);
+    sansProduit.rapport.fiche = { ...sansProduit.rapport.fiche, produit: undefined };
+    expect(relaisIndisponible(panne, sansProduit)).toBe(false);
+  });
+
+  it("a sa phrase et son geste dans les deux langues", () => {
+    setLangue("fr");
+    expect(t("commande.indisponible")).toContain("indisponible");
+    expect(t("commande.reessayer")).toBe("Réessayer");
+    setLangue("en");
+    expect(t("commande.reessayer")).toBe("Try again");
+  });
+});
 
 describe("commandePossible", () => {
   it("demande un relais joignable, un dossier de cette ouverture et un contrôle vert", () => {

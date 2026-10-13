@@ -6,9 +6,10 @@
 // L'écran attend en relisant l'état toutes les cinq secondes, et la liste
 // des commandes prend le relais quand le paiement a abouti.
 //
-// Rien ne s'affiche sans relais joignable, sans dossier préparé dans cette
+// Rien ne s'affiche sans relais compilé, sans dossier préparé dans cette
 // ouverture d'Envoi ou sans contrôle vert (`commandePossible`) : jamais un
-// bouton grisé. La liste des commandes, elle, se montre dès qu'il y en a une,
+// bouton grisé. Un relais compilé qui ne répond pas se dit, à la place de
+// Commander, avec « Réessayer » (`relaisIndisponible`). La liste des commandes, elle, se montre dès qu'il y en a une,
 // et se relit à chaque ouverture d'Envoi.
 
 import { useCallback, useEffect, useReducer, useState } from "react";
@@ -26,7 +27,7 @@ import {
 } from "./bridge";
 import {
   IntentionVue,
-  Pays,
+  Relais,
   aRelire,
   abandonnable,
   ignorable,
@@ -43,6 +44,8 @@ import {
   phraseErreur,
   phraseIntention,
   prixDeCentimes,
+  relaisDe,
+  relaisIndisponible,
   visibles,
 } from "./commande";
 import { t, useLangue } from "./i18n";
@@ -54,7 +57,9 @@ const mo = (octets: number) => (octets / 1e6).toFixed(1);
 
 export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparation | null }) {
   const langue = useLangue();
-  const [pays, setPays] = useState<Pays[] | null>(null);
+  // Null tant que la première réponse n'est pas venue.
+  const [relais, setRelais] = useState<Relais | null>(null);
+  const [sonde, setSonde] = useState(false);
   const [intentions, setIntentions] = useState<IntentionVue[]>([]);
   const [parcours, envoyer] = useReducer(avancer, { etape: "repos" });
   const [occupe, setOccupe] = useState<string | null>(null);
@@ -66,14 +71,21 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
     for (const i of liste) envoyer({ type: "etat", intention: i });
   }, []);
 
-  // À l'ouverture d'Envoi : le relais répond-il, et où en sont les
-  // commandes ? Sans relais compilé, `relaisPays` rend null sans un appel.
+  // Le relais répond-il ? Sans relais compilé, `relaisPays` rend null sans
+  // un appel ; un échec, lui, est un relais compilé qui ne répond pas, et
+  // l'écran le dit au lieu de se taire.
+  const sonder = useCallback((vivant: () => boolean = () => true) => {
+    setSonde(true);
+    relaisPays().then(
+      (p) => vivant() && (setRelais(relaisDe(p)), setSonde(false)),
+      () => vivant() && (setRelais({ etat: "injoignable" }), setSonde(false)),
+    );
+  }, []);
+
+  // À l'ouverture d'Envoi : le relais, et où en sont les commandes.
   useEffect(() => {
     let vivant = true;
-    relaisPays().then(
-      (p) => vivant && setPays(p),
-      () => vivant && setPays(null),
-    );
+    sonder(() => vivant);
     relaisRelire().then(
       (r) => {
         if (!vivant) return;
@@ -85,7 +97,7 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
     return () => {
       vivant = false;
     };
-  }, [recevoir]);
+  }, [recevoir, sonder]);
 
   // Tant que l'écran est ouvert, ce qui attend se relit toutes les cinq
   // secondes. L'effet tombe avec la dernière intention en attente.
@@ -100,7 +112,9 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
     return () => clearInterval(minuterie);
   }, [enAttente, recevoir]);
 
-  const joignable = (pays?.length ?? 0) > 0;
+  const pays = relais?.etat === "joignable" ? relais.pays : null;
+  const joignable = pays !== null;
+  const indisponible = relais !== null && relaisIndisponible(relais, preparationNeuve);
   const possible = commandePossible(joignable, preparationNeuve);
   const invendable = formatInvendable(joignable, preparationNeuve);
   const prix = (c: number) => prixDeCentimes(c, langue);
@@ -205,6 +219,17 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
         <p className="commande-format" role="status">
           {t("commande.format.invendable")}
         </p>
+      )}
+
+      {indisponible && parcours.etape === "repos" && (
+        <div className="commande-ouvrir">
+          <p className="commande-erreur" role="status">
+            {t("commande.indisponible")}
+          </p>
+          <button className="link" disabled={sonde} onClick={() => sonder()}>
+            {t("commande.reessayer")}
+          </button>
+        </div>
       )}
 
       {possible && parcours.etape === "repos" && (
