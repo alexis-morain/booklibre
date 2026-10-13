@@ -33,8 +33,9 @@ and places the order with Cloudprinter, so that the app holds no key. Which
 relay a build talks to is fixed when it is compiled. The published builds
 carry none, and call none: the order button does not exist in them, and
 nothing in these notes will say otherwise until a release announces it. A
-debug build points at a test relay; a release built from source with
-`COLOPHON_RELAIS_REEL` set points at that address.
+debug build points at a test relay, as does a release built from source with
+`COLOPHON_RELAIS_SANDBOX=1`; a release built with `COLOPHON_RELAIS_REEL` set
+points at that address. Setting both stops the build.
 
 A build that carries a relay asks it for the list of countries it delivers
 to each time you open the Send panel: an HTTPS request from the Rust

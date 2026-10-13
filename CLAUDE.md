@@ -511,9 +511,12 @@ une ligne dont la case ne porte plus la photo du rapport se tait.
 
 **L'app ne tient aucune clé.** Le relais d'Alexis (`colophon-relais`, dépôt privé, un
 Worker) devise, encaisse par Stripe Checkout et commande chez Cloudprinter. L'app ne
-connaît qu'une adresse compilée, **`relais::RELAIS_URL`** = `url_pour(cfg!(debug_assertions), REEL)` :
-le sandbox `workers.dev` en debug ; en release, **`REEL`**, lu par
-`option_env!("COLOPHON_RELAIS_REEL")`, et rien sans lui (le gate tourne en debug, d'où la
+connaît qu'une adresse compilée, **`relais::RELAIS_URL`** =
+`url_pour(cfg!(debug_assertions), SANDBOX_EN_RELEASE, REEL)` : le sandbox `workers.dev` en
+debug, ou en release avec `COLOPHON_RELAIS_SANDBOX=1` (le produit final à tester, intentions
+en mode sandbox, sinon `Stock::vue` les cacherait) ; en release sinon, **`REEL`**, lu par
+`option_env!("COLOPHON_RELAIS_REEL")`, et rien sans lui ; les deux à la fois, ou une autre
+valeur que `1`, arrêtent le build (`sandbox_valide`, `relais_unique`) (le gate tourne en debug, d'où la
 fonction : son test tient aussi la valeur de la release). La CI publique ne la pose pas : la
 release publiée reste inerte. Posée, elle doit être `https://` puis un hôte seul
 (`reel_valide`, `const`) : un chemin, un port, des identifiants ou une requête font
@@ -525,7 +528,9 @@ pas (jamais grisé) ; une adresse qui échoue n'est pas une absence, et la phras
 `relaisIndisponible` ; au harnais, `POST /__dev/relais/panne`). Commander demande aussi un dossier préparé dans cette ouverture, vert, et
 **un produit à ses cotes** (`Fiche::produit`, `commande::produit_pour`, Cloudprinter seul) :
 un 28 × 21 ou une taille libre affichent `commande.format.invendable` à la place, et
-`relais_creer` les refuse avant le réseau. **Un bundle contre le relais réel** :
+`relais_creer` les refuse avant le réseau. **Une release contre le sandbox** :
+`COLOPHON_RELAIS_SANDBOX=1 npm run tauri build -- --bundles app`, signée par
+`APPLE_SIGNING_IDENTITY`. **Un bundle contre le relais réel** :
 `COLOPHON_RELAIS_REEL=https://<hôte> npm run tauri build` dans `crates/colophon-app` (l'hôte
 seul, sans `/` final), puis `install-app.sh` comme d'habitude.
 

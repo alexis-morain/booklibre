@@ -29,25 +29,49 @@ use std::time::Duration;
 const SANDBOX: &str = "https://colophon-relais-sandbox.alexis-c1f.workers.dev";
 
 /// L'adresse du relais pour un build de debug ou de release : le sandbox en
-/// debug ; en release, le relais réel `reel` que la compilation a reçu, et
-/// **rien** sans lui. Une fonction plutôt que deux `cfg` : le gate tourne en
-/// debug, et c'est ainsi qu'un test y tient aussi la valeur de la release.
-pub const fn url_pour(debug: bool, reel: Option<&'static str>) -> Option<&'static str> {
-    if debug {
+/// debug ; en release, le sandbox si la compilation l'a demandé (`sandbox`,
+/// le produit final qu'on teste à la carte de test), sinon le relais réel
+/// `reel` qu'elle a reçu, et **rien** sans l'un ni l'autre. Une fonction
+/// plutôt que des `cfg` : le gate tourne en debug, et c'est ainsi qu'un test
+/// y tient aussi la valeur de la release.
+pub const fn url_pour(debug: bool, sandbox: bool, reel: Option<&'static str>) -> Option<&'static str> {
+    if debug || sandbox {
         Some(SANDBOX)
     } else {
         reel
     }
 }
 
-/// Le mode des intentions que ce relais rend : sandbox en debug, réel en
-/// release, aucun sans relais. L'app ne liste que celles-là : debug et
-/// release partagent `commande.json`.
-pub const fn mode_pour(debug: bool, reel: Option<&'static str>) -> Option<Mode> {
-    match url_pour(debug, reel) {
+/// Le mode des intentions que ce relais rend : sandbox pour le sandbox, réel
+/// pour le relais réel, aucun sans relais. L'app ne liste que celles-là :
+/// debug et release partagent `commande.json`, et une intention du sandbox
+/// rangée sous un autre mode sortirait de la liste dès sa création.
+pub const fn mode_pour(debug: bool, sandbox: bool, reel: Option<&'static str>) -> Option<Mode> {
+    match url_pour(debug, sandbox, reel) {
         None => None,
-        Some(_) if debug => Some(Mode::Sandbox),
+        Some(_) if debug || sandbox => Some(Mode::Sandbox),
         Some(_) => Some(Mode::Reel),
+    }
+}
+
+/// `COLOPHON_RELAIS_SANDBOX` : absent, ou `1` exactement. Toute autre valeur
+/// arrête le build, comme une adresse réelle refusée : un `0` qui
+/// brancherait quand même le sandbox serait le piège.
+pub const fn sandbox_valide(v: Option<&'static str>) -> Result<bool, &'static str> {
+    match v {
+        None => Ok(false),
+        Some(v) if v.len() == 1 && v.as_bytes()[0] == b'1' => Ok(true),
+        Some(_) => Err("COLOPHON_RELAIS_SANDBOX : 1, ou ne pas la poser"),
+    }
+}
+
+/// Un seul relais par build : le sandbox et le réel à la fois arrêtent la
+/// compilation, plutôt que de laisser l'un gagner en silence.
+pub const fn relais_unique(sandbox: bool, reel: Option<&'static str>) -> Result<(), &'static str> {
+    if sandbox && reel.is_some() {
+        Err("COLOPHON_RELAIS_SANDBOX et COLOPHON_RELAIS_REEL : l'un ou l'autre")
+    } else {
+        Ok(())
     }
 }
 
@@ -105,12 +129,23 @@ pub const REEL: Option<&str> = match reel_valide(option_env!("COLOPHON_RELAIS_RE
     Err(raison) => panic!("{}", raison),
 };
 
+/// Une release branchée sur le sandbox, par `COLOPHON_RELAIS_SANDBOX=1` à la
+/// compilation : le produit final à tester, paiement à la carte de test. La
+/// CI publique ne la pose pas plus que le relais réel.
+pub const SANDBOX_EN_RELEASE: bool = match sandbox_valide(option_env!("COLOPHON_RELAIS_SANDBOX")) {
+    Ok(s) => match relais_unique(s, REEL) {
+        Ok(()) => s,
+        Err(raison) => panic!("{}", raison),
+    },
+    Err(raison) => panic!("{}", raison),
+};
+
 /// L'adresse du relais compilé (décision 3). Sans adresse, l'app n'offre pas
 /// Commander.
-pub const RELAIS_URL: Option<&str> = url_pour(cfg!(debug_assertions), REEL);
+pub const RELAIS_URL: Option<&str> = url_pour(cfg!(debug_assertions), SANDBOX_EN_RELEASE, REEL);
 
 /// Le mode du relais compilé.
-pub const RELAIS_MODE: Option<Mode> = mode_pour(cfg!(debug_assertions), REEL);
+pub const RELAIS_MODE: Option<Mode> = mode_pour(cfg!(debug_assertions), SANDBOX_EN_RELEASE, REEL);
 
 /// Les seuls en-têtes de la réponse de création que le PUT recopie. Le relais
 /// n'est pas cru sur parole : `Host`, `Authorization`, `Cookie`,
@@ -832,17 +867,38 @@ mod tests {
         // Sans `COLOPHON_RELAIS_REEL`, la release ne porte rien : c'est ce qui
         // rend Commander inerte dans le bundle publié (décision 3). Le gate
         // tourne en debug, d'où `url_pour`.
-        assert_eq!(url_pour(false, None), None);
-        assert_eq!(mode_pour(false, None), None);
+        assert_eq!(url_pour(false, false, None), None);
+        assert_eq!(mode_pour(false, false, None), None);
         // Avec, la release parle au relais réel, et à lui seul.
-        assert_eq!(url_pour(false, Some("https://relais.exemple.fr")), Some("https://relais.exemple.fr"));
-        assert_eq!(mode_pour(false, Some("https://relais.exemple.fr")), Some(Mode::Reel));
-        // Le debug reste au sandbox, variable posée ou non.
+        assert_eq!(url_pour(false, false, Some("https://relais.exemple.fr")), Some("https://relais.exemple.fr"));
+        assert_eq!(mode_pour(false, false, Some("https://relais.exemple.fr")), Some(Mode::Reel));
+        // Le debug reste au sandbox, variables posées ou non.
         for reel in [None, Some("https://relais.exemple.fr")] {
-            assert_eq!(url_pour(true, reel), Some("https://colophon-relais-sandbox.alexis-c1f.workers.dev"));
-            assert_eq!(mode_pour(true, reel), Some(Mode::Sandbox));
+            for sandbox in [false, true] {
+                assert_eq!(url_pour(true, sandbox, reel), Some(SANDBOX));
+                assert_eq!(mode_pour(true, sandbox, reel), Some(Mode::Sandbox));
+            }
         }
-        assert_eq!(RELAIS_URL, url_pour(cfg!(debug_assertions), REEL));
+        assert_eq!(RELAIS_URL, url_pour(cfg!(debug_assertions), SANDBOX_EN_RELEASE, REEL));
+    }
+
+    /// Une release branchée sur le sandbox : le produit final, optimisé et
+    /// signé, qu'on teste de bout en bout à la carte de test. Ses intentions
+    /// sont en mode sandbox, comme le relais les déclare : en mode réel elles
+    /// sortiraient de la liste dès leur création (`Stock::vue`).
+    #[test]
+    fn une_release_peut_parler_au_sandbox_et_le_dit_en_mode_sandbox() {
+        assert_eq!(url_pour(false, true, None), Some(SANDBOX));
+        assert_eq!(mode_pour(false, true, None), Some(Mode::Sandbox));
+        assert_eq!(sandbox_valide(None), Ok(false));
+        assert_eq!(sandbox_valide(Some("1")), Ok(true));
+        for refusee in ["", "0", "oui", "true", " 1", "11"] {
+            assert!(sandbox_valide(Some(refusee)).is_err(), "{refusee:?} est acceptée");
+        }
+        // Les deux à la fois : on ne sait plus à qui parle la release.
+        assert!(relais_unique(true, Some("https://relais.exemple.fr")).is_err());
+        assert!(relais_unique(true, None).is_ok());
+        assert!(relais_unique(false, Some("https://relais.exemple.fr")).is_ok());
     }
 
     #[test]

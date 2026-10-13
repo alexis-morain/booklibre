@@ -1578,7 +1578,8 @@ fn donnees(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 }
 
 /// L'adresse compilée du relais, ou le refus : un build de release n'en
-/// porte aucune sans `COLOPHON_RELAIS_REEL` à la compilation.
+/// porte aucune sans `COLOPHON_RELAIS_REEL` ni `COLOPHON_RELAIS_SANDBOX` à la
+/// compilation.
 fn relais_url() -> Result<&'static str, String> {
     colophon_core::relais::RELAIS_URL.ok_or_else(|| "aucun relais dans ce build".to_string())
 }
