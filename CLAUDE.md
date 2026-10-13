@@ -489,6 +489,19 @@ Lulu) : c'est la planche blanche du 21/09. La date du colophon passe par
 `BuildOptions.aujourdhui`, `None` lisant `pdfx::stamp()` : plus aucun `set_var` dans
 le dépôt.
 
+**La fenêtre ne juge que l'album, et chaque défaut mène quelque part** (13/10). La
+commande `preflight` appelle `prevol::prevol_album` (`FichiersPoses::default()`) : les
+PDF restés à côté d'`album.json` ne se jugent plus que dans le dossier préparé
+(`prevol_dossier`) ; la CLI garde `prevol()` et ses conseils à drapeaux, et
+`--prevol --sans-fichiers` (caché) est ce que lance le harnais. Les règles sont une
+liste fermée, `prevol::REGLES` (vérifiée en debug à chaque défaut, donnée à l'app par
+`moteur.codes.json`) ; chacune a une destination dans `envoi.ts::DESTINATIONS` —
+planche, couverture (choix de photo ouvert), Format, « Préparer à nouveau » sous le
+dossier préparé, `ici` pour une page à décocher, `composition` pour le fond perdu — et
+une phrase simple sans chiffre, `envoi.simple.<règle>` dans `i18n.ts`, FR et EN. La
+phrase du moteur passe sous « Détails ». **`format_sans_produit` bloque** chez un
+profil à `commande` quand `commande::produit_pour` ne connaît pas le format.
+
 **Une photo sous 250 ppi a une sortie dans Envoi** (L-s1, `ResolutionLigne`,
 `envoi.ts::actionsDefaut`) : Voir, Remplacer, Retirer de la planche. La barre ne bouge
 pas. Retirer et Remplacer **enregistrent l'album**, parce que le prévol lit le disque ;
@@ -507,7 +520,9 @@ release publiée reste inerte. Posée, elle doit être `https://` puis un hôte 
 **échouer le build** à l'évaluation de la constante, et changer la variable recompile le
 moteur (mesuré le 12/10, `option_env!` entre dans les dépendances de cargo, pas de
 `build.rs`). Sans adresse, `relais_pays` rend `null` sans un appel et Commander ne s'affiche
-pas (jamais grisé). Commander demande aussi un dossier préparé dans cette ouverture, vert, et
+pas (jamais grisé) ; une adresse qui échoue n'est pas une absence, et la phrase
+`commande.indisponible` avec « Réessayer » prend sa place (`commande.ts::relaisDe`,
+`relaisIndisponible` ; au harnais, `POST /__dev/relais/panne`). Commander demande aussi un dossier préparé dans cette ouverture, vert, et
 **un produit à ses cotes** (`Fiche::produit`, `commande::produit_pour`, Cloudprinter seul) :
 un 28 × 21 ou une taille libre affichent `commande.format.invendable` à la place, et
 `relais_creer` les refuse avant le réseau. **Un bundle contre le relais réel** :
@@ -1083,7 +1098,7 @@ de chaque jeu. `--reprise` : part des planches corrigées à la main contre
 `album.origin.json` ; sous 10 % bon, jusqu'à 30 % à surveiller, au-delà rédhibitoire.
 `--prevol --profil <id>` : bloquants et avertissements contre un `PrinterProfile`, et la
 fiche que l'imprimeur demande au téléphone. **Bloque ce que la coupe traverse ou que la
-reliure sépare** (`resolution`, `couverture_resolution`, `couverture_vide`,
+reliure sépare** (`format_sans_produit`, `resolution`, `couverture_resolution`, `couverture_vide`,
 `imposition`, `objet_coupe`, `objet_pli`, `fond_perdu`, `espace`, `pagination`,
 `fichier_interieur`, `fichier_couverture`, `fichier_profil`, `fichier_perime`) ; **avertit de ce qu'un fournisseur
 préfère** (`zone_sure`, `dos_nu`, un coefficient de dos provisoire). Un seuil réglé pour
@@ -1101,8 +1116,9 @@ liste est `moteur.codes.json`, tenue fraîche par `codes.rs` (régénérer :
 `cargo test -p colophon-core ecrire_la_liste_des_codes -- --ignored`) ; `moteur.test.ts`
 exige une phrase anglaise par code et aucun trou sans valeur, et un mot changé dans une
 réserve ou une note rougit jusqu'à ce que l'anglais suive. Un code inconnu rend le
-français, jamais un trou. **Une nouvelle règle de prévol = un code dans `PHRASES`, la
-phrase dans `moteur.ts`.** Restent tels quels : ce que la fiche d'une photo cite
+français, jamais un trou. **Une nouvelle règle de prévol = son nom dans `REGLES`, un
+code dans `PHRASES`, la phrase dans `moteur.ts`, sa destination dans `envoi.ts` et sa
+phrase simple dans `i18n.ts`.** Restent tels quels : ce que la fiche d'une photo cite
 (appareil, lieu), qui est de la donnée, et la raison brute d'un PDF illisible. **Vitest tourne sans `navigator`**, langue par défaut
 anglaise : un test qui affirme du français pose `setLangue("fr")`. Sous
 `pipeline::PETIT_DOSSIER` (25 photos), la curation se limite aux rejets certains. **Et

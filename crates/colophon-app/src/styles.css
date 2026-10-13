@@ -4033,20 +4033,43 @@ kbd {
   border-bottom: 1px solid var(--rule);
 }
 
-button.envoi-defaut {
-  transition: background var(--turn);
-}
-
-button.envoi-defaut:hover,
-button.envoi-defaut:focus-visible {
-  background: var(--surface);
-  outline: none;
-}
-
 .envoi-defaut-ou {
-  grid-row: span 2;
+  grid-row: span 3;
+  align-self: start;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+  text-align: left;
+}
+
+/* La planche se nomme par un bouton qui y mène : le saut que toute la ligne
+   portait avant qu'elle ne porte un repli. */
+button.envoi-defaut-ou {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+button.envoi-defaut-ou:hover,
+button.envoi-defaut-ou:focus-visible {
+  color: var(--text);
+}
+
+.envoi-defaut-simple {
+  line-height: var(--lh-ui);
+}
+
+.envoi-defaut-geste:empty {
+  display: none;
+}
+
+.envoi-defaut-details summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: var(--fs-13);
+}
+
+.envoi-defaut-details > span {
+  display: block;
+  margin-top: 2px;
 }
 
 .envoi-defaut.bloquant .envoi-defaut-ou {

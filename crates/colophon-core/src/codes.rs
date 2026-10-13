@@ -12,8 +12,8 @@
 use crate::{build, format, layout, prevol, printer};
 use std::collections::BTreeMap;
 
-/// La liste, en JSON stable : formats, rythmes, propositions, les phrases du
-/// prévol avec les valeurs que chacune lit, et les textes fixes — notes du
+/// La liste, en JSON stable : formats, rythmes, propositions, les règles du
+/// prévol, ses phrases avec les valeurs que chacune lit, et les textes fixes — notes du
 /// rapport et réserves des profils — en entier, puisque l'app les reconnaît
 /// mot pour mot.
 pub fn codes_json() -> String {
@@ -27,6 +27,7 @@ pub fn codes_json() -> String {
         notes: [&'static str; 2],
         phrases: BTreeMap<&'static str, &'static [&'static str]>,
         propositions: [&'static str; 3],
+        regles: &'static [&'static str],
         reserves: BTreeMap<&'static str, &'static [&'static str]>,
     }
     let codes = Codes {
@@ -35,6 +36,7 @@ pub fn codes_json() -> String {
         notes: [prevol::NOTE_PDF_X4, prevol::NOTE_PHOTOS_INTROUVABLES],
         phrases: prevol::PHRASES.iter().copied().collect(),
         propositions: build::IDS_PROPOSITIONS,
+        regles: prevol::REGLES,
         reserves: printer::PrinterProfile::tous().iter().map(|p| (p.id, p.reserves)).collect(),
     };
     let mut s = serde_json::to_string_pretty(&codes).expect("du JSON fait de chaînes");
@@ -83,5 +85,28 @@ mod tests {
         for (code, _) in prevol::PHRASES {
             assert!(corps.contains(&format!("\"{code}\"")), "{code} n'est émis nulle part");
         }
+    }
+
+    /// Les règles du prévol sont une liste fermée, que l'app lit pour donner
+    /// à chacune sa destination à l'écran (`envoi.ts::DESTINATIONS`). Chaque
+    /// règle de la liste est émise, et chaque `regle: "…"` écrit dans le
+    /// prévol est dans la liste : une règle neuve sans entrée rougit ici, puis
+    /// dans l'app tant qu'elle n'a nulle part où mener. `check` le vérifie
+    /// aussi à chaque défaut qu'il pose, en debug.
+    #[test]
+    fn chaque_regle_du_prevol_est_listee_et_emise() {
+        let source = include_str!("prevol.rs");
+        let corps = source.split("pub const REGLES").next().unwrap().to_string()
+            + source.split("fn phrase(").nth(1).unwrap().split("#[cfg(test)]").next().unwrap();
+        for regle in prevol::REGLES {
+            assert!(corps.contains(&format!("\"{regle}\"")), "{regle} n'est émise nulle part");
+        }
+        for (i, _) in corps.match_indices("regle: \"") {
+            let reste = &corps[i + "regle: \"".len()..];
+            let regle = &reste[..reste.find('"').unwrap()];
+            assert!(prevol::REGLES.contains(&regle), "{regle} manque à prevol::REGLES");
+        }
+        let codes: serde_json::Value = serde_json::from_str(&codes_json()).unwrap();
+        assert_eq!(codes["regles"].as_array().map(Vec::len), Some(prevol::REGLES.len()));
     }
 }

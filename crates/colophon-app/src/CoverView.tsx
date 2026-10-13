@@ -32,6 +32,8 @@ export function CoverView({
   printer,
   onCover,
   onReglage,
+  choixALOuverture = false,
+  onChoixOuvert,
 }: {
   album: Album;
   /** The supplier the sheet is drawn for. Null while the profiles load: the
@@ -43,12 +45,23 @@ export function CoverView({
    *  adjustable here even when it sits on no spread — the alternative is a
    *  dead end. */
   onReglage: (src: string, reglage: Reglage) => void;
+  /** Ouvrir le choix de la photo dès l'arrivée : Envoi y mène une photo de
+   *  couverture trop petite, et le geste qui la répare est ce choix-là. */
+  choixALOuverture?: boolean;
+  /** Le choix s'est ouvert : l'appelant oublie la demande, pour qu'un retour
+   *  à la couverture plus tard ne le rouvre pas. */
+  onChoixOuvert?: () => void;
 }) {
   const cover: Cover = album.cover ?? { title: album.title };
   // Text fields edit a local form and land on the undo stack at blur:
   // one ⌘Z per field touched, not one per keystroke.
   const [form, setForm] = useState<Cover>(cover);
-  const [picking, setPicking] = useState(false);
+  const [picking, setPicking] = useState(choixALOuverture);
+  useEffect(() => {
+    if (choixALOuverture) onChoixOuvert?.();
+    // Une fois, à l'arrivée.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // The sheet the printer receives, from the profile's own coefficients.
   // `parity.test.ts` compares this arithmetic with the engine's.
   const sheet = coverSheet(album, {

@@ -79,8 +79,13 @@ check sent to GitHub at launch, which you can turn off in Preferences.
 - The preflight blocks what the guillotine would cut or the binding would
   swallow, warns about the safe zone, and for every problem names the spread
   and the gesture that fixes it. No photo ever prints below 250 ppi.
+- In Send, every problem reads as one plain sentence, in French or English,
+  with the button that leads to the fix: the spread, the cover with its photo
+  picker open, the Format panel, or Prepare again. The figures (ppi,
+  millimetres, file names) wait under Details.
 - The preflight also blocks a file exported for another printer, or one older
-  than the album's last change.
+  than the album's last change. It judges the files in the folder Send
+  prepares, and no longer the PDFs an earlier export left next to the album.
 
 #### Print
 
@@ -123,7 +128,8 @@ Compared with 0.9.0, described below, which was built but never distributed:
   or writes a plain PDF for any other printer. Prodigi and Lulu stay on the
   command line (`--profil`). A new album comes with a cover, and a cover with
   no photo blocks a printer that takes it as a separate file. Cloudprinter
-  takes 24 to 800 pages.
+  takes 24 to 800 pages. A format it does not print, such as landscape
+  28 × 21 or a custom size, blocks the preparation and points to Format.
 - *Export.* A photo too small for its cell still blocks the export, but its
   line in Send carries three gestures: Show, Replace, Remove from spread.
   Remove always works.

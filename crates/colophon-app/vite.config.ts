@@ -97,9 +97,11 @@ function albumDevServer(dir: string): Plugin {
         try {
           // Non-zero exit is the normal answer of a failing preflight: the
           // report is on stdout either way, and it is the report we want.
+          // `--sans-fichiers` : l'album seul, comme la commande `preflight`
+          // de la fenêtre, jamais les PDF restés à côté de lui.
           const out = execFileSync(
             engineBinary,
-            ["--prevol", "--profil", profil, "-o", dir],
+            ["--prevol", "--sans-fichiers", "--profil", profil, "-o", dir],
             { encoding: "utf8" },
           );
           res.setHeader("Content-Type", "application/json");
@@ -452,6 +454,9 @@ function geometryParity(): Plugin {
  * `abandonnee`, 409 `avancee` au-delà. `POST /__dev/relais/abandon` force la
  * réponse du prochain abandon (`{reponse: 200 | 404 | 409 | 502}`), et le
  * paiement d'une intention qui n'attend plus le sien rend le 409 `etat`.
+ * `POST /__dev/relais/panne {"pays": true}` fait échouer `pays` comme le
+ * sandbox le 13/10 (502), jusqu'à `{"pays": false}` : de quoi voir l'écran
+ * dire la panne et « Réessayer ».
  */
 function relaisDev() {
   type Intention = {
@@ -464,6 +469,7 @@ function relaisDev() {
   const intentions: Intention[] = [];
   // La réponse forcée du prochain abandon, puis la route reprend la main.
   let abandonForce: 200 | 404 | 409 | 502 | null = null;
+  let paysEnPanne = false;
   const vue = () => [...intentions].reverse();
   const trouver = (id: string) => {
     const i = intentions.find((x) => x.id === id);
@@ -475,7 +481,14 @@ function relaisDev() {
   const SUITE_CODES = [null, 1, 10, 15, 30, 501];
   const actions: Record<string, (b: any) => unknown> = {
     // La France seule, comme au relais réel.
-    pays: () => [{ code: "FR", nom: "France", require_state: false }],
+    pays: () => {
+      if (paysEnPanne) throw new Error("relais : injoignable (502)");
+      return [{ code: "FR", nom: "France", require_state: false }];
+    },
+    panne: (b) => {
+      paysEnPanne = b.pays === true;
+      return { pays: paysEnPanne };
+    },
     creer: () => {
       const id = `faux${Date.now().toString(36)}`;
       intentions.push({ id, mode: "sandbox", etat: "attente_fichiers", dernier_code: null, niveau: null });
