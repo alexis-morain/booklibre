@@ -21,6 +21,7 @@ import {
   niveauChoisi,
   nomNiveau,
   part,
+  paiementRecu,
   payable,
   phraseConfirmation,
   phraseErreur,
@@ -333,6 +334,23 @@ describe("la confirmation", () => {
     expect(ignorable("envoi_en_cours")).toBe(true);
     expect(ignorable("relais : fichiers (422)")).toBe(false);
   });
+
+  it("prend le paiement déjà reçu pour une bonne nouvelle, et Stripe muet pour un refus qui se réessaie", () => {
+    // Le relais refuse d'ouvrir une seconde session sur une session payée.
+    const recu = new Error("relais : paiement_recu (409)");
+    expect(paiementRecu(recu)).toBe(true);
+    expect(refusDefinitif(recu)).toBe(false);
+    expect(paiementRecu("relais : etat (409)")).toBe(false);
+    setLangue("fr");
+    expect(t("commande.attente.recu")).toBe("Paiement reçu. La commande se confirme, cela prend quelques secondes.");
+    const muet = new Error("relais : stripe_injoignable (502)");
+    expect(refusDefinitif(muet)).toBe(false);
+    expect(paiementRecu(muet)).toBe(false);
+    expect(phraseErreur(muet)).toBe("Stripe ne répond pas, réessayez dans un instant.");
+    setLangue("en");
+    expect(t("commande.attente.recu")).toBe("Payment received. The order is being confirmed; this takes a few seconds.");
+    expect(phraseErreur(muet)).toBe("Stripe is not answering, try again in a moment.");
+  });
 });
 
 describe("le parcours", () => {
@@ -389,6 +407,29 @@ describe("le parcours", () => {
     expect(avancer(grille, { type: "retour" })).toEqual({ etape: "repos" });
     // L'étape `pret` a sa sortie.
     expect(avancer(pret, { type: "retour" })).toEqual({ etape: "repos" });
+  });
+
+  it("mène un paiement déjà reçu à l'attente reçue, sans page à rouvrir", () => {
+    const confirmation = suite(
+      { etape: "repos" },
+      { type: "commander", pays: PAYS },
+      { type: "offre", offre: OFFRE },
+      { type: "envoyer" },
+      { type: "envoye" },
+    );
+    const recue = suite(confirmation, { type: "payer" }, { type: "recu" });
+    expect(recue).toMatchObject({ etape: "attente", recu: true, niveau: "cp_ground" });
+    // Une attente ordinaire n'est pas reçue.
+    expect(suite(confirmation, { type: "payer" }, { type: "ouvert" })).not.toHaveProperty("recu", true);
+    // Plus de page à rouvrir : « payer » n'en sort pas.
+    expect(avancer(recue, { type: "payer" })).toBe(recue);
+    // La relecture suit le chemin existant : encore en attente, rien ne
+    // bouge ; payée, la liste prend le relais.
+    expect(avancer(recue, { type: "etat", intention: intention("attente_paiement") })).toBe(recue);
+    expect(avancer(recue, { type: "etat", intention: intention("payee") })).toEqual({ etape: "repos" });
+    expect(avancer(recue, { type: "fermer" })).toEqual({ etape: "repos" });
+    // Reçu n'a de sens qu'au paiement.
+    expect(avancer(confirmation, { type: "recu" })).toBe(confirmation);
   });
 
   it("mène un refus définitif du paiement à l'erreur, d'où l'on recommence au pays", () => {
