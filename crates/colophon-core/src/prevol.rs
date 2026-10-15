@@ -1807,6 +1807,7 @@ mod tests {
             avec.trim_mm,
             150.0,
             "0.9.0",
+            crate::langue::Langue::Fr,
         ));
         let r = check(&avec, pr, &dims, &FichiersPoses::default());
         let d = r.defauts.iter().find(|d| d.regle == "pagination").unwrap();
@@ -1825,7 +1826,7 @@ mod tests {
             appareils: Vec::new(),
             compose_le: chrono::NaiveDate::from_ymd_opt(2026, 8, 17).unwrap(),
         };
-        garde.spreads.insert(0, crate::garde::spread("Corse", &f, 190.0));
+        garde.spreads.insert(0, crate::garde::spread("Corse", &f, 190.0, crate::langue::Langue::Fr));
         let d = check(&garde, pr, &dims, &FichiersPoses::default())
             .defauts
             .into_iter()

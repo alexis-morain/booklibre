@@ -21,6 +21,7 @@
 //! with a spread that holds no photograph.
 
 use crate::colophon::Faits;
+use crate::langue::Langue;
 use crate::pdf::{Point, SpreadGeometry};
 
 /// The template name of the half-title spread. No photo, like `vide`,
@@ -75,9 +76,9 @@ pub fn place(g: &SpreadGeometry) -> f64 {
 /// `place_mm` is the room on the page, from [`place`]: the town line is
 /// built to fit it rather than run off the paper, and the format is fixed
 /// before the composition, so measuring it once here is measuring it once.
-pub fn texte(titre: &str, f: &Faits, place_mm: f64) -> String {
+pub fn texte(titre: &str, f: &Faits, place_mm: f64, langue: Langue) -> String {
     let mut quiet: Vec<String> = Vec::new();
-    if let Some(p) = ligne_des_dates(f) {
+    if let Some(p) = ligne_des_dates(f, langue) {
         quiet.push(p);
     }
     if let Some(v) = villes(&f.lieux, place_mm) {
@@ -93,17 +94,17 @@ pub fn texte(titre: &str, f: &Faits, place_mm: f64) -> String {
 /// La première ligne discrète de la page : les dates, avec sa majuscule
 /// (« Du 21 au 29 octobre 2013 »). Le sous-titre que le Composer pose sur la
 /// couverture est cette ligne-là, pour que les deux ne se contredisent pas.
-pub fn ligne_des_dates(f: &Faits) -> Option<String> {
-    crate::colophon::periode(f.debut, f.fin).map(|p| majuscule(&p))
+pub fn ligne_des_dates(f: &Faits, langue: Langue) -> Option<String> {
+    crate::colophon::periode(f.debut, f.fin, langue).map(|p| majuscule(&p))
 }
 
 /// The spread the album carries at its head, text already rendered.
-pub fn spread(titre: &str, f: &Faits, place_mm: f64) -> crate::model::Spread {
+pub fn spread(titre: &str, f: &Faits, place_mm: f64, langue: Langue) -> crate::model::Spread {
     crate::model::Spread {
         template: TEMPLATE.into(),
         slots: Vec::new(),
         caption: None,
-        text: Some(texte(titre, f, place_mm)),
+        text: Some(texte(titre, f, place_mm, langue)),
         edited: false,
         locked: false,
         objets: Vec::new(),
@@ -227,7 +228,7 @@ mod tests {
 
     #[test]
     fn the_page_says_the_title_then_when_then_where() {
-        let t = texte("Corse 2013", &faits(), place(&geom(210.0, 210.0)));
+        let t = texte("Corse 2013", &faits(), place(&geom(210.0, 210.0)), Langue::Fr);
         assert_eq!(
             t,
             "Corse 2013\n\nDu 21 au 29 octobre 2013\nPorto-Vecchio, Bonifacio"
@@ -240,7 +241,7 @@ mod tests {
     fn the_page_is_three_lines_at_most() {
         let mut f = faits();
         f.lieux = vec!["A".into(), "B".into(), "C".into(), "D".into(), "E".into()];
-        let t = texte("Corse 2013", &f, place(&geom(210.0, 210.0)));
+        let t = texte("Corse 2013", &f, place(&geom(210.0, 210.0)), Langue::Fr);
         assert_eq!(t.lines().filter(|l| !l.trim().is_empty()).count(), 3);
         assert!(t.ends_with("A, B, C"), "{t}");
         assert!(!t.contains(", D"), "{t}");
@@ -254,16 +255,16 @@ mod tests {
         let mut f = faits();
         f.debut = None;
         f.fin = None;
-        let t = texte("Corse 2013", &f, place(&geom(210.0, 210.0)));
+        let t = texte("Corse 2013", &f, place(&geom(210.0, 210.0)), Langue::Fr);
         assert_eq!(t, "Corse 2013\n\nPorto-Vecchio, Bonifacio");
         f.lieux = Vec::new();
-        assert_eq!(texte("Corse 2013", &f, place(&geom(210.0, 210.0))), "Corse 2013");
+        assert_eq!(texte("Corse 2013", &f, place(&geom(210.0, 210.0)), Langue::Fr), "Corse 2013");
     }
 
     /// Same forbidden list as the colophon page and the report channel.
     #[test]
     fn the_page_never_carries_a_path_a_coordinate_or_a_file_name() {
-        let t = texte("Corse 2013", &faits(), place(&geom(210.0, 210.0)));
+        let t = texte("Corse 2013", &faits(), place(&geom(210.0, 210.0)), Langue::Fr);
         assert!(!t.contains('/') && !t.contains('\\'), "{t}");
         assert!(!t.contains('\u{b0}'), "{t}");
         for ext in [".jpg", ".JPG", ".png", ".heic", ".HEIC"] {
@@ -275,7 +276,7 @@ mod tests {
     /// edit flag, so a recomposition rebuilds it like any machine page.
     #[test]
     fn the_spread_holds_text_and_nothing_else() {
-        let s = spread("Corse 2013", &faits(), place(&geom(210.0, 210.0)));
+        let s = spread("Corse 2013", &faits(), place(&geom(210.0, 210.0)), Langue::Fr);
         assert_eq!(s.template, TEMPLATE);
         assert!(s.slots.is_empty());
         assert!(s.caption.is_none());
@@ -290,7 +291,7 @@ mod tests {
     #[test]
     fn the_layout_gives_the_title_its_own_size() {
         let p = place(&geom(210.0, 210.0));
-        let l = mise_en_page(&texte("Corse 2013", &faits(), p), p);
+        let l = mise_en_page(&texte("Corse 2013", &faits(), p, Langue::Fr), p);
         assert_eq!(l.len(), 3);
         assert_eq!(l[0].texte, "Corse 2013");
         assert_eq!(l[0].taille_pt, TITRE_PT);
@@ -348,7 +349,10 @@ mod tests {
             let g = geom(*w, *h);
             let p = place(&g);
             let at = anchor(&g);
-            for l in mise_en_page(&texte(&titre, &f, p), p) {
+            for l in [Langue::Fr, Langue::En]
+                .into_iter()
+                .flat_map(|langue| mise_en_page(&texte(&titre, &f, p, langue), p))
+            {
                 let large = crate::font::text_width_mm(&l.texte, l.taille_pt);
                 assert!(
                     large <= p + 1e-9,
@@ -360,5 +364,20 @@ mod tests {
                 assert!(at.y - l.dy_mm > g.bleed, "{nom} : le bloc descend sous la coupe");
             }
         }
+    }
+
+    /// La page de garde d'un album composé en anglais : le titre, puis
+    /// « From 21 to 29 October 2013 », puis les villes, séparées par des
+    /// virgules comme en français.
+    #[test]
+    fn la_page_de_garde_parle_la_langue_de_la_composition() {
+        let t = texte("Corsica 2013", &faits(), place(&geom(210.0, 210.0)), Langue::En);
+        assert_eq!(t, "Corsica 2013\n\nFrom 21 to 29 October 2013\nPorto-Vecchio, Bonifacio");
+        assert_eq!(
+            ligne_des_dates(&faits(), Langue::En).as_deref(),
+            Some("From 21 to 29 October 2013")
+        );
+        let s = spread("Corsica 2013", &faits(), place(&geom(210.0, 210.0)), Langue::En);
+        assert!(s.text.unwrap().contains("October"));
     }
 }

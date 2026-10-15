@@ -202,11 +202,23 @@ fn detected_focal(src: String, state: State<'_, AppState>) -> Result<[f64; 2], S
     Ok(colophon_core::face::focal_from_boxes(&faces).unwrap_or([0.5, 0.42]))
 }
 
+/// The language the interface writes the album's words in, from the code
+/// `i18n.ts` stores. Refused rather than read as French when it is anything
+/// else: a typo here would print the wrong language on paper, silently.
+fn langue_de(code: &str) -> Result<colophon_core::langue::Langue, String> {
+    colophon_core::langue::Langue::par_code(code).ok_or_else(|| format!("langue inconnue : {code}"))
+}
+
 /// The EXIF capture date of a photo, formatted the way chapter captions
 /// are. The caption editor proposes it, never imposes it. None when the
 /// date is unreliable (screenshots, forwards) or the original is gone.
 #[tauri::command]
-fn caption_suggestion(src: String, state: State<'_, AppState>) -> Result<Option<String>, String> {
+fn caption_suggestion(
+    src: String,
+    langue: String,
+    state: State<'_, AppState>,
+) -> Result<Option<String>, String> {
+    let langue = langue_de(&langue)?;
     let dir = {
         let guard = state.open.lock().unwrap();
         guard.as_ref().ok_or("aucun album ouvert")?.dir.clone()
@@ -215,7 +227,7 @@ fn caption_suggestion(src: String, state: State<'_, AppState>) -> Result<Option<
         .map_err(|e| format!("lecture de album.json : {e}"))?;
     let album: Album =
         serde_json::from_str(&text).map_err(|e| format!("album.json illisible : {e}"))?;
-    Ok(colophon_core::legende::date_de(Path::new(&album.root), &src))
+    Ok(colophon_core::legende::date_de(Path::new(&album.root), &src, langue))
 }
 
 /// The trusted date of every placed photo, by source, worded like the
@@ -223,8 +235,9 @@ fn caption_suggestion(src: String, state: State<'_, AppState>) -> Result<Option<
 /// légendes » writes. Takes the live album, so a photo placed since the
 /// last save is dated too. One EXIF read per photo, off the main thread.
 #[tauri::command]
-async fn dates_fiables(album: Album) -> Result<BTreeMap<String, String>, String> {
-    tauri::async_runtime::spawn_blocking(move || colophon_core::legende::dates_fiables(&album))
+async fn dates_fiables(album: Album, langue: String) -> Result<BTreeMap<String, String>, String> {
+    let langue = langue_de(&langue)?;
+    tauri::async_runtime::spawn_blocking(move || colophon_core::legende::dates_fiables(&album, langue))
         .await
         .map_err(|e| e.to_string())
 }
@@ -370,8 +383,10 @@ async fn reserve_classee(
 #[tauri::command]
 fn proposition_legende(
     planche: usize,
+    langue: String,
     state: State<'_, AppState>,
 ) -> Result<Option<String>, String> {
+    let langue = langue_de(&langue)?;
     let dir = {
         let guard = state.open.lock().unwrap();
         guard.as_ref().ok_or("aucun album ouvert")?.dir.clone()
@@ -380,7 +395,7 @@ fn proposition_legende(
         .map_err(|e| format!("lecture de album.json : {e}"))?;
     let album: Album =
         serde_json::from_str(&text).map_err(|e| format!("album.json illisible : {e}"))?;
-    Ok(colophon_core::legende::proposition(&album, planche))
+    Ok(colophon_core::legende::proposition(&album, planche, langue))
 }
 
 /// The whole geometry dump for the open album. The editor draws every
@@ -869,9 +884,11 @@ async fn build_album_from_folder(
     spreads: usize,
     densite: String,
     title: Option<String>,
+    langue: String,
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<BuiltAlbum, String> {
+    let langue = langue_de(&langue)?;
     let trim = colophon_core::format::parse(&format).map_err(|e| e.to_string())?;
     let densite = colophon_core::layout::Densite::par_id(&densite)
         .ok_or_else(|| format!("densité inconnue : {densite}"))?;
@@ -903,6 +920,8 @@ async fn build_album_from_folder(
                 // composing two more proposals from the same photos is
                 // arithmetic, and it turns a wait into a choice.
                 variantes: colophon_core::build::variantes_offertes(densite, spreads.clamp(8, 200)),
+                // Les mots du livre dans la langue de l'interface qui compose.
+                langue,
                 ..Default::default()
             },
         )
@@ -968,9 +987,11 @@ fn choose_variante(id: String, state: State<'_, AppState>) -> Result<OpenedAlbum
 /// and the spreads re-inserted at their place in time: recomposing is safe.
 #[tauri::command]
 async fn recompose_album(
+    langue: String,
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<OpenedAlbum, String> {
+    let langue = langue_de(&langue)?;
     let dir = {
         let guard = state.open.lock().unwrap();
         guard.as_ref().ok_or("aucun album ouvert")?.dir.clone()
@@ -1050,6 +1071,10 @@ async fn recompose_album(
         // Le colophon dit le jour où le livre a été composé, et une
         // recomposition le compose : la date du jour, comme avant.
         aujourdhui: None,
+        // Une recomposition récrit les lignes de chapitre, la garde et le
+        // colophon : dans la langue de l'interface qui la lance. Les
+        // planches épinglées gardent leurs mots, elles passent telles quelles.
+        langue,
     };
     tauri::async_runtime::spawn_blocking(move || {
         colophon_core::build_album(&root, &build_out, opts)
@@ -1989,14 +2014,17 @@ async fn render_cover_preview(
 #[tauri::command]
 fn colophon_spread(
     album: Album,
+    langue: String,
     app: tauri::AppHandle,
 ) -> Result<Option<colophon_core::model::Spread>, String> {
+    let langue = langue_de(&langue)?;
     Ok(album.colophon.as_ref().map(|f| {
         colophon_core::colophon::spread(
             f,
             album.trim_mm,
             colophon_core::printer::GRAMMAGE_DEFAUT,
             &app.package_info().version.to_string(),
+            langue,
         )
     }))
 }
@@ -2008,13 +2036,14 @@ fn colophon_spread(
 /// The album travels from the front rather than being reread from disk: the
 /// title the page prints is the one on screen, unsaved rename and all.
 #[tauri::command]
-fn garde_spread(album: Album) -> Result<Option<colophon_core::model::Spread>, String> {
+fn garde_spread(album: Album, langue: String) -> Result<Option<colophon_core::model::Spread>, String> {
+    let langue = langue_de(&langue)?;
     let place = colophon_core::garde::place(&colophon_core::pdf::geometry(&album));
     let titre = colophon_core::cover::titre_du_livre(&album).to_string();
     Ok(album
         .colophon
         .as_ref()
-        .map(|f| colophon_core::garde::spread(&titre, f, place)))
+        .map(|f| colophon_core::garde::spread(&titre, f, place, langue)))
 }
 
 /// The composer's own version of one spread, for « rendre à l'automatique ».

@@ -207,14 +207,15 @@ function albumDevServer(dir: string): Plugin {
       // own EXIF: the ghost text is visible in a browser, not only in the
       // bundle.
       server.middlewares.use("/__dev/proposition", (req, res) => {
-        const planche =
-          new URL(req.url ?? "", "http://x").searchParams.get("planche") ?? "0";
+        const q = new URL(req.url ?? "", "http://x").searchParams;
+        const planche = q.get("planche") ?? "0";
+        const langue = q.get("langue") === "en" ? "en" : "fr";
         try {
           res.setHeader("Content-Type", "application/json");
           res.end(
             execFileSync(
               engineBinary,
-              ["--proposition", planche, "-o", dir],
+              ["--proposition", planche, "--langue", langue, "-o", dir],
               { encoding: "utf8" },
             ),
           );
@@ -278,11 +279,13 @@ function albumDevServer(dir: string): Plugin {
       });
       // La date fiable de chaque photo posée, par src, lue sur l'album.json
       // du disque comme la réserve : le harnais enregistre avant de dater.
-      server.middlewares.use("/__dev/dates", (_req, res) => {
+      server.middlewares.use("/__dev/dates", (req, res) => {
+        const q = new URL(req.url ?? "", "http://x").searchParams;
+        const langue = q.get("langue") === "en" ? "en" : "fr";
         try {
           res.setHeader("Content-Type", "application/json");
           res.end(
-            execFileSync(engineBinary, ["--dates", "-o", dir], {
+            execFileSync(engineBinary, ["--dates", "--langue", langue, "-o", dir], {
               encoding: "utf8",
             }),
           );

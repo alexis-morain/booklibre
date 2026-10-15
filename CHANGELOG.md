@@ -44,6 +44,10 @@ check sent to GitHub at launch, which you can turn off in Preferences.
   crops.
 - A half-title (title, dates, towns) at the front and a colophon page at the
   back, each removed with one click.
+- The words Colophon writes into the book (half-title, colophon page,
+  chapter lines, cover subtitle, caption dates) are in the language of the
+  interface at the time they are written: compose in English, get an English
+  book. Switching language later leaves an album as it is.
 - A new album comes with its cover: one of the book's best-rated photos,
   landscape or square, the album's title, and the dates of the half-title.
   Change it in Cover; a recomposition keeps the one you chose.

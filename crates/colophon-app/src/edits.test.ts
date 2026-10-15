@@ -837,6 +837,22 @@ describe("copier, coller, dupliquer, pousser un objet", () => {
 // Les dates viennent du moteur (`dates_fiables`), une photo sans entrée n'a
 // pas de date fiable.
 describe("daterLegendes et dedaterLegendes", () => {
+  /** L'interface a changé de langue depuis que la légende a été datée :
+   *  la date de l'autre langue se reconnaît, se retire, et se remplace au
+   *  lieu de s'empiler. */
+  it("reconnaît la date écrite dans l'autre langue", () => {
+    const en = { "p0.jpg": "28 October 2013", "p1.jpg": "29 October 2013" };
+    const a = album(spread("duo", 2));
+    a.spreads[0].slots[0].caption = "la plage · 28 octobre 2013";
+    a.spreads[0].slots[1].caption = "29 octobre 2013";
+    const retirees = dedaterLegendes(a, en, undefined, [dates]);
+    expect(legendes(retirees.album)).toEqual([["la plage", undefined]]);
+    expect(retirees.retirees).toBe(2);
+    const redatees = daterLegendes(a, en, undefined, [dates]);
+    expect(legendes(redatees.album)).toEqual([["la plage · 28 October 2013", "29 October 2013"]]);
+    expect(redatees.datees).toBe(2);
+  });
+
   const D = "28 octobre 2013";
   const dates = { "p0.jpg": D, "p1.jpg": "29 octobre 2013" };
   const legendes = (a: Album) => a.spreads.map((s) => s.slots.map((x) => x.caption));

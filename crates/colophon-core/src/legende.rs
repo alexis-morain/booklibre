@@ -4,12 +4,12 @@
 //! proposal only speaks when it adds to what the chapter line already says:
 //! the spread's town when it diverges from the chapter's, the spread's day
 //! when the chapter covers several. Never a path, never a coordinate: the
-//! words come from the gazetteer and `date_fr`, nowhere else.
+//! words come from the gazetteer and `Langue::date`, nowhere else.
 //!
 //! It also holds the one wording of a photo's own date (`date_de`), which
 //! the caption editor proposes and the « Dater » button writes.
 
-use crate::build::date_fr;
+use crate::langue::Langue;
 use crate::meta;
 use crate::model::Album;
 use crate::places;
@@ -21,7 +21,7 @@ use std::path::Path;
 /// Reads the EXIF of the chapter's originals on the spot; there is no
 /// analysis cache to reread (`.cache` only holds thumbnails), and a chapter's
 /// worth of EXIF headers costs nothing next to opening one original.
-pub fn proposition(album: &Album, planche: usize) -> Option<String> {
+pub fn proposition(album: &Album, planche: usize, langue: Langue) -> Option<String> {
     let spread = album.spreads.get(planche)?;
     // A captioned spread needs nothing; a photo-less one has nothing to say.
     if spread.caption.is_some() || spread.slots.is_empty() {
@@ -68,33 +68,33 @@ pub fn proposition(album: &Album, planche: usize) -> Option<String> {
     let jour_p = jour_unique(&jours_p);
     let bornes_c = bornes(&jours_c);
 
-    texte(place_p, place_c, titre, jour_p, bornes_c)
+    texte(place_p, place_c, titre, jour_p, bornes_c, langue)
 }
 
 /// The capture date of one photo, worded for a caption, or None when the
 /// date is not trusted (a screenshot, a forward: the mtime is a copy date)
 /// or the original is gone. The one wording of a photo's date: the caption
 /// editor proposes it, the « Dater » button writes it.
-pub fn date_de(root: &Path, src: &str) -> Option<String> {
+pub fn date_de(root: &Path, src: &str, langue: Langue) -> Option<String> {
     let path = root.join(src);
     if !path.is_file() {
         return None;
     }
     let m = meta::read(&path);
-    m.taken_reliable.then(|| date_fr(m.taken.date(), true))
+    m.taken_reliable.then(|| langue.date(m.taken.date(), true))
 }
 
 /// Every placed photo's trusted date, by source, for dating all the
 /// captions in one step. A photo without an entry is one the status line
 /// counts as having no trusted date.
-pub fn dates_fiables(album: &Album) -> BTreeMap<String, String> {
+pub fn dates_fiables(album: &Album, langue: Langue) -> BTreeMap<String, String> {
     let root = Path::new(&album.root);
     let mut dates = BTreeMap::new();
     for slot in album.spreads.iter().flat_map(|s| &s.slots) {
         if dates.contains_key(&slot.src) {
             continue;
         }
-        if let Some(d) = date_de(root, &slot.src) {
+        if let Some(d) = date_de(root, &slot.src, langue) {
             dates.insert(slot.src.clone(), d);
         }
     }
@@ -130,6 +130,7 @@ fn texte(
     titre_chapitre: &str,
     jour_planche: Option<NaiveDate>,
     jours_chapitre: Option<(NaiveDate, NaiveDate)>,
+    langue: Langue,
 ) -> Option<String> {
     let place = place_planche
         .filter(|p| place_chapitre != Some(*p) && !titre_chapitre.contains(*p));
@@ -138,9 +139,9 @@ fn texte(
         _ => None,
     };
     match (place, jour) {
-        (Some(p), Some(d)) => Some(format!("{p}, {}", date_fr(d, true))),
+        (Some(p), Some(d)) => Some(format!("{p}, {}", langue.date(d, true))),
         (Some(p), None) => Some(p.to_string()),
-        (None, Some(d)) => Some(date_fr(d, true)),
+        (None, Some(d)) => Some(langue.date(d, true)),
         (None, None) => None,
     }
 }
@@ -157,7 +158,7 @@ mod tests {
     fn se_tait_quand_la_planche_dit_comme_son_chapitre() {
         // Même ville, chapitre d'un seul jour : rien à ajouter.
         assert_eq!(
-            texte(Some("Calvi"), Some("Calvi"), "Calvi, 27 octobre 2013", Some(j(27)), Some((j(27), j(27)))),
+            texte(Some("Calvi"), Some("Calvi"), "Calvi, 27 octobre 2013", Some(j(27)), Some((j(27), j(27))), Langue::Fr),
             None
         );
     }
@@ -172,6 +173,7 @@ mod tests {
                 "Porto-Vecchio, 27 – 30 octobre 2013",
                 Some(j(28)),
                 Some((j(27), j(30))),
+                Langue::Fr,
             ),
             Some("Bonifacio, 28 octobre 2013".into())
         );
@@ -180,7 +182,7 @@ mod tests {
     #[test]
     fn date_seule_quand_le_chapitre_couvre_plusieurs_jours() {
         assert_eq!(
-            texte(Some("Calvi"), Some("Calvi"), "Calvi", Some(j(29)), Some((j(27), j(31)))),
+            texte(Some("Calvi"), Some("Calvi"), "Calvi", Some(j(29)), Some((j(27), j(31))), Langue::Fr),
             Some("29 octobre 2013".into())
         );
     }
@@ -191,7 +193,7 @@ mod tests {
         // mais le titre imprimé dit déjà « Porto-Vecchio » : le répéter est
         // du bruit.
         assert_eq!(
-            texte(Some("Porto-Vecchio"), None, "Porto-Vecchio, octobre 2013", Some(j(27)), Some((j(27), j(27)))),
+            texte(Some("Porto-Vecchio"), None, "Porto-Vecchio, octobre 2013", Some(j(27)), Some((j(27), j(27))), Langue::Fr),
             None
         );
     }
@@ -199,15 +201,15 @@ mod tests {
     #[test]
     fn ville_seule_quand_le_chapitre_tient_en_un_jour() {
         assert_eq!(
-            texte(Some("Bonifacio"), Some("Calvi"), "Calvi, 27 octobre 2013", Some(j(27)), Some((j(27), j(27)))),
+            texte(Some("Bonifacio"), Some("Calvi"), "Calvi, 27 octobre 2013", Some(j(27)), Some((j(27), j(27))), Langue::Fr),
             Some("Bonifacio".into())
         );
     }
 
     #[test]
     fn silence_sans_gps_ni_pluralite_de_jours() {
-        assert_eq!(texte(None, None, "", Some(j(27)), Some((j(27), j(27)))), None);
-        assert_eq!(texte(None, None, "", None, None), None);
+        assert_eq!(texte(None, None, "", Some(j(27)), Some((j(27), j(27))), Langue::Fr), None);
+        assert_eq!(texte(None, None, "", None, None, Langue::Fr), None);
     }
 
     #[test]
@@ -218,7 +220,7 @@ mod tests {
     }
 
     /// Les interdits de `colophon.rs` : jamais un chemin, jamais une
-    /// coordonnée. La chaîne sort du gazetteer et de `date_fr`, le test
+    /// coordonnée. La chaîne sort du gazetteer et de `Langue::date`, le test
     /// verrouille la forme.
     #[test]
     fn jamais_un_chemin_ni_une_coordonnee() {
@@ -228,6 +230,7 @@ mod tests {
             "Calvi",
             Some(j(28)),
             Some((j(27), j(30))),
+            Langue::Fr,
         )
         .unwrap();
         assert!(!s.contains('/') && !s.contains('\\'));
@@ -255,13 +258,13 @@ mod tests {
             locked: false,
             objets: Vec::new(),
         });
-        assert_eq!(proposition(&album, 0), None);
+        assert_eq!(proposition(&album, 0, Langue::Fr), None);
         // Hors bornes, planche légendée : mêmes silences.
-        assert_eq!(proposition(&album, 7), None);
+        assert_eq!(proposition(&album, 7, Langue::Fr), None);
     }
 
     /// Les dates du bouton « Dater » : une par photo posée dont la date est
-    /// fiable, écrite par `date_fr` comme la proposition de la case. Une
+    /// fiable, écrite par `Langue::date` comme la proposition de la case. Une
     /// photo datée par son seul mtime, ou disparue, n'a pas d'entrée : c'est
     /// elle que la ligne de statut compte.
     #[test]
@@ -294,13 +297,39 @@ mod tests {
             objets: Vec::new(),
         });
 
-        let dates = dates_fiables(&album);
+        let dates = dates_fiables(&album, Langue::Fr);
         assert_eq!(dates.len(), 1, "{dates:?}");
         assert_eq!(dates.get("a.jpg").map(String::as_str), Some("10 mai 2020"));
         // La même fonction que la proposition de la case, à la lettre.
-        assert_eq!(date_de(&dir, "a.jpg").as_deref(), Some("10 mai 2020"));
-        assert_eq!(date_de(&dir, "b.jpg"), None);
-        assert_eq!(date_de(&dir, "c.jpg"), None);
+        assert_eq!(date_de(&dir, "a.jpg", Langue::Fr).as_deref(), Some("10 mai 2020"));
+        // Et dans la langue de l'interface qui la demande.
+        assert_eq!(date_de(&dir, "a.jpg", Langue::En).as_deref(), Some("10 May 2020"));
+        assert_eq!(
+            dates_fiables(&album, Langue::En).get("a.jpg").map(String::as_str),
+            Some("10 May 2020")
+        );
+        assert_eq!(date_de(&dir, "b.jpg", Langue::Fr), None);
+        assert_eq!(date_de(&dir, "c.jpg", Langue::Fr), None);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// La proposition et la date d'une légende suivent la langue demandée.
+    #[test]
+    fn la_legende_parle_la_langue_demandee() {
+        assert_eq!(
+            texte(Some("Calvi"), Some("Calvi"), "Calvi", Some(j(29)), Some((j(27), j(31))), Langue::En),
+            Some("29 October 2013".into())
+        );
+        assert_eq!(
+            texte(
+                Some("Bonifacio"),
+                Some("Porto-Vecchio"),
+                "Porto-Vecchio",
+                Some(j(28)),
+                Some((j(27), j(30))),
+                Langue::En,
+            ),
+            Some("Bonifacio, 28 October 2013".into())
+        );
     }
 }

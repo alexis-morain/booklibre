@@ -36,6 +36,12 @@ struct Cli {
     #[arg(long, default_value = "equilibree", value_name = "PACE")]
     densite: String,
 
+    /// Language of the words the composition writes into the book: the
+    /// half-title, the colophon page, the chapter lines, a caption's date.
+    /// `fr` or `en`. The app passes the language of its interface.
+    #[arg(long, default_value = "fr", value_name = "LANG")]
+    langue: String,
+
     /// Compose the two alternative proposals beside the album, the way the
     /// app does. They land next to it as `album.<id>.json`; the audit gate
     /// reads them one by one.
@@ -252,6 +258,8 @@ fn main() -> Result<()> {
     }
 
     let trim = format::parse(&cli.format)?;
+    let langue = colophon_core::langue::Langue::par_code(&cli.langue)
+        .ok_or_else(|| anyhow::anyhow!("langue inconnue : {} (fr, en)", cli.langue))?;
 
     // Toute commande qui travaille sur un dossier d'album existant le migre
     // d'abord. Un `focal` d'avant le schéma 2 ne veut plus ce qu'il dit :
@@ -350,7 +358,7 @@ fn main() -> Result<()> {
         )?)?;
         let p = planche
             .checked_sub(1)
-            .and_then(|i| colophon_core::legende::proposition(&album, i));
+            .and_then(|i| colophon_core::legende::proposition(&album, i, langue));
         println!("{}", serde_json::to_string(&p)?);
         return Ok(());
     }
@@ -420,7 +428,7 @@ fn main() -> Result<()> {
         let album: Album = serde_json::from_str(&std::fs::read_to_string(
             cli.out.join("album.json"),
         )?)?;
-        let dates = colophon_core::legende::dates_fiables(&album);
+        let dates = colophon_core::legende::dates_fiables(&album, langue);
         println!("{}", serde_json::to_string(&dates)?);
         return Ok(());
     }
@@ -620,6 +628,7 @@ fn main() -> Result<()> {
                 spreads: cli.spreads,
                 trim,
                 densite,
+                langue,
                 progress: Box::new(|line| eprintln!("{line}")),
                 variantes: if cli.variantes {
                     colophon_core::build::variantes_offertes(densite, cli.spreads.max(8))
@@ -644,6 +653,7 @@ fn main() -> Result<()> {
             spreads: cli.spreads,
             trim,
             densite,
+            langue,
             progress: Box::new(|line| eprintln!("{line}")),
             variantes: if cli.variantes {
                 colophon_core::build::variantes_offertes(densite, cli.spreads.max(8))

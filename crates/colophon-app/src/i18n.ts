@@ -1015,6 +1015,8 @@ export const FR = {
   "racc.k.molette": "molette · + −",
   "racc.k.doubleclic": "double-clic",
   "racc.k.echap": "Échap",
+  "touche.entree": "Entrée",
+  "touche.echap": "Échap",
 
   // -- le tiroir de photos
   "tiroir.reserve": "Photos en réserve",
@@ -1718,7 +1720,7 @@ export const EN: Record<Cle, string> = {
 
   "table.liste": "The album’s spreads",
   "table.cellule.nom": "Spread {n}",
-  "table.cellule.role": "spread, Enter opens it, ⌥ arrows move it",
+  "table.cellule.role": "spread, Return opens it, ⌥ arrows move it",
   "table.cellule.titre":
     "spread {n} · drag to move, double-click to open",
   "table.editee": "Edited by hand: survives any recomposition",
@@ -1745,7 +1747,7 @@ export const EN: Record<Cle, string> = {
   "legendes.datees": "{n} captions dated",
   "legendes.datees.sans": "{n} captions dated, {m} photos without a reliable date",
   "legendes.dedatees": "Date removed from {n} captions",
-  "planche.texte.placeholder": "Your text, line by line.\nEnter for a new line.",
+  "planche.texte.placeholder": "Your text, line by line.\nReturn for a new line.",
   "planche.texte.editer": "Click to edit the text",
   "planche.texte.ghost": "Text page: click to write.",
 
@@ -2003,13 +2005,15 @@ export const EN: Record<Cle, string> = {
   "racc.ouvrir": "Open, new",
   "racc.k.espace": "← → · space",
   "racc.k.debut": "Home / End",
-  "racc.k.entree": "Enter (Sort)",
+  "racc.k.entree": "Return (Sort)",
   "racc.k.suppr.planches": "⌫ (Spreads)",
   "racc.k.suppr.livre": "⌫ (Book)",
   "racc.k.glisser": "drag · ⌥ refines",
   "racc.k.molette": "wheel · + −",
   "racc.k.doubleclic": "double-click",
   "racc.k.echap": "Esc",
+  "touche.entree": "Return",
+  "touche.echap": "Esc",
 
   "tiroir.reserve": "Photos on hand",
   "tiroir.non.placees": "Not placed",

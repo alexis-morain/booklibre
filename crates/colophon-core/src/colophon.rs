@@ -22,6 +22,7 @@
 //! yet. [`texte`] takes it as an argument rather than reading it, so the day
 //! a profile carries its own the page follows the file being written.
 
+use crate::langue::Langue;
 use crate::model::Size;
 use serde::{Deserialize, Serialize};
 
@@ -117,7 +118,8 @@ pub fn faits(
 
 /// The span the album covers, as a sentence fragment: « le 21 octobre 2013 »
 /// for a single day, « du 21 au 29 octobre 2013 » when one month holds both
-/// ends, « du 29 décembre 2013 au 2 janvier 2014 » when it does not.
+/// ends, « du 29 décembre 2013 au 2 janvier 2014 » when it does not; the
+/// same three shapes in English (`Langue::periode`).
 ///
 /// `None` when no photo carried a trusted capture date, and every page that
 /// asks then says nothing about time rather than printing a copy date as a
@@ -126,20 +128,9 @@ pub fn faits(
 pub fn periode(
     debut: Option<chrono::NaiveDate>,
     fin: Option<chrono::NaiveDate>,
+    langue: Langue,
 ) -> Option<String> {
-    use chrono::Datelike;
-    let (d, e) = (debut?, fin?);
-    if d == e {
-        return Some(format!("le {}", crate::build::date_fr(d, true)));
-    }
-    let depart = if d.year() != e.year() {
-        crate::build::date_fr(d, true)
-    } else if d.month() != e.month() {
-        crate::build::date_fr(d, false)
-    } else {
-        d.day().to_string()
-    };
-    Some(format!("du {depart} au {}", crate::build::date_fr(e, true)))
+    langue.periode(debut, fin)
 }
 
 /// The page as it prints, line by line. Blank lines separate the three
@@ -148,53 +139,60 @@ pub fn periode(
 /// `grammage` comes from the supplier chosen at export time, which is why
 /// this takes it rather than reading it from the album: the paper named on
 /// the page is the paper of the file being written.
-pub fn texte(f: &Faits, trim: Size, grammage: f64, version: &str) -> String {
+pub fn texte(f: &Faits, trim: Size, grammage: f64, version: &str, langue: Langue) -> String {
     let mut l: Vec<String> = Vec::new();
     l.push("Colophon".into());
     l.push(String::new());
 
-    let retenues = if f.photos_retenues == 1 {
-        "1 photographie retenue".to_string()
-    } else {
-        format!("{} photographies retenues", f.photos_retenues)
+    let retenues = match (langue, f.photos_retenues) {
+        (Langue::Fr, 1) => "1 photographie retenue".to_string(),
+        (Langue::Fr, n) => format!("{n} photographies retenues"),
+        (Langue::En, 1) => "1 photograph kept".to_string(),
+        (Langue::En, n) => format!("{n} photographs kept"),
     };
-    l.push(match periode(f.debut, f.fin) {
-        Some(p) => format!("{retenues} sur {}, prises {p}.", f.photos_scannees),
+    let sur = match langue {
+        Langue::Fr => "sur",
+        Langue::En => "out of",
+    };
+    l.push(match periode(f.debut, f.fin, langue) {
+        Some(p) => {
+            let prises = match langue {
+                Langue::Fr => "prises",
+                Langue::En => "taken",
+            };
+            format!("{retenues} {sur} {}, {prises} {p}.", f.photos_scannees)
+        }
         // No photo carried a trusted capture date: the page says the counts
         // and stops, rather than printing a copy date as a shooting date.
-        None => format!("{retenues} sur {}.", f.photos_scannees),
+        None => format!("{retenues} {sur} {}.", f.photos_scannees),
     });
 
     if !f.lieux.is_empty() {
-        l.push(liste(&f.lieux) + ".");
+        l.push(langue.liste(&f.lieux) + ".");
     }
     if !f.appareils.is_empty() {
-        l.push(liste(&f.appareils) + ".");
+        l.push(langue.liste(&f.appareils) + ".");
     }
 
     l.push(String::new());
-    l.push(format!(
-        "Composé le {} avec Colophon {}.",
-        crate::build::date_fr(f.compose_le, true),
-        version
-    ));
-    l.push(format!(
-        "{} × {} mm, papier {} g/m\u{b2}.",
-        arrondi(trim.w),
-        arrondi(trim.h),
-        arrondi(grammage)
-    ));
+    let le = langue.date(f.compose_le, true);
+    l.push(match langue {
+        Langue::Fr => format!("Composé le {le} avec Colophon {version}."),
+        Langue::En => format!("Composed on {le} with Colophon {version}."),
+    });
+    let (w, h, g) = (arrondi(trim.w), arrondi(trim.h), arrondi(grammage));
+    l.push(match langue {
+        Langue::Fr => format!("{w} × {h} mm, papier {g} g/m\u{b2}."),
+        Langue::En => format!("{w} × {h} mm, {g} g/m\u{b2} paper."),
+    });
     l.join("\n")
 }
 
 /// « a, b et c ». The last separator is a word, the way a sentence joins
 /// things, not a comma the way a database does.
+#[cfg(test)]
 fn liste(v: &[String]) -> String {
-    match v.len() {
-        0 => String::new(),
-        1 => v[0].clone(),
-        _ => format!("{} et {}", v[..v.len() - 1].join(", "), v[v.len() - 1]),
-    }
+    Langue::Fr.liste(v)
 }
 
 /// Millimetres print whole when they are whole: « 210 × 210 mm », not
@@ -211,12 +209,18 @@ fn arrondi(v: f64) -> String {
 /// a late-bound flag on purpose: the page then counts in the pagination the
 /// suppliers sanction, shows up in the editor, and travels through the
 /// preflight, all without a single special case.
-pub fn spread(f: &Faits, trim: Size, grammage: f64, version: &str) -> crate::model::Spread {
+pub fn spread(
+    f: &Faits,
+    trim: Size,
+    grammage: f64,
+    version: &str,
+    langue: Langue,
+) -> crate::model::Spread {
     crate::model::Spread {
         template: TEMPLATE.into(),
         slots: Vec::new(),
         caption: None,
-        text: Some(texte(f, trim, grammage, version)),
+        text: Some(texte(f, trim, grammage, version, langue)),
         edited: false,
         locked: false,
         objets: Vec::new(),
@@ -245,7 +249,7 @@ mod tests {
 
     #[test]
     fn the_page_says_what_only_the_machine_knows() {
-        let t = texte(&faits_test(), trim(), 150.0, "0.9.0");
+        let t = texte(&faits_test(), trim(), 150.0, "0.9.0", Langue::Fr);
         assert!(t.contains("152 photographies retenues sur 575"));
         assert!(t.contains("prises du 21 au 29 octobre 2013."), "{t}");
         assert!(t.contains("Porto-Vecchio et Bonifacio."));
@@ -260,7 +264,7 @@ mod tests {
     fn the_page_never_carries_a_path_a_coordinate_or_a_caption() {
         let mut f = faits_test();
         f.lieux = vec!["Bonifacio".into()];
-        let t = texte(&f, trim(), 150.0, "0.9.0");
+        let t = texte(&f, trim(), 150.0, "0.9.0", Langue::Fr);
         assert!(!t.contains('\\'), "{t}");
         for ext in [".jpg", ".JPG", ".png", ".heic", ".HEIC"] {
             assert!(!t.contains(ext), "{ext} dans la page : {t}");
@@ -281,7 +285,7 @@ mod tests {
         let mut f = faits_test();
         f.debut = None;
         f.fin = None;
-        let t = texte(&f, trim(), 150.0, "0.9.0");
+        let t = texte(&f, trim(), 150.0, "0.9.0", Langue::Fr);
         assert!(t.contains("152 photographies retenues sur 575."));
         assert!(!t.contains("prises"));
     }
@@ -298,7 +302,7 @@ mod tests {
             appareils: vec!["iPhone 5".into()],
             compose_le: chrono::NaiveDate::from_ymd_opt(2026, 8, 17).unwrap(),
         };
-        let t = texte(&f, trim(), 150.0, "0.9.0");
+        let t = texte(&f, trim(), 150.0, "0.9.0", Langue::Fr);
         assert!(t.contains("1 photographie retenue sur 1, prises le 21 octobre 2013."));
         assert!(t.contains("Bonifacio."));
     }
@@ -310,7 +314,7 @@ mod tests {
         let mut f = faits_test();
         f.debut = chrono::NaiveDate::from_ymd_opt(2013, 12, 29);
         f.fin = chrono::NaiveDate::from_ymd_opt(2014, 1, 2);
-        let t = texte(&f, trim(), 150.0, "0.9.0");
+        let t = texte(&f, trim(), 150.0, "0.9.0", Langue::Fr);
         assert!(t.contains("du 29 décembre 2013 au 2 janvier 2014"), "{t}");
     }
 
@@ -319,15 +323,15 @@ mod tests {
     #[test]
     fn the_paper_follows_the_supplier() {
         let f = faits_test();
-        assert!(texte(&f, trim(), 170.0, "0.9.0").contains("papier 170 g/m²"));
-        assert!(texte(&f, trim(), 115.0, "0.9.0").contains("papier 115 g/m²"));
+        assert!(texte(&f, trim(), 170.0, "0.9.0", Langue::Fr).contains("papier 170 g/m²"));
+        assert!(texte(&f, trim(), 115.0, "0.9.0", Langue::Fr).contains("papier 115 g/m²"));
     }
 
     /// The spread carries no photo and no caption: every geometry, every
     /// counter and every preflight already knows what to do with that.
     #[test]
     fn the_spread_holds_text_and_nothing_else() {
-        let s = spread(&faits_test(), trim(), 150.0, "0.9.0");
+        let s = spread(&faits_test(), trim(), 150.0, "0.9.0", Langue::Fr);
         assert_eq!(s.template, TEMPLATE);
         assert!(s.slots.is_empty());
         assert!(s.caption.is_none());
@@ -362,23 +366,25 @@ mod tests {
             compose_le: chrono::NaiveDate::from_ymd_opt(2026, 12, 28).unwrap(),
         };
         for (nom, w, h, _) in crate::format::FORMATS {
-            let mut a = crate::model::Album::new("t", std::path::Path::new("/p"), Size { w: *w, h: *h });
-            a.spreads.push(spread(&plein, a.trim_mm, 150.0, "0.9.0"));
-            let g = crate::pdf::geometry(&a);
-            let at = crate::pdf::colophon_anchor(&g);
-            // From the first baseline to the trimmed edge of the recto page.
-            let place = g.media_w - g.bleed - at.x;
-            for ligne in texte(&plein, a.trim_mm, 150.0, "0.9.0").lines() {
-                let large = crate::font::text_width_mm(ligne, SIZE_PT);
-                assert!(
-                    large <= place,
-                    "{nom} : « {ligne} » fait {large:.1} mm pour {place:.1} mm de place"
-                );
+            for langue in [Langue::Fr, Langue::En] {
+                let mut a = crate::model::Album::new("t", std::path::Path::new("/p"), Size { w: *w, h: *h });
+                a.spreads.push(spread(&plein, a.trim_mm, 150.0, "0.9.0", langue));
+                let g = crate::pdf::geometry(&a);
+                let at = crate::pdf::colophon_anchor(&g);
+                // From the first baseline to the trimmed edge of the recto page.
+                let place = g.media_w - g.bleed - at.x;
+                for ligne in texte(&plein, a.trim_mm, 150.0, "0.9.0", langue).lines() {
+                    let large = crate::font::text_width_mm(ligne, SIZE_PT);
+                    assert!(
+                        large <= place,
+                        "{nom} : « {ligne} » fait {large:.1} mm pour {place:.1} mm de place"
+                    );
+                }
+                // And the block has to stop above the bottom of the page.
+                let lignes = texte(&plein, a.trim_mm, 150.0, "0.9.0", langue).lines().count();
+                let bas = at.y - (lignes - 1) as f64 * LEADING_MM;
+                assert!(bas > g.bleed, "{nom} : le bloc descend sous la coupe");
             }
-            // And the block has to stop above the bottom of the page.
-            let lignes = texte(&plein, a.trim_mm, 150.0, "0.9.0").lines().count();
-            let bas = at.y - (lignes - 1) as f64 * LEADING_MM;
-            assert!(bas > g.bleed, "{nom} : le bloc descend sous la coupe");
         }
     }
 
@@ -387,5 +393,29 @@ mod tests {
         assert_eq!(liste(&["a".into()]), "a");
         assert_eq!(liste(&["a".into(), "b".into()]), "a et b");
         assert_eq!(liste(&["a".into(), "b".into(), "c".into()]), "a, b et c");
+    }
+
+    /// Composé en anglais, le colophon s'écrit en anglais, phrase par phrase,
+    /// et rien du français ne traîne : ni « papier », ni « Composé », ni « et ».
+    #[test]
+    fn la_page_parle_la_langue_de_la_composition() {
+        let t = texte(&faits_test(), trim(), 150.0, "1.0.0", Langue::En);
+        assert!(t.starts_with("Colophon\n\n"), "{t}");
+        assert!(
+            t.contains("152 photographs kept out of 575, taken from 21 to 29 October 2013."),
+            "{t}"
+        );
+        assert!(t.contains("Porto-Vecchio and Bonifacio."), "{t}");
+        assert!(t.contains("Composed on 17 August 2026 with Colophon 1.0.0."), "{t}");
+        assert!(t.contains("210 × 210 mm, 150 g/m\u{b2} paper."), "{t}");
+        for mot in ["papier", "Composé", " et ", "photographies", "prises", "octobre"] {
+            assert!(!t.contains(mot), "« {mot} » dans la page anglaise : {t}");
+        }
+        let mut un = faits_test();
+        un.photos_retenues = 1;
+        un.debut = None;
+        un.fin = None;
+        let t = texte(&un, trim(), 150.0, "1.0.0", Langue::En);
+        assert!(t.contains("1 photograph kept out of 575."), "{t}");
     }
 }

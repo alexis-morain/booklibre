@@ -406,6 +406,7 @@ export function daterLegendes(
   album: Album,
   dates: Record<string, string>,
   planches?: number[],
+  autres: Record<string, string>[] = [],
 ): { album: Album; datees: number; sansDate: number } {
   let datees = 0;
   let sansDate = 0;
@@ -416,24 +417,46 @@ export function daterLegendes(
       return s.caption ?? "";
     }
     datees++;
-    return legendeDatee(s.caption, date);
+    // Datée dans l'autre langue de l'interface : la date se remplace.
+    return legendeDatee(sansAutreDate(s.caption, s.src, autres), date);
   });
   return { album: suivant, datees, sansDate };
 }
 
+/** La légende sans la date qu'une autre langue de l'interface y a écrite,
+ *  ou telle quelle. `autres` : les dates fiables, par src, dans les autres
+ *  langues ; les mots du livre suivent la langue du moment où ils sont
+ *  écrits, et l'interface a pu changer depuis. */
+function sansAutreDate(
+  caption: string | undefined,
+  src: string,
+  autres: Record<string, string>[],
+): string {
+  for (const table of autres) {
+    const date = table[src];
+    if (date && estDatee(caption, date)) return legendeDedatee(caption, date);
+  }
+  return caption ?? "";
+}
+
 /** Retire des légendes visées la date que `daterLegendes` a écrite, et rien
- *  d'autre. Rend le nombre de légendes qui l'ont perdue. */
+ *  d'autre, dans la langue du moment ou dans une de celles d'`autres`. Rend
+ *  le nombre de légendes qui l'ont perdue. */
 export function dedaterLegendes(
   album: Album,
   dates: Record<string, string>,
   planches?: number[],
+  autres: Record<string, string>[] = [],
 ): { album: Album; retirees: number } {
   let retirees = 0;
   const suivant = reecrireLegendes(album, planches, (s) => {
-    const date = dates[s.src];
-    if (!date || !estDatee(s.caption, date)) return s.caption ?? "";
-    retirees++;
-    return legendeDedatee(s.caption, date);
+    for (const table of [dates, ...autres]) {
+      const date = table[s.src];
+      if (!date || !estDatee(s.caption, date)) continue;
+      retirees++;
+      return legendeDedatee(s.caption, date);
+    }
+    return s.caption ?? "";
   });
   return { album: suivant, retirees };
 }
