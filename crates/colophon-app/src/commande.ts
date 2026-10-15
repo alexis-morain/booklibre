@@ -244,6 +244,12 @@ export function paiementRecu(e: unknown): boolean {
   return String(e).includes("paiement_recu");
 }
 
+/** L'intention a été payée, quoi qu'il en soit advenu depuis : un `etat
+ *  (409)` au paiement n'est alors pas un refus, le webhook est passé avant. */
+export function dejaPayee(etat: string): boolean {
+  return !["attente_fichiers", "attente_paiement", "abandonnee", "purgee"].includes(etat);
+}
+
 /** Le second envoi d'une intention dont les fichiers partent déjà : le
  *  moteur le refuse sans rien toucher, et l'écran n'en dit rien. */
 export function ignorable(e: unknown): boolean {

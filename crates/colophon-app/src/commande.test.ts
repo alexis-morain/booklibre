@@ -21,6 +21,7 @@ import {
   niveauChoisi,
   nomNiveau,
   part,
+  dejaPayee,
   paiementRecu,
   payable,
   phraseConfirmation,
@@ -333,6 +334,17 @@ describe("la confirmation", () => {
     expect(refusDefinitif("relais injoignable : dns")).toBe(false);
     expect(ignorable("envoi_en_cours")).toBe(true);
     expect(ignorable("relais : fichiers (422)")).toBe(false);
+  });
+
+  it("tient pour payée une intention que le webhook a déjà fait avancer", () => {
+    // « Rouvrir » une seconde après avoir payé : le relais répond `etat (409)`
+    // sur une `payee`, et ce n'est pas un refus.
+    for (const e of ["payee", "commandee", "annulation_en_cours", "annulee", "remboursement_en_cours", "echec_remboursee"]) {
+      expect(dejaPayee(e)).toBe(true);
+    }
+    for (const e of ["attente_fichiers", "attente_paiement", "abandonnee", "purgee"]) {
+      expect(dejaPayee(e)).toBe(false);
+    }
   });
 
   it("prend le paiement déjà reçu pour une bonne nouvelle, et Stripe muet pour un refus qui se réessaie", () => {

@@ -30,6 +30,7 @@ import {
   Relais,
   aRelire,
   abandonnable,
+  dejaPayee,
   ignorable,
   paiementRecu,
   payable,
@@ -164,6 +165,16 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
     }
   };
 
+  /** Le paiement refusé parce qu'il a déjà eu lieu : la session payée
+   *  (`paiement_recu`), ou le webhook passé avant le clic (`etat (409)` sur
+   *  une intention payée, relue pour le savoir). */
+  const payeeEntreTemps = async (e: unknown, id: string) => {
+    if (paiementRecu(e)) return true;
+    if (!String(e).includes("etat (409)")) return false;
+    const elle = (await relaisRelire(id)).intentions.find((i) => i.id === id);
+    return elle !== undefined && dejaPayee(elle.etat);
+  };
+
   const payer = () => {
     if (parcours.etape !== "confirmation" && parcours.etape !== "attente") return;
     const { offre, niveau } = parcours;
@@ -176,7 +187,7 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
           await ouvrirPaiement(offre.id, niveau);
           envoyer({ type: "ouvert" });
         } catch (e) {
-          if (!paiementRecu(e)) throw e;
+          if (!(await payeeEntreTemps(e, offre.id))) throw e;
           envoyer({ type: "recu" });
         }
         recevoir((await relaisRelire(offre.id)).intentions);
@@ -194,7 +205,7 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
       try {
         await ouvrirPaiement(i.id, i.niveau!);
       } catch (e) {
-        if (!paiementRecu(e)) throw e;
+        if (!(await payeeEntreTemps(e, i.id))) throw e;
         setMessage(t("commande.attente.recu"));
       }
       recevoir((await relaisRelire(i.id)).intentions);
