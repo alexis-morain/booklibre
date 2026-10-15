@@ -222,6 +222,7 @@ const ERREURS: [string, Cle][] = [
   ["abandon_refuse", "commande.abandon.refuse"],
   ["trop_tard", "commande.annuler.tard"],
   ["etat (409)", "commande.paiement.etat"],
+  ["stripe_injoignable", "commande.paiement.stripe"],
   ["devis_expire", "commande.devis.expire"],
   ["intention_expiree", "commande.devis.expire"],
   ["trop_de_sessions", "commande.sessions"],
@@ -235,6 +236,18 @@ const ERREURS: [string, Cle][] = [
 export function refusDefinitif(e: unknown): boolean {
   const s = String(e);
   return ["devis_expire", "intention_expiree", "trop_de_sessions", "etat (409)"].some((c) => s.includes(c));
+}
+
+/** La session de paiement est déjà payée : le relais n'en ouvre pas
+ *  d'autre. Ce n'est pas un refus, la commande se confirme seule. */
+export function paiementRecu(e: unknown): boolean {
+  return String(e).includes("paiement_recu");
+}
+
+/** L'intention a été payée, quoi qu'il en soit advenu depuis : un `etat
+ *  (409)` au paiement n'est alors pas un refus, le webhook est passé avant. */
+export function dejaPayee(etat: string): boolean {
+  return !["attente_fichiers", "attente_paiement", "abandonnee", "purgee"].includes(etat);
 }
 
 /** Le second envoi d'une intention dont les fichiers partent déjà : le
@@ -261,7 +274,7 @@ export type Parcours =
   | { etape: "confirmation"; offre: Offre; niveau: string }
   | { etape: "pret"; offre: Offre; niveau: string }
   | { etape: "paiement"; offre: Offre; niveau: string }
-  | { etape: "attente"; offre: Offre; niveau: string }
+  | { etape: "attente"; offre: Offre; niveau: string; recu?: boolean }
   | { etape: "erreur"; phrase: string };
 
 export type Evenement =
@@ -277,6 +290,7 @@ export type Evenement =
   | { type: "fermer" }
   | { type: "payer" }
   | { type: "ouvert" }
+  | { type: "recu" }
   | { type: "echec"; definitif?: string }
   | { type: "recommencer"; pays: Pays[] }
   | { type: "retour" }
@@ -332,11 +346,16 @@ export function avancer(p: Parcours, e: Evenement): Parcours {
     case "confirmer":
       return p.etape === "pret" ? { etape: "confirmation", offre: p.offre, niveau: p.niveau } : p;
     case "payer":
-      return p.etape === "confirmation" || p.etape === "attente"
+      // Une attente reçue n'a plus de page à rouvrir.
+      return p.etape === "confirmation" || (p.etape === "attente" && !p.recu)
         ? { etape: "paiement", offre: p.offre, niveau: p.niveau }
         : p;
     case "ouvert":
       return p.etape === "paiement" ? { etape: "attente", offre: p.offre, niveau: p.niveau } : p;
+    case "recu":
+      // Le relais dit la session déjà payée : on attend la confirmation,
+      // relue toutes les cinq secondes comme une attente ordinaire.
+      return p.etape === "paiement" ? { etape: "attente", offre: p.offre, niveau: p.niveau, recu: true } : p;
     case "echec":
       // L'envoi raté revient à la grille, où « Envoyer » réessaie ; un
       // paiement raté revient au bouton qui le rouvre.

@@ -647,6 +647,7 @@ export const FR = {
   "commande.payer.encours": "Ouverture de la page de paiement…",
   "commande.attente": "En attente du paiement : la page de Stripe s’est ouverte dans votre navigateur. Revenez ici une fois payé.",
   "commande.attente.rouvrir": "Rouvrir la page de paiement",
+  "commande.attente.recu": "Paiement reçu. La commande se confirme, cela prend quelques secondes.",
   "commande.retour": "Retour",
   "commande.abandonner": "Abandonner",
   "commande.recommencer": "Recommencer",
@@ -662,6 +663,7 @@ export const FR = {
   "commande.abandon.double": "Cette commande est déjà en train d’être abandonnée : attendez la réponse du relais.",
   "commande.paiement.etat":
     "Cette commande ne peut plus être payée : elle a été abandonnée, ou elle a déjà avancé. Recommencez-la au besoin.",
+  "commande.paiement.stripe": "Stripe ne répond pas, réessayez dans un instant.",
   "commande.fermer": "Fermer",
   "commandes.titre": "Commandes",
   "commandes.ligne": "{reference} · {mode}",
@@ -1655,6 +1657,7 @@ export const EN: Record<Cle, string> = {
   "commande.payer.encours": "Opening the payment page…",
   "commande.attente": "Waiting for payment: the Stripe page opened in your browser. Come back here once paid.",
   "commande.attente.rouvrir": "Reopen the payment page",
+  "commande.attente.recu": "Payment received. The order is being confirmed; this takes a few seconds.",
   "commande.retour": "Back",
   "commande.abandonner": "Give up",
   "commande.recommencer": "Start again",
@@ -1670,6 +1673,7 @@ export const EN: Record<Cle, string> = {
   "commande.abandon.double": "This order is already being given up: wait for the relay’s answer.",
   "commande.paiement.etat":
     "This order can no longer be paid: it was given up, or it has already moved on. Start it again if needed.",
+  "commande.paiement.stripe": "Stripe is not answering, try again in a moment.",
   "commande.fermer": "Close",
   "commandes.titre": "Orders",
   "commandes.ligne": "{reference} · {mode}",

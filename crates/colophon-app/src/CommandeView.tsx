@@ -30,7 +30,9 @@ import {
   Relais,
   aRelire,
   abandonnable,
+  dejaPayee,
   ignorable,
+  paiementRecu,
   payable,
   refusDefinitif,
   annulableIntention,
@@ -163,6 +165,16 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
     }
   };
 
+  /** Le paiement refusé parce qu'il a déjà eu lieu : la session payée
+   *  (`paiement_recu`), ou le webhook passé avant le clic (`etat (409)` sur
+   *  une intention payée, relue pour le savoir). */
+  const payeeEntreTemps = async (e: unknown, id: string) => {
+    if (paiementRecu(e)) return true;
+    if (!String(e).includes("etat (409)")) return false;
+    const elle = (await relaisRelire(id)).intentions.find((i) => i.id === id);
+    return elle !== undefined && dejaPayee(elle.etat);
+  };
+
   const payer = () => {
     if (parcours.etape !== "confirmation" && parcours.etape !== "attente") return;
     const { offre, niveau } = parcours;
@@ -170,8 +182,14 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
     void tenter(
       t("commande.payer.encours"),
       async () => {
-        await ouvrirPaiement(offre.id, niveau);
-        envoyer({ type: "ouvert" });
+        // Déjà payée : pas d'erreur, l'attente le dit et la relecture suit.
+        try {
+          await ouvrirPaiement(offre.id, niveau);
+          envoyer({ type: "ouvert" });
+        } catch (e) {
+          if (!(await payeeEntreTemps(e, offre.id))) throw e;
+          envoyer({ type: "recu" });
+        }
         recevoir((await relaisRelire(offre.id)).intentions);
       },
       // Un refus définitif mène à l'étape d'erreur, d'où l'on recommence ;
@@ -181,11 +199,18 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
   };
 
   /** « Payer » depuis la liste : le niveau gardé, la même porte. */
-  const payerDepuisLaListe = (i: IntentionVue) =>
+  const payerDepuisLaListe = (i: IntentionVue) => {
+    setMessage(null);
     void tenter(t("commande.payer.encours"), async () => {
-      await ouvrirPaiement(i.id, i.niveau!);
+      try {
+        await ouvrirPaiement(i.id, i.niveau!);
+      } catch (e) {
+        if (!(await payeeEntreTemps(e, i.id))) throw e;
+        setMessage(t("commande.attente.recu"));
+      }
       recevoir((await relaisRelire(i.id)).intentions);
     });
+  };
 
   // Le moteur demande l'abandon au relais avant d'oublier : la phrase de
   // confirmation ne vient qu'après lui. Un refus garde l'intention, et la
@@ -378,11 +403,13 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
 
           {parcours.etape === "attente" && (
             <div className="commande-attente" role="status">
-              <p>{t("commande.attente")}</p>
+              <p>{t(parcours.recu ? "commande.attente.recu" : "commande.attente")}</p>
               <div className="commande-gestes">
-                <button className="link" disabled={occupe !== null} onClick={payer}>
-                  {t("commande.attente.rouvrir")}
-                </button>
+                {!parcours.recu && (
+                  <button className="link" disabled={occupe !== null} onClick={payer}>
+                    {t("commande.attente.rouvrir")}
+                  </button>
+                )}
                 <button className="link" onClick={() => envoyer({ type: "fermer" })}>
                   {t("commande.fermer")}
                 </button>
