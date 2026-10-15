@@ -10,17 +10,11 @@ What Darktable is to Lightroom, Colophon is to Blurb.
 > installers for macOS and Windows; the Windows build has not yet been tried
 > on real hardware. HEIC, RAW and the Apple Photos import work on macOS only.
 
-<!-- CAPTURES, à insérer avant de rendre le dépôt public. Ordre imposé par
-     l'audit UX. Ne pas committer ce README avec des images manquantes.
+![The Sort view: every discarded photo, and why](docs/images/tri.png)
 
-     ![The Sort view: every discarded photo, and why](docs/images/tri.png)
-     ![What the composer kept](docs/images/bilan.png)
-     ![Composing an album](docs/images/compose.gif)
+![What the composer kept, out of what it read](docs/images/bilan.png)
 
-     1. tri.png     — vue Tri, écartées groupées par raison. Capture héros.
-     2. bilan.png   — le bilan de composition, chiffres réels.
-     3. compose.gif — dossier choisi jusqu'à la première planche, 10 s max.
-     Largeur 1600 px, fenêtre à 1440×900, jeu corse-2013.                  -->
+![Composing an album from a folder (analysis sped up)](docs/images/compose.gif)
 
 ---
 
