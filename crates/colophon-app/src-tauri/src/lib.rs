@@ -1395,6 +1395,31 @@ async fn export_pdf(
                 .map(|s| s.to_string_lossy().to_string())
                 .unwrap_or_else(|| "album".into());
             let cover = interior.with_file_name(format!("{stem}-couverture.pdf"));
+            // Sous le bac à sable, le dialogue n'a ouvert que le fichier de
+            // l'intérieur : la couverture d'à côté serait refusée. Elle a donc
+            // son propre dialogue, qui propose le même dossier et le même nom.
+            #[cfg(all(target_os = "macos", feature = "mas"))]
+            let cover = {
+                use tauri_plugin_dialog::DialogExt;
+                let mut boite = app
+                    .dialog()
+                    .file()
+                    .set_title("Enregistrer la couverture")
+                    .set_file_name(cover.file_name().unwrap_or_default().to_string_lossy())
+                    .add_filter("PDF", &["pdf"]);
+                if let Some(d) = cover.parent() {
+                    boite = boite.set_directory(d);
+                }
+                match boite.blocking_save_file().map(|c| c.into_path()) {
+                    Some(Ok(c)) => c,
+                    // L'intérieur est posé ; renoncer à la couverture le dit.
+                    Some(Err(e)) => return Err(format!("couverture : destination illisible : {e}")),
+                    None => {
+                        colophon_core::log::line("couverture : enregistrement abandonné");
+                        return Ok(written);
+                    }
+                }
+            };
             colophon_core::cover::render_cover_pdf(&dir, profil, &cover)
                 .map_err(|e| {
                     colophon_core::log::line(&format!("couverture en échec : {e:#}"));
