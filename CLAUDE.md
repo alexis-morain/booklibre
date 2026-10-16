@@ -1334,12 +1334,20 @@ Sous bac à sable, `$HOME` est le conteneur : tout dossier de la personne passe 
 (`font::installed_avec`). `album.root` se rouvre par un **marque-page de sécurité**,
 `root.bookmark` à côté d'`album.json` (`signet.rs`, `signet.m`), résolu dans `open_album`
 avant toute lecture ; sans lui, `dossier_a_revoir` et le bouton qui rechoisit le dossier.
+Un dossier déplacé, le marque-page le suit : `open_album` réécrit alors `album.root`
+(`signet::suivre`, même nom et mêmes photos, sinon la personne le revoit). Un refus de
+`revoir_dossier` est un code `refus-revoir:…` que `racine.ts` traduit en phrase.
+**Une app signée « Apple Distribution » ne se lance pas sur ce Mac** (AMFI, « No matching
+profile found ») : l'essai à l'écran se fait par `mas.sh build --essai`, ad hoc même quand le
+`.env` porte les identités.
 Ouvrir, révéler, naviguer passent par NSWorkspace en `mas`, par `open` ailleurs. Les droits
 sont exactement ceux de `entitlements.mas.plist`, un test les compte ; **`network.client` y est
 pour WebKit**, pas pour l'app : sans lui, sous bac à sable, WebContent meurt au lancement et la
 fenêtre reste blanche (mesuré le 15/10). **Le dialogue d'enregistrement n'accorde que le fichier
 choisi**, jamais son dossier : un `.part` ou un second fichier d'à côté est refusé. D'où
-`print::poser_pdf` (repli par le dossier temporaire) et le dialogue propre à la couverture en `mas`. La GPL tient par la
+`print::poser_pdf` (repli par le dossier temporaire) et le dialogue propre à la couverture en `mas`
+(qu'aucun bouton n'atteint aujourd'hui : Cloudprinter passe par « Préparer », qui choisit un
+dossier, et « PDF sans contrainte » n'écrit qu'un fichier). La GPL tient par la
 permission additionnelle de `LICENSE-APPSTORE.md`.
 **`thumb::chemin` est la seule porte vers une vignette
 du cache**, six lecteurs y passent, un nom qui n'est pas un nom de fichier est refusé.
