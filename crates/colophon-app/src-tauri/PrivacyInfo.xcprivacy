@@ -6,7 +6,7 @@
        Rien n'est collecté, rien ne piste. Une seule famille d'API à raison
        déclarée est appelée, les horodatages de fichiers (`stat`, par
        `std::fs::metadata(..).modified()`) : l'album déjà composé
-       (`album_deja_compose`), le cache de vignettes (`thumb.rs`), la réserve
+       (`album_deja_compose`), la liste des albums (Stockage), le cache de vignettes (`thumb.rs`), la réserve
        (`reserve.rs`), et la date d'une photo sans EXIF (`meta.rs`), qui peut
        finir dans une légende sous les yeux de la personne. Inventaire du
        15/10 : ni espace disque, ni durée de démarrage, ni UserDefaults, dans
