@@ -2951,9 +2951,12 @@ mod tests {
 
     // ---- La saveur Mac App Store -----------------------------------------
 
+    /// Un fichier du crate, fins de ligne ramenées à `\n` : git le rend en
+    /// CRLF sur Windows, et le contenu est ce qu'on compare.
     fn fichier(nom: &str) -> String {
         std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join(nom))
             .unwrap_or_else(|e| panic!("{nom} : {e}"))
+            .replace("\r\n", "\n")
     }
 
     /// La fusion que fait `tauri build --config` (RFC 7396) : un objet se
