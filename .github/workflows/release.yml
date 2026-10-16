@@ -284,7 +284,7 @@ jobs:
               raise SystemExit(1)
           PY
           echo >> notes.md
-          echo "## Empreintes SHA-256" >> notes.md
+          echo "## SHA-256 checksums" >> notes.md
           echo >> notes.md
           echo '```' >> notes.md
           cat publication/*.sha256 >> notes.md

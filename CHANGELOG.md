@@ -9,7 +9,7 @@ sur la page des releases.
 
 ## [Non publié]
 
-## [1.0.0] - YYYY-MM-DD
+## [1.0.0] - 2026-10-15
 
 First public release. Colophon takes a folder of photos and turns it into a
 composed album, spread by spread, in under a minute. You can rework any of it
