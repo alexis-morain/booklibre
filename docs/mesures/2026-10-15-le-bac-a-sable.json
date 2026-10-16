@@ -1,0 +1,41 @@
+{
+  "session": "MAS-s1",
+  "date": "2026-10-15",
+  "machine": "MacBook Air d'Alexis, macOS 26.5.2, arm64",
+  "contexte": "fseventsd figé tout le soir (FSEventStreamStart bloque même dans un programme C de dix lignes), probablement par le volume Time Machine monté en SMB via Tailscale ; `tauri build` s'arrête avant toute compilation, DMG compris. L'app d'essai a donc été construite sans le CLI : `VITE_COLOPHON_MAS=1 npm run build`, puis `TAURI_CONFIG=<tauri.essai.conf.json> cargo build --release -p colophon-app --features mas,tauri/custom-protocol --target aarch64-apple-darwin`, binaire posé dans une copie du bundle de main, PrivacyInfo.xcprivacy et ITSAppUsesNonExemptEncryption ajoutés, signature ad hoc avec les droits d'essai (les deux identifiants retirés). Lancée depuis target/mas/essai, jamais depuis /Applications.",
+  "signature": "ad hoc (aucun certificat Apple Distribution ni profil sur ce Mac)",
+  "binaire_sans_updater": {
+    "mas_aarch64": { "latest.json": 0, "cle_publique_updater": 0, "plugin:updater": 0, "colophon_signet_commencer": 1 },
+    "dmg_target_release": { "latest.json": 1, "cle_publique_updater": 1 },
+    "bundle_web_mas": "aucun fichier de dist/ ne contient « plugin:updater »"
+  },
+  "droits_lus_par_codesign": [
+    "com.apple.security.app-sandbox = true",
+    "com.apple.security.assets.pictures.read-write = true",
+    "com.apple.security.files.bookmarks.app-scope = true",
+    "com.apple.security.files.user-selected.read-write = true",
+    "com.apple.security.personal-information.photos-library = true"
+  ],
+  "conteneur": "~/Library/Containers/fr.morain.colophon créé au premier lancement ; le journal de l'app y écrit (« démarrage, version 1.0.0 »)",
+  "webkit_sans_network_client": {
+    "vu": "fenêtre blanche ; pile du fil principal : WebProcessProxy::didClose → processDidTerminate → wry WebView::reload → WebPageProxy::launchProcess, en boucle",
+    "journal_noyau": [
+      "Sandbox: colophon-app deny(1) file-read-data /Library/Preferences/com.apple.networkd.plist",
+      "Sandbox: colophon-app deny(1) file-read-data /private/var/db/nsurlstoraged/dafsaData.bin",
+      "runningboardd : xpcservice com.apple.WebKit.WebContent de l'app, erreur"
+    ]
+  },
+  "webkit_avec_network_client": {
+    "vu": "plus aucun processDidTerminate dans la pile ; un processus WebContent neuf reste en vie",
+    "decision": "D5 prévoyait le cas : network.client est ajouté à entitlements.mas.plist, pour WebKit ; l'app ne fait toujours aucun appel réseau. Fiche App Store et page de confidentialité corrigées."
+  },
+  "pas_vu": [
+    "la fenêtre principale chargée : au second lancement, aucune fenêtre 1280 × 820 dans la liste de CoreGraphics, et System Events répond -600 pour ce processus ; le système est trop dégradé pour conclure",
+    "choisir un dossier de ~/Pictures/colophon-testsets, composer, quitter, relancer, rouvrir depuis les récents (marque-page root.bookmark)",
+    "exporter le PDF, « Voir l'original », Signaler qui ouvre le navigateur, la page Confidentialité",
+    "le panneau Police sous bac à sable (polices du système et de /Library/Fonts)",
+    "l'état « dossier à revoir » et son bouton",
+    "scripts/mas.sh build de bout en bout (binaire universel, preuves sur le bundle)",
+    "le marque-page sous signature ad hoc : non mesuré, à refaire avec un certificat si l'ad hoc le refuse"
+  ]
+}
