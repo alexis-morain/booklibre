@@ -2,6 +2,7 @@
 # La version Mac App Store : la même app, compilée autrement.
 #
 #   mas.sh build              Colophon.app universel, bac à sable, sans updater
+#   mas.sh build --essai      la même, signée ad hoc même si les identités existent
 #   mas.sh pkg                le .pkg signé « 3rd Party Mac Developer Installer »
 #   mas.sh valider            xcrun altool --validate-app sur le .pkg
 #   mas.sh envoyer --oui      xcrun altool --upload-app, geste d'Alexis
@@ -14,6 +15,11 @@
 # local, et le dit : les deux identifiants (`application-identifier`,
 # `team-identifier`) sont alors retirés de la signature, que macOS refuserait
 # sans profil embarqué. Une telle app ne part jamais chez Apple.
+#
+# À l'inverse, une app signée « Apple Distribution » ne se lance pas sur ce Mac
+# (AMFI : « No matching profile found », mesuré le 16/10) : un profil App Store
+# ne sert qu'au Store. Pour l'essai à l'écran, `build --essai` signe ad hoc
+# même quand le .env porte les identités.
 #
 # Ce que `build` prouve sur ce qu'il vient de produire, au lieu de le supposer :
 # le binaire ne porte ni le flux des versions ni la clé publique de l'updater,
@@ -53,6 +59,12 @@ pas_de_construction_en_cours() {
 }
 
 build() {
+  local essai=0
+  case "${1:-}" in
+    "") ;;
+    --essai) essai=1 ;;
+    *) echouer "option inconnue : $1 (seule --essai existe)" ;;
+  esac
   pas_de_construction_en_cours
   for t in aarch64-apple-darwin x86_64-apple-darwin; do
     rustup target list --installed | grep -qx "$t" \
@@ -66,6 +78,9 @@ build() {
   profil="$(lire COLOPHON_MAS_PROFIL)"
   conf="$TAURI/tauri.appstore.conf.json"
 
+  if [ "$essai" = 1 ]; then
+    identite=""; profil=""
+  fi
   if [ -n "$identite" ] && [ -n "$profil" ]; then
     [ -f "$profil" ] || echouer "COLOPHON_MAS_PROFIL ne désigne aucun fichier"
     # Le profil le temps de la construction, jamais suivi par git (.gitignore).
@@ -74,7 +89,11 @@ build() {
     echo "mas : signature App Store, profil embarqué"
   else
     identite="-"
-    echo "mas : AUCUNE identité App Store ou aucun profil : signature AD HOC, pour l'essai local seulement"
+    if [ "$essai" = 1 ]; then
+      echo "mas : --essai : signature AD HOC, pour l'essai local seulement"
+    else
+      echo "mas : AUCUNE identité App Store ou aucun profil : signature AD HOC, pour l'essai local seulement"
+    fi
     # La même configuration, sans profil et avec des droits sans les deux
     # identifiants. Écrite dans target/, chemins absolus.
     python3 - "$conf" "$PWD/$TAURI" "$PWD/$SORTIE" <<'PY'
@@ -160,11 +179,11 @@ altool() {
 }
 
 case "${1:-}" in
-  build) build ;;
+  build) build "${2:-}" ;;
   pkg) pkg ;;
   valider) altool --validate-app ;;
   envoyer)
     [ "${2:-}" = "--oui" ] || echouer "l'envoi est le geste d'Alexis : mas.sh envoyer --oui"
     altool --upload-app ;;
-  *) echo "usage : mas.sh build|pkg|valider|envoyer --oui" >&2; exit 2 ;;
+  *) echo "usage : mas.sh build [--essai]|pkg|valider|envoyer --oui" >&2; exit 2 ;;
 esac
