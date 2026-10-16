@@ -1324,7 +1324,19 @@ jamais le bundle ad hoc du Mac de dev. Vérifié le 10/10 : un DMG Developer ID 
 par Apple, agrafé, accepté par `spctl`, installé, demande la photothèque et en affiche les
 albums. La forme du refus sans la clé n'est pas mesurée. `signature-macos.sh verifier`
 tourne aussi en local avec un certificat Apple Development.
-Pas de Mac App Store : la GPL, le bac à sable et l'updater en font un chantier à part.
+**La version Mac App Store est une saveur, pas une branche** (MAS-s1) : feature Cargo
+`mas` et `VITE_COLOPHON_MAS=1`, construite par `scripts/mas.sh build|pkg|valider|envoyer`
+seulement, jamais par la CI ni le DMG. Elle n'enregistre pas l'updater et ne charge pas
+`capabilities/maj.json` (`build.rs`), `tauri.appstore.conf.json` retire `plugins.updater`
+par fusion (`null`), et `mas.sh` le **prouve sur le binaire** (ni `latest.json` ni la clé).
+Sous bac à sable, `$HOME` est le conteneur : tout dossier de la personne passe par
+`core::maison::vrai_dossier_personnel` (getpwuid), et `~/Library/Fonts` n'est pas listé
+(`font::installed_avec`). `album.root` se rouvre par un **marque-page de sécurité**,
+`root.bookmark` à côté d'`album.json` (`signet.rs`, `signet.m`), résolu dans `open_album`
+avant toute lecture ; sans lui, `dossier_a_revoir` et le bouton qui rechoisit le dossier.
+Ouvrir, révéler, naviguer passent par NSWorkspace en `mas`, par `open` ailleurs. Les droits
+sont exactement ceux de `entitlements.mas.plist`, un test les compte. La GPL tient par la
+permission additionnelle de `LICENSE-APPSTORE.md`.
 **`thumb::chemin` est la seule porte vers une vignette
 du cache**, six lecteurs y passent, un nom qui n'est pas un nom de fichier est refusé.
 **`url_de_rapport` est un jeu fermé**, et Windows ouvre par `rundll32`, jamais `cmd`.
