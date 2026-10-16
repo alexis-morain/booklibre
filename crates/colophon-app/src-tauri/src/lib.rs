@@ -3010,9 +3010,10 @@ mod tests {
             .collect()
     }
 
-    /// Exactement les cinq droits de la décision D5 et les deux identifiants
-    /// que le profil embarqué exige : un droit de plus est une question de
-    /// plus à la revue, et `network.client` serait faux.
+    /// Exactement les cinq droits de la décision D5, `network.client` que
+    /// WebKit exige sous bac à sable (mesuré le 15/10, voir le plist), et les
+    /// deux identifiants du profil embarqué : un droit de plus est une
+    /// question de plus à la revue.
     #[test]
     fn les_droits_de_la_saveur_mas_sont_ceux_de_la_decision() {
         let mut lus = cles(&fichier("entitlements.mas.plist"));
@@ -3023,6 +3024,7 @@ mod tests {
             "com.apple.security.files.bookmarks.app-scope",
             "com.apple.security.assets.pictures.read-write",
             "com.apple.security.personal-information.photos-library",
+            "com.apple.security.network.client",
             "com.apple.application-identifier",
             "com.apple.developer.team-identifier",
         ];
