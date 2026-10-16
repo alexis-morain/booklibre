@@ -68,7 +68,7 @@ export function TriView({
             onRevue();
           }}
         >
-          {t("tri.revue")}&ensp;<kbd>Entrée</kbd>
+          {t("tri.revue")}&ensp;<kbd>{t("touche.entree")}</kbd>
         </button>
       </div>
       {sections.map(({ key, label, list }) => (
@@ -223,7 +223,7 @@ export function RevueView({
             <kbd>←</kbd> <kbd>→</kbd> {t("revue.parcourir")}
           </span>
           <button className="link" onClick={onClose}>
-            {t("revue.sortir")}&ensp;<kbd>Échap</kbd>
+            {t("revue.sortir")}&ensp;<kbd>{t("touche.echap")}</kbd>
           </button>
         </span>
       </footer>

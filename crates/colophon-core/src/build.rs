@@ -58,6 +58,12 @@ pub struct BuildOptions {
     /// déclaré dans le PDF. Un test qui compare deux compositions le passe
     /// ici plutôt que de toucher à l'environnement du processus.
     pub aujourdhui: Option<chrono::NaiveDate>,
+    /// La langue des mots que la composition écrit dans le livre : page de
+    /// garde, colophon, lignes de chapitre, sous-titre de la couverture
+    /// (`crate::langue`). L'app passe celle de l'interface ; la CLI, le
+    /// français par défaut. Elle n'est pas rangée dans l'album : les mots le
+    /// sont, en toutes lettres.
+    pub langue: crate::langue::Langue,
 }
 
 
@@ -78,6 +84,7 @@ impl Default for BuildOptions {
             reglages: std::collections::BTreeMap::new(),
             police: None,
             aujourdhui: None,
+            langue: crate::langue::Langue::Fr,
         }
     }
 }
@@ -664,7 +671,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
             // Captions are worked out for the run of chapters at once, not one
             // by one: whether a place is worth naming depends on the chapter
             // before it.
-            let captions = chapter_captions(&trial);
+            let captions = chapter_captions(&trial, opts.langue);
             let spreads: Vec<model::Spread> = trial
                 .iter()
                 .zip(captions)
@@ -732,6 +739,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                 opts.trim,
                 crate::printer::GRAMMAGE_DEFAUT,
                 env!("CARGO_PKG_VERSION"),
+                opts.langue,
             ));
         }
 
@@ -741,7 +749,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         if let (true, Some(f)) = (opts.garde, &album.colophon) {
             let g = crate::pdf::geometry(&album);
             let titre = crate::cover::titre_du_livre(&album).to_string();
-            let garde = crate::garde::spread(&titre, f, crate::garde::place(&g));
+            let garde = crate::garde::spread(&titre, f, crate::garde::place(&g), opts.langue);
             album.spreads.insert(0, garde);
         }
 
@@ -785,7 +793,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                     subtitle: album
                         .colophon
                         .as_ref()
-                        .and_then(crate::garde::ligne_des_dates)
+                        .and_then(|f| crate::garde::ligne_des_dates(f, opts.langue))
                         .unwrap_or_default(),
                     photo: Some(model::Slot::new(src.to_string(), focal)),
                     back_text: String::new(),
@@ -1543,26 +1551,11 @@ fn write_thumb_index(
     cache.elaguer(&gardes)
 }
 
-const MONTHS_FR: [&str; 12] = [
-    "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août",
-    "septembre", "octobre", "novembre", "décembre",
-];
-
-pub fn date_fr(d: chrono::NaiveDate, with_year: bool) -> String {
-    use chrono::Datelike;
-    let m = MONTHS_FR[d.month0() as usize];
-    if with_year {
-        format!("{} {} {}", d.day(), m, d.year())
-    } else {
-        format!("{} {}", d.day(), m)
-    }
-}
-
 /// The dates of one chapter, read from the photos whose EXIF is trusted.
 /// The others fell back to the file's mtime, which is a copy date, not a
 /// shooting date: printing it once produced « 6 décembre – 14 juin 2026 »
 /// on an album of 2024. A chapter with no trusted date shows none.
-pub fn chapter_dates(c: &pipeline::Chapter) -> Option<String> {
+pub fn chapter_dates(c: &pipeline::Chapter, langue: crate::langue::Langue) -> Option<String> {
     let mut dates = c
         .photos
         .iter()
@@ -1570,11 +1563,7 @@ pub fn chapter_dates(c: &pipeline::Chapter) -> Option<String> {
         .map(|p| p.meta.taken.date());
     let first = dates.next()?;
     let (s, e) = dates.fold((first, first), |(lo, hi), d| (lo.min(d), hi.max(d)));
-    Some(if s == e {
-        date_fr(s, true)
-    } else {
-        format!("{} \u{2013} {}", date_fr(s, false), date_fr(e, true))
-    })
+    Some(langue.intervalle(s, e))
 }
 
 /// The town a chapter was shot in, when its photos agree on one.
@@ -1597,11 +1586,14 @@ pub fn chapter_place(c: &pipeline::Chapter) -> Option<&'static str> {
 /// agreed town. Its opening spread then carries no line at all, which is
 /// the one honest option left, and the linter's missing-caption counter
 /// keeps watching the album's first spread.
-pub fn chapter_captions(chapters: &[pipeline::Chapter]) -> Vec<Option<String>> {
+pub fn chapter_captions(
+    chapters: &[pipeline::Chapter],
+    langue: crate::langue::Langue,
+) -> Vec<Option<String>> {
     let mut out = Vec::with_capacity(chapters.len());
     let mut previous: Option<&str> = None;
     for c in chapters {
-        let dates = chapter_dates(c);
+        let dates = chapter_dates(c, langue);
         let place = chapter_place(c);
         out.push(match (place, dates) {
             (Some(name), Some(dates)) if previous != Some(name) => {
@@ -1642,6 +1634,7 @@ pub fn jpeg_dimensions(data: &[u8]) -> Option<(u32, u32)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::langue::Langue;
 
     /// Le jour et l'instant de tous les tests qui comparent deux rendus, passés
     /// en paramètre. Ils posaient `SOURCE_DATE_EPOCH` dans l'environnement du
@@ -1760,7 +1753,7 @@ mod tests {
             "la photo de couverture est une photo du livre : {}",
             photo.src
         );
-        let attendu = crate::garde::ligne_des_dates(album.colophon.as_ref().unwrap())
+        let attendu = crate::garde::ligne_des_dates(album.colophon.as_ref().unwrap(), Langue::Fr)
             .unwrap_or_default();
         assert_eq!(cover.subtitle, attendu);
         assert!(cover.back_text.is_empty());
@@ -2801,5 +2794,33 @@ mod tests {
         fs::write(dir.join(&p.fichier), b"pas une police").unwrap();
         assert!(poser_police_objet(&dir, &installee).is_ok());
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// La langue des options est celle des mots que la composition écrit
+    /// dans le livre : un album composé en anglais a un colophon anglais, et
+    /// le défaut reste le français (la CLI, les albums d'avant).
+    #[test]
+    fn la_composition_ecrit_dans_la_langue_demandee() {
+        let (photos, out) = dossier_test("langue");
+        for i in 0..3 {
+            jpeg_imprimable(&photos.join(format!("photo-{i}.jpg")), i);
+        }
+        let colophon_de = |album: &model::Album| {
+            album
+                .spreads
+                .iter()
+                .find(|s| s.template == crate::colophon::TEMPLATE)
+                .and_then(|s| s.text.clone())
+                .expect("une page de colophon")
+        };
+        let en = BuildOptions { langue: Langue::En, ..options_datees() };
+        let album = build_album(&photos, &out, en).unwrap().album;
+        let t = colophon_de(&album);
+        assert!(t.contains("Composed on 14 November 2023 with Colophon"), "{t}");
+        assert!(t.contains("photographs kept out of"), "{t}");
+
+        let album = build_album(&photos, &out, options_datees()).unwrap().album;
+        let t = colophon_de(&album);
+        assert!(t.contains("Composé le 14 novembre 2023 avec Colophon"), "{t}");
     }
 }

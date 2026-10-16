@@ -8,7 +8,7 @@ import { Ornement, setOrnements } from "./ornement";
 import { Album, Discard, OpenedAlbum, Police, Spread } from "./album";
 
 import { Dump, setGeometrie, setGeometrieFormat } from "./geometrie";
-import { t } from "./i18n";
+import { Lang, langue, t } from "./i18n";
 import type { IntentionVue, Offre, Pays, Progres } from "./commande";
 
 export const inTauri =
@@ -142,6 +142,9 @@ export async function buildAlbum(
   }
   const built = await invoke<BuiltAlbum>("build_album_from_folder", {
     photosDir,
+    // Les mots du livre (garde, colophon, chapitres) dans la langue de
+    // l'interface qui compose. Un album déjà composé garde les siens.
+    langue: langue(),
     format,
     spreads,
     densite,
@@ -466,7 +469,7 @@ export async function recomposeAlbum(): Promise<OpenedAlbum> {
   if (!inTauri) {
     throw new Error("recomposition hors application : utilisez la commande colophon");
   }
-  return invoke<OpenedAlbum>("recompose_album");
+  return invoke<OpenedAlbum>("recompose_album", { langue: langue() });
 }
 
 /** Abandon the composition in flight. The engine stops between photos. */
@@ -513,8 +516,8 @@ export async function cancelExport(): Promise<void> {
  *  dev server answers from the same table as « Dater » (`/__dev/dates`), so
  *  the popover's buttons show in a browser too. */
 export async function captionSuggestion(src: string): Promise<string | null> {
-  if (inTauri) return invoke<string | null>("caption_suggestion", { src });
-  const res = await fetch("/__dev/dates");
+  if (inTauri) return invoke<string | null>("caption_suggestion", { src, langue: langue() });
+  const res = await fetch(`/__dev/dates?langue=${langue()}`);
   if (!res.ok) return null;
   const dates: Record<string, string> = await res.json();
   return dates[src] ?? null;
@@ -523,9 +526,14 @@ export async function captionSuggestion(src: string): Promise<string | null> {
 /** La date fiable de chaque photo posée, par src, écrite comme la
  *  proposition de la case (`legende::date_de`). Une photo absente de la
  *  table n'a pas de date fiable. Le serveur de dev lit l'album du disque. */
-export async function datesFiables(album: Album): Promise<Record<string, string>> {
-  if (inTauri) return invoke<Record<string, string>>("dates_fiables", { album });
-  const res = await fetch("/__dev/dates");
+export async function datesFiables(
+  album: Album,
+  l: Lang = langue(),
+): Promise<Record<string, string>> {
+  if (inTauri) {
+    return invoke<Record<string, string>>("dates_fiables", { album, langue: l });
+  }
+  const res = await fetch(`/__dev/dates?langue=${l}`);
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
@@ -534,8 +542,10 @@ export async function datesFiables(album: Album): Promise<Record<string, string>
  *  diverges from the chapter, day when the chapter covers several. Null is
  *  silence, and silence is a full answer. */
 export async function legendeProposee(planche: number): Promise<string | null> {
-  if (inTauri) return invoke<string | null>("proposition_legende", { planche });
-  const res = await fetch(`/__dev/proposition?planche=${planche + 1}`);
+  if (inTauri) {
+    return invoke<string | null>("proposition_legende", { planche, langue: langue() });
+  }
+  const res = await fetch(`/__dev/proposition?planche=${planche + 1}&langue=${langue()}`);
   if (!res.ok) return null;
   return res.json();
 }
@@ -973,12 +983,16 @@ export async function colophonSpread(album: Album): Promise<Spread | null> {
       template: "colophon",
       slots: [],
       text:
-        "Colophon\n\n152 photographies retenues sur 575, prises du 21 au 29 octobre 2013.\n" +
-        "Porto-Vecchio et Bonifacio.\nCanon EOS 550D.\n\n" +
-        "Composé le 17 août 2026 avec Colophon dev.\n210 × 210 mm, papier 150 g/m².",
+        langue() === "en"
+          ? "Colophon\n\n152 photographs kept out of 575, taken from 21 to 29 October 2013.\n" +
+            "Porto-Vecchio and Bonifacio.\nCanon EOS 550D.\n\n" +
+            "Composed on 17 August 2026 with Colophon dev.\n210 × 210 mm, 150 g/m² paper."
+          : "Colophon\n\n152 photographies retenues sur 575, prises du 21 au 29 octobre 2013.\n" +
+            "Porto-Vecchio et Bonifacio.\nCanon EOS 550D.\n\n" +
+            "Composé le 17 août 2026 avec Colophon dev.\n210 × 210 mm, papier 150 g/m².",
     };
   }
-  return invoke<Spread | null>("colophon_spread", { album });
+  return invoke<Spread | null>("colophon_spread", { album, langue: langue() });
 }
 
 /** The half-title page, rendered from the facts the album carries and from
@@ -992,10 +1006,13 @@ export async function gardeSpread(album: Album): Promise<Spread | null> {
     return {
       template: "garde",
       slots: [],
-      text: `${album.title}\n\nDu 21 au 29 octobre 2013\nPorto-Vecchio, Bonifacio`,
+      text:
+        langue() === "en"
+          ? `${album.title}\n\nFrom 21 to 29 October 2013\nPorto-Vecchio, Bonifacio`
+          : `${album.title}\n\nDu 21 au 29 octobre 2013\nPorto-Vecchio, Bonifacio`,
     };
   }
-  return invoke<Spread | null>("garde_spread", { album });
+  return invoke<Spread | null>("garde_spread", { album, langue: langue() });
 }
 
 /** The composer's own version of one spread, for « rendre à l'automatique ».

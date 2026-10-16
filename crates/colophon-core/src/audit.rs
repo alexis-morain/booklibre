@@ -996,11 +996,11 @@ mod tests {
             compose_le: chrono::NaiveDate::from_ymd_opt(2026, 8, 18).unwrap(),
         };
         a.spreads = vec![
-            crate::garde::spread("Corse", &faits, 190.0),
+            crate::garde::spread("Corse", &faits, 190.0, crate::langue::Langue::Fr),
             planche(Some("Porto-Vecchio")),
             planche(None),
             planche(Some("Bonifacio")),
-            crate::colophon::spread(&faits, a.trim_mm, 150.0, "0.9.0"),
+            crate::colophon::spread(&faits, a.trim_mm, 150.0, "0.9.0", crate::langue::Langue::Fr),
         ];
         assert_eq!(premiere_photo(&a), Some(1));
         assert_eq!(chapter_ranges(&a), vec![1..3, 3..5]);

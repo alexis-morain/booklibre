@@ -1209,8 +1209,14 @@ export default function App() {
     const courant = histRef.current?.album;
     if (!courant) return;
     let dates: Record<string, string>;
+    // Les mêmes dates dans l'autre langue : une légende datée avant un
+    // changement de langue se reconnaît, se retire et se remplace.
+    let autre: Record<string, string>;
     try {
-      dates = await datesFiables(courant);
+      [dates, autre] = await Promise.all([
+        datesFiables(courant),
+        datesFiables(courant, langue() === "fr" ? "en" : "fr"),
+      ]);
     } catch (e) {
       setError(fault(t("erreur.dates"), e));
       return;
@@ -1218,16 +1224,16 @@ export default function App() {
     const avant = histRef.current?.album;
     if (!avant) return;
     if (dater) {
-      const r = daterLegendes(avant, dates);
-      apply((a) => daterLegendes(a, dates).album);
+      const r = daterLegendes(avant, dates, undefined, [autre]);
+      apply((a) => daterLegendes(a, dates, undefined, [autre]).album);
       setStatus(
         r.sansDate
           ? t("legendes.datees.sans", { n: r.datees, m: r.sansDate })
           : t("legendes.datees", { n: r.datees }),
       );
     } else {
-      const r = dedaterLegendes(avant, dates);
-      apply((a) => dedaterLegendes(a, dates).album);
+      const r = dedaterLegendes(avant, dates, undefined, [autre]);
+      apply((a) => dedaterLegendes(a, dates, undefined, [autre]).album);
       setStatus(t("legendes.dedatees", { n: r.retirees }));
     }
   };

@@ -23,6 +23,7 @@ pub mod garde;
 pub mod heic;
 pub mod icc;
 pub mod imposition;
+pub mod langue;
 pub mod layout;
 pub mod legende;
 pub mod log;
