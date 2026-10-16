@@ -87,22 +87,31 @@ pub fn ouvrir(album: &Path) -> Option<Acces> {
 /// Si le dossier que la personne vient de rechoisir est bien celui de
 /// l'album : même nom que `root`, et toutes les photos posées s'y trouvent.
 /// Un dossier déplacé passe ; un autre dossier, même homonyme, non.
+///
+/// Le refus est un code, `refus-revoir:autre-nom:<nom>` ou
+/// `refus-revoir:manquantes:<n>:<total>`, que l'interface traduit en phrase
+/// (`racine.ts`) : la raison est ce que la personne doit lire, dans sa langue.
 pub fn dossier_revu(root: &Path, choisi: &Path, srcs: &[String]) -> Result<(), String> {
     if root.file_name() != choisi.file_name() {
         return Err(format!(
-            "ce n'est pas le dossier de l'album : il s'appelait « {} »",
+            "refus-revoir:autre-nom:{}",
             root.file_name().unwrap_or_default().to_string_lossy()
         ));
     }
-    let manquantes: Vec<&String> = srcs.iter().filter(|s| !choisi.join(s).is_file()).collect();
-    match manquantes.as_slice() {
-        [] => Ok(()),
-        [une, ..] => Err(format!(
-            "ce dossier ne porte pas les photos de l'album : {} sur {} manquent, dont {une}",
-            manquantes.len(),
-            srcs.len()
-        )),
+    let manquantes = srcs.iter().filter(|s| !choisi.join(s).is_file()).count();
+    if manquantes == 0 {
+        Ok(())
+    } else {
+        Err(format!("refus-revoir:manquantes:{manquantes}:{}", srcs.len()))
     }
+}
+
+/// Le nouveau chemin du dossier de photos quand le marque-page l'a suivi
+/// ailleurs : un dossier déplacé sur le même volume, le système le retrouve
+/// tout seul. `None` s'il n'a pas bougé, ou si ce qu'il désigne n'est plus
+/// sûrement le dossier de l'album ([`dossier_revu`]) : la personne le revoit.
+pub fn suivre(root: &Path, resolu: &Path, srcs: &[String]) -> Option<PathBuf> {
+    (resolu != root && dossier_revu(root, resolu, srcs).is_ok()).then(|| resolu.to_path_buf())
 }
 
 /// Si l'app peut lire le dossier : sous le bac à sable, un dossier sans
@@ -225,11 +234,13 @@ mod tests {
         assert_eq!(dossier_revu(root, &choisi, &srcs), Ok(()));
     }
 
+    /// Le refus arrive à l'écran par un code que l'interface traduit : la
+    /// raison est la phrase, pas un détail replié en français seul.
     #[test]
     fn un_autre_nom_n_est_pas_le_dossier_de_l_album() {
         let choisi = dossier("autre", "islande", &["a.jpg"]);
         let e = dossier_revu(Path::new("/x/corse-2013"), &choisi, &["a.jpg".into()]).unwrap_err();
-        assert!(e.contains("corse-2013"), "{e}");
+        assert_eq!(e, "refus-revoir:autre-nom:corse-2013");
     }
 
     #[test]
@@ -237,7 +248,34 @@ mod tests {
         let choisi = dossier("homonyme", "corse-2013", &["a.jpg"]);
         let srcs = vec!["a.jpg".to_string(), "b.jpg".to_string(), "c.jpg".to_string()];
         let e = dossier_revu(Path::new("/x/corse-2013"), &choisi, &srcs).unwrap_err();
-        assert!(e.contains("2 sur 3"), "{e}");
+        assert_eq!(e, "refus-revoir:manquantes:2:3");
+    }
+
+    /// Un marque-page suit le dossier qu'on déplace : à l'ouverture, l'album
+    /// le suit aussi, au lieu de demander un dossier que l'app lit déjà.
+    #[test]
+    fn l_album_suit_le_marque_page_d_un_dossier_deplace() {
+        let resolu = dossier("suivre", "corse-2013", &["a.jpg", "b.jpg"]);
+        let srcs = vec!["a.jpg".to_string(), "b.jpg".to_string()];
+        let root = Path::new("/Users/x/Pictures/corse-2013");
+        assert_eq!(suivre(root, &resolu, &srcs), Some(resolu.clone()));
+    }
+
+    #[test]
+    fn un_marque_page_au_meme_endroit_ne_change_rien() {
+        let resolu = dossier("meme", "corse-2013", &["a.jpg"]);
+        assert_eq!(suivre(&resolu, &resolu, &["a.jpg".into()]), None);
+    }
+
+    /// Renommé, ou vidé de ses photos : ce n'est plus sûrement le dossier de
+    /// l'album, la personne le revoit.
+    #[test]
+    fn un_marque_page_vers_un_dossier_renomme_ne_suit_pas() {
+        let resolu = dossier("renomme", "corse", &["a.jpg"]);
+        let root = Path::new("/x/corse-2013");
+        assert_eq!(suivre(root, &resolu, &["a.jpg".into()]), None);
+        let vide = dossier("vide", "corse-2013", &[]);
+        assert_eq!(suivre(root, &vide, &["a.jpg".into()]), None);
     }
 
     /// Hors saveur `mas`, rien ne s'écrit ni ne s'ouvre : le DMG garde ses

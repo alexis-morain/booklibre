@@ -145,7 +145,7 @@ import { PlanchesView, LockGlyph } from "./PlanchesView";
 import { CoverView } from "./CoverView";
 import { EnvoiView } from "./EnvoiView";
 import { Cle, FR, langue, t, useLangue } from "./i18n";
-import { etatRacine } from "./racine";
+import { etatRacine, refusRevoir } from "./racine";
 import { jusquAuRendu } from "./mesure";
 import { aboutDensite, aboutFormat, nomDensite } from "./moteur";
 import { RaccourcisView } from "./Raccourcis";
@@ -603,7 +603,7 @@ export default function App() {
       adopt(result);
       setCuration(await fetchCuration().catch(() => []));
     } catch (e) {
-      setError(fault(t("erreur.revoir"), e));
+      setError(fault(refusRevoir(String(e)) ?? t("erreur.revoir"), e));
     }
   }, [adopt, dirty, opened]);
 

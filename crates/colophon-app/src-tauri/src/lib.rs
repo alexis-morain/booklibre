@@ -182,10 +182,20 @@ fn read_thumb(dir: &Path, thumbs: &ThumbIndex, src: &str) -> Result<Vec<u8>, Str
 /// Open an album from either its folder or its `album.json` directly.
 #[tauri::command]
 fn open_album(path: String, state: State<'_, AppState>) -> Result<OpenedAlbum, String> {
-    let (dir, album, thumbs) = load_album(Path::new(&path))?;
+    let (dir, mut album, thumbs) = load_album(Path::new(&path))?;
     // Sous le bac à sable, l'accès aux photos s'ouvre avant toute lecture, et
     // reste ouvert tant que l'album l'est. Ailleurs, `ouvrir` ne fait rien.
     let acces = signet::ouvrir(&dir);
+    // Un dossier déplacé, le marque-page l'a suivi : l'album le suit aussi,
+    // comme quand la personne le rechoisit, au lieu de le lui redemander.
+    if let Some(nouveau) = acces
+        .as_ref()
+        .and_then(|a| signet::suivre(Path::new(&album.root), &a.chemin, &photos_posees(&album)))
+    {
+        colophon_core::log::line("dossier de photos déplacé : l'album suit son marque-page");
+        album.root = nouveau.to_string_lossy().to_string();
+        colophon_core::write_album_json(&dir, &album).map_err(|e| format!("{e:#}"))?;
+    }
     let root = Path::new(&album.root);
     let root_present = root.is_dir();
     let dossier_a_revoir = cfg!(all(target_os = "macos", feature = "mas")) && !signet::lisible(root);
@@ -199,6 +209,11 @@ fn open_album(path: String, state: State<'_, AppState>) -> Result<OpenedAlbum, S
         dossier_a_revoir,
         thumb_srcs,
     })
+}
+
+/// Les photos posées dans l'album, par leur chemin relatif à `root`.
+fn photos_posees(album: &Album) -> Vec<String> {
+    album.spreads.iter().flat_map(|s| s.slots.iter().map(|sl| sl.src.clone())).collect()
 }
 
 /// Le dossier de photos de l'album ouvert, rechoisi par la personne quand
@@ -217,9 +232,7 @@ fn revoir_dossier(chemin: String, state: State<'_, AppState>) -> Result<OpenedAl
     let mut album: Album =
         serde_json::from_str(&text).map_err(|e| format!("album.json illisible : {e}"))?;
     let choisi = PathBuf::from(&chemin);
-    let srcs: Vec<String> =
-        album.spreads.iter().flat_map(|s| s.slots.iter().map(|sl| sl.src.clone())).collect();
-    signet::dossier_revu(Path::new(&album.root), &choisi, &srcs)?;
+    signet::dossier_revu(Path::new(&album.root), &choisi, &photos_posees(&album))?;
     signet::poser(&dir, &choisi)?;
     if album.root != chemin {
         album.root = chemin;

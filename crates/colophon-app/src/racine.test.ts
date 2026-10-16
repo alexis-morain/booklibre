@@ -4,7 +4,7 @@
 // qu'un dossier disparu, et c'est lui qui a un bouton.
 
 import { afterEach, describe, expect, it } from "vitest";
-import { etatRacine } from "./racine";
+import { etatRacine, refusRevoir } from "./racine";
 import { setLangue, t } from "./i18n";
 
 const ouvert = (root_present: boolean, dossier_a_revoir: boolean) => ({
@@ -26,6 +26,23 @@ describe("l'état du dossier de photos", () => {
   it("est à revoir quand le bac à sable le ferme, qu'il existe ou non", () => {
     expect(etatRacine(ouvert(true, true))).toBe("a-revoir");
     expect(etatRacine(ouvert(false, true))).toBe("a-revoir");
+  });
+
+  it("dit pourquoi un dossier rechoisi est refusé, dans la langue de l'interface", () => {
+    setLangue("fr");
+    expect(refusRevoir("refus-revoir:autre-nom:corse-2013")).toBe(
+      "Ce n’est pas le dossier de cet album : il s’appelait « corse-2013 ».",
+    );
+    expect(refusRevoir("refus-revoir:manquantes:2:3")).toBe(
+      "Ce dossier ne porte pas les photos de l’album : 2 sur 3 manquent.",
+    );
+    setLangue("en");
+    expect(refusRevoir("refus-revoir:autre-nom:corse-2013")).toContain("“corse-2013”");
+    expect(refusRevoir("refus-revoir:manquantes:2:3")).toContain("2 of 3");
+    // Un nom de dossier peut porter des deux-points.
+    expect(refusRevoir("Error: refus-revoir:autre-nom:a:b")).toContain("“a:b”");
+    // Tout le reste garde la phrase générique.
+    expect(refusRevoir("marque-page refusé par le système")).toBeNull();
   });
 
   it("le dit dans les deux langues, avec un bouton qui nomme le geste", () => {

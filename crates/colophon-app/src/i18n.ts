@@ -1058,6 +1058,9 @@ export const FR = {
     "Colophon a besoin de revoir le dossier de photos ({dossier}) pour lire les originaux. L’aperçu tourne sur les vignettes en attendant.",
   "racine.a.revoir.bouton": "Retrouver le dossier…",
   "racine.a.revoir.titre": "Retrouver le dossier de photos de cet album",
+  "racine.revoir.autre.nom": "Ce n’est pas le dossier de cet album : il s’appelait « {nom} ».",
+  "racine.revoir.manquantes":
+    "Ce dossier ne porte pas les photos de l’album : {n} sur {total} manquent.",
   "envoi.prevol.echec": "Le contrôle avant impression n’a pas pu tourner.",
   "signaler.diagnostic.absent":
     "Le diagnostic de la machine n’a pas pu être lu : le rapport part sans lui, décrivez ce qui s’est passé.",
@@ -2074,6 +2077,9 @@ export const EN: Record<Cle, string> = {
     "Colophon needs to see the photo folder again ({dossier}) to read the originals. The preview runs on the thumbnails meanwhile.",
   "racine.a.revoir.bouton": "Find the folder…",
   "racine.a.revoir.titre": "Find this album’s photo folder",
+  "racine.revoir.autre.nom": "This is not this album’s folder: it was called “{nom}”.",
+  "racine.revoir.manquantes":
+    "This folder does not hold the album’s photos: {n} of {total} are missing.",
   "envoi.prevol.echec": "The preflight could not run.",
   "signaler.diagnostic.absent":
     "The machine’s diagnostic could not be read: the report goes without it, describe what happened.",
