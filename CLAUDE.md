@@ -1337,7 +1337,9 @@ avant toute lecture ; sans lui, `dossier_a_revoir` et le bouton qui rechoisit le
 Ouvrir, révéler, naviguer passent par NSWorkspace en `mas`, par `open` ailleurs. Les droits
 sont exactement ceux de `entitlements.mas.plist`, un test les compte ; **`network.client` y est
 pour WebKit**, pas pour l'app : sans lui, sous bac à sable, WebContent meurt au lancement et la
-fenêtre reste blanche (mesuré le 15/10). La GPL tient par la
+fenêtre reste blanche (mesuré le 15/10). **Le dialogue d'enregistrement n'accorde que le fichier
+choisi**, jamais son dossier : un `.part` ou un second fichier d'à côté est refusé. D'où
+`print::poser_pdf` (repli par le dossier temporaire) et le dialogue propre à la couverture en `mas`. La GPL tient par la
 permission additionnelle de `LICENSE-APPSTORE.md`.
 **`thumb::chemin` est la seule porte vers une vignette
 du cache**, six lecteurs y passent, un nom qui n'est pas un nom de fichier est refusé.
