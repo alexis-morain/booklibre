@@ -213,6 +213,8 @@ jobs:
       # pas un téléchargement sûr.
       - name: Renommer et empreindre
         shell: bash
+        env:
+          CLE_POSEE: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
         run: |
           set -eu
           v="${{ steps.version.outputs.v }}"
@@ -225,17 +227,27 @@ jobs:
           # L'archive de mise à jour et sa signature, quand la clé était là.
           # Le fichier .sig est ce que l'updater vérifie avant d'installer
           # quoi que ce soit : sans lui, pas de mise à jour, et c'est voulu.
+          # Sous Windows, Tauri 2 signe le .msi lui-même et ne l'archive plus
+          # (`*.msi.zip` était la forme de Tauri 1) : la v1.0.0 est sortie sans
+          # Windows dans latest.json parce que seul le zip était cherché.
           maj="$(find "target/${{ matrix.cible }}/release/bundle" \
-            \( -name "*.app.tar.gz" -o -name "*-setup.nsis.zip" -o -name "*.msi.zip" \) \
+            \( -name "*.app.tar.gz" -o -name "*.msi" \) \
             -type f | head -1)"
           if [ -n "$maj" ] && [ -f "$maj.sig" ]; then
             case "$maj" in
               *.tar.gz) ext="tar.gz" ;;
-              *) ext="zip" ;;
+              *) ext="msi" ;;
             esac
             cp "$maj" "publication/Colophon-$v-${{ matrix.suffixe }}-maj.$ext"
             cp "$maj.sig" "publication/Colophon-$v-${{ matrix.suffixe }}-maj.sig"
             echo "artefact de mise à jour signé : $(basename "$maj")"
+          elif [ "$CLE_POSEE" = "true" ]; then
+            # La clé était là et rien n'est sorti : c'est un nom qu'on ne
+            # cherche pas, pas un oubli de secret. Une release sans mise à
+            # jour pour une plateforme ne se rattrape qu'à la suivante.
+            echo "::error::clé de signature posée, mais aucun artefact de mise à jour signé trouvé" >&2
+            find "target/${{ matrix.cible }}/release/bundle" -type f -name "*.sig" >&2
+            exit 1
           else
             echo "pas d'artefact de mise à jour : la clé de signature manque" >&2
           fi

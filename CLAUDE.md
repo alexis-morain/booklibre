@@ -10,9 +10,10 @@ Le glossaire du domaine est `CONTEXT.md`. Un synonyme dans un diff est un rappor
 qui attend.
 
 Logiciel libre d'albums photo : un dossier en entrée, composition automatique, tout
-modifiable, PDF prêt à imprimer. Tauri 2 (Rust + React), GPL-3.0, version 1.0.0, pas encore taguée : le tag `v1.0.0` est le
+modifiable, PDF prêt à imprimer. Tauri 2 (Rust + React), GPL-3.0, version 1.0.1, pas encore taguée : le tag `v1.0.1` est le
 geste d'Alexis, et `release.yml` le refuse si les quatre fichiers de version ou la section
-`## [1.0.0]` du CHANGELOG manquent.
+`## [1.0.1]` du CHANGELOG manquent. Le tag `v1.0.0` (`b222272`) existe, ne sort jamais (import
+Photos cassé) et ne se repose pas ; le Mac App Store garde sa 1.0.0 (build 173, déjà corrigé).
 
 ## Si tu es une session cloud, commence par ça
 
