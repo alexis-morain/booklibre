@@ -1,13 +1,14 @@
 # Les avis de sécurité des crates, lus chaque semaine et à chaque changement
 # du Cargo.lock. La seule vulnérabilité du 10/09 (lopdf, 7,5) est restée
 # invisible jusqu'à ce qu'on lance l'outil à la main. Ce workflow n'est pas
-# sur le chemin de fusion : il prévient, le gate décide.
+# sur le chemin de fusion : il prévient, le gate décide. Les avis ignorés, et
+# pourquoi : `.cargo/audit.toml`, que `cargo audit` lit tout seul.
 
 name: audit
 
 on:
   push:
-    paths: ["Cargo.lock", ".github/workflows/audit.yml"]
+    paths: ["Cargo.lock", ".cargo/audit.toml", ".github/workflows/audit.yml"]
   schedule:
     - cron: "17 6 * * 1"
   workflow_dispatch:
