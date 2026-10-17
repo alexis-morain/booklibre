@@ -7,6 +7,11 @@
 #   mas.sh valider            xcrun altool --validate-app sur le .pkg
 #   mas.sh envoyer --oui      xcrun altool --upload-app, geste d'Alexis
 #
+# Le numéro de build (`CFBundleVersion`) doit être unique et croissant d'un
+# envoi à l'autre ; la version affichée reste celle de `tauri.conf.json`. Il
+# vaut le nombre de commits de HEAD, qui croît à chaque fusion dans `main`
+# (d'où : envoyer depuis `main` à jour), ou `COLOPHON_MAS_BUILD` s'il est posé.
+#
 # Les identités et la clé d'API se lisent dans le .env de gestion
 # (`APPLE_MAS_APP`, `APPLE_MAS_INSTALLER`, `APPLE_MAS_API_KEY_ID`,
 # `APPLE_MAS_API_ISSUER`, `COLOPHON_MAS_PROFIL`), ou dans l'environnement qui
@@ -114,6 +119,10 @@ PY
     conf="$SORTIE/tauri.essai.conf.json"
   fi
 
+  local numero="${COLOPHON_MAS_BUILD:-$(git rev-list --count HEAD)}"
+  [[ "$numero" =~ ^[0-9]+$ ]] || echouer "numéro de build invalide : $numero (un entier)"
+  echo "mas : numéro de build $numero"
+
   # Aucune notarisation ici : le Store ne la demande pas, et Tauri la tente
   # dès que ces variables existent.
   (
@@ -122,20 +131,25 @@ PY
       -u APPLE_CERTIFICATE -u APPLE_CERTIFICATE_PASSWORD \
       APPLE_SIGNING_IDENTITY="$identite" VITE_COLOPHON_MAS=1 \
       npm run tauri build -- --target "$CIBLE" --bundles app \
-      --config "$OLDPWD/$conf" --features mas
+      --config "$OLDPWD/$conf" \
+      --config "{\"bundle\":{\"macOS\":{\"bundleVersion\":\"$numero\"}}}" \
+      --features mas
   )
   [ -d "$BUNDLE" ] || echouer "pas d'app à $BUNDLE"
 
   # L'attribut de quarantaine est refusé par le Store depuis le 18/02/2025.
   xattr -cr "$BUNDLE"
-  prouver "$identite"
+  prouver "$identite" "$numero"
   ditto "$BUNDLE" "$SORTIE/Colophon.app"
   echo "mas : $SORTIE/Colophon.app"
 }
 
 # Les preuves, sur les fichiers produits.
 prouver() {
-  local identite="$1" binaire="$BUNDLE/Contents/MacOS/colophon-app"
+  local identite="$1" numero="$2" binaire="$BUNDLE/Contents/MacOS/colophon-app"
+  local lu
+  lu="$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$BUNDLE/Contents/Info.plist")"
+  [ "$lu" = "$numero" ] || echouer "CFBundleVersion vaut $lu, attendu $numero"
   [ -f "$binaire" ] || binaire="$(find "$BUNDLE/Contents/MacOS" -type f -perm -u+x | head -1)"
   lipo -archs "$binaire" | grep -q "x86_64" && lipo -archs "$binaire" | grep -q "arm64" \
     || echouer "le binaire n'est pas universel : $(lipo -archs "$binaire")"

@@ -1345,7 +1345,8 @@ Un dossier déplacé, le marque-page le suit : `open_album` réécrit alors `alb
 `revoir_dossier` est un code `refus-revoir:…` que `racine.ts` traduit en phrase.
 **Une app signée « Apple Distribution » ne se lance pas sur ce Mac** (AMFI, « No matching
 profile found ») : l'essai à l'écran se fait par `mas.sh build --essai`, ad hoc même quand le
-`.env` porte les identités.
+`.env` porte les identités. Le `CFBundleVersion` est le nombre de commits de `HEAD`
+(`COLOPHON_MAS_BUILD` le force) : unique et croissant si l'on envoie depuis `main` à jour.
 Ouvrir, révéler, naviguer passent par NSWorkspace en `mas`, par `open` ailleurs. Les droits
 sont exactement ceux de `entitlements.mas.plist`, un test les compte ; **`network.client` y est
 pour WebKit**, pas pour l'app : sans lui, sous bac à sable, WebContent meurt au lancement et la
