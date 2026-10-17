@@ -47,6 +47,20 @@ pub enum Etat {
     Indisponible,
 }
 
+/// L'état d'une bibliothèque autorisée, d'après ce que PhotoKit a rendu.
+///
+/// Des albums rendus prouvent que la bibliothèque répond : le chemin déclaré
+/// par photolibraryd ne sert qu'à expliquer une liste **vide**. Mesuré le
+/// 17/10, il peut nommer un dossier supprimé alors que PhotoKit lit très bien
+/// la bibliothèque désignée depuis, et sous bac à sable il ne se lit pas.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn classer(albums: Vec<AlbumPhotos>, chemin: String, presente: bool) -> Etat {
+    if albums.is_empty() && !presente {
+        return Etat::Injoignable { chemin };
+    }
+    Etat::Lisible { albums }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AlbumPhotos {
     pub id: String,
@@ -67,7 +81,25 @@ pub struct FichePhoto {
     /// Vraie quand Photos porte une version rendue, donc quand l'utilisateur a
     /// retouché. C'est cette version-là qu'on écrit.
     #[allow(dead_code)]
+    #[serde(deserialize_with = "booleen_du_pont")]
     pub modifiee: bool,
+}
+
+/// Un booléen venu de `photos.m`, écrit `true` ou `1`. En C, `a && b` et
+/// `a == b` sont des entiers, et `@(…)` les sérialise en nombres : le pont
+/// les caste en `BOOL`, et ce lecteur garde l'autre forme pour qu'un oubli
+/// futur ne refuse plus une liste entière (mesuré le 17/10).
+fn booleen_du_pont<'de, D: serde::Deserializer<'de>>(d: D) -> Result<bool, D::Error> {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Brut {
+        B(bool),
+        N(i64),
+    }
+    Ok(match Brut::deserialize(d)? {
+        Brut::B(b) => b,
+        Brut::N(n) => n != 0,
+    })
 }
 
 /// Ce qu'un import a fait, écrit à côté des photographies.
@@ -211,7 +243,7 @@ mod mac {
         ok: bool,
         #[serde(default)]
         octets: u64,
-        #[serde(default)]
+        #[serde(default, deserialize_with = "super::booleen_du_pont")]
         absente_du_mac: bool,
         #[serde(default)]
         motif: String,
@@ -251,10 +283,7 @@ mod mac {
             Ok(r) => r,
             Err(_) => return Etat::Injoignable { chemin: String::new() },
         };
-        if !r.bibliotheque_presente {
-            return Etat::Injoignable { chemin: r.bibliotheque_systeme };
-        }
-        Etat::Lisible { albums: r.albums }
+        super::classer(r.albums, r.bibliotheque_systeme, r.bibliotheque_presente)
     }
 
     /// Les photographies d'un album, sans lire un octet de pixel.
@@ -458,5 +487,59 @@ mod tests {
         // Et la phrase de l'état injoignable porte le chemin, sans quoi elle
         // n'apprend rien à personne.
         assert!(injoignable.contains("Photos Library.photoslibrary"), "{injoignable}");
+    }
+
+    fn album(nom: &str) -> AlbumPhotos {
+        AlbumPhotos {
+            id: nom.into(),
+            nom: nom.into(),
+            photos: 64,
+            intelligent: false,
+        }
+    }
+
+    /// Des albums rendus prouvent que la bibliothèque répond, quoi que dise
+    /// le chemin déclaré. Mesuré le 17/10 : `SystemLibraryPath` nommait encore
+    /// un dossier supprimé alors que PhotoKit listait sept albums, et sous bac
+    /// à sable la clé ne se lit pas du tout. Les deux disaient « injoignable ».
+    #[test]
+    fn des_albums_rendus_l_emportent_sur_le_chemin_declare() {
+        let attendu = Etat::Lisible {
+            albums: vec![album("Colophon test")],
+        };
+        let mort = "/Users/x/Pictures/Photos Library.photoslibrary".to_string();
+        assert_eq!(classer(vec![album("Colophon test")], mort, false), attendu);
+        assert_eq!(classer(vec![album("Colophon test")], String::new(), false), attendu);
+    }
+
+    /// Le chemin ne sert qu'à expliquer une liste vide.
+    #[test]
+    fn une_liste_vide_se_dit_par_le_chemin() {
+        let chemin = "/Users/x/Pictures/Photos Library.photoslibrary".to_string();
+        assert_eq!(
+            classer(vec![], chemin.clone(), false),
+            Etat::Injoignable { chemin }
+        );
+        assert_eq!(
+            classer(vec![], "/x".into(), true),
+            Etat::Lisible { albums: vec![] }
+        );
+    }
+
+    /// Mesuré le 17/10 : `photos.m` écrivait `modifiee` en `0` ou `1`, parce
+    /// qu'en C `a && b` est un entier, et `@(…)` en fait un nombre JSON. Serde
+    /// refusait la liste entière, et **aucun import depuis Photos n'aboutissait**
+    /// depuis la vague 5.2. Le pont garde les deux formes.
+    #[test]
+    fn un_booleen_du_pont_se_lit_en_nombre_comme_en_booleen() {
+        let n: FichePhoto =
+            serde_json::from_str(r#"{"id":"a","nom":"b.jpg","modifiee":0}"#).unwrap();
+        assert!(!n.modifiee);
+        let n: FichePhoto =
+            serde_json::from_str(r#"{"id":"a","nom":"b.jpg","modifiee":1}"#).unwrap();
+        assert!(n.modifiee);
+        let b: FichePhoto =
+            serde_json::from_str(r#"{"id":"a","nom":"b.jpg","modifiee":true}"#).unwrap();
+        assert!(b.modifiee);
     }
 }

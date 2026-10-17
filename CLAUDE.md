@@ -444,6 +444,12 @@ cette machine : PhotoKit ne lit **que** la bibliothèque système (`SystemLibrar
 un renommage de photothèque laisse le chemin mort — autorisation accordée, échecs
 `NSXPCConnection` en boucle, zéro album. La phrase de cet état nomme le chemin et la
 case à cocher ; sans elle on cherche le défaut dans Colophon pendant une heure.
+**Ce chemin n'explique qu'une liste vide** (`photos::classer`) : mesuré le 17/10, il nomme
+encore un dossier supprimé alors que PhotoKit lit la bibliothèque désignée depuis, et sous
+bac à sable il ne se lit pas ; des albums rendus l'emportent toujours. **Un booléen du pont
+s'écrit `@YES`/`@NO`**, jamais `@(a && b)` ni `@(x == y)`, qui sont des entiers en C : un `0`
+JSON faisait refuser toute la liste par serde, et aucun import n'aboutissait depuis la 5.2
+(`booleen_du_pont` garde les deux formes). Un import qui lève se dit à l'écran (`tenterImport`).
 `bibliotheque.test.ts` tient la distinction, et il mord (vérifié par mutation).
 
 **Trois règles à ne pas défaire.** Le réseau est refusé au premier passage

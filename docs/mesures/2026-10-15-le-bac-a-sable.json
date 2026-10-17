@@ -93,5 +93,31 @@
     ],
     "photos": "« Importer un album de Photos » puis « Autoriser l'accès… » : la demande système de TCC s'affiche sous bac à sable, avec la phrase d'usage FR/EN. Laissée sans réponse : autoriser ouvre toute la photothèque d'Alexis, refuser inscrit un refus pour fr.morain.colophon. La demande reste à l'écran après la fermeture de l'app (UserNotificationCenter). Reste à Alexis.",
     "signature_app_store": "une construction sans --essai, avec les identités du .env, a produit un bundle « Apple Distribution: Alexis Morain (27VZJ5H6Q9) », profil embarqué, huit clés de droits dont les deux identifiants : la chaîne de MAS-s2 se construit"
+  },
+  "photos_17_10": {
+    "app": "mas.sh build --essai (ad hoc, universel, preuves vertes), lancée depuis target/mas ; /Applications jamais touché. Chaque reconstruction ad hoc change l'empreinte, donc TCC redemande : accordé « Autoriser l'accès à toutes les photos » à chaque fois (autorisation d'Alexis du 17/10), jamais refusé",
+    "demande_tcc": "« « Colophon » souhaite accéder à votre photothèque. », avec la phrase FR/EN de NSPhotoLibraryUsageDescription ; boutons « Autoriser l'accès à toutes les photos » et « Ne pas autoriser » ; pilotée par System Events sur UserNotificationCenter",
+    "bug_1_injoignable": {
+      "vu": "autorisé, l'écran disait « La photothèque système ne répond pas. » (phrase sans chemin), aucun album",
+      "cause_mesuree": "SystemLibraryPath (group.com.apple.photolibraryd.private) nomme encore « Photos Library.photoslibrary », supprimé, alors que PhotoKit lit la Photothèque désignée depuis : la sonde hors bac à sable (SondeColophon.app --albums) liste 7 albums dont « Colophon test » (64). Sous bac à sable la clé ne se lit pas du tout. Le code déclarait « injoignable » sur ce seul chemin, même avec des albums rendus",
+      "correctif": "photos::classer : des albums rendus l'emportent, le chemin n'explique qu'une liste vide ; tests des_albums_rendus_l_emportent_sur_le_chemin_declare, une_liste_vide_se_dit_par_le_chemin",
+      "verifie_a_l_ecran": "7 albums listés sous bac à sable, intelligents signalés"
+    },
+    "bug_2_import_muet": {
+      "vu": "« Importer 64 photos… » ne faisait rien : aucun dossier créé, aucun message",
+      "cause": "lancerImport sans catch : une promesse rejetée laissait l'écran tel quel",
+      "correctif": "bibliotheque::tenterImport rend { erreur } ; phrase « L'import n'a pas abouti : … » (FR/EN, role=alert) ; tests Vitest « un import qui échoue »",
+      "erreur_alors_lue": "réponse illisible : invalid type: integer `0`, expected a boolean at line 1 column 138"
+    },
+    "bug_3_booleen_du_pont": {
+      "cause": "photos.m sérialisait `modifiee` par @(r && …) et `absente_du_mac` par @(err.code == 3164) : en C ce sont des entiers, donc 0/1 en JSON, et serde refusait la liste entière. Présent depuis c952037 (02/09, vague 5.2) : aucun import depuis Photos n'aboutissait dans l'app, bac à sable ou non",
+      "correctif": "@YES/@NO dans photos.m, et booleen_du_pont côté Rust (bool ou nombre) ; test un_booleen_du_pont_se_lit_en_nombre_comme_en_booleen"
+    },
+    "import": "album « Colophon test » : 64 demandées, 64 importées, 219 100 811 octets, 0 absente du Mac, 0 échec ; 209 Mo sur disque",
+    "dossier_d_import": "/Users/alex-pack/Pictures/Colophon/Colophon test : le vrai dossier Images (le Pictures du conteneur est un lien vers ../../../../Pictures), 64 JPEG préfixés par le rang + import.json",
+    "compose": "64 lues, 57 gardées (89 %), 47 planches en 7 chapitres ; album dans le conteneur (albums/Colophon test-51269849) avec root.bookmark ; album.root = le vrai dossier",
+    "photos_affichees": "planches 1 à 4 vues : page de titre « Colophon test, du 27 octobre au 3 novembre 2013, Calvi, Bastia », photos dessinées",
+    "relance": "quitter (osascript par identifiant), relancer depuis target/mas, rouvrir depuis les récents : aucun bandeau « à revoir », photos affichées",
+    "export_sans_contrainte": "3 photos à 130 ppi bloquaient (règle des 250 ppi), retirées des planches ; puis target/mas-photos/Colophon test.pdf : 66 686 028 octets, sha256 597198ccb786…, 46 pages PDF lues par pypdfium2 (44 planches de 426 × 216 mm et 2 pages de couverture de 216 × 216 mm, soit les 90 pages annoncées), encre moyenne 38,9 %, quasi blanches : page 2 (garde, 0,3 %), 45 (colophon, 0,6 %), 46 (quatrième de couverture, 0,0 %)"
   }
 }

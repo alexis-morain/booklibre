@@ -8,6 +8,7 @@ import {
   dossierPropose,
   etatBibliotheque,
   importerAlbum,
+  tenterImport,
 } from "./bibliotheque";
 import {
   BuildBilan,
@@ -3678,6 +3679,7 @@ function Empty({
   const [dossierImport, setDossierImport] = useState("");
   const [progresImport, setProgresImport] = useState<[number, number] | null>(null);
   const [rapport, setRapport] = useState<RapportImport | null>(null);
+  const [erreurImport, setErreurImport] = useState<string | null>(null);
 
   // Sondé une fois, au montage : hors macOS l'état est « indisponible » et le
   // lien ne s'affiche jamais. Proposer une photothèque Apple sur Windows
@@ -3690,6 +3692,7 @@ function Empty({
   const ouvrirPhotos = async () => {
     setPhotosOuvert(true);
     setRapport(null);
+    setErreurImport(null);
     setAlbumPhotos(null);
     setEtatPhotos(await etatBibliotheque());
   };
@@ -3702,16 +3705,23 @@ function Empty({
 
   const choisirAlbumPhotos = async (a: AlbumPhotos) => {
     setAlbumPhotos(a);
+    setErreurImport(null);
     setDossierImport(await dossierPropose(a.nom));
   };
 
   const lancerImport = async () => {
     if (!albumPhotos) return;
     setProgresImport([0, albumPhotos.photos]);
+    setErreurImport(null);
     try {
-      const r = await importerAlbum(albumPhotos.id, dossierImport, false, (f, n) =>
-        setProgresImport([f, n]),
+      const issue = await tenterImport(() =>
+        importerAlbum(albumPhotos.id, dossierImport, false, (f, n) => setProgresImport([f, n])),
       );
+      if ("erreur" in issue) {
+        setErreurImport(issue.erreur);
+        return;
+      }
+      const r = issue.rapport;
       setRapport(r);
       // Rien ne passe sous silence : tant qu'une photographie manque, l'écran
       // reste et le dit. Sinon on enchaîne directement sur la création.
@@ -3832,9 +3842,16 @@ function Empty({
                     })}
                   </p>
                 ) : (
-                  <button className="cta" onClick={() => void lancerImport()}>
-                    {t("photos.importer", { n: albumPhotos.photos })}
-                  </button>
+                  <>
+                    {erreurImport && (
+                      <p className="lede" role="alert">
+                        {t("photos.import.echec", { raison: erreurImport })}
+                      </p>
+                    )}
+                    <button className="cta" onClick={() => void lancerImport()}>
+                      {t("photos.importer", { n: albumPhotos.photos })}
+                    </button>
+                  </>
                 )}
               </>
             )}

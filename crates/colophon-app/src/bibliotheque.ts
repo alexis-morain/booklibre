@@ -80,6 +80,19 @@ export async function importerAlbum(
   }
 }
 
+/** L'issue d'un import : son rapport, ou la raison de son échec. */
+export type IssueImport = { rapport: RapportImport } | { erreur: string };
+
+/** Lance un import et rend son issue, échec compris. Une promesse rejetée que
+ *  personne n'attrape laissait l'écran muet (mesuré le 17/10, sous bac à sable). */
+export async function tenterImport(lancer: () => Promise<RapportImport>): Promise<IssueImport> {
+  try {
+    return { rapport: await lancer() };
+  } catch (e) {
+    return { erreur: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 /** La clé i18n qui explique un état, ou `null` quand il n'y a rien à
  *  expliquer parce que la liste va s'afficher.
  *
