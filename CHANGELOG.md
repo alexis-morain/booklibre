@@ -9,7 +9,7 @@ sur la page des releases.
 
 ## [Non publié]
 
-## [1.0.0] - 2026-10-15
+## [1.0.1] - 2026-10-17
 
 First public release. Colophon takes a folder of photos and turns it into a
 composed album, spread by spread, in under a minute. You can rework any of it
@@ -22,6 +22,28 @@ an unsigned installer, but
 nobody has run it on a real Windows machine yet. Unless you send a file
 somewhere yourself, only one request ever leaves your computer: the update
 check sent to GitHub at launch, which you can turn off in Preferences.
+
+### Fixed
+
+- Making an album from Apple Photos works. The app used to reject the list of
+  photos it had just read from the library, so no import from Photos ever finished.
+- A Photos library whose albums the app can read is no longer reported as
+  unreachable. The app trusted the library location macOS reports, which can still
+  point at a folder that was deleted.
+- When an import from Photos fails, the window now says why, instead of staying
+  silent.
+- Windows: the next versions will reach you through the in-app update. The signed
+  update package was built but left out of the release, so a Windows install would
+  never have been offered a newer version.
+
+Everything Colophon does is listed under 1.0.0 in
+[CHANGELOG.md](https://github.com/alexis-morain/colophon/blob/main/CHANGELOG.md),
+and all of it is part of this release.
+
+## [1.0.0] - 2026-10-15
+
+Tagged but never published: its import from Apple Photos was broken. 1.0.1 is the
+first public release and contains everything below.
 
 ### Added
 
