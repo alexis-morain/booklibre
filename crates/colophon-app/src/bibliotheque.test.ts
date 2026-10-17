@@ -4,7 +4,7 @@
 // les nomme. Ce fichier tient cette distinction, et rien d'autre.
 
 import { describe, expect, it } from "vitest";
-import { Etat, cleDeLetat, poids } from "./bibliotheque";
+import { Etat, RapportImport, cleDeLetat, poids, tenterImport } from "./bibliotheque";
 import { setLangue, t } from "./i18n";
 
 describe("les trois états d'une liste vide", () => {
@@ -68,5 +68,36 @@ describe("poids", () => {
    *  « 0 Ko » ferait croire à une photo vide. */
   it("ne rend jamais zéro pour un fichier qui existe", () => {
     expect(poids(1)).toBe("1 Ko");
+  });
+});
+
+describe("un import qui échoue", () => {
+  /** Mesuré le 17/10 sous bac à sable : « Importer 64 photos… » levait, et
+   *  l'écran restait tel quel, sans un mot. Une erreur de l'import se rend
+   *  comme une issue, jamais comme une promesse rejetée que personne n'attrape. */
+  it("rend sa raison au lieu de se taire", async () => {
+    const issue = await tenterImport(() => Promise.reject("création de /x : Operation not permitted"));
+    expect(issue).toEqual({ erreur: "création de /x : Operation not permitted" });
+  });
+
+  it("garde le rapport d'un import qui aboutit", async () => {
+    const rapport: RapportImport = {
+      album: "Colophon test",
+      dossier: "/x",
+      demandees: 1,
+      importees: 1,
+      octets: 1,
+      absentes_du_mac: [],
+      echecs: [],
+    };
+    expect(await tenterImport(() => Promise.resolve(rapport))).toEqual({ rapport });
+  });
+
+  it("a une phrase dans les deux langues", () => {
+    setLangue("fr");
+    expect(t("photos.import.echec", { raison: "R" })).toContain("R");
+    setLangue("en");
+    expect(t("photos.import.echec", { raison: "R" })).toContain("R");
+    setLangue("fr");
   });
 });

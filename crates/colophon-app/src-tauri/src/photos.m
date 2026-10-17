@@ -177,7 +177,7 @@ char *colophon_photos_lister(const char *album_id) {
         [fiches addObject:@{
             @"id": a.localIdentifier ?: @"",
             @"nom": r.originalFilename ?: @"",
-            @"modifiee": @(r && r.type == PHAssetResourceTypeFullSizePhoto),
+            @"modifiee": (r && r.type == PHAssetResourceTypeFullSizePhoto) ? @YES : @NO,
         }];
     }
     return dump(@{@"nom": [(PHAssetCollection *)cols[0] localizedTitle] ?: @"",
@@ -227,7 +227,7 @@ char *colophon_photos_exporter(const char *asset_id, const char *dest, int resea
                       // 3164 : les octets sont dans iCloud et pas ici. Le seul
                       // code que l'appelant distingue, parce que c'est le seul
                       // auquel un téléchargement répondrait.
-                      @"absente_du_mac": @(err.code == 3164),
+                      @"absente_du_mac": err.code == 3164 ? @YES : @NO,
                       @"motif": err.localizedDescription ?: @"écriture refusée"});
     }
     NSDictionary *at = [[NSFileManager defaultManager] attributesOfItemAtPath:chemin error:nil];

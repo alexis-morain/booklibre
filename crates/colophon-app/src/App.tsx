@@ -8,6 +8,7 @@ import {
   dossierPropose,
   etatBibliotheque,
   importerAlbum,
+  tenterImport,
 } from "./bibliotheque";
 import {
   BuildBilan,
@@ -57,6 +58,7 @@ import {
 
   renderCoverPreview,
   renderPdf,
+  revoirDossier,
   saveAlbum,
   datesFiables,
 } from "./bridge";
@@ -144,6 +146,7 @@ import { PlanchesView, LockGlyph } from "./PlanchesView";
 import { CoverView } from "./CoverView";
 import { EnvoiView } from "./EnvoiView";
 import { Cle, FR, langue, t, useLangue } from "./i18n";
+import { etatRacine, refusRevoir } from "./racine";
 import { jusquAuRendu } from "./mesure";
 import { aboutDensite, aboutFormat, nomDensite } from "./moteur";
 import { RaccourcisView } from "./Raccourcis";
@@ -588,6 +591,22 @@ export default function App() {
     },
     [adopt, dirty],
   );
+
+  /** La version App Store ne lit plus le dossier de photos : la personne le
+   *  rechoisit et l'album se rouvre, comme depuis les récents, donc ce qui
+   *  n'est pas enregistré demande d'abord. */
+  const revoir = useCallback(async () => {
+    if (!opened) return;
+    if (dirty && !(await confirmDialog(t("ouvrir.confirme")))) return;
+    try {
+      const result = await revoirDossier(opened.album.root);
+      if (result === null) return;
+      adopt(result);
+      setCuration(await fetchCuration().catch(() => []));
+    } catch (e) {
+      setError(fault(refusRevoir(String(e)) ?? t("erreur.revoir"), e));
+    }
+  }, [adopt, dirty, opened]);
 
   const openAlbum = useCallback(async () => {
     if (dirty && !(await confirmDialog(t("ouvrir.confirme")))) return;
@@ -2263,7 +2282,12 @@ export default function App() {
           onPlusTard={() => setMaj(null)}
         />
       )}
-        {apropos && <AProposView onClose={() => setApropos(false)} />}
+        {apropos && (
+        <AProposView
+          onClose={() => setApropos(false)}
+          onErreur={(e) => setError(fault(t("erreur.confidentialite"), e))}
+        />
+      )}
         {prefs && <PrefsView onClose={() => setPrefs(false)} />}
       </>
     );
@@ -2821,8 +2845,16 @@ export default function App() {
           onSeek={(i) => setIndex(Math.min(total - 1, Math.max(COVER, i)))}
         />
       )}
-      {opened && !opened.root_present && (
+      {opened && etatRacine(opened) === "introuvable" && (
         <p className="warn">{t("racine.introuvable", { dossier: album.root })}</p>
+      )}
+      {opened && etatRacine(opened) === "a-revoir" && (
+        <p className="warn warn-action">
+          <span>{t("racine.a.revoir", { dossier: album.root })}</span>
+          <button className="cta small" onClick={() => void revoir()}>
+            {t("racine.a.revoir.bouton")}
+          </button>
+        </p>
       )}
       {error && <FaultBlock fault={error} onDismiss={() => setError(null)} />}
       {shortcuts && <RaccourcisView onClose={() => setShortcuts(false)} />}
@@ -2926,7 +2958,12 @@ export default function App() {
           onPlusTard={() => setMaj(null)}
         />
       )}
-      {apropos && <AProposView onClose={() => setApropos(false)} />}
+      {apropos && (
+        <AProposView
+          onClose={() => setApropos(false)}
+          onErreur={(e) => setError(fault(t("erreur.confidentialite"), e))}
+        />
+      )}
         {prefs && <PrefsView onClose={() => setPrefs(false)} />}
     </div>
   );
@@ -3642,6 +3679,7 @@ function Empty({
   const [dossierImport, setDossierImport] = useState("");
   const [progresImport, setProgresImport] = useState<[number, number] | null>(null);
   const [rapport, setRapport] = useState<RapportImport | null>(null);
+  const [erreurImport, setErreurImport] = useState<string | null>(null);
 
   // Sondé une fois, au montage : hors macOS l'état est « indisponible » et le
   // lien ne s'affiche jamais. Proposer une photothèque Apple sur Windows
@@ -3654,6 +3692,7 @@ function Empty({
   const ouvrirPhotos = async () => {
     setPhotosOuvert(true);
     setRapport(null);
+    setErreurImport(null);
     setAlbumPhotos(null);
     setEtatPhotos(await etatBibliotheque());
   };
@@ -3666,16 +3705,23 @@ function Empty({
 
   const choisirAlbumPhotos = async (a: AlbumPhotos) => {
     setAlbumPhotos(a);
+    setErreurImport(null);
     setDossierImport(await dossierPropose(a.nom));
   };
 
   const lancerImport = async () => {
     if (!albumPhotos) return;
     setProgresImport([0, albumPhotos.photos]);
+    setErreurImport(null);
     try {
-      const r = await importerAlbum(albumPhotos.id, dossierImport, false, (f, n) =>
-        setProgresImport([f, n]),
+      const issue = await tenterImport(() =>
+        importerAlbum(albumPhotos.id, dossierImport, false, (f, n) => setProgresImport([f, n])),
       );
+      if ("erreur" in issue) {
+        setErreurImport(issue.erreur);
+        return;
+      }
+      const r = issue.rapport;
       setRapport(r);
       // Rien ne passe sous silence : tant qu'une photographie manque, l'écran
       // reste et le dit. Sinon on enchaîne directement sur la création.
@@ -3796,9 +3842,16 @@ function Empty({
                     })}
                   </p>
                 ) : (
-                  <button className="cta" onClick={() => void lancerImport()}>
-                    {t("photos.importer", { n: albumPhotos.photos })}
-                  </button>
+                  <>
+                    {erreurImport && (
+                      <p className="lede" role="alert">
+                        {t("photos.import.echec", { raison: erreurImport })}
+                      </p>
+                    )}
+                    <button className="cta" onClick={() => void lancerImport()}>
+                      {t("photos.importer", { n: albumPhotos.photos })}
+                    </button>
+                  </>
                 )}
               </>
             )}
