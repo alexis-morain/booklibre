@@ -1,0 +1,26 @@
+# Les avis RustSec ignorés, chacun avec sa preuve et sa condition de retrait.
+# Lu par `cargo audit` à la racine du dépôt, donc par le job `audit`
+# (rustsec/audit-check) comme à la main.
+
+[advisories]
+ignore = [
+    # zip 4.6.1 (17/10/2026). Tiré par tauri-plugin-updater 2.10.1, sous
+    # Windows seulement (`zip = "^4"`, cfg(target_os = "windows")). Corrigé en
+    # zip >= 9, qu'aucune version publiée du plugin n'accepte au 17/10 (ni la
+    # 2.14.0, ni la 3.0.0-alpha.3) ; la montée est fusionnée sur la branche v2
+    # du plugin (ba98bfa, 16/10, `.changes/updater-zip-9.md`), pas encore sortie.
+    #
+    # Le seul appel à zip est `extract_zip` (updater.rs:903), et il ne reçoit
+    # que des octets déjà passés par `verify_signature` contre notre clé
+    # publique (updater.rs:712, dans `download`) : la commande `install` lit
+    # un `DownloadedBytes` que seul `download` crée (commands.rs:137), et
+    # l'app n'appelle que `downloadAndInstall` (bridge.ts). Une archive qui
+    # arrive jusqu'à zip est donc signée par nous, et qui tient la clé peut
+    # déjà livrer un installateur arbitraire.
+    #
+    # Retirer ces trois lignes avec la montée vers le premier
+    # tauri-plugin-updater qui dépend de zip >= 9.
+    "RUSTSEC-2026-0367", # bits SUID/SGID conservés : code cfg(unix), absent sous Windows
+    "RUSTSEC-2026-0368", # cible de lien symbolique hors du dossier : archive signée seulement
+    "RUSTSEC-2026-0369", # droits Unix appliqués à travers un lien : code cfg(unix), absent sous Windows
+]
