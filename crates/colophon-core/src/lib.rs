@@ -39,6 +39,7 @@ pub mod prevol;
 pub mod print;
 pub mod printer;
 pub mod qualite;
+pub mod recomposition;
 pub mod reglage;
 pub mod relais;
 pub mod releve;

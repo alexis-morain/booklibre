@@ -251,8 +251,25 @@ export const FR = {
   "compo.vide":
     "Ce dossier n’a donné aucune photo exploitable, rien n’a été créé. Choisissez un autre dossier, ou rouvrez celui-ci après y avoir ajouté des photos.",
   "erreur.compo": "La composition a échoué.",
-  "recomp.confirme":
-    "Recomposer l’album ? Les planches éditées à la main ou verrouillées sont conservées telles quelles, les autres sont recomposées. L’historique d’annulation repart de zéro.",
+  // -- le panneau Recomposer
+  "recomposer.titre": "Recomposer l’album",
+  "recomposer.intro":
+    "Colophon refait la mise en page des planches à partir de vos photos, au format choisi.",
+  "recomposer.section.format": "Le format",
+  "recomposer.non_imprimable": "non imprimable par Colophon",
+  "recomposer.aeree": "Moins de photos, plus grandes",
+  "recomposer.aeree.note": "Moins de photos par page, chacune plus grande.",
+  "recomposer.gardees": "{n} planches que vous avez modifiées restent telles quelles.",
+  "recomposer.gardees.un": "1 planche que vous avez modifiée reste telle quelle.",
+  "recomposer.gardees.format":
+    "{n} planches que vous avez modifiées gardent leurs photos ; leur mise en page s’adapte au nouveau format.",
+  "recomposer.gardees.format.un":
+    "1 planche que vous avez modifiée garde ses photos ; sa mise en page s’adapte au nouveau format.",
+  "recomposer.historique": "L’historique d’annulation repart de zéro.",
+  "recomposer.bouton": "Recomposer l’album",
+  "recomposer.annuler": "Annuler",
+  "recomposer.sans": "Changer de format sans recomposer",
+  "recomposer.sans.note": "Garde toutes les planches et adapte leur mise en page.",
   "recomp.ok": "Album recomposé, planches éditées conservées",
   "recomp.annulee": "Recomposition annulée",
   "erreur.recomp": "La recomposition a échoué.",
@@ -302,10 +319,9 @@ export const FR = {
   "planche.texte.inseree":
     "Planche de texte insérée : double-clic pour l’ouvrir et écrire",
   "planche.supprimee": "Planche {n} supprimée (⌘Z la ramène)",
-  // Le panneau porte les deux propriétés qui changent tout sans rien
-  // recomposer : le format et la police. Son intitulé les nomme toutes les
-  // deux plutôt que d'en cacher une derrière l'autre.
-  "bascule.titre": "Ce dont le livre est fait",
+  // Le changement de format sans recomposer : on n'y arrive que par le
+  // lien du panneau Recomposer, et son titre est ce lien.
+  "bascule.titre": "Changer de format sans recomposer",
 
   "bascule.intro":
     "Le même album dans un autre format : mêmes planches, même ordre, mêmes photos, mêmes recadrages. Seules les mises en page dont les photos ne tiendraient plus sont remplacées, et tout ce qui bouge est dit ci-dessous.",
@@ -331,14 +347,12 @@ export const FR = {
   "bascule.faite": "Album basculé en {w} × {h} mm (⌘Z annule)",
   "bascule.geometrie":
     "la géométrie de ce format n’a pas pu être chargée, rien n’a été appliqué",
-  "bascule.section.format": "Le format",
-  "bar.format": "Format et police",
-  "bar.format.titre": "Le format et la police de l’album",
+  "bar.format": "Police",
+  "bar.format.titre": "La police de l’album",
 
   "erreur.bascule": "Changement de format impossible",
 
-  // -- la police de l'album, dans le panneau Format
-  "police.section": "La police",
+  // -- la police de l'album, dans le panneau Police
   "police.intro":
     "Une police pour tout le livre : légendes, titres de chapitre, page de garde, colophon, couverture et dos. La police choisie est copiée dans le dossier de l’album, donc l’album s’ouvre et s’imprime pareil sur une machine qui ne l’a pas. Rien n’est recomposé : seules les coupures de ligne suivent.",
   "police.projet": "La police de Colophon",
@@ -463,6 +477,8 @@ export const FR = {
   "menu.recents.vide": "Aucun album récent",
   "menu.enregistrer": "Enregistrer",
   "menu.exporter": "Exporter…",
+  "menu.recomposer": "Recomposer…",
+  "menu.police": "Police…",
   "menu.stockage": "Stockage…",
   "menu.fermer.album": "Fermer l’album",
   "menu.edition": "Édition",
@@ -512,7 +528,7 @@ export const FR = {
     "Chaque ligne mène à ce qui la répare. Corrigez, revenez, le contrôle se refait tout seul.",
   "envoi.defaut.album": "L’album",
   "envoi.ou.couverture": "Couverture",
-  "envoi.ou.format": "Format",
+  "envoi.ou.format": "Recomposer",
   "envoi.ou.fichiers": "Fichiers",
   "envoi.ou.pages": "Pages",
   "envoi.ou.composition": "Composition",
@@ -547,7 +563,7 @@ export const FR = {
   "envoi.simple.fond_perdu":
     "Cet album a été composé avec trop peu de marge de coupe pour cet imprimeur : composez-le à nouveau depuis ses photos.",
   "envoi.simple.format_sans_produit":
-    "Cet imprimeur n’imprime pas ce format : choisissez-en un autre dans Format.",
+    "Cet imprimeur n’imprime pas ce format : choisissez-en un autre dans Recomposer.",
   "envoi.simple.imposition":
     "La première page de gauche ne s’imprime pas chez cet imprimeur, et elle porte quelque chose : cochez la page de garde plus bas.",
   "envoi.simple.objet_coupe":
@@ -692,7 +708,7 @@ export const FR = {
   "commande.mode.reel": "réel",
   "commande.indisponible": "La commande est indisponible pour le moment. Réessayez plus tard ; l’export PDF, lui, marche toujours.",
   "commande.reessayer": "Réessayer",
-  "commande.format.invendable": "Ce format ne se commande pas depuis Colophon : Cloudprinter n’imprime que le carré 21 ou 30, l’A4 portrait ou paysage et le 20 × 25. Changez-le dans Format, ou envoyez ce dossier à un autre imprimeur.",
+  "commande.format.invendable": "Ce format ne se commande pas depuis Colophon : Cloudprinter n’imprime que le carré 21 ou 30, l’A4 portrait ou paysage et le 20 × 25. Changez-le dans Recomposer, ou envoyez ce dossier à un autre imprimeur.",
   "commande.papier": "Ce dossier est préparé pour un autre papier que celui de l’imprimeur : préparez-le pour Cloudprinter.",
   "commande.relais.attente_fichiers": "Les fichiers ne sont pas encore partis.",
   "commande.relais.attente_paiement": "En attente du paiement, dans votre navigateur.",
@@ -862,7 +878,7 @@ export const FR = {
   "photo.coller.pleine": "La planche affichée n’accueille pas une photo de plus.",
   "objet.police": "La police du bloc",
   "objet.police.livre": "Police du livre",
-  "objet.police.livre.note": "Celle que le livre a choisie dans Format",
+  "objet.police.livre.note": "Celle que le livre a choisie dans Police",
   "objet.police.manque":
     "Sa police manque du dossier, le livre sortira dans la police du livre.",
   "objet.style": "Gras et italique",
@@ -1333,8 +1349,24 @@ export const EN: Record<Cle, string> = {
   "compo.vide":
     "This folder yielded no usable photo, nothing was created. Choose another folder, or reopen this one after adding photos to it.",
   "erreur.compo": "The composition failed.",
-  "recomp.confirme":
-    "Recompose the album? Spreads edited by hand or locked are kept exactly as they are, the others are recomposed. The undo history starts over.",
+  "recomposer.titre": "Recompose the album",
+  "recomposer.intro":
+    "Colophon lays out the spreads again from your photos, in the format you choose.",
+  "recomposer.section.format": "The format",
+  "recomposer.non_imprimable": "not printable through Colophon",
+  "recomposer.aeree": "Fewer photos, larger",
+  "recomposer.aeree.note": "Fewer photos per page, each one larger.",
+  "recomposer.gardees": "{n} spreads you edited stay exactly as they are.",
+  "recomposer.gardees.un": "1 spread you edited stays exactly as it is.",
+  "recomposer.gardees.format":
+    "{n} spreads you edited keep their photos; their layout adapts to the new format.",
+  "recomposer.gardees.format.un":
+    "1 spread you edited keeps its photos; its layout adapts to the new format.",
+  "recomposer.historique": "The undo history starts over.",
+  "recomposer.bouton": "Recompose the album",
+  "recomposer.annuler": "Cancel",
+  "recomposer.sans": "Change format without recomposing",
+  "recomposer.sans.note": "Keeps every spread and adapts its layout.",
   "recomp.ok": "Album recomposed, edited spreads kept",
   "recomp.annulee": "Recomposition cancelled",
   "erreur.recomp": "The recomposition failed.",
@@ -1380,7 +1412,7 @@ export const EN: Record<Cle, string> = {
   "planche.vide.inseree": "Empty spread inserted: a breath",
   "planche.texte.inseree": "Text spread inserted: double-click to open it and write",
   "planche.supprimee": "Spread {n} deleted (⌘Z brings it back)",
-  "bascule.titre": "What the book is made of",
+  "bascule.titre": "Change format without recomposing",
 
   "bascule.intro":
     "The same album in another size: same spreads, same order, same photos, same crops. Only the layouts whose photos would no longer fit are replaced, and everything that moves is listed below.",
@@ -1406,14 +1438,12 @@ export const EN: Record<Cle, string> = {
   "bascule.faite": "Album switched to {w} × {h} mm (⌘Z undoes)",
   "bascule.geometrie":
     "this format’s geometry could not be loaded; nothing was applied",
-  "bascule.section.format": "The format",
-  "bar.format": "Format & type",
-  "bar.format.titre": "The album’s format and typeface",
+  "bar.format": "Typeface",
+  "bar.format.titre": "The album’s typeface",
 
   "erreur.bascule": "Cannot change format",
 
-  // -- the album's typeface, in the Format panel
-  "police.section": "The typeface",
+  // -- the album's typeface, in the Typeface panel
   "police.intro":
     "One typeface for the whole book: captions, chapter titles, half-title, colophon, cover and spine. The face you pick is copied into the album’s folder, so the album opens and prints the same on a machine that does not have it. Nothing is recomposed: only the line breaks follow.",
   "police.projet": "Colophon’s own typeface",
@@ -1521,6 +1551,8 @@ export const EN: Record<Cle, string> = {
   "menu.recents.vide": "No recent album",
   "menu.enregistrer": "Save",
   "menu.exporter": "Export…",
+  "menu.recomposer": "Recompose…",
+  "menu.police": "Typeface…",
   "menu.stockage": "Storage…",
   "menu.fermer.album": "Close the album",
   "menu.edition": "Edit",
@@ -1569,7 +1601,7 @@ export const EN: Record<Cle, string> = {
     "Each line leads to what fixes it. Fix, come back, the check reruns on its own.",
   "envoi.defaut.album": "The album",
   "envoi.ou.couverture": "Cover",
-  "envoi.ou.format": "Format",
+  "envoi.ou.format": "Recompose",
   "envoi.ou.fichiers": "Files",
   "envoi.ou.pages": "Pages",
   "envoi.ou.composition": "Composition",
@@ -1598,7 +1630,7 @@ export const EN: Record<Cle, string> = {
   "envoi.simple.fond_perdu":
     "This album was composed with too little trim margin for this printer: compose it again from its photos.",
   "envoi.simple.format_sans_produit":
-    "This printer does not print this format: choose another one in Format.",
+    "This printer does not print this format: choose another one in Recompose.",
   "envoi.simple.imposition":
     "The first left page is not printed at this printer, and it holds something: tick the half-title below.",
   "envoi.simple.objet_coupe": "An object placed by hand runs past the trim: bring it inside the page, or make it smaller.",
@@ -1739,7 +1771,7 @@ export const EN: Record<Cle, string> = {
   "commande.mode.reel": "live",
   "commande.indisponible": "Ordering is unavailable for now. Try again later; the PDF export always works.",
   "commande.reessayer": "Try again",
-  "commande.format.invendable": "This size can’t be ordered from Colophon: Cloudprinter only prints the 21 or 30 cm square, A4 portrait or landscape, and 8 × 10 in. Change it in Format, or send this folder to another printer.",
+  "commande.format.invendable": "This size can’t be ordered from Colophon: Cloudprinter only prints the 21 or 30 cm square, A4 portrait or landscape, and 8 × 10 in. Change it in Recompose, or send this folder to another printer.",
   "commande.papier": "This folder was prepared for another paper than the printer’s: prepare it for Cloudprinter.",
   "commande.relais.attente_fichiers": "The files have not left yet.",
   "commande.relais.attente_paiement": "Waiting for payment, in your browser.",
@@ -1900,7 +1932,7 @@ export const EN: Record<Cle, string> = {
   "photo.coller.pleine": "The spread on screen cannot take one more photo.",
   "objet.police": "The block’s typeface",
   "objet.police.livre": "Book typeface",
-  "objet.police.livre.note": "The one the book chose in Format",
+  "objet.police.livre.note": "The one the book chose in Typeface",
   "objet.police.manque":
     "Its typeface is missing from the folder: the book will print it in the book typeface.",
   "objet.style": "Bold and italic",

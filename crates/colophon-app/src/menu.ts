@@ -43,6 +43,8 @@ export type MenuActions = {
   dater(): void;
   dedater(): void;
   supprimerPlanche(): void;
+  recomposer(): void;
+  police(): void;
   raccourcis(): void;
   signalerBug(): void;
   signalerPlanche(): void;
@@ -148,6 +150,12 @@ export async function installMenu(
         accelerator: "Shift+CmdOrCtrl+E",
         enabled: albumOpen,
       }),
+      await sep(),
+      // Ce dont le livre est fait : le format et le rythme se choisissent en
+      // recomposant, la police à part. Le changement de format sans
+      // recomposer n'a pas d'entrée : il est un lien du panneau Recomposer.
+      await item("recomposer", t("menu.recomposer"), { enabled: albumOpen }),
+      await item("police", t("menu.police"), { enabled: albumOpen }),
       await sep(),
       // Storage answers a question about the machine, not about the album:
       // it opens with or without one, like the bug report does.

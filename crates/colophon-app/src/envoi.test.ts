@@ -247,7 +247,7 @@ describe("une destination par règle", () => {
   it("une ligne sans planche se nomme par sa destination, plus jamais « L'album »", () => {
     setLangue("fr");
     expect(libelleDestination(defaut("couverture_resolution"))).toBe("Couverture");
-    expect(libelleDestination(defaut("format_sans_produit"))).toBe("Format");
+    expect(libelleDestination(defaut("format_sans_produit"))).toBe("Recomposer");
     expect(libelleDestination(defaut("fichier_couverture"))).toBe("Fichiers");
     expect(libelleDestination(defaut("resolution", { planche: 4 }))).toBe("Planche 4");
     // Une règle de planche nomme toujours la sienne.

@@ -128,6 +128,9 @@ export type Album = {
    *  is one of two the engine writes; nothing here ever looks a font up by
    *  name on the machine that opens the album. */
   police?: Police;
+  /** The pace the album was composed at (`layout::Densite`). Absent means
+   *  the default, `equilibree`: the engine does not write it then. */
+  densite?: "aeree" | "equilibree" | "dense";
 };
 
 /** The chosen face, as `album.json` records it: the file beside it, and who

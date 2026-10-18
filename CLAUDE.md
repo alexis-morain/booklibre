@@ -346,7 +346,7 @@ sont ceux de `Face::extraire`, **jamais le fichier système recopié** — Helve
 sort à 14 % de sa `.ttc`. `font::face_album(dir, fichier)` est la seule porte : elle rend
 la face **et** `defaut`, le code d'un fichier nommé et introuvable. **Ce cas ne fait
 jamais échouer un export** : l'album sort dans la face du projet et l'écran le dit, en
-haut d'Envoi comme dans le panneau *Format*.
+haut d'Envoi comme dans le panneau *Police*.
 
 **Le dossier qui compte est celui d'`album.json`, jamais `album.root`** (les photos).
 `PdfWriter::new(album, dir)` le prend, `print`, `cover` et `build` l'ont tous en main.
@@ -374,7 +374,7 @@ octets des deux côtés. Le crénage et les ligatures sont coupés des deux côt
 (`featureSettings`, `ctx.fontKerning`), le moteur n'en dessinant aucun. Mesuré le
 29/08 : l'écart écran/moteur est de 1,6·10⁻⁵ mm pour une borne de 6,4·10⁻² mm — et
 nommer la face **installée** avec le crénage du navigateur décale de 0,067 mm sur une
-ligne de 74,8 mm. Le sélecteur vit dans le panneau *Format*, montre les faces refusées
+ligne de 74,8 mm. Le sélecteur vit dans le panneau *Police*, montre les faces refusées
 grisées avec leur raison (`police.ts`, sur le modèle de `reasons.ts`), et le
 « Regular » final s'élague **à l'écran** : le moteur rend ce que le fichier déclare.
 Il offre **dix familles, une par voix** (`police::selection`, une liste ordonnée de
@@ -396,7 +396,7 @@ visages à 4 % des bords au moins, jamais deux quasi-doublons sur une planche, u
 ouverture au quartile haut, jamais quatre gabarits d'affilée. Plancher 250 ppi visé,
 **pas garanti** : l'audit en tolère trois, le prévol aucun.
 
-**La bascule (`core::bascule`) n'est pas une recomposition.** `recompose_album` rebâtit
+**La bascule (`core::bascule`) n'est pas une recomposition.** `core::recomposition` rebâtit
 tout ce qui n'est pas épinglé ; la bascule ne rebâtit rien — mêmes planches, même ordre,
 mêmes photos, mêmes recadrages —, elle ne change que `trim_mm` et le `template` d'une
 planche devenue inapte, et jamais vers une capacité plus basse (une photo perdue ne se
@@ -1058,9 +1058,32 @@ autant de cases que le dump en pose, et qu'elle les répartisse du même côté 
 c'est ce test qui tient la table des familles historiques, seul endroit de l'app qui
 redit une forme du moteur. G et ⇧G lisent la même liste.
 
+**Recomposer ouvre un panneau, et c'est là que le format se change** (C3,
+`RecomposerView.tsx`, `recomposer.ts`). Les cinq formats de Nouvel album (le format
+d'un album en 28 × 21 ou en taille libre s'y ajoute, coché, « non imprimable par
+Colophon »), la `VisionneuseFormat` garnie des vignettes de l'album, la case « Moins de
+photos, plus grandes » (`aeree`), la phrase chiffrée des planches gardées, et le bouton.
+Le panneau n'envoie **que ce qui a changé** (`choixDeRecomposition`) : rien de changé,
+`recompose_album` reçoit `format: null, densite: null` et rend l'`album.json` d'avant au
+bit près — c'est le test `sans_parametres_le_meme_album_json_qu_avant`, qui recopie
+l'ancien assemblage de la coquille. Un format donné passe les planches gardées par
+`bascule::bascule` **avant** de recomposer le reste au nouveau format
+(`core::recomposition::recomposer`, appelé par la commande et par la CLI cachée
+`--recomposer`, que le harnais lance par `POST /__dev/recomposer`). La phrase dit alors
+que les planches gardées « gardent leurs photos ; leur mise en page s'adapte » : « telles
+quelles » serait faux. ⌘Z repart de zéro après une recomposition, et le panneau le dit.
+**`recomposeAlbum` recharge la géométrie** après la commande : avant C3 le format ne
+changeait jamais là, et un album passé en A4 sur le dump du carré est une fenêtre
+blanche. « Changer de format sans recomposer », lien du panneau, est le seul chemin vers
+`BasculeView` ; l'ancien « Format et police » est devenu **Police** (`PoliceView.tsx`),
+sans format, et la destination `format` d'Envoi mène à Recomposer.
+
 Menu natif (`menu.ts`), barre en trois zones, couverture = cellule zéro de Planches,
 export uniquement par Envoi. **Toute commande passe par la table `raw` d'App et
-`menu.ts`** ; les cinq panneaux s'excluent. **Aide puis Signaler** (`signaler.ts`) :
+`menu.ts`** ; les cinq panneaux s'excluent. Recomposer, le changement de format sans
+recomposer et Police sont **une seule place** (l'état `bascule` d'App, une union de trois
+valeurs) : ils s'excluent par construction et le compte ne bouge pas. Fichier porte
+« Recomposer… » et « Police… ». **Aide puis Signaler** (`signaler.ts`) :
 rapport entier visible avant envoi, jamais un chemin ni une légende.
 
 **DA** : piste A, chrome clair sur blanc, plus un mode sombre qui suit le système, un
@@ -1309,7 +1332,8 @@ de scène porte un angle et une origine, **jamais une matrice**.
 Autres drapeaux : `--print`, `--cover`, `--prevol --profil <id>`, `--densite`,
 `--variantes`, `--reprise`, `--bascule <FORMAT> [--essai]`, `--dump-scene`,
 `--dump-geometry`, `--dump-ornements`, `--profils`, `--preparer <DOSSIER>`. Cachés :
-`--fiche`, `--releve-album`, `--dates`, `--reserve`, `--devis <album> --pays FR` (le
+`--fiche`, `--releve-album`, `--dates`, `--reserve`, `--recomposer [--vers <FORMAT>]
+[--rythme <ID>]`, `--devis <album> --pays FR` (le
 code de commande, clé lue dans `CLOUDPRINTER_SANDBOX_API_KEY`, jamais en argument).
 Scripts :
 `pdfx.sh full`, `install-app.sh`, `fixture-scene.sh`, `ornement-encre.py`, `notices.sh`,
@@ -1337,7 +1361,8 @@ COLOPHON_POLICE=.albums/corse-2013 cargo test -p colophon-core --release \
 Workspace Cargo. **`colophon-core`** : `scan` → `meta` → `thumb` → `analyze` → `face` →
 `heic` → `pipeline` (curation) → `layout` (Composer, `Densite`) → `scene` → `pdf` →
 `print` → `cover` → `audit` ; `build.rs` enchaîne. À côté : `font`, `icc`, `places`,
-`ornement` (le pack), `pdfx`, `reprise`, `log`, `printer`, `prevol`,
+`ornement` (le pack), `pdfx`, `reprise`, `log`, `printer`, `prevol`, `recomposition`
+(la recomposition d'un album composé, au même format ou à un autre),
 `imposition` (la découpe en pages simples), `export` (le manifeste `export.json`,
 l'empreinte d'un album, le dossier préparé, MD5 et SHA-256), `colophon` (la page),
 `fiche` (la fiche d'une photo), `qualite` (la mesure de l'alerte), `legende` (la
