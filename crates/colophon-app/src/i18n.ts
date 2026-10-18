@@ -896,17 +896,24 @@ export const FR = {
     "Photo à la taille exacte de sa case : zoomez (molette ou +) avant de recadrer",
   "planche.couverture.recadrer":
     "Glisser pour recadrer · molette pour zoomer · ⌥ affine",
-  "planche.warn.ppi":
-    "Cette photo imprimerait vers {ppi} ppi ici, sous le plancher de {plancher}. Une case plus petite, un zoom réduit ou une autre photo règlent le problème. L’export le signalera aussi.",
-  "planche.warn.sombre":
-    "Photo très sombre : le papier la rendra plus sombre encore que l’écran. À garder en connaissance de cause, rien ne bloque.",
-  "planche.warn.floue":
-    "Photo floue : elle est dans le dixième le moins net de son dossier. Le papier ne la rendra pas plus nette. Une autre prise de la même scène la remplace peut-être, sinon gardez-la en connaissance de cause.",
+  "alerte.phrase.sous_resolution":
+    "Trop petite pour cette case : elle risque d’imprimer floue. Remplacez-la ou donnez-lui une case plus petite.",
+  "alerte.phrase.sombre": "Photo sombre : elle imprimera plus sombre qu’à l’écran.",
+  "alerte.phrase.floue": "Photo peu nette : parmi les moins nettes de son dossier.",
+  "alerte.phrase.reserve.sous_resolution":
+    "Trop petite pour une demi-page : elle risque d’imprimer floue. Donnez-lui une case plus petite.",
   "alerte.sous_resolution": "{ppi} ppi, sous {plancher}",
   "alerte.sombre": "sombre",
-  "alerte.floue": "floue",
-  "tri.alerte.sous_resolution":
-    "Trop petite pour une demi-page : {ppi} ppi sur une demi-page de ce format, sous le plancher de {plancher}. Elle tient dans une case plus petite.",
+  "alerte.floue": "peu nette",
+  "qualite.titre": "Qualité :",
+  "qualite.groupe": "Qualité des photos",
+  "qualite.voir": "Mener à la planche concernée suivante",
+  "qualite.sous_resolution": "{n} trop petites",
+  "qualite.sous_resolution.un": "{n} trop petite",
+  "qualite.sombre": "{n} sombres",
+  "qualite.sombre.un": "{n} sombre",
+  "qualite.floue": "{n} peu nettes",
+  "qualite.floue.un": "{n} peu nette",
   "table.alerte": "{n} cases en alerte",
   "table.alerte.une": "Une case en alerte",
   "fidele.pdf.aria": "Aperçu fidèle, rendu depuis le PDF",
@@ -1921,17 +1928,24 @@ export const EN: Record<Cle, string> = {
   "planche.recadrer.pleine.status":
     "Photo exactly the size of its cell: zoom in (wheel or +) before cropping",
   "planche.couverture.recadrer": "Drag to crop · wheel to zoom · ⌥ refines",
-  "planche.warn.ppi":
-    "This photo would print near {ppi} ppi here, under the {plancher} floor. A smaller cell, less zoom or another photo fixes it. The export will flag it too.",
-  "planche.warn.sombre":
-    "Very dark photo: paper will print it darker still than the screen. Keep it knowingly, nothing blocks.",
-  "planche.warn.floue":
-    "Blurry photo: it is in the least sharp tenth of its folder. Paper will not make it sharper. Another shot of the same scene may replace it, or keep it knowingly.",
+  "alerte.phrase.sous_resolution":
+    "Too small for this cell: it may print blurry. Replace it or give it a smaller cell.",
+  "alerte.phrase.sombre": "Dark photo: it will print darker than on screen.",
+  "alerte.phrase.floue": "Not sharp: among the least sharp of its folder.",
+  "alerte.phrase.reserve.sous_resolution":
+    "Too small for half a page: it may print blurry. Give it a smaller cell.",
   "alerte.sous_resolution": "{ppi} ppi, under {plancher}",
   "alerte.sombre": "dark",
-  "alerte.floue": "blurry",
-  "tri.alerte.sous_resolution":
-    "Too small for half a page: {ppi} ppi on half a page of this format, under the {plancher} floor. It fits a smaller cell.",
+  "alerte.floue": "not sharp",
+  "qualite.titre": "Quality:",
+  "qualite.groupe": "Photo quality",
+  "qualite.voir": "Go to the next spread concerned",
+  "qualite.sous_resolution": "{n} too small",
+  "qualite.sous_resolution.un": "{n} too small",
+  "qualite.sombre": "{n} dark",
+  "qualite.sombre.un": "{n} dark",
+  "qualite.floue": "{n} not sharp",
+  "qualite.floue.un": "{n} not sharp",
   "table.alerte": "{n} cells flagged",
   "table.alerte.une": "One cell flagged",
   "fidele.pdf.aria": "Faithful preview, rendered from the PDF",

@@ -644,15 +644,28 @@ pile n'est pas une erreur qu'on rattrape.
 
 ## L'alerte de qualité, la fiche et les dates
 
-**Un seul signe, un triangle au coin de la case rognée** (G-s1, `photos.ts::badgesDe`,
-`icons.tsx::PastilleAlerte`) : `sous_resolution` sur la taille de l'**original**, pas de
-la vignette, `sombre` sur la vignette au travers du réglage, `floue` dans le dernier
-décile de netteté du dossier (`qualite::seuil_de_flou`, `PART_FLOUE`, rien sous
-`PETIT_DOSSIER`). **Sans relevé, aucune alerte.** La mesure vient de
-`qualite::releve_album` (le `releve.json`, sinon les vignettes et les en-têtes, au bit
-de `analyze`), une fois par album. `SceneProxies` reçoit les alertes en codes et les
-ajoute au nom : il reste une fonction de la scène. Le Tri et Planches reprennent le
-signe. Aucun seuil de l'audit n'a bougé.
+**Trois signes, un par cause, au coin de la case rognée** (B1, `photos.ts::badgesDe`,
+`SignesAlerte.tsx`, `icons.tsx::SignePixels`/`SigneLune`/`SigneFlou`) : quatre carrés sur
+pastille rouge (`--chip-danger`) pour `sous_resolution`, seule qui bloque l'impression ;
+une lune et deux cercles sur pastille neutre (`--chip-fond`) pour `sombre` et `floue`. La
+plus grave à gauche (`qualite.ts::GRAVITE`). Une bulle au survol et au focus de la case
+(`SceneProxies.onFocusCase`) dit la phrase simple sans chiffre (`phraseDAlerte`), le ppi
+en petit dessous (`detailDAlerte`) ; chaque signe porte `role="img"` et sa phrase. **La
+légende du pied** (`LegendeQualite.tsx`, Livre et Planches) compte les cases par cause,
+chaque compte mène à la première planche concernée puis à la suivante
+(`qualite.ts::plancheSuivante`), et se tait quand tout est bon : Colophon ne note pas
+les photos. `sous_resolution` sur la taille de l'**original**, pas de la vignette,
+`sombre` sur la vignette au travers du réglage, `floue` dans le dernier décile de
+netteté du dossier (`qualite::seuil_de_flou`, `PART_FLOUE`, rien sous `PETIT_DOSSIER`).
+**Le décile reste un quota, et c'est mesuré** : un seuil absolu de netteté a été cherché
+(B2, `qualite::tests::banc_seuil_de_flou`,
+`docs/mesures/2026-10-17-seuil-de-flou.json`) et n'existe pas sur cette mesure — le haut
+des vignettes floutées σ = 3 vaut 936, le 2ᵉ centile des originales 63 : la variance du
+laplacien à 256 px dit la texture de la scène avant le flou. **Sans relevé, aucune
+alerte.** La mesure vient de `qualite::releve_album` (le `releve.json`, sinon les
+vignettes et les en-têtes, au bit de `analyze`), une fois par album. `SceneProxies`
+reçoit les alertes en codes et les ajoute au nom : il reste une fonction de la scène. Le
+Tri et Planches reprennent les signes et la bulle. Aucun seuil de l'audit n'a bougé.
 
 **La fiche d'une photo** (F-s1, `core::fiche`, `FichePhoto.tsx`, ⌘I) lit l'EXIF étendu de
 `meta.rs` et la mesure par `qualite::mesure_photo`. « Voir l'original » passe par

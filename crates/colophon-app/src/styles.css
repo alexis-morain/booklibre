@@ -56,6 +56,11 @@
      dark glass whatever the chrome, so they read on any image. */
   --chip-texte: #ede6d8;
   --chip-accent: #e08a5e;
+  /* The one alert that blocks printing (resolution) wears this chip; white
+     on it is 6,5:1. A chip sits on a photograph, never on the chrome, so it
+     has no dark variant. */
+  --chip-danger: #b3261e;
+  --chip-fond: rgb(var(--ink-rgb) / 0.78);
 
   /* The keyboard review's dark room, scoped onto .revue. */
   --salle-fond: #1a1c1e;
@@ -626,23 +631,98 @@ input[type="radio"] {
   pointer-events: none;
 }
 
-/* The quality alert on a case (resolution under the floor, night-dark,
-   blurry): one 12 px triangle in the top-left corner of the case as the
-   page shows it, the same for both renderers. Information while
-   composing, never a modal: the title carries the remedies, the proxy's
-   name says them, and the Envoi screen repeats the first at export. */
+/* The quality alerts on a case: one sign per cause in the top-left corner
+   of the case as the page shows it, the same for both renderers, the most
+   serious on the left. Each sign sits on its own chip so it reads on any
+   photograph: the ink glass with the chip text (7,3:1 even over white), and
+   red for the resolution, the only one that blocks printing. Information
+   while composing, never a modal: the bubble says the remedy. */
 .slot-alerte {
   position: absolute;
   display: block;
-  width: 12px;
-  height: 12px;
   margin: 4px 0 0 4px;
   line-height: 0;
   cursor: help;
+  z-index: 3;
 }
 
-.slot-alerte svg {
+.slot-alerte.en-ligne {
+  position: relative;
+  display: inline-block;
+  margin: 0;
+  vertical-align: middle;
+  z-index: auto;
+}
+
+.alerte-signes {
+  display: flex;
+  gap: 2px;
+}
+
+.alerte-signe {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  background: var(--chip-fond);
+  color: var(--chip-texte);
+}
+
+.alerte-signe.grave {
+  background: var(--chip-danger);
+  color: #ffffff;
+}
+
+.alerte-signe svg {
   display: block;
+}
+
+/* The bubble: the plain sentence and the gesture, the ppi under it in
+   small. Chrome colours, so it follows the theme like any popover. */
+.alerte-bulle {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: max-content;
+  max-width: 260px;
+  padding: 8px 10px;
+  background: var(--fond);
+  color: var(--text);
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow-pop);
+  font-family: var(--font-ui);
+  font-size: var(--fs-13);
+  line-height: var(--lh-ui);
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* In a line of text (the light table's flags, at the right of the cell),
+   the bubble opens leftwards so the last column keeps it on screen. */
+.slot-alerte.en-ligne .alerte-bulle {
+  left: auto;
+  right: 0;
+}
+
+.slot-alerte:hover .alerte-bulle,
+.slot-alerte.ouverte .alerte-bulle,
+.planche-cell:focus-visible .alerte-bulle {
+  display: grid;
+  gap: 6px;
+}
+
+.alerte-bulle-ligne {
+  display: grid;
+  gap: 2px;
+}
+
+.alerte-bulle small {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
 }
 
 /* A zoomed slot flags itself discreetly even unselected. */
@@ -1091,6 +1171,14 @@ input[type="radio"] {
 .tri-cell > .slot-alerte {
   top: 0;
   left: 0;
+  right: 4px;
+}
+
+/* A sorted photo is a small square in a grid that runs to the window's
+   edge: its bubble stays inside the cell rather than past the last column. */
+.tri-cell .alerte-bulle {
+  width: auto;
+  right: 0;
 }
 
 .tri-cell.selected {
@@ -1325,6 +1413,43 @@ input[type="radio"] {
   min-width: 62px;
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* The foot's second row: the status line, and the quality legend on its
+   right when there is anything to say. */
+.foot-bas {
+  display: flex;
+  align-items: start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.foot-bas > .foot-line {
+  flex: 1;
+  min-width: 0;
+}
+
+.foot-qualite {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: var(--fs-12);
+  white-space: nowrap;
+}
+
+.foot-qualite-ligne {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.foot-qualite-compte {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  font-size: var(--fs-12);
 }
 
 .foot-line {
@@ -3053,14 +3178,6 @@ kbd {
 
 /* « Une case en alerte » : the alert's triangle at the size of the edited
    point, same accent, the title counting the cells. */
-.badge-alerte {
-  width: 9px;
-  height: 8px;
-  background: var(--accent);
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
-  display: inline-block;
-}
-
 .lock {
   display: inline-grid;
   place-items: center;

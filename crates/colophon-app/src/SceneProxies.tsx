@@ -158,6 +158,7 @@ export function SceneProxies({
   onEchap,
   onPlanche,
   alertes,
+  onFocusCase,
 }: {
   scene: Scene;
   mm: number;
@@ -178,6 +179,9 @@ export function SceneProxies({
   onPlanche?: (sens: 1 | -1) => boolean;
   /** Les alertes de chaque case, dites à la fin du nom de sa photo. */
   alertes?: ReadonlyMap<number, Alerte[]>;
+  /** La case dont la photo tient le focus, ou null : c'est elle qui ouvre
+   *  la bulle de ses alertes, comme le survol. */
+  onFocusCase?: (cell: number | null) => void;
 }) {
   const conteneur = useRef<HTMLDivElement>(null);
   /** Le champ ouvert l'a été depuis une boîte, donc le focus lui revient. */
@@ -276,7 +280,10 @@ export function SceneProxies({
             aria-pressed={
               o.role.role === "photo" ? selected === o.role.cell : undefined
             }
-            onFocus={() => (rangClavier = i)}
+            onFocus={() => {
+              rangClavier = i;
+              onFocusCase?.(o.role.role === "photo" ? o.role.cell : null);
+            }}
             // Tab s'en va ailleurs : la place gardée n'a plus lieu d'être.
             // Un `relatedTarget` nul, lui, ne dit rien — c'est aussi bien la
             // boîte qu'on détruit sous le focus que le corps du document.
@@ -284,6 +291,7 @@ export function SceneProxies({
             // un ailleurs : il rendra le focus en se refermant, donc le rang
             // doit lui survivre — sans ça la restauration n'a rien à rendre.
             onBlur={(e) => {
+              onFocusCase?.(null);
               const vers = e.relatedTarget;
               if (
                 vers instanceof Node &&

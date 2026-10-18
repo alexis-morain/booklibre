@@ -65,20 +65,51 @@ export function AlignGlyph({ cote }: { cote: "gauche" | "centre" | "droite" }) {
   );
 }
 
-/** L'alerte de qualité, un seul motif partout : un triangle de 12 px,
- *  l'accent des pastilles cerné du verre sombre, lisible sur toute photo.
- *  Sans texte : le texte est dans le `title` de qui le porte, et dans le
- *  nom de l'objet pour la voix. */
-export function PastilleAlerte() {
+/** Les trois signes de l'alerte de qualité, 12 px, dessinés en
+ *  `currentColor` : c'est la pastille qui les porte (`SignesAlerte`) qui
+ *  pose le fond et l'encre, lisibles sur toute photo. Sans texte : le nom
+ *  est sur la pastille. */
+
+/** Trop petite : quatre carrés, l'image qui se pixelise. */
+export function SignePixels() {
   return (
     <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-      <path
-        d="M 6 1 L 11.25 11 L 0.75 11 Z"
-        fill="var(--chip-accent)"
-        stroke="rgb(var(--ink-rgb) / 0.72)"
-        strokeWidth="1"
-        strokeLinejoin="round"
+      {[
+        [1.5, 1.5],
+        [6.5, 1.5],
+        [1.5, 6.5],
+        [6.5, 6.5],
+      ].map(([x, y]) => (
+        <rect key={`${x}-${y}`} x={x} y={y} width="4" height="4" fill="currentColor" />
+      ))}
+    </svg>
+  );
+}
+
+/** Sombre : un demi-disque, la lune. */
+export function SigneLune() {
+  return (
+    <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+      <circle cx="6" cy="6" r="4.6" fill="none" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M 6 1.4 A 4.6 4.6 0 0 0 6 10.6 Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** Peu nette : deux cercles, l'extérieur estompé, le contour qui bave. */
+export function SigneFlou() {
+  return (
+    <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+      <circle
+        cx="6"
+        cy="6"
+        r="4.6"
+        fill="none"
+        stroke="currentColor"
+        strokeOpacity="0.45"
+        strokeWidth="1.6"
       />
+      <circle cx="6" cy="6" r="2.4" fill="currentColor" />
     </svg>
   );
 }
