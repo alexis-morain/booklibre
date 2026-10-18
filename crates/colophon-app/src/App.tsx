@@ -152,10 +152,13 @@ import { langue, t, useLangue } from "./i18n";
 import { etatRacine, refusRevoir } from "./racine";
 import { jusquAuRendu } from "./mesure";
 import VisionneuseFormat from "./VisionneuseFormat";
-import { cm, echelleCommune, formatLabel, planchePx } from "./visionneuse";
+import { FormatCard } from "./FormatCard";
 import { couvertureProposee, estimerLivre, formatsOfferts } from "./nouvelAlbum";
 import { RaccourcisView } from "./Raccourcis";
 import { BasculeView } from "./BasculeView";
+import { PoliceView } from "./PoliceView";
+import { RecomposerView } from "./RecomposerView";
+import { choixDeRecomposition, formatsDeRecomposition, planchesGardees } from "./recomposer";
 import { chargerFace, chargerFacesObjet, oublierFacesObjet, setAbsents } from "./font";
 import { nomLisible } from "./police";
 import { useVeille } from "./maj";
@@ -318,10 +321,19 @@ export default function App() {
   /** La fiche d'une photo ouverte (chantier F) : son src, et sa case sur la
    *  planche affichée quand elle en a une, pour le ppi. */
   const [fiche, setFiche] = useState<{ src: string; cell: number | null } | null>(null);
-  // Le panneau « Changer de format ». Il ne détient rien : le moteur rend un
-  // album et un bilan, l'aperçu se lit, et l'appliquer passe par `apply` —
-  // donc par l'historique, donc par ⌘Z. Rien n'atteint le disque avant ⌘S.
-  const [bascule, setBascule] = useState(false);
+  // Le panneau de ce dont le livre est fait, une seule place pour trois
+  // faces qui s'excluent : Recomposer (format et rythme, puis le moteur
+  // recompose), le changement de format sans recomposer où son lien mène, et
+  // la Police. Un seul état, donc jamais deux de ces panneaux à la fois, et
+  // le compte des panneaux exclusifs n'a pas bougé (C3).
+  //
+  // Le changement de format ne détient rien : le moteur rend un album et un
+  // bilan, l'aperçu se lit, et l'appliquer passe par `apply` — donc par
+  // l'historique, donc par ⌘Z. Rien n'atteint le disque avant ⌘S.
+  const [bascule, setBascule] = useState<"recomposer" | "format" | "police" | false>(false);
+  // Les formats que Colophon fait imprimer, pour Recomposer : la liste de
+  // l'écran de création, lue une fois.
+  const [imprimables, setImprimables] = useState<string[] | null>(null);
   const [basculeFormats, setBasculeFormats] = useState<FormatPreset[]>([]);
   const [basculeChoisi, setBasculeChoisi] = useState<string | null>(null);
   const [basculeApercu, setBasculeApercu] = useState<{
@@ -965,64 +977,76 @@ export default function App() {
     }
   }, [adopt, openRecent]);
 
-  /**
-   * Recompose the album in place. Edited and locked spreads survive
-   * verbatim, so the button is safe; it still resets ⌘Z, which is the one
-   * thing worth a confirmation.
-   */
-  const recompose = useCallback(async () => {
+  /** Ouvrir le panneau Recomposer. Enregistrer d'abord : le moteur
+   *  recompose `album.json`, donc l'album tel qu'il est sur le disque, et le
+   *  compte des planches gardées doit être celui qu'il lira. */
+  const ouvrirRecomposer = useCallback(async () => {
     if (!hist || building) return;
-    if (
-      !(await confirmDialog(
-        t("recomp.confirme"),
-      ))
-    ) {
-      return;
-    }
     if (dirty && !(await save())) return;
-    setBusyTitle(hist.album.title);
-    setBuilding([]);
-    const off = await onBuildProgress((line) =>
-      setBuilding((b) => (b ? [...b, line] : [line])),
-    );
-    try {
-      const result = await recomposeAlbum();
-      adopt(result);
-      setCuration(await fetchCuration().catch(() => []));
-      setStatus(t("recomp.ok"));
-    } catch (e) {
-      if (String(e).includes("annulée")) setStatus(t("recomp.annulee"));
-      else setError(fault(t("erreur.recomp"), e));
-    } finally {
-      off();
-      setBuilding(null);
-      setBusyTitle(null);
-    }
-  }, [hist, building, dirty, save, adopt]);
+    setBascule("recomposer");
+    if (basculeFormats.length === 0) listFormats().then(setBasculeFormats, () => {});
+    if (imprimables === null) formatsImprimables().then(setImprimables, () => {});
+  }, [hist, building, dirty, save, basculeFormats.length, imprimables]);
 
-  /** Ouvrir le panneau de format, en chargeant la liste une seule fois.
-   *
-   *  Enregistrer d'abord, comme la recomposition : le moteur bascule
-   *  `album.json`, donc l'album tel qu'il est sur le disque. Avec des
-   *  retouches non enregistrées, l'aperçu porterait sur une version
-   *  périmée et l'appliquer les effacerait sans rien dire — précisément la
-   *  perte silencieuse que cette vague existe pour empêcher. */
+  /**
+   * Recompose the album in place, with what the panel changed. Edited and
+   * locked spreads survive — through the bascule when the format changes —
+   * so the gesture is safe; it still resets ⌘Z, and the panel says so.
+   */
+  const recompose = useCallback(
+    async (choix: ReturnType<typeof choixDeRecomposition>) => {
+      if (!hist || building) return;
+      setBascule(false);
+      if (dirty && !(await save())) return;
+      setBusyTitle(hist.album.title);
+      setBuilding([]);
+      const off = await onBuildProgress((line) =>
+        setBuilding((b) => (b ? [...b, line] : [line])),
+      );
+      try {
+        const result = await recomposeAlbum(choix);
+        adopt(result);
+        setCuration(await fetchCuration().catch(() => []));
+        setStatus(t("recomp.ok"));
+      } catch (e) {
+        if (String(e).includes("annulée")) setStatus(t("recomp.annulee"));
+        else setError(fault(t("erreur.recomp"), e));
+      } finally {
+        off();
+        setBuilding(null);
+        setBusyTitle(null);
+      }
+    },
+    [hist, building, dirty, save, adopt],
+  );
+
+  /** Le changement de format sans recomposer, depuis le lien du panneau
+   *  Recomposer : il prend sa place. Enregistrer d'abord, comme la
+   *  recomposition : le moteur bascule `album.json`, donc l'album tel qu'il
+   *  est sur le disque. Avec des retouches non enregistrées, l'aperçu
+   *  porterait sur une version périmée et l'appliquer les effacerait sans
+   *  rien dire — précisément la perte silencieuse que la vague 3 existe pour
+   *  empêcher. */
   const ouvrirBascule = useCallback(async () => {
     if (dirty && !(await save())) return;
     setBasculeChoisi(null);
     setBasculeApercu(null);
+    setBascule("format");
+    if (basculeFormats.length === 0) listFormats().then(setBasculeFormats, () => {});
+  }, [basculeFormats.length, dirty, save]);
+
+  /** Ouvrir le panneau Police. */
+  const ouvrirPolice = useCallback(() => {
     // Le panneau s'ouvre neuf, filtre compris : rouvrir sur « Aucune police
     // ne correspond » et un mot tapé il y a une heure se lit comme une panne.
     setPoliceFiltre("");
-    setBascule(true);
-
-    if (basculeFormats.length === 0) listFormats().then(setBasculeFormats, () => {});
+    setBascule("police");
     // Les faces de la machine, une fois par ouverture du panneau plutôt
     // qu'une fois par session : une police installée entre-temps doit
     // apparaître, et la marche des dossiers coûte quelques dizaines de
     // millisecondes.
     if (inTauri) polices_installees().then(setPolices, () => {});
-  }, [basculeFormats.length, dirty, save]);
+  }, []);
 
   /** Choisir une face : le moteur la copie dans le dossier de l'album, et
    *  l'album la nomme. Par `apply`, donc annulable par ⌘Z comme la bascule
@@ -1399,6 +1423,16 @@ export default function App() {
     // moteur en un appel, l'édition est un seul pas d'annulation.
     dater: () => void daterTout(true),
     dedater: () => void daterTout(false),
+    // Recomposer… et Police… : les deux panneaux de ce dont le livre est
+    // fait, comme les boutons de la barre.
+    recomposer: () => {
+      if (!album) return;
+      void ouvrirRecomposer();
+    },
+    police: () => {
+      if (!album || !inTauri) return;
+      ouvrirPolice();
+    },
     "supprimer-planche": () => {
       if (!album || index < 0 || (view !== "livre" && view !== "planches")) return;
       apply((a) => removeSpread(a, index));
@@ -1695,6 +1729,8 @@ export default function App() {
       dater: () => fire("menu", "dater"),
       dedater: () => fire("menu", "dedater"),
       supprimerPlanche: () => fire("menu", "supprimer-planche"),
+      recomposer: () => fire("menu", "recomposer"),
+      police: () => fire("menu", "police"),
       raccourcis: () => fire("menu", "raccourcis"),
       signalerBug: () => fire("menu", "signaler-bug"),
       signalerPlanche: () => fire("menu", "signaler-planche"),
@@ -2565,8 +2601,8 @@ export default function App() {
           apply((a) => renameAlbum(a, titre));
           setStatus(t("etat.titre.modifie"));
         }}
-        onRecompose={inTauri ? () => void recompose() : undefined}
-        onFormat={inTauri ? () => void ouvrirBascule() : undefined}
+        onRecompose={() => void ouvrirRecomposer()}
+        onFormat={inTauri ? ouvrirPolice : undefined}
         onOpen={inTauri ? undefined : openAlbum}
         onClose={inTauri ? undefined : closeAlbum}
       />
@@ -2601,7 +2637,7 @@ export default function App() {
             setChoixCouverture(choisir);
             raw.couverture();
           }}
-          onFormat={() => void ouvrirBascule()}
+          onFormat={() => void ouvrirRecomposer()}
           onVoir={(planche, cell) => {
             // Sur la planche déjà ouverte, l'effet ne repasse pas : rien à
             // garder pour lui.
@@ -2915,7 +2951,28 @@ export default function App() {
           onFermer={() => setOrnementAu(null)}
         />
       )}
-      {bascule && hist && (
+      {bascule === "recomposer" && hist && (() => {
+        const { formats, courant } = formatsDeRecomposition(
+          basculeFormats,
+          imprimables,
+          hist.album.trim_mm,
+        );
+        return (
+          <RecomposerView
+            // Remonté à chaque liste reçue : la présélection se pose sur
+            // le format de l'album quand la liste arrive.
+            key={formats.map((f) => f.name).join()}
+            album={hist.album}
+            formats={formats}
+            courant={courant}
+            gardees={planchesGardees(hist.album)}
+            onRecomposer={(choix) => void recompose(choix)}
+            onSansRecomposer={() => void ouvrirBascule()}
+            onClose={() => setBascule(false)}
+          />
+        );
+      })()}
+      {bascule === "format" && hist && (
         <BasculeView
           formats={basculeFormats}
           courant={hist.album.trim_mm}
@@ -2924,6 +2981,11 @@ export default function App() {
           enCours={basculeEnCours}
           onChoisir={(f) => void apercuBascule(f)}
           onAppliquer={appliquerBascule}
+          onClose={() => setBascule(false)}
+        />
+      )}
+      {bascule === "police" && hist && (
+        <PoliceView
           polices={polices}
           policeAlbum={hist.album.police ?? null}
           policeInfo={policeInfo}
@@ -2934,7 +2996,6 @@ export default function App() {
           onRendrePolice={rendreLaPolice}
           onClose={() => setBascule(false)}
         />
-
       )}
       {signaler && (
         <SignalerView
@@ -4111,44 +4172,6 @@ function CouvertureProposee({
       </div>
       <figcaption className="setup-hint">{t("setup.couverture.apercu")}</figcaption>
     </figure>
-  );
-}
-
-/** Every card draws at this scale, so the shapes compare in size as well as
- *  in proportion: the 30 × 30 is the large one. */
-const ECHELLE_CARTE = echelleCommune(140);
-
-/**
- * One page format, drawn as an open double page at the scale all cards
- * share: the shapes and the sizes differ, so the choice is visible before
- * any vocabulary. The name comes from the dictionaries, never the engine.
- */
-function FormatCard({
-  f,
-  active,
-  onPick,
-}: {
-  f: FormatPreset;
-  active: boolean;
-  onPick: () => void;
-}) {
-  const p = planchePx(f, ECHELLE_CARTE);
-  return (
-    <button
-      type="button"
-      className={"format-card" + (active ? " active" : "")}
-      onClick={onPick}
-      aria-pressed={active}
-    >
-      <span className="format-preview">
-        <span className="format-page" style={{ width: p.w / 2, height: p.h }} />
-        <span className="format-page" style={{ width: p.w / 2, height: p.h }} />
-      </span>
-      <span className="format-name">{formatLabel(f.name)}</span>
-      <span className="format-dims">
-        {cm(f.w)} × {cm(f.h)} cm
-      </span>
-    </button>
   );
 }
 

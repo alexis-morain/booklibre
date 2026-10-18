@@ -1958,7 +1958,92 @@ input[type="radio"] {
   color: var(--muted);
 }
 
-/* ---- la police de l'album, dans le même panneau ------------------------- */
+/* ---- le panneau Recomposer ----------------------------------------------- */
+
+/* Deux colonnes : les choix à gauche, la visionneuse à droite, qui suit le
+   format choisi. Sous 900 px, la visionneuse passe dessous. */
+.recomposer-panel {
+  width: min(1000px, 94vw);
+}
+
+.recomposer-corps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 28px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .recomposer-corps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.recomposer-aeree {
+  display: flex;
+  gap: 10px;
+  align-items: start;
+  margin: 20px 0 0;
+  cursor: pointer;
+}
+
+.recomposer-aeree input {
+  margin: 3px 0 0;
+  accent-color: var(--accent);
+}
+
+.recomposer-aeree-nom {
+  display: block;
+  font-size: var(--fs-13);
+  color: var(--text);
+}
+
+.recomposer-aeree-note {
+  display: block;
+  font-size: var(--fs-12);
+  color: var(--muted);
+}
+
+.recomposer-gardees {
+  margin: 18px 0 0;
+  font-size: var(--fs-13);
+  color: var(--text);
+}
+
+.recomposer-historique {
+  margin: 4px 0 0;
+  font-size: var(--fs-12);
+  color: var(--muted);
+}
+
+.recomposer-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin: 18px 0 0;
+}
+
+.recomposer-sans {
+  margin: 18px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  font-size: var(--fs-13);
+}
+
+.recomposer-sans-note {
+  display: block;
+  font-size: var(--fs-12);
+  color: var(--muted);
+}
+
+/* La mention d'un format que Colophon ne fait pas imprimer, sous ses cotes. */
+.format-note {
+  font-size: var(--fs-12);
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ---- la police de l'album ------------------------------------------------ */
 
 .bascule-section {
   margin: 22px 0 8px;

@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 #[command(after_help = FORMAT_HELP.as_str())]
 struct Cli {
     /// Folder of photos to build the album from
-    #[arg(required_unless_present_any = ["formats", "profils", "profils_json", "dump_geometry", "dump_ornements", "dump_lut", "dump_scene", "print", "cover", "audit", "reprise", "prevol", "preparer", "sheets", "bascule", "proposition", "gabarits", "reserve", "devis", "fiche", "releve_album", "survol", "dates", "banc_gabarits", "depuis_fiches"])]
+    #[arg(required_unless_present_any = ["formats", "profils", "profils_json", "dump_geometry", "dump_ornements", "dump_lut", "dump_scene", "print", "cover", "audit", "reprise", "prevol", "preparer", "sheets", "bascule", "proposition", "gabarits", "reserve", "devis", "fiche", "releve_album", "survol", "dates", "banc_gabarits", "depuis_fiches", "recomposer"])]
     photos: Option<PathBuf>,
 
     /// Output directory (album.json, album.pdf, thumbnail cache)
@@ -152,6 +152,21 @@ struct Cli {
     /// cellules est replié, et le bilan nomme tout ce qui a bougé.
     #[arg(long, value_name = "FORMAT")]
     bascule: Option<String>,
+
+    /// Recompose l'album de --out depuis son dossier de photos, comme le
+    /// panneau Recomposer : les planches éditées ou verrouillées passent
+    /// telles quelles, le reste se recompose. Pour le serveur de dev.
+    #[arg(long, hide = true)]
+    recomposer: bool,
+
+    /// Avec --recomposer : le nouveau format (nom ou LARGEURxHAUTEUR). Absent,
+    /// celui de l'album. Les planches gardées passent par la bascule.
+    #[arg(long, value_name = "FORMAT", hide = true, requires = "recomposer")]
+    vers: Option<String>,
+
+    /// Avec --recomposer : le nouveau rythme. Absent, celui de l'album.
+    #[arg(long, value_name = "PACE", hide = true, requires = "recomposer")]
+    rythme: Option<String>,
 
     /// Avec --bascule : dit ce qui se passerait, sans rien écrire.
     #[arg(long)]
@@ -502,6 +517,35 @@ fn main() -> Result<()> {
         if !p.rapport.ok {
             std::process::exit(1);
         }
+        return Ok(());
+    }
+
+    if cli.recomposer {
+        let format = cli.vers.as_deref().map(format::parse).transpose()?;
+        let densite = match &cli.rythme {
+            None => None,
+            Some(id) => Some(
+                colophon_core::layout::Densite::par_id(id)
+                    .ok_or_else(|| anyhow::anyhow!("rythme inconnu : {id}"))?,
+            ),
+        };
+        let r = colophon_core::recomposition::recomposer(
+            &cli.out,
+            colophon_core::recomposition::Recomposition {
+                format,
+                densite,
+                langue,
+                progress: Box::new(|line| eprintln!("{line}")),
+                ..Default::default()
+            },
+        )?;
+        eprintln!(
+            "recomposé : {} planches, {} gardées, {} × {} mm",
+            r.album.spreads.len(),
+            colophon_core::recomposition::planches_gardees(&r.album),
+            r.album.trim_mm.w,
+            r.album.trim_mm.h
+        );
         return Ok(());
     }
 

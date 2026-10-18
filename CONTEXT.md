@@ -95,6 +95,15 @@ the originals' headers — and writes nothing until the editor's own save, so
 ⌘Z undoes a change of format like any other edit.
 _Avoid_: resize, convert, reflow, re-layout
 
+**Recomposition**:
+Running the Composer again on an album already composed, from its photo
+folder: every spread a hand edited or locked passes through untouched, and the
+rest is laid out anew. It may change the trim and the pace; a new trim sends
+the kept spreads through the bascule first, so they fold their templates
+rather than lose a photograph (`core::recomposition`). It resets the undo
+history, which a bascule does not.
+_Avoid_: rebuild, regenerate, re-layout
+
 **Aptitude**:
 Whether a template can carry given photographs on a given geometry: it holds
 all of them, and none betrays its cell past `audit::ASPECT_BETRAYAL`. One

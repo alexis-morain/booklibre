@@ -90,7 +90,7 @@ export function ppiDe(d: Defaut): number | null {
  *
  *  - `planche` : le saut existant, quand le défaut en nomme une ;
  *  - `couverture` : l'éditeur de couverture (l'index `COVER` d'App) ;
- *  - `format` : le panneau Format ;
+ *  - `format` : le panneau Recomposer, où se choisit le format ;
  *  - `preparer` : refaire le dossier préparé, seul endroit où un fichier se
  *    juge depuis que la fenêtre ne regarde plus ceux d'à côté de l'album ;
  *  - `ici` : le geste est sur cet écran même (une page à décocher) ;

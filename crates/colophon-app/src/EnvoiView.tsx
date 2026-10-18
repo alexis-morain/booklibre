@@ -20,7 +20,7 @@
 // second thing to keep true.
 
 import { useEffect, useState } from "react";
-import { phraseAbsents } from "./BasculeView";
+import { phraseAbsents } from "./PoliceView";
 import { CommandeView, useRelais } from "./CommandeView";
 import { phraseDefaut, texteMoteur } from "./moteur";
 import { Album } from "./album";
@@ -89,7 +89,7 @@ export function EnvoiView({
   onJump: (planche: number) => void;
   /** L'éditeur de couverture ; `choisir` ouvre aussi le choix de sa photo. */
   onCouverture: (choisir: boolean) => void;
-  /** Le panneau Format. */
+  /** Le panneau Recomposer, où se choisit le format. */
   onFormat: () => void;
   /** Une photo trop petite pour sa case : la planche ouverte sur la case. */
   onVoir: (planche: number, cell: number) => void;

@@ -311,6 +311,36 @@ function albumDevServer(dir: string): Plugin {
           res.end(String(e));
         }
       });
+      // La recomposition, comme la commande `recompose_album` : le moteur
+      // recompose l'album servi depuis ses photos, au format et au rythme
+      // que le panneau a changés, puis le front le relit par GET /__dev/album.
+      // Il écrit le vrai album.json : copies jetables, comme pour POST.
+      server.middlewares.use("/__dev/recomposer", (req, res) => {
+        if (req.method !== "POST") {
+          res.statusCode = 405;
+          res.end();
+          return;
+        }
+        let body = "";
+        req.on("data", (c) => (body += c));
+        req.on("end", () => {
+          try {
+            const choix = JSON.parse(body || "{}") as {
+              format?: { w: number; h: number };
+              densite?: string;
+              langue?: string;
+            };
+            const args = ["--recomposer", "-o", dir, "--langue", choix.langue ?? "fr"];
+            if (choix.format) args.push("--vers", `${choix.format.w}x${choix.format.h}`);
+            if (choix.densite) args.push("--rythme", choix.densite);
+            execFileSync(engineBinary, args, { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
+            res.end("ok");
+          } catch (e) {
+            res.statusCode = 500;
+            res.end(String(e));
+          }
+        });
+      });
       // Le survol d'un dossier de photos par l'écran de création : le
       // harnais « choisit » toujours le dossier des photos de l'album servi,
       // son `root`, et le moteur le lit comme la commande `survol_dossier`.

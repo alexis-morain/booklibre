@@ -1082,99 +1082,57 @@ fn choose_variante(id: String, state: State<'_, AppState>) -> Result<OpenedAlbum
 /// Recompose the open album from its photo folder, preserving every spread
 /// edited by hand or locked. Their photos are withdrawn from the pipeline
 /// and the spreads re-inserted at their place in time: recomposing is safe.
+///
+/// `format` and `densite` are the Recomposer panel's two choices, both
+/// optional: absent, the album's own are read back from the file, exactly as
+/// before the panel existed. A format goes through the bascule first, so the
+/// kept spreads fold their templates rather than lose a photo
+/// (`core::recomposition`).
 #[tauri::command]
 async fn recompose_album(
     langue: String,
+    format: Option<colophon_core::Size>,
+    densite: Option<String>,
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<OpenedAlbum, String> {
     let langue = langue_de(&langue)?;
+    let densite = match densite {
+        None => None,
+        Some(id) => Some(
+            colophon_core::layout::Densite::par_id(&id)
+                .ok_or_else(|| format!("rythme inconnu : {id}"))?,
+        ),
+    };
+    if let Some(f) = &format {
+        if !(f.w.is_finite() && f.h.is_finite() && f.w > 0.0 && f.h > 0.0) {
+            return Err(format!("format invalide : {} × {}", f.w, f.h));
+        }
+    }
     let dir = {
         let guard = state.open.lock().unwrap();
         guard.as_ref().ok_or("aucun album ouvert")?.dir.clone()
     };
-    let json = dir.join("album.json");
-    let text = std::fs::read_to_string(&json)
-        .map_err(|e| format!("lecture de {} : {e}", json.display()))?;
-    let album: Album =
-        serde_json::from_str(&text).map_err(|e| format!("album.json illisible : {e}"))?;
-    let root = PathBuf::from(&album.root);
-    if !root.is_dir() {
-        return Err(format!(
-            "dossier de photos introuvable ({}) : impossible de recomposer",
-            root.display()
-        ));
-    }
-
-    // Pinned spreads keep their place through a capture-time anchor. A
-    // photo-less spread (texte, vide) inherits the time of the spread
-    // before it, so it stays glued to its chapter.
-    let mut pinned = Vec::new();
-    let mut last: Option<colophon_core::chrono::NaiveDateTime> = None;
-    for spread in &album.spreads {
-        let t = spread
-            .slots
-            .first()
-            .map(|sl| colophon_core::meta::read(&root.join(&sl.src)).taken)
-            .or(last);
-        if spread.pinned() {
-            pinned.push((spread.clone(), t));
-        }
-        last = t;
-    }
-    let target = album.spreads.len().saturating_sub(pinned.len()).max(4);
 
     state.cancel_build.store(false, Ordering::Relaxed);
     let flag = state.cancel_build.clone();
     let emitter = app.clone();
     let build_out = dir.clone();
-    let opts = colophon_core::BuildOptions {
-        title: Some(album.title.clone()),
-        spreads: target,
-        trim: album.trim_mm,
+    let opts = colophon_core::recomposition::Recomposition {
+        format,
+        densite,
+        langue,
+        // Le colophon dit le jour où le livre a été composé, et une
+        // recomposition le compose : la date du jour, comme avant.
+        aujourdhui: None,
         progress: Box::new(move |line| {
             colophon_core::log::line(line);
             let _ = emitter.emit("build:progress", line);
         }),
         cancel: Box::new(move || flag.load(Ordering::Relaxed)),
-        pinned,
-        cover: album.cover.clone(),
-        // The pace the album was built at, read back from the file: a
-        // recomposition keeps it rather than quietly reverting to the
-        // default one.
-        densite: album.densite,
-        // Same reasoning for the colophon page: somebody who took it away
-        // must not have to take it away again after every recomposition.
-        colophon: album
-            .spreads
-            .iter()
-            .any(|s| s.template == colophon_core::colophon::TEMPLATE),
-        // And the half-title at the head of the book, on the same rule.
-        garde: album
-            .spreads
-            .iter()
-            .any(|s| s.template == colophon_core::garde::TEMPLATE),
-        // A recomposition is not a choice of album: the user already made
-        // that one, and a second offer would throw away every hand edit that
-        // the pinned spreads were kept for.
-        variantes: Vec::new(),
-        // The adjustments follow the photographs, not the spreads: a field
-        // BuildOptions did not carry would be destroyed by the rebuild.
-        reglages: album.reglages.clone(),
-        // And the face, on the same rule: the file stays beside album.json,
-        // which the rebuild writes into, so only the album's record of it
-        // could be lost — silently, and in the one place nobody would look.
-        police: album.police.clone(),
-        // Le colophon dit le jour où le livre a été composé, et une
-        // recomposition le compose : la date du jour, comme avant.
-        aujourdhui: None,
-        // Une recomposition récrit les lignes de chapitre, la garde et le
-        // colophon : dans la langue de l'interface qui la lance. Les
-        // planches épinglées gardent leurs mots, elles passent telles quelles.
-        langue,
     };
     tauri::async_runtime::spawn_blocking(move || {
-        colophon_core::build_album(&root, &build_out, opts)
+        colophon_core::recomposition::recomposer(&build_out, opts)
     })
     .await
     .map_err(|e| e.to_string())?

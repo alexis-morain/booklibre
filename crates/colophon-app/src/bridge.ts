@@ -503,12 +503,35 @@ export async function surFermeture(
 }
 
 /** Recompose the open album from its photo folder. Edited and locked
- *  spreads survive verbatim; progress streams like a build. Tauri only. */
-export async function recomposeAlbum(): Promise<OpenedAlbum> {
+ *  spreads survive verbatim; progress streams like a build.
+ *
+ *  `choix` carries only what the Recomposer panel changed
+ *  (`recomposer.ts::choixDeRecomposition`): empty, the engine reads the
+ *  format and the pace back from the file, exactly as before the panel. The
+ *  browser harness recomposes through the engine binary, on the album it
+ *  serves. */
+export async function recomposeAlbum(
+  choix: { format?: { w: number; h: number }; densite?: string } = {},
+): Promise<OpenedAlbum> {
   if (!inTauri) {
-    throw new Error("recomposition hors application : utilisez la commande colophon");
+    const res = await fetch("/__dev/recomposer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...choix, langue: langue() }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return openAlbum("");
   }
-  return invoke<OpenedAlbum>("recompose_album", { langue: langue() });
+  const opened = await invoke<OpenedAlbum>("recompose_album", {
+    langue: langue(),
+    format: choix.format ?? null,
+    densite: choix.densite ?? null,
+  });
+  // The geometry of the album as recomposed, which may be another format:
+  // a page whose dump nobody loaded does not draw, it throws, and without an
+  // error boundary over the tree that is a blank window.
+  await chargeGeometrie();
+  return opened;
 }
 
 /** Abandon the composition in flight. The engine stops between photos. */
