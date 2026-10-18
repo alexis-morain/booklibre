@@ -5,6 +5,15 @@ you exactly what to paste, and the app's Help menu builds the whole report
 for you, one entry per template; outside the app, `colophon --audit` prints
 the numbers it quotes. Read on if you want to change the code.
 
+## Where to start
+
+The issues labelled
+[good first issue](https://github.com/alexis-morain/colophon/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+each describe the expected result and the files involved, and none needs to
+know the composer: reading TIFF files, exporting spreads as JPEG, dropping a
+folder on the welcome screen. Say in the issue that you are taking one, so two
+people do not do the same work.
+
 ## Build and run
 
 Requirements: a stable Rust toolchain, Node 20 or newer, and the
