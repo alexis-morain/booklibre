@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { execFileSync } from "node:child_process";
-import { readFileSync, renameSync, writeFileSync } from "node:fs";
+import { readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import type { Plugin, ViteDevServer } from "vite";
@@ -147,6 +147,39 @@ function albumDevServer(dir: string): Plugin {
           );
         } catch (e: any) {
           // Un bloquant sort en échec, le rapport est sur stdout quand même.
+          if (e?.stdout) {
+            repondre(e.stdout);
+            return;
+          }
+          res.statusCode = 500;
+          res.end(String(e?.stderr || e));
+        }
+      });
+      // « Faire imprimer » au harnais (A1) : le même `--preparer`, pour
+      // Cloudprinter, dans un `commandes/` du répertoire temporaire vidé à
+      // chaque fois, comme celui du dossier de données de la fenêtre.
+      server.middlewares.use("/__dev/preparer-commande", (req, res) => {
+        if (req.method !== "POST") {
+          res.statusCode = 405;
+          res.end("POST seulement");
+          return;
+        }
+        const commandes = join(tmpdir(), "colophon-donnees", "commandes");
+        const dest = join(commandes, "Album – Cloudprinter");
+        console.log(`[preparer-commande] ${dest}`);
+        rmSync(commandes, { recursive: true, force: true });
+        const repondre = (out: string) => {
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ dossier: basename(dest), ...JSON.parse(out), commande: true }));
+        };
+        try {
+          repondre(
+            execFileSync(engineBinary, ["--preparer", dest, "--profil", "cloudprinter", "-o", dir], {
+              encoding: "utf8",
+              maxBuffer: 32 * 1024 * 1024,
+            }),
+          );
+        } catch (e: any) {
           if (e?.stdout) {
             repondre(e.stdout);
             return;

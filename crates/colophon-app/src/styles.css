@@ -4794,6 +4794,36 @@ button.envoi-defaut-ou:focus-visible {
   line-height: var(--lh-ui);
 }
 
+/* Le sandbox se dit au-dessus du parcours : rien ne sera imprimé ni payé. */
+.commande-sandbox {
+  margin: 0 0 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--rule);
+  border-left: 2px solid var(--accent);
+  font-size: var(--fs-13);
+  line-height: var(--lh-ui);
+}
+
+/* Une ligne par étape : ce qui se passe, et ce qui ne se passe pas. */
+.commande-explique {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: var(--fs-13);
+  line-height: var(--lh-ui);
+}
+
+.envoi-actions > .commande-explique {
+  margin-top: 10px;
+}
+
+.commande-livraison {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  margin: 0 0 10px;
+  font-size: var(--fs-13);
+}
+
 .commande-erreur {
   margin: 10px 0 0;
   color: var(--accent);

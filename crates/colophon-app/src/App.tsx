@@ -23,6 +23,7 @@ import {
   surFermeture,
   exportPdf,
   preparerDossier,
+  preparerPourCommande,
   Preparation,
   fetchCuration,
   FormatPreset,
@@ -875,19 +876,24 @@ export default function App() {
   /** Prepare the order folder for a two-file supplier: the interior, the
    *  cover, their manifest and the sheet, then the check read again on the
    *  files written. The folder is chosen in the native dialog, and its path
-   *  never reaches this side. */
-  const preparer = useCallback(async () => {
+   *  never reaches this side. « Faire imprimer » (`commande`) skips the
+   *  dialog: the engine writes into the app's data folder, and Envoi opens
+   *  the order straight after. */
+  const preparer = useCallback(async (commande = false) => {
     if (rendering || !hist || !(await save())) return;
     setRendering(true);
     setStatus(t("export.rendu"));
     try {
       let dernier = 0;
-      const p = await preparerDossier(hist.album.title, profil, (done, total) => {
+      const progres = (done: number, total: number) => {
         const now = performance.now();
         if (done < total && now - dernier < 1000) return;
         dernier = now;
         setStatus(t("export.progress", { done, total }));
-      });
+      };
+      const p = commande
+        ? await preparerPourCommande(hist.album.title, progres)
+        : await preparerDossier(hist.album.title, profil, progres);
       if (p === null) {
         setStatus(t("export.enregistrement.annule"));
         return;
@@ -2608,7 +2614,7 @@ export default function App() {
           }
           reserveVide={entries.length === 0}
           onExport={() => void regenPdf()}
-          onPrepare={() => void preparer()}
+          onPrepare={(commande) => void preparer(commande)}
           preparation={preparation}
           exporting={rendering}
           exporte={exporte}

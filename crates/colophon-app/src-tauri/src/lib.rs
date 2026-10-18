@@ -1454,6 +1454,9 @@ struct Preparation {
     dossier: String,
     fichiers: Vec<String>,
     rapport: colophon_core::prevol::PrevolReport,
+    /// Préparé par « Faire imprimer » : le parcours de commande s'ouvre de
+    /// lui-même.
+    commande: bool,
 }
 
 /// Prépare le dossier de la commande : la boîte native choisit un dossier,
@@ -1499,6 +1502,75 @@ async fn preparer_dossier(
         .into_path()
         .map_err(|e| format!("dossier illisible : {e}"))?
         .join(&nom);
+    let p = preparer_dans(&app, &state, dir, profil, dest.clone(), nom, false).await?;
+    // Le dossier s'ouvre de lui-même : c'est là que la personne va prendre
+    // les deux fichiers pour la commande. Un échec d'ouverture ne défait pas
+    // ce qui est écrit.
+    let _ = ouvrir_dossier(&dest);
+    Ok(Some(p))
+}
+
+/// « Faire imprimer » (A1) : le même dossier que `preparer_dossier`, pour
+/// Cloudprinter, sans boîte et sans Finder. Il s'écrit dans
+/// `<données>/commandes/<Titre> – Cloudprinter`, qui remplace la préparation
+/// précédente (`dossier_pour_commande`) ; le chemin reste dans `AppState`,
+/// où Commander et « Montrer le dossier » le prennent, et la fenêtre n'en
+/// reçoit que le nom.
+#[tauri::command]
+async fn preparer_pour_commande(
+    app: tauri::AppHandle,
+    titre: String,
+    state: State<'_, AppState>,
+) -> Result<Preparation, String> {
+    let dir = {
+        let guard = state.open.lock().unwrap();
+        guard.as_ref().ok_or("aucun album ouvert")?.dir.clone()
+    };
+    let profil = printer_profile("cloudprinter")?;
+    let donnees = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("dossier de données introuvable : {e}"))?;
+    let dest = dossier_pour_commande(&donnees, &titre, profil.nom)?;
+    let nom = nom_du_dossier_prepare(&titre, profil.nom);
+    preparer_dans(&app, &state, dir, profil, dest, nom, true).await
+}
+
+/// Où « Faire imprimer » écrit : `<données>/commandes/<nom>`, après avoir
+/// vidé `commandes` de toute préparation d'avant. Une seule à la fois, parce
+/// qu'une préparation pèse le poids des photographies à 300 dpi et que
+/// personne ne vient jamais faire le ménage dans le dossier de données.
+/// Le nom ne peut pas sortir de `commandes` : `nom_propre` remplace les
+/// séparateurs, et le suffixe de l'imprimeur interdit `.` et `..` ; on le
+/// vérifie quand même avant d'effacer quoi que ce soit.
+fn dossier_pour_commande(donnees: &Path, titre: &str, imprimeur: &str) -> Result<PathBuf, String> {
+    let nom = nom_du_dossier_prepare(titre, imprimeur);
+    let mut parts = Path::new(&nom).components();
+    if !matches!((parts.next(), parts.next()), (Some(std::path::Component::Normal(_)), None)) {
+        return Err(format!("nom de dossier refusé : {nom}"));
+    }
+    let commandes = donnees.join("commandes");
+    match std::fs::remove_dir_all(&commandes) {
+        Ok(()) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(format!("préparation précédente : {e}")),
+    }
+    std::fs::create_dir_all(&commandes).map_err(|e| format!("création de {} : {e}", commandes.display()))?;
+    Ok(commandes.join(nom))
+}
+
+/// Ce que les deux préparations partagent : `export::preparer` dans `dest`,
+/// la progression en `export:progress`, puis le dossier retenu dans
+/// `AppState` pour Commander et « Montrer le dossier ».
+async fn preparer_dans(
+    app: &tauri::AppHandle,
+    state: &State<'_, AppState>,
+    dir: PathBuf,
+    profil: &'static colophon_core::printer::PrinterProfile,
+    dest: PathBuf,
+    nom: String,
+    commande: bool,
+) -> Result<Preparation, String> {
     state.cancel_export.store(false, Ordering::Relaxed);
     let flag = state.cancel_export.clone();
     let emetteur = app.clone();
@@ -1535,11 +1607,7 @@ async fn preparer_dossier(
         papier: profil.commande.map(|c| c.papier),
     });
     *state.envoi.lock().unwrap() = None;
-    // Le dossier s'ouvre de lui-même : c'est là que la personne va prendre
-    // les deux fichiers pour la commande. Un échec d'ouverture ne défait pas
-    // ce qui est écrit.
-    let _ = ouvrir_dossier(&dest);
-    Ok(Some(Preparation { dossier: nom, fichiers: p.fichiers, rapport: p.rapport }))
+    Ok(Preparation { dossier: nom, fichiers: p.fichiers, rapport: p.rapport, commande })
 }
 
 /// Rouvre le dernier dossier préparé. Le chemin est celui que l'app a écrit,
@@ -2524,6 +2592,7 @@ pub fn run() {
             render_pdf,
             export_pdf,
             preparer_dossier,
+            preparer_pour_commande,
             montrer_dossier_prepare,
             list_formats,
             build_album_from_folder,
@@ -2910,6 +2979,46 @@ mod tests {
             "Été - mer – Cloudprinter"
         );
         assert_eq!(nom_du_dossier_prepare("", "Cloudprinter"), "album – Cloudprinter");
+    }
+
+    /// « Faire imprimer » écrit dans `<données>/commandes/<nom>`, et nulle
+    /// part ailleurs : quel que soit le titre, la destination est un enfant
+    /// direct de `commandes`, et une préparation remplace la précédente,
+    /// d'un autre titre comprise, au lieu d'empiler 95 Mo à chaque essai.
+    #[test]
+    fn la_preparation_pour_commande_reste_dans_le_dossier_de_donnees_et_se_remplace() {
+        let donnees = std::env::temp_dir().join(format!("colophon-commandes-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&donnees);
+        std::fs::create_dir_all(&donnees).unwrap();
+        let commandes = donnees.join("commandes");
+        for titre in ["Corse 2013", "..", "../../etc", "/", "a/b\\c:d", "", " . "] {
+            let dest = dossier_pour_commande(&donnees, titre, "Cloudprinter").unwrap();
+            assert_eq!(dest.parent(), Some(commandes.as_path()), "{titre:?} → {}", dest.display());
+            assert!(
+                matches!(dest.file_name(), Some(n) if n != ".." && n != "."),
+                "{titre:?} → {}",
+                dest.display()
+            );
+            assert!(commandes.is_dir(), "{titre:?}");
+        }
+
+        // Une préparation d'avant, sous un autre titre, avec ses fichiers.
+        let vieille = commandes.join("Mauritanie – Cloudprinter");
+        std::fs::create_dir_all(&vieille).unwrap();
+        std::fs::write(vieille.join("album-print.pdf"), b"vieux").unwrap();
+        let meme = commandes.join("Corse 2013 – Cloudprinter");
+        std::fs::create_dir_all(&meme).unwrap();
+        std::fs::write(meme.join("album-cover.pdf"), b"vieux").unwrap();
+        // Ce qui vit à côté de `commandes` n'est pas à elle.
+        std::fs::write(donnees.join("commande.json"), b"{}").unwrap();
+
+        let dest = dossier_pour_commande(&donnees, "Corse 2013", "Cloudprinter").unwrap();
+        assert_eq!(dest, meme);
+        assert!(!vieille.exists(), "la préparation d'un autre titre reste");
+        assert!(!meme.join("album-cover.pdf").exists(), "un fichier d'avant reste");
+        assert_eq!(std::fs::read_dir(&commandes).unwrap().count(), 0);
+        assert!(donnees.join("commande.json").exists(), "commande.json a été touché");
+        std::fs::remove_dir_all(&donnees).unwrap();
     }
 
     /// The id is a folder name, nothing else. Everything that could climb out
