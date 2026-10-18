@@ -6,13 +6,18 @@
 // L'écran attend en relisant l'état toutes les cinq secondes, et la liste
 // des commandes prend le relais quand le paiement a abouti.
 //
+// Après « Faire imprimer » (A1), le parcours s'ouvre seul, sans « Commander »,
+// la grille se demande d'elle-même quand le relais n'ouvre qu'un pays, et le
+// bouton de la grille enchaîne l'envoi et la confirmation : trois gestes
+// jusqu'à Stripe.
+//
 // Rien ne s'affiche sans relais compilé, sans dossier préparé dans cette
 // ouverture d'Envoi ou sans contrôle vert (`commandePossible`) : jamais un
 // bouton grisé. Un relais compilé qui ne répond pas se dit, à la place de
 // Commander, avec « Réessayer » (`relaisIndisponible`). La liste des commandes, elle, se montre dès qu'il y en a une,
 // et se relit à chaque ouverture d'Envoi.
 
-import { useCallback, useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { Dialogue } from "./Dialogue";
 import {
   Preparation,
@@ -27,6 +32,7 @@ import {
 } from "./bridge";
 import {
   IntentionVue,
+  Parcours,
   Relais,
   aRelire,
   abandonnable,
@@ -37,6 +43,7 @@ import {
   refusDefinitif,
   annulableIntention,
   avancer,
+  commandeDirecte,
   commandePossible,
   formatInvendable,
   niveauChoisi,
@@ -45,6 +52,7 @@ import {
   phraseConfirmation,
   phraseErreur,
   phraseIntention,
+  phraseLivraison,
   prixDeCentimes,
   relaisDe,
   relaisIndisponible,
@@ -57,11 +65,52 @@ const RELECTURE_MS = 5000;
 
 const mo = (octets: number) => (octets / 1e6).toFixed(1);
 
-export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparation | null }) {
-  const langue = useLangue();
-  // Null tant que la première réponse n'est pas venue.
+/** Le relais répond-il ? Sans relais compilé, `relaisPays` rend null sans
+ *  un appel ; un échec, lui, est un relais compilé qui ne répond pas, et
+ *  l'écran le dit au lieu de se taire. Tenu par Envoi, qui en tire le nom de
+ *  son bouton (« Faire imprimer »), et passé à `CommandeView`. `relais` est
+ *  null tant que la première réponse n'est pas venue. */
+export function useRelais(): { relais: Relais | null; sonde: boolean; sonder: () => void } {
   const [relais, setRelais] = useState<Relais | null>(null);
   const [sonde, setSonde] = useState(false);
+  const vivant = useRef(true);
+  const sonder = useCallback(() => {
+    setSonde(true);
+    relaisPays().then(
+      (p) => {
+        if (!vivant.current) return;
+        const r = relaisDe(p);
+        // La release publique n'en porte aucun : ce n'est pas une panne,
+        // mais au harnais comme dans une release de test on doit le voir.
+        if (r.etat === "absent") console.info("colophon : aucun relais compilé, Commander ne s'offre pas");
+        setRelais(r);
+        setSonde(false);
+      },
+      () => vivant.current && (setRelais({ etat: "injoignable" }), setSonde(false)),
+    );
+  }, []);
+  useEffect(() => {
+    vivant.current = true;
+    sonder();
+    return () => {
+      vivant.current = false;
+    };
+  }, [sonder]);
+  return { relais, sonde, sonder };
+}
+
+export function CommandeView({
+  preparationNeuve,
+  relais,
+  sonde,
+  sonder,
+}: {
+  preparationNeuve: Preparation | null;
+  relais: Relais | null;
+  sonde: boolean;
+  sonder: () => void;
+}) {
+  const langue = useLangue();
   const [intentions, setIntentions] = useState<IntentionVue[]>([]);
   const [parcours, envoyer] = useReducer(avancer, { etape: "repos" });
   const [occupe, setOccupe] = useState<string | null>(null);
@@ -73,21 +122,9 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
     for (const i of liste) envoyer({ type: "etat", intention: i });
   }, []);
 
-  // Le relais répond-il ? Sans relais compilé, `relaisPays` rend null sans
-  // un appel ; un échec, lui, est un relais compilé qui ne répond pas, et
-  // l'écran le dit au lieu de se taire.
-  const sonder = useCallback((vivant: () => boolean = () => true) => {
-    setSonde(true);
-    relaisPays().then(
-      (p) => vivant() && (setRelais(relaisDe(p)), setSonde(false)),
-      () => vivant() && (setRelais({ etat: "injoignable" }), setSonde(false)),
-    );
-  }, []);
-
-  // À l'ouverture d'Envoi : le relais, et où en sont les commandes.
+  // À l'ouverture d'Envoi : où en sont les commandes.
   useEffect(() => {
     let vivant = true;
-    sonder(() => vivant);
     relaisRelire().then(
       (r) => {
         if (!vivant) return;
@@ -99,7 +136,7 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
     return () => {
       vivant = false;
     };
-  }, [recevoir, sonder]);
+  }, [recevoir]);
 
   // Tant que l'écran est ouvert, ce qui attend se relit toutes les cinq
   // secondes. L'effet tombe avec la dernière intention en attente.
@@ -134,12 +171,37 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
     }
   };
 
+  // Un échec rend le choix du pays, d'où « Voir les prix » réessaie.
   const voirLesPrix = () => {
     if (parcours.etape !== "pays") return;
-    void tenter(t("commande.devis.encours"), async () => {
-      envoyer({ type: "offre", offre: await relaisCreer(parcours.choisi, parcours.region) });
-    });
+    void tenter(
+      t("commande.devis.encours"),
+      async () => {
+        envoyer({ type: "offre", offre: await relaisCreer(parcours.choisi, parcours.region) });
+      },
+      () => envoyer({ type: "echec" }),
+    );
   };
+
+  // « Faire imprimer » a préparé ce dossier : le parcours s'ouvre seul, une
+  // fois par préparation. Revenu au repos, « Commander » le rouvre.
+  const direct = commandeDirecte(joignable, preparationNeuve);
+  const [ouvertPour, setOuvertPour] = useState<Preparation | null>(null);
+  useEffect(() => {
+    if (!direct || !pays || parcours.etape !== "repos" || ouvertPour === preparationNeuve) return;
+    setOuvertPour(preparationNeuve);
+    envoyer({ type: "commander", pays });
+  }, [direct, pays, parcours.etape, ouvertPour, preparationNeuve]);
+
+  // Un seul pays, rien à choisir : la grille se demande tout de suite. Une
+  // fois par étape, le double rendu de développement compris : chaque
+  // demande crée une intention au relais.
+  const demandee = useRef<Parcours | null>(null);
+  useEffect(() => {
+    if (parcours.etape !== "pays" || !parcours.saute || demandee.current === parcours) return;
+    demandee.current = parcours;
+    voirLesPrix();
+  });
 
   // Le niveau se garde dès le choix : la liste rouvre le paiement avec lui.
   const choisirNiveau = (id: string, niveau: string) => {
@@ -257,7 +319,7 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
         </div>
       )}
 
-      {possible && parcours.etape === "repos" && (
+      {possible && parcours.etape === "repos" && (!direct || ouvertPour === preparationNeuve) && (
         <div className="commande-ouvrir">
           <button
             className="envoi-exporter"
@@ -273,7 +335,13 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
         <section className="commande" aria-label={t("commande.titre")}>
           <h3>{t("commande.titre")}</h3>
 
-          {parcours.etape === "pays" && (
+          {"offre" in parcours && parcours.offre.mode === "sandbox" && (
+            <p className="commande-sandbox" role="note">
+              {t("commande.sandbox.bandeau")}
+            </p>
+          )}
+
+          {parcours.etape === "pays" && !parcours.saute && (
             <>
               <div className="commande-grille">
                 <label htmlFor="commande-pays">{t("commande.pays")}</label>
@@ -316,6 +384,15 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
             </>
           )}
 
+          {parcours.etape === "grille" && parcours.livraison && (
+            <p className="commande-livraison">
+              <span>{phraseLivraison(parcours.livraison)}</span>
+              <button className="link" disabled={occupe !== null} onClick={() => envoyer({ type: "changer" })}>
+                {t("commande.changer")}
+              </button>
+            </p>
+          )}
+
           {(parcours.etape === "grille" || parcours.etape === "envoi") && (
             <fieldset className="commande-offres" disabled={parcours.etape === "envoi"}>
               <legend>{t("commande.grille")}</legend>
@@ -341,11 +418,11 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
             <div className="commande-gestes">
               <button
                 className="envoi-exporter"
-                title={t("commande.envoyer.titre")}
+                title={t("commande.continuer.titre")}
                 disabled={occupe !== null}
                 onClick={() => void envoyerLesFichiers()}
               >
-                {t("commande.envoyer")}
+                {t("commande.continuer", { prix: prix(niveauChoisi(parcours).prix_ttc_centimes) })}
               </button>
               <button className="link" onClick={() => envoyer({ type: "retour" })}>
                 {t("commande.abandonner")}
@@ -355,6 +432,9 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
 
           {parcours.etape === "envoi" && (
             <div className="commande-envoi">
+              <p className="commande-explique" role="status">
+                {t("commande.explique.envoi")}
+              </p>
               {(["interieur", "couverture"] as const).map((q) => (
                 <div key={q} className="commande-barre">
                   <label htmlFor={`commande-barre-${q}`}>{t(`commande.envoi.${q}`)}</label>
@@ -438,6 +518,7 @@ export function CommandeView({ preparationNeuve }: { preparationNeuve: Preparati
                 {phraseConfirmation(prix(niveauChoisi(parcours).prix_ttc_centimes), parcours.offre.mode)}
               </p>
               <p className="envoi-sub">{nomNiveau(niveauChoisi(parcours))}</p>
+              <p className="commande-explique">{t("commande.explique.paiement")}</p>
               <div className="commande-confirmation-gestes">
                 <button className="envoi-exporter" onClick={payer}>
                   {t("commande.payer.ouvrir")}

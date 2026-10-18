@@ -29,15 +29,25 @@ export function imprimeurAffiche(
 }
 
 /** Le bouton de l'écran. Chez qui relie deux fichiers, il prépare un
- *  dossier ; sinon il enregistre un PDF, comme il l'a toujours fait. */
-export function actionEnvoi(p: Printer): { prepare: boolean; texte: string; titre: string } {
-  return p.fichiers === "deux"
-    ? {
+ *  dossier ; sinon il enregistre un PDF, comme il l'a toujours fait. Chez
+ *  Cloudprinter, quand le relais répond, il devient « Faire imprimer » : la
+ *  préparation se fait sans boîte, dans le dossier de données, et mène droit
+ *  à la commande (`commande`). Sans relais joignable, rien ne change. */
+export function actionEnvoi(
+  p: Printer,
+  relaisJoignable = false,
+): { prepare: boolean; commande: boolean; texte: string; titre: string } {
+  if (p.fichiers !== "deux") {
+    return { prepare: false, commande: false, texte: t("envoi.exporter"), titre: t("envoi.exporter.titre") };
+  }
+  return relaisJoignable && p.id === PROFIL_ENVOI
+    ? { prepare: true, commande: true, texte: t("envoi.faire_imprimer"), titre: t("envoi.faire_imprimer.titre") }
+    : {
         prepare: true,
+        commande: false,
         texte: t("envoi.preparer", { imprimeur: p.nom }),
         titre: t("envoi.preparer.titre"),
-      }
-    : { prepare: false, texte: t("envoi.exporter"), titre: t("envoi.exporter.titre") };
+      };
 }
 
 /** Une phrase : le dossier est prêt, ou ce que le contrôle relu sur ses

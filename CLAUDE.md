@@ -487,6 +487,17 @@ jamais dans un `match` sur l'identifiant. MD5 et SHA-256 sont écrits à la main
 crate de hachage et n'en gagne pas. Le chemin du dossier reste dans `AppState`
 (`montrer_dossier_prepare`), le front n'en reçoit que le nom.
 
+**Quand le relais répond, le bouton s'appelle « Faire imprimer »** (A1,
+`envoi.ts::actionEnvoi(p, relaisJoignable)`) : `preparer_pour_commande(titre)`, le même
+`export::preparer` sous Cloudprinter, **sans boîte ni Finder**, dans
+`<données>/commandes/<Titre> – Cloudprinter` (`dossier_pour_commande`, qui vide
+`commandes/` d'abord : une préparation à la fois, jamais hors du dossier de données).
+`Preparation.commande` vaut alors vrai et `commandeDirecte` ouvre le parcours tout seul,
+sans « Commander » (qui revient si l'on retourne au repos). Relais `absent` ou
+`injoignable` : « Préparer pour Cloudprinter » et la boîte, comme avant. L'état du relais
+est tenu par Envoi (`useRelais`) et passé à `CommandeView`. Au harnais,
+`POST /__dev/preparer-commande`.
+
 **Le Composer pose une couverture** quand `BuildOptions.cover` est vide
 (`build::photo_de_couverture`) : la mieux notée du quartile haut, paysage ou carrée,
 parmi les photos qui tiennent 250 ppi sur la feuille de couverture des quatre profils ;
@@ -576,7 +587,12 @@ jeu fermé de caractères. L'URL ne passe jamais par la fenêtre.
 
 **Le parcours** (`CommandeView.tsx`, la machine `commande.ts::avancer`) : pays, grille
 TTC par niveau, envoi à deux barres, confirmation en toutes lettres
-(`phraseConfirmation`), navigateur, attente. Ce qui bouge seul (`enAttente` :
+(`phraseConfirmation`), navigateur, attente. Un seul pays sans région (`saute`) : la
+grille se demande seule, une fois par étape, et la grille rappelle la livraison avec
+« Changer » (événement `changer`) ; un échec du devis rend le choix du pays. Le bouton de
+la grille, « Continuer vers le paiement · {prix} », enchaîne l'envoi et la confirmation.
+Une ligne d'explication par étape (`commande.explique.*`), et le bandeau
+`commande.sandbox.bandeau` dès qu'une offre est en sandbox. Ce qui bouge seul (`enAttente` :
 `attente_paiement`, `payee`, et les deux états de remboursement et d'annulation) se
 relit toutes les cinq secondes tant qu'Envoi est ouvert, tout le reste à chaque
 ouverture. Les dix états du relais ont leur phrase (`phraseIntention`), un état inconnu

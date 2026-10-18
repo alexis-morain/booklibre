@@ -61,6 +61,13 @@ export function commandePossible(
   return relaisJoignable && !!preparationNeuve && preparationNeuve.rapport.ok && !!preparationNeuve.rapport.fiche?.produit;
 }
 
+/** « Faire imprimer » a préparé ce dossier pour la commande (A1) : le
+ *  parcours s'ouvre de lui-même, sans le bouton « Commander » entre deux.
+ *  Un dossier préparé à la main, dans un dossier choisi, garde ce bouton. */
+export function commandeDirecte(relaisJoignable: boolean, preparationNeuve: Preparation | null): boolean {
+  return commandePossible(relaisJoignable, preparationNeuve) && preparationNeuve?.commande === true;
+}
+
 /** Ce que l'écran sait du relais. `absent` : ce build n'en porte aucun
  *  (`relaisPays` rend null sans un appel), rien ne s'affiche. `injoignable` :
  *  il y en a un, et il n'a pas répondu, ou répondu sans un pays où vendre ;
@@ -265,12 +272,33 @@ export function phraseErreur(e: unknown): string {
 
 // ---- le parcours ------------------------------------------------------------
 
-/** Où en est le parcours de Commander. */
+/** Où livrer, tel qu'on l'a choisi : la grille le rappelle, et « Changer »
+ *  y revient. */
+export type Livraison = { pays: Pays[]; choisi: string; region: string | null };
+
+/** La livraison rappelée dans la grille, en une ligne. Un code que la
+ *  liste du relais ne nomme pas reste un code. */
+export function phraseLivraison(l: Livraison): string {
+  const p = l.pays.find((x) => x.code === l.choisi);
+  const pays = p?.nom ?? l.choisi;
+  if (l.region === null) return t("commande.livraison", { pays });
+  const region = p?.etats?.find((r) => r.code === l.region)?.nom ?? l.region;
+  return t("commande.livraison.region", { pays, region });
+}
+
+/** Où en est le parcours de Commander. `saute` : un seul pays, sans région,
+ *  rien à choisir ; l'écran demande la grille tout de suite. */
 export type Parcours =
   | { etape: "repos" }
-  | { etape: "pays"; pays: Pays[]; choisi: string; region: string | null }
-  | { etape: "grille"; offre: Offre; niveau: string }
-  | { etape: "envoi"; offre: Offre; niveau: string; progres: Record<Quel, { envoyes: number; total: number }> }
+  | ({ etape: "pays"; saute: boolean } & Livraison)
+  | { etape: "grille"; offre: Offre; niveau: string; livraison?: Livraison }
+  | {
+      etape: "envoi";
+      offre: Offre;
+      niveau: string;
+      progres: Record<Quel, { envoyes: number; total: number }>;
+      livraison?: Livraison;
+    }
   | { etape: "confirmation"; offre: Offre; niveau: string }
   | { etape: "pret"; offre: Offre; niveau: string }
   | { etape: "paiement"; offre: Offre; niveau: string }
@@ -283,6 +311,7 @@ export type Evenement =
   | { type: "region"; code: string }
   | { type: "offre"; offre: Offre }
   | { type: "niveau"; niveau: string }
+  | { type: "changer" }
   | { type: "envoyer" }
   | { type: "progres"; progres: Progres }
   | { type: "envoye" }
@@ -313,7 +342,8 @@ export function avancer(p: Parcours, e: Evenement): Parcours {
       if (p.etape !== "repos" || e.pays.length === 0) return p;
       // La France d'abord quand elle est ouverte, sinon le premier.
       const code = e.pays.some((x) => x.code === "FR") ? "FR" : e.pays[0].code;
-      return { etape: "pays", pays: e.pays, ...paysChoisi(e.pays, code) };
+      const saute = e.pays.length === 1 && !e.pays[0].require_state;
+      return { etape: "pays", pays: e.pays, ...paysChoisi(e.pays, code), saute };
     }
     case "pays":
       return p.etape === "pays" && p.pays.some((x) => x.code === e.code)
@@ -323,15 +353,29 @@ export function avancer(p: Parcours, e: Evenement): Parcours {
       return p.etape === "pays" ? { ...p, region: e.code } : p;
     case "offre":
       return p.etape === "pays" && e.offre.grille.length > 0
-        ? { etape: "grille", offre: e.offre, niveau: e.offre.grille[0].niveau }
+        ? {
+            etape: "grille",
+            offre: e.offre,
+            niveau: e.offre.grille[0].niveau,
+            livraison: { pays: p.pays, choisi: p.choisi, region: p.region },
+          }
         : p;
+    case "changer":
+      // Retour au pays, qui ne se resaute pas : on vient le changer.
+      return p.etape === "grille" && p.livraison ? { etape: "pays", ...p.livraison, saute: false } : p;
     case "niveau":
       return p.etape === "grille" && p.offre.grille.some((n) => n.niveau === e.niveau)
         ? { ...p, niveau: e.niveau }
         : p;
     case "envoyer":
       return p.etape === "grille"
-        ? { etape: "envoi", offre: p.offre, niveau: p.niveau, progres: { interieur: SANS_PROGRES, couverture: SANS_PROGRES } }
+        ? {
+            etape: "envoi",
+            offre: p.offre,
+            niveau: p.niveau,
+            progres: { interieur: SANS_PROGRES, couverture: SANS_PROGRES },
+            livraison: p.livraison,
+          }
         : p;
     case "progres":
       return p.etape === "envoi"
@@ -361,7 +405,10 @@ export function avancer(p: Parcours, e: Evenement): Parcours {
       // paiement raté revient au bouton qui le rouvre.
       // Un refus définitif (`refusDefinitif`) mène à l'étape d'erreur, d'où
       // l'on recommence.
-      if (p.etape === "envoi") return { etape: "grille", offre: p.offre, niveau: p.niveau };
+      if (p.etape === "envoi") return { etape: "grille", offre: p.offre, niveau: p.niveau, livraison: p.livraison };
+      // Les prix ne sont pas venus : le pays se montre, avec « Voir les
+      // prix » pour réessayer, au lieu de redemander sans fin.
+      if (p.etape === "pays") return p.saute ? { ...p, saute: false } : p;
       if (p.etape === "paiement") {
         return e.definitif !== undefined
           ? { etape: "erreur", phrase: e.definitif }

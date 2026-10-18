@@ -1190,6 +1190,9 @@ export type Preparation = {
   dossier: string;
   fichiers: string[];
   rapport: PrevolReport;
+  /** Préparé par « Faire imprimer », dans le dossier de données de l'app :
+   *  le parcours de commande s'ouvre de lui-même (A1). */
+  commande?: boolean;
 };
 
 /** Prépare le dossier de la commande : la boîte native choisit un dossier,
@@ -1220,6 +1223,33 @@ export async function preparerDossier(
   });
   try {
     return await invoke<Preparation | null>("preparer_dossier", { titre: title, profil });
+  } finally {
+    off();
+  }
+}
+
+/** « Faire imprimer » : le même dossier que `preparerDossier`, pour
+ *  Cloudprinter, mais sans boîte. Le moteur l'écrit dans le dossier de
+ *  données de l'app (`commandes/<nom>`), le remplace à chaque fois, et
+ *  n'en rend que le nom. Au harnais, `/__dev/preparer-commande` fait de même
+ *  dans le répertoire temporaire. */
+export async function preparerPourCommande(
+  title: string,
+  onProgress?: (done: number, total: number) => void,
+): Promise<Preparation> {
+  if (!inTauri) {
+    const res = await fetch("/__dev/preparer-commande", { method: "POST" });
+    const text = await res.text();
+    if (!res.ok) throw new Error(text);
+    return JSON.parse(text);
+  }
+  const { listen } = await import("@tauri-apps/api/event");
+  const off = await listen<string>("export:progress", (e) => {
+    const m = /^render: (\d+)\/(\d+)/.exec(e.payload);
+    if (m && onProgress) onProgress(Number(m[1]), Number(m[2]));
+  });
+  try {
+    return await invoke<Preparation>("preparer_pour_commande", { titre: title });
   } finally {
     off();
   }
