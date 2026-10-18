@@ -314,6 +314,28 @@ pub struct Cover {
     /// Back-cover text (the quatrième de couverture), optional.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub back_text: String,
+    /// La couleur du fond de la couverture et du dos, `#rrggbb` ; absente,
+    /// le blanc du papier. Additive comme [`Album::police`] et sans montée de
+    /// schéma : une version plus ancienne l'ignore et la perd à
+    /// l'enregistrement, et la couverture retombe en blanc, perte bénigne et
+    /// visible. Elle se lit par [`Cover::fond_rgb`], jamais autrement.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fond: Option<String>,
+}
+
+impl Cover {
+    /// Le fond qu'elle demande, s'il se lit. Une valeur hors `#rrggbb` vaut
+    /// « pas de fond » : le fichier se répare à la main, et une couleur gâtée
+    /// ne doit jamais empêcher un album de s'ouvrir ni de s'exporter. Elle se
+    /// signale au journal, une ligne, sans le chemin de personne.
+    pub fn fond_rgb(&self) -> Option<[f64; 3]> {
+        let f = self.fond.as_deref()?;
+        let rgb = crate::couleur::parse(f);
+        if rgb.is_none() {
+            crate::log::line(&format!("couverture : fond {f:?} ignoré, #rrggbb attendu"));
+        }
+        rgb
+    }
 }
 
 pub fn default_zoom() -> f64 {
@@ -451,6 +473,29 @@ mod tests {
         assert!(ancien.police.is_none());
     }
 
+
+    /// Le fond de la couverture est additif : une couverture d'avant se relit
+    /// sans lui et n'en écrit pas, une valeur gâtée se lit `None` sans casser
+    /// l'ouverture.
+    #[test]
+    fn le_fond_de_la_couverture_est_additif() {
+        let ancien: Cover = serde_json::from_str(r#"{ "title": "Corse" }"#)
+            .expect("une couverture d'avant s'ouvre telle quelle");
+        assert!(ancien.fond.is_none() && ancien.fond_rgb().is_none());
+        assert!(!serde_json::to_string(&ancien).unwrap().contains("fond"));
+
+        let noir = Cover { fond: Some("#1a1a1a".into()), ..ancien.clone() };
+        let ecrit = serde_json::to_string(&noir).unwrap();
+        assert!(ecrit.contains(r##""fond":"#1a1a1a""##), "{ecrit}");
+        let relu: Cover = serde_json::from_str(&ecrit).unwrap();
+        assert_eq!(relu.fond.as_deref(), Some("#1a1a1a"));
+        assert!(relu.fond_rgb().is_some());
+
+        let gate: Cover = serde_json::from_str(r#"{ "title": "t", "fond": "noir" }"#)
+            .expect("une couleur gâtée ne ferme pas l'album");
+        assert_eq!(gate.fond_rgb(), None);
+        assert_eq!(gate.fond.as_deref(), Some("noir"), "la valeur reste, réparable à la main");
+    }
 
     /// La couleur et la police d'un objet sont additives comme `album.police` :
     /// absentes, rien ne s'écrit et un objet d'avant se relit tel quel. Une

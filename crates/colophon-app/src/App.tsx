@@ -65,6 +65,7 @@ import {
   saveAlbum,
   datesFiables,
 } from "./bridge";
+import { ouvertureDuFeuilletage } from "./envoi";
 import {
   Album,
   boiteDePage,
@@ -105,6 +106,7 @@ import {
   rescuePhoto,
   restoreSpread,
   setCover,
+  setFond,
   setReglage,
   setSlotCaption,
   daterLegendes,
@@ -728,8 +730,12 @@ export default function App() {
    *
    * The cover is its own render, per printer profile: the spine width comes
    * from the supplier, and a preview of somebody else's spine is a lie.
+   *
+   * `surCouverture` is « Feuilleter » (A4, décision 11): the book opens on its
+   * cover when that render exists, on the first spread otherwise — decided
+   * in the same tick as the mode turns on, so no spread flashes before it.
    */
-  const basculerFidele = useCallback(async () => {
+  const basculerFidele = useCallback(async (surCouverture = false) => {
     if (fideleRef.current) {
       setFidele(false);
       return;
@@ -743,13 +749,18 @@ export default function App() {
       if (inTauri) {
         if (!(await save())) return;
         await renderPdf();
-        // The cover is its own file and its own render. A failure there (a
-        // photo folder that moved, say) must not cost the whole preview: the
-        // interior is what the mode is mostly about.
-        await renderCoverPreview(profilRef.current).catch(() => {});
       }
+      // The cover is its own file and its own render. A failure there (a
+      // photo folder that moved, say) must not cost the whole preview: the
+      // interior is what the mode is mostly about. The harness renders it
+      // too, through its dev server.
+      const couverture = await renderCoverPreview(profilRef.current).then(
+        () => true,
+        () => false,
+      );
       forgetPdfs();
       setPdfCle((k) => k + 1);
+      if (surCouverture) setIndex(ouvertureDuFeuilletage(couverture) === "couverture" ? COVER : 0);
       setFidele(true);
       setStatus(
         inTauri
@@ -2673,17 +2684,22 @@ export default function App() {
           onGarde={(on) => void toggleGarde(on)}
           policeManquante={policeInfo?.manquante ?? false}
           absents={absents}
+          onFond={(f) => {
+            // Enregistré comme Retirer et Remplacer : le prévol et le dossier
+            // préparé lisent le disque, et l'empreinte de l'album change.
+            const suivant = setFond(album, f);
+            if (suivant !== album) appliquerDepuisEnvoi(suivant);
+          }}
           onFeuilleter={() => {
-            // L'aperçu fidèle, ouvert sur la première planche : le même
-            // chemin que ⇧⌘P, qui rend le PDF s'il a vieilli. Aucun second
-            // lecteur. Pas sur la couverture, dont le rendu peut échouer sans
-            // coûter l'aperçu (`basculerFidele`) : on feuillette l'intérieur.
+            // L'aperçu fidèle : le même chemin que ⇧⌘P, qui rend le PDF s'il
+            // a vieilli. Aucun second lecteur. Il ouvre sur la couverture
+            // quand son rendu a abouti, sur la première planche sinon
+            // (`envoi.ts::ouvertureDuFeuilletage`).
             setIndex(0);
             setSelected(null);
             setView("livre");
-            void basculerFidele();
+            void basculerFidele(true);
           }}
-          onSignaler={() => fire("menu", "signaler-bug")}
           progresExport={progresExport}
         />
 
@@ -2728,6 +2744,7 @@ export default function App() {
                 album={album}
                 printer={printers?.find((p) => p.id === profil) ?? null}
                 onCover={(c) => apply((a) => setCover(a, c))}
+                onFond={(f) => apply((a) => setFond(a, f))}
                 onReglage={(src, r) => apply((a) => setReglage(a, src, r))}
                 choixALOuverture={choixCouverture}
                 onChoixOuvert={() => setChoixCouverture(false)}

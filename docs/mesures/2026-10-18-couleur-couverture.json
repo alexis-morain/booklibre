@@ -1,0 +1,205 @@
+{
+  "date": "2026-10-18",
+  "session": "A4, la couleur de la couverture",
+  "jeu": "mauritanie-2019 (59 planches, 118 pages), couverture composée, quatrième ajoutée pour la mesure",
+  "profil": "cloudprinter",
+  "commande": "COLOPHON=target/release/colophon ; SOURCE_DATE_EPOCH=1792000000 colophon --cover --profil cloudprinter -o <copie de l'album>, puis --prevol pour la fiche",
+  "script": "dossier de gestion, scripts/mesure-couleur-couverture.py (pypdfium2 sur fond blanc, 4 px/mm ; veraPDF -f 2b)",
+  "lecture": {
+    "cotes": "MediaBox égale à feuille_couverture_mm de la fiche, au millième, pour les trois rendus",
+    "flux": "avec un fond, la première opération du flux est l'aplat de la feuille entière (0 0 largeur hauteur, arrondi au centième de point par excès) ; sans fond, aucun aplat et le flux d'avant",
+    "encre": "avec un fond, aucun pixel blanc sur la feuille (taux non blanc 1,0) : coin du fond perdu, bas du dos dans le fond perdu, rempli et quatrième relevés à la couleur exacte du fond. Sans fond, 49 % de la feuille porte de l'encre (la photo de la première)",
+    "texte": "sur le noir, le dos et la quatrième sortent au blanc papier de cover.rs (252, 247, 240) ; sur le crème, à l'encre du livre (51, 48, 41), comme sans fond",
+    "conformite": "veraPDF PDF/A-2b PASS pour les trois",
+    "octets": "le fond coûte une ligne de flux : +22 o (noir) et +34 o (crème) sur 2,1 Mo"
+  },
+  "rendus": {
+    "aucun": {
+      "fond": null,
+      "octets": 2105558,
+      "mediabox_mm": [
+        491.965,
+        258.0
+      ],
+      "fiche_feuille_mm": [
+        491.965,
+        258.0
+      ],
+      "ecart_cotes_mm": [
+        0.0,
+        -0.0
+      ],
+      "dos_mm": 13.965,
+      "prevol_ok": true,
+      "flux_premiere_operation": "q 717.07 0.00 677.48 731.34 re W n 731.34 0 0 731.34 688.66 0.00 cm /Im0 Do Q",
+      "flux_aplats_pleine_feuille": 0,
+      "raster_px_par_mm": 4.0,
+      "raster_taux_non_blanc": 0.4873,
+      "releves_rgb": {
+        "fond_perdu_coin_haut_gauche": [
+          255,
+          255,
+          255
+        ],
+        "fond_perdu_bas_milieu_dos": [
+          255,
+          255,
+          255
+        ],
+        "rempli_quatrieme": [
+          255,
+          255,
+          255
+        ],
+        "quatrieme_haut": [
+          255,
+          255,
+          255
+        ],
+        "dos_bas": [
+          255,
+          255,
+          255
+        ]
+      },
+      "texte_dos_px": 446,
+      "texte_dos_rgb_extreme": [
+        51,
+        48,
+        41
+      ],
+      "texte_quatrieme_px": 1231,
+      "texte_quatrieme_rgb_extreme": [
+        55,
+        52,
+        46
+      ],
+      "verapdf_2b": "PASS"
+    },
+    "noir": {
+      "fond": "#1a1a1a",
+      "octets": 2105580,
+      "mediabox_mm": [
+        491.965,
+        258.0
+      ],
+      "fiche_feuille_mm": [
+        491.965,
+        258.0
+      ],
+      "ecart_cotes_mm": [
+        0.0,
+        -0.0
+      ],
+      "dos_mm": 13.965,
+      "prevol_ok": true,
+      "flux_premiere_operation": "q 0.10196078431372549 0.10196078431372549 0.10196078431372549 rg 0 0 1394.55 731.34 re f Q",
+      "flux_aplats_pleine_feuille": 1,
+      "raster_px_par_mm": 4.0,
+      "raster_taux_non_blanc": 1.0,
+      "releves_rgb": {
+        "fond_perdu_coin_haut_gauche": [
+          26,
+          26,
+          26
+        ],
+        "fond_perdu_bas_milieu_dos": [
+          26,
+          26,
+          26
+        ],
+        "rempli_quatrieme": [
+          26,
+          26,
+          26
+        ],
+        "quatrieme_haut": [
+          26,
+          26,
+          26
+        ],
+        "dos_bas": [
+          26,
+          26,
+          26
+        ]
+      },
+      "texte_dos_px": 449,
+      "texte_dos_rgb_extreme": [
+        252,
+        247,
+        240
+      ],
+      "texte_quatrieme_px": 1279,
+      "texte_quatrieme_rgb_extreme": [
+        246,
+        241,
+        234
+      ],
+      "verapdf_2b": "PASS"
+    },
+    "creme": {
+      "fond": "#f3ead8",
+      "octets": 2105592,
+      "mediabox_mm": [
+        491.965,
+        258.0
+      ],
+      "fiche_feuille_mm": [
+        491.965,
+        258.0
+      ],
+      "ecart_cotes_mm": [
+        0.0,
+        -0.0
+      ],
+      "dos_mm": 13.965,
+      "prevol_ok": true,
+      "flux_premiere_operation": "q 0.9529411764705882 0.9176470588235294 0.8470588235294118 rg 0 0 1394.55 731.34 re f Q",
+      "flux_aplats_pleine_feuille": 1,
+      "raster_px_par_mm": 4.0,
+      "raster_taux_non_blanc": 1.0,
+      "releves_rgb": {
+        "fond_perdu_coin_haut_gauche": [
+          243,
+          234,
+          216
+        ],
+        "fond_perdu_bas_milieu_dos": [
+          243,
+          234,
+          216
+        ],
+        "rempli_quatrieme": [
+          243,
+          234,
+          216
+        ],
+        "quatrieme_haut": [
+          243,
+          234,
+          216
+        ],
+        "dos_bas": [
+          243,
+          234,
+          216
+        ]
+      },
+      "texte_dos_px": 425,
+      "texte_dos_rgb_extreme": [
+        51,
+        48,
+        41
+      ],
+      "texte_quatrieme_px": 1150,
+      "texte_quatrieme_rgb_extreme": [
+        55,
+        52,
+        45
+      ],
+      "verapdf_2b": "PASS"
+    }
+  },
+  "sans_fond_a_l_octet": "cover::tests::sans_fond_la_feuille_est_celle_d_avant_a_l_octet épingle l'empreinte relevée sur main (481fd68) avant la première ligne de A4"
+}

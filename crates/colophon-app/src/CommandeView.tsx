@@ -813,8 +813,10 @@ function CarteCommande({ i, langue, children }: { i: IntentionVue; langue: strin
  *  URL de dépôt) et le balayage quotidien retire les objets dès l'état 100
  *  ou à 30 jours ; l'annulation rembourse sous l'état 30 ; la France n'est
  *  dite que quand le relais n'ouvre qu'elle. Rien sur le suivi du colis ni
- *  sur un délai : la grille ne promet ni l'un ni l'autre. */
-export function Rassurance({ enFrance, onSignaler }: { enFrance: boolean; onSignaler: () => void }) {
+ *  sur un délai : la grille ne promet ni l'un ni l'autre. Et aucun lien vers
+ *  Signaler (A4, décision 10) : il crée une issue GitHub publique, et
+ *  quelqu'un y citerait sa commande. */
+export function Rassurance({ enFrance }: { enFrance: boolean }) {
   return (
     <aside className="rassurance" aria-label={t("commande.rassure.titre")}>
       <h3>{t("commande.rassure.titre")}</h3>
@@ -824,12 +826,6 @@ export function Rassurance({ enFrance, onSignaler }: { enFrance: boolean; onSign
         <li>{t("commande.rassure.fichiers")}</li>
         <li>{t("commande.rassure.annuler")}</li>
         {enFrance && <li>{t("commande.rassure.france")}</li>}
-        <li>
-          {t("commande.rassure.question")}{" "}
-          <button type="button" className="link" onClick={onSignaler}>
-            {t("menu.signaler.bug")}
-          </button>
-        </li>
       </ul>
     </aside>
   );

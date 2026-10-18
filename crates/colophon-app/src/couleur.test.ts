@@ -6,9 +6,14 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { Objet } from "./album";
 import {
+  CONTRASTE_MIN,
+  contraste,
   couleurDe,
   couleurValide,
+  encreSurFond,
   ENCRE_LIVRE,
+  luminance,
+  PAPIER,
   ENCRE_ORNEMENT,
   PASTILLES,
   TEXT_INK,
@@ -93,5 +98,45 @@ describe("les pastilles", () => {
       "#4d4d4d",
       "#b04a1f",
     ]);
+  });
+});
+
+/** Une constante `[f64; 3]` de `cover.rs`, lue dans le source. */
+function constanteDeLaCouverture(nom: string): number[] {
+  const source = readFileSync(
+    fileURLToPath(new URL("../../colophon-core/src/cover.rs", import.meta.url)),
+    "utf8",
+  );
+  const m = source.match(new RegExp(`const ${nom}: \\[f64; 3\\] = \\[([^\\]]+)\\]`));
+  if (!m) throw new Error(`${nom} introuvable dans cover.rs`);
+  return m[1].split(",").map((v) => Number(v.trim()));
+}
+
+describe("le contraste du texte de couverture, miroir de couleur.rs", () => {
+  it("le blanc papier est celui de cover.rs", () => {
+    expect([...PAPIER]).toEqual(constanteDeLaCouverture("PAPER"));
+  });
+
+  it("les bornes de WCAG", () => {
+    expect(luminance([0, 0, 0])).toBe(0);
+    expect(luminance([1, 1, 1])).toBeCloseTo(1, 12);
+    expect(contraste([0, 0, 0], [1, 1, 1])).toBeCloseTo(21, 9);
+    expect(CONTRASTE_MIN).toBe(4.5);
+  });
+
+  it.each([
+    ["#000000", "papier"],
+    ["#1a1a1a", "papier"],
+    ["#ffffff", "encre"],
+    ["#f3ead8", "encre"],
+    ["#777777", "papier"],
+    ["#b04a1f", "papier"],
+  ])("sur %s, le texte est à l'%s", (fond, qui) => {
+    expect(encreSurFond(fond)).toBe(qui === "papier" ? versHex(PAPIER) : ENCRE_LIVRE);
+  });
+
+  it("sans fond, ou sur un fond gâté, l'encre du livre", () => {
+    expect(encreSurFond(null)).toBe(ENCRE_LIVRE);
+    expect(encreSurFond("noir")).toBe(ENCRE_LIVRE);
   });
 });

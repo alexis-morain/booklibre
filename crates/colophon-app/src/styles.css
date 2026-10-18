@@ -3660,8 +3660,9 @@ kbd {
 
 .cover {
   --cover-aspect: 2.1;
-  /* 40px kept for the note under the sheet. */
-  width: min(100cqw, calc((100cqh - 40px) * var(--cover-aspect)));
+  /* Kept under the sheet: the note, the adjustments, and the row of the fond
+     with its small book (A4). */
+  width: min(100cqw, calc((100cqh - 190px) * var(--cover-aspect)));
   display: grid;
   gap: 8px;
   justify-items: center;
@@ -3712,6 +3713,8 @@ kbd {
 
 .cover-spine-title {
   writing-mode: vertical-rl;
+  /* De bas en haut, comme `cover.rs` le pose sur la feuille. */
+  transform: rotate(180deg);
   font-family: var(--font-book);
   font-size: clamp(8px, 0.9vw, 12px);
   letter-spacing: 0.06em;
@@ -3787,6 +3790,29 @@ kbd {
 .cover-front:not(:has(.cover-photo)) .cover-subtitle-input {
   color: var(--paper-ink);
   text-shadow: none;
+}
+
+/* Le fond choisi (A4) peint la feuille, et le texte posé à même la feuille
+   prend l'encre que `cover.rs` lui donnera. */
+.cover-sheet.avec-fond {
+  background: var(--couv-fond);
+}
+
+.cover-sheet.avec-fond .cover-back-text,
+.cover-sheet.avec-fond .cover-spine-title,
+.cover-sheet.avec-fond .cover-front:not(:has(.cover-photo)) .cover-title-input,
+.cover-sheet.avec-fond .cover-front:not(:has(.cover-photo)) .cover-subtitle-input {
+  color: var(--couv-encre);
+}
+
+.cover-sheet.avec-fond .cover-back-text::placeholder {
+  color: color-mix(in srgb, var(--couv-encre) 45%, transparent);
+}
+
+.cover-fond {
+  display: flex;
+  align-items: center;
+  gap: 24px;
 }
 
 .cover-title-input {
@@ -4653,7 +4679,7 @@ button.envoi-defaut-ou:focus-visible {
   max-width: 58ch;
 }
 
-/* ---- le livre, à droite (A2 ; le volume complet est A4) ---- */
+/* ---- le livre, à droite : en volume (A4) ---- */
 
 .envoi-livre {
   display: grid;
@@ -4661,63 +4687,207 @@ button.envoi-defaut-ou:focus-visible {
   justify-items: start;
 }
 
-.livre {
-  perspective: 1200px;
-  padding: 10px 0 18px 30px;
+/* Six faces en CSS 3D autour d'un centre commun. La boîte de l'objet a les
+   cotes de la page ; chaque face s'y pose par une rotation puis une
+   translation le long de sa normale. Le conteneur porte la perspective, et
+   garde la place d'un livre tourné de biais. */
+.livre3d {
+  --livre-papier: var(--paper);
+  --livre-pages: #f4f1ea;
+  display: grid;
+  place-items: center;
+  perspective: 1400px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  outline-offset: 4px;
 }
 
-.livre-objet {
+.livre3d.en-main {
+  cursor: grabbing;
+}
+
+.livre3d.reduit {
+  cursor: pointer;
+}
+
+.livre3d:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+.livre3d-objet {
   position: relative;
   transform-style: preserve-3d;
-  transform: rotateY(28deg);
-  transform-origin: left center;
+  /* Le retour au trois-quarts, en douceur, au relâchement. */
+  transition: transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.livre-plat {
+.livre3d.en-main .livre3d-objet,
+.livre3d.reduit .livre3d-objet {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .livre3d-objet {
+    transition: none;
+  }
+}
+
+.livre3d-face {
   position: absolute;
-  inset: 0;
-  box-shadow: 0 14px 28px -12px rgb(var(--ink-rgb) / 0.45), 0 0 0 1px rgb(var(--ink-rgb) / 0.08);
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  backface-visibility: hidden;
 }
 
-.livre-plat .mini-cover {
+.livre3d-avant {
+  box-shadow: 0 0 0 1px rgb(var(--ink-rgb) / 0.1);
+}
+
+.livre3d-avant .mini-cover {
   width: 100%;
   height: 100%;
   position: relative;
-  background: var(--paper);
+  background: var(--livre-papier);
   overflow: hidden;
 }
 
-.livre-plat .mini-cover-title {
+/* Le titre posé sur la photo est un objet imprimé, pas un texte de
+   l'interface : le blanc papier et l'ombre dure de `cover.rs`, quel que soit
+   le thème. Sans photo, la règle de `.mini-cover` et l'encre du fond
+   reprennent la main. */
+.livre3d-avant .mini-cover-title {
   font-size: var(--fs-15);
+  color: rgb(252 247 240);
+  text-shadow: 0.5px 0.5px 0 rgb(23 20 15);
 }
 
-/* Le dos, à sa largeur réelle et à l'échelle du plat, posé à gauche du plat
-   et rabattu vers l'arrière autour de son bord droit : sa face regarde vers
-   l'extérieur, et son titre se lit à l'endroit. Un gris mêlé du papier et de
-   l'encre, pour qu'il se détache sur le fond clair comme sur le sombre. */
-.livre-dos {
-  position: absolute;
-  top: 0;
-  right: 100%;
-  height: 100%;
-  transform-origin: right center;
-  transform: rotateY(-90deg);
-  background: color-mix(in srgb, var(--paper) 62%, rgb(var(--ink-rgb)) 38%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+.livre3d-arriere {
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 1px rgb(var(--ink-rgb) / 0.1);
 }
 
-.livre-dos span {
-  writing-mode: vertical-rl;
+.livre3d-quatrieme {
+  margin: 0;
+  width: 70%;
+  text-align: center;
   font-family: var(--font-book);
   font-size: var(--fs-12);
-  color: var(--paper-ink);
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
+/* Le dos : l'aplat du fond, et le titre qui se lit de bas en haut, comme
+   `cover.rs` le pose (un quart de tour dans le sens inverse des aiguilles). */
+.livre3d-dos {
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 1px rgb(var(--ink-rgb) / 0.12);
+}
+
+.livre3d-titre-dos {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--font-book);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-height: 90%;
+}
+
+/* Le bloc de pages : un blanc cassé, et le léger rayé des feuilles. */
+.livre3d-tranche {
+  background: repeating-linear-gradient(
+      to right,
+      transparent 0 1px,
+      rgb(var(--ink-rgb) / 0.07) 1px 1.6px
+    ),
+    var(--livre-pages);
+}
+
+.livre3d-dessus,
+.livre3d-dessous {
+  background: repeating-linear-gradient(
+      to bottom,
+      transparent 0 1px,
+      rgb(var(--ink-rgb) / 0.07) 1px 1.6px
+    ),
+    var(--livre-pages);
+}
+
+/* ---- le fond de la couverture : les pastilles (A4) ---- */
+
+.fond {
+  display: grid;
+  gap: 6px;
+  max-width: 320px;
+}
+
+.fond-pastilles {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.fond-pastille {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  /* Un filet de la couleur du texte : le noir se voit sur le fond sombre,
+     le blanc papier sur le clair. */
+  border: 1px solid rgb(var(--text-rgb) / 0.3);
+}
+
+.fond-pastille.papier {
+  background: var(--paper);
+}
+
+.fond-pastille.actif,
+.fond-autre.actif {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.fond-pastille:focus-visible,
+.fond-autre:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.fond-autre {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--rule);
+  font-size: var(--fs-12);
+  color: var(--text);
+}
+
+.fond-autre-temoin {
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--rule);
+}
+
+/* Le sélecteur natif n'a pas de place à lui : « Autre… » l'ouvre. */
+.fond-natif {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fond-phrase {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--muted);
 }
 
 .livre-lignes {

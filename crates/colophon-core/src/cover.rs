@@ -22,7 +22,7 @@ use crate::font;
 use crate::model::{Album, Cover};
 use crate::pdf::{self, Boxes, PdfWriter, Rect};
 use crate::printer::{Fichiers, PrinterProfile, GRAMMAGE_DEFAUT};
-use crate::{meta, print};
+use crate::{couleur, meta, print};
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -148,6 +148,17 @@ pub fn render_cover_pdf(
     profil: &'static PrinterProfile,
     out: &Path,
 ) -> Result<PathBuf> {
+    render_cover_pdf_at(dir, profil, out, crate::pdfx::stamp())
+}
+
+/// [`render_cover_pdf`] at a pinned instant: the one field of the file that
+/// is not a function of the album, split out so byte identity is testable.
+fn render_cover_pdf_at(
+    dir: &Path,
+    profil: &'static PrinterProfile,
+    out: &Path,
+    stamp: chrono::DateTime<chrono::Local>,
+) -> Result<PathBuf> {
     let json = dir.join("album.json");
     let album: Album = serde_json::from_str(
         &fs::read_to_string(&json).with_context(|| format!("lecture de {}", json.display()))?,
@@ -162,11 +173,16 @@ pub fn render_cover_pdf(
         subtitle: String::new(),
         photo: None,
         back_text: String::new(),
+        fond: None,
     });
 
-    let mut writer = PdfWriter::new(&album, dir);
+    let mut writer = PdfWriter::with_stamp(&album, dir, stamp);
     let mut content = String::new();
     let mut xobjects = lopdf::dictionary! {};
+    let fond = cover.fond_rgb();
+    if let Some(rgb) = fond {
+        aplat(&mut content, &g, rgb);
+    }
 
     // The photo bleeds off the top, the bottom and the outer edge, and stops
     // dead at the fold: an image running onto the spine is folded in half.
@@ -194,7 +210,7 @@ pub fn render_cover_pdf(
         writer.draw_image(&mut content, &mut xobjects, 0, &asset, &rect);
     }
 
-    draw_text(&mut content, &mut writer.ecrivain, &g, &album, &cover);
+    draw_text(&mut content, &mut writer.ecrivain, &g, &album, &cover, encre_sur(fond));
 
     writer.add_page(
         Boxes { media: [g.media_w, g.media_h], trim: g.trim() },
@@ -316,10 +332,16 @@ pub(crate) fn add_cover_page(
         subtitle: String::new(),
         photo: None,
         back_text: String::new(),
+        fond: None,
     });
 
     let mut content = String::new();
     let mut xobjects = lopdf::dictionary! {};
+    let fond = cover.fond_rgb();
+    if let Some(rgb) = fond {
+        aplat(&mut content, &g, rgb);
+    }
+    let encre = encre_sur(fond);
 
     match face {
         Face::Premiere => {
@@ -346,9 +368,11 @@ pub(crate) fn add_cover_page(
                 .with_context(|| format!("photo de couverture : {}", slot.src))?;
                 writer.draw_image(&mut content, &mut xobjects, 0, &asset, &rect);
             }
-            draw_front(&mut content, &mut writer.ecrivain, &g, album, &cover);
+            draw_front(&mut content, &mut writer.ecrivain, &g, album, &cover, encre);
         }
-        Face::Quatrieme => draw_back(&mut content, &mut writer.ecrivain, &g, album, &cover),
+        Face::Quatrieme => {
+            draw_back(&mut content, &mut writer.ecrivain, &g, album, &cover, encre)
+        }
     }
 
     writer.add_page(
@@ -371,10 +395,37 @@ fn draw_text(
     g: &CoverGeometry,
     album: &Album,
     cover: &Cover,
+    encre: [f64; 3],
 ) {
-    draw_front(content, ecrivain, g, album, cover);
-    draw_spine(content, ecrivain, g, album, cover);
-    draw_back(content, ecrivain, g, album, cover);
+    draw_front(content, ecrivain, g, album, cover, encre);
+    draw_spine(content, ecrivain, g, album, cover, encre);
+    draw_back(content, ecrivain, g, album, cover, encre);
+}
+
+/// The fond: one flat fill of the whole card, bleed included, laid before
+/// anything else so the photograph and the type print over it. The front,
+/// the spine and the back are one colour because they are one piece of card.
+///
+/// The rectangle is rounded **up** to the hundredth of a point: rounded to
+/// nearest it could stop a few thousandths short of the card's edge, and a
+/// hairline of white at the knife is exactly what the bleed is there to
+/// prevent.
+fn aplat(content: &mut String, g: &CoverGeometry, rgb: [f64; 3]) {
+    let pt = |mm: f64| (mm * 72.0 / 25.4 * 100.0).ceil() / 100.0;
+    let (r, v, b) = (rgb[0], rgb[1], rgb[2]);
+    content.push_str(&format!(
+        "q {r} {v} {b} rg 0 0 {:.2} {:.2} re f Q\n",
+        pt(g.media_w),
+        pt(g.media_h)
+    ));
+}
+
+/// The ink of the type that sits on the card rather than on the photograph:
+/// the book's own ink on a bare sheet, so a cover without a fond is the one
+/// this project has always printed, and otherwise whichever of that ink and
+/// the paper white reads on the fond ([`couleur::encre_lisible`]).
+fn encre_sur(fond: Option<[f64; 3]>) -> [f64; 3] {
+    fond.map_or(pdf::TEXT_INK, |f| couleur::encre_lisible(f, pdf::TEXT_INK, PAPER))
 }
 
 /// The title the book wears, from the album alone: the cover's when it was
@@ -403,6 +454,7 @@ fn draw_front(
     g: &CoverGeometry,
     album: &Album,
     cover: &Cover,
+    encre: [f64; 3],
 ) {
     let scale = album.trim_mm.w / 210.0;
     let title_pt = TITLE_PT_AT_210 * scale;
@@ -417,8 +469,8 @@ fn draw_front(
     } else {
         (y, y + title_pt * PT_TO_MM * 1.25)
     };
-    plate(content, ecrivain, x, subtitle_y, subtitle_pt, over_photo, &cover.subtitle);
-    plate(content, ecrivain, x, title_y, title_pt, over_photo, title);
+    plate(content, ecrivain, x, subtitle_y, subtitle_pt, over_photo, encre, &cover.subtitle);
+    plate(content, ecrivain, x, title_y, title_pt, over_photo, encre, title);
 }
 
 /// Spine: the title along the fold, running bottom to top, centred. Only when
@@ -429,6 +481,7 @@ fn draw_spine(
     g: &CoverGeometry,
     album: &Album,
     cover: &Cover,
+    encre: [f64; 3],
 ) {
     let scale = album.trim_mm.w / 210.0;
     if let Some(spine) = &g.spine {
@@ -439,7 +492,7 @@ fn draw_spine(
 
             let cx = spine.x + spine.w / 2.0 - size * PT_TO_MM * 0.35;
             let cy = spine.y + (spine.h - width) / 2.0;
-            rotated(content, ecrivain, cx, cy, size, pdf::TEXT_INK, title);
+            rotated(content, ecrivain, cx, cy, size, encre, title);
         }
     }
 }
@@ -453,6 +506,7 @@ fn draw_back(
     g: &CoverGeometry,
     album: &Album,
     cover: &Cover,
+    encre: [f64; 3],
 ) {
     let scale = album.trim_mm.w / 210.0;
     if !cover.back_text.is_empty() {
@@ -467,7 +521,7 @@ fn draw_back(
             // Centred on the panel, measured on the real advance widths.
             let x = g.back.x + (g.back.w - ecrivain.largeur_mm(line, size)) / 2.0;
 
-            pdf::text_op(content, ecrivain, 1, x, y, size, pdf::TEXT_INK, line);
+            pdf::text_op(content, ecrivain, 1, x, y, size, encre, line);
             y -= leading;
             if y < g.back.y + g.safe {
                 break; // the editor is where an overlong quatrième is signalled
@@ -479,7 +533,7 @@ fn draw_back(
 const PT_TO_MM: f64 = 25.4 / 72.0;
 
 /// A line of cover type: white over the photo with one hard shadow under it,
-/// plain ink on a bare panel. Two draws rather than a blur, because a blur
+/// plain `encre` on a bare panel. Two draws rather than a blur, because a blur
 /// needs transparency and transparency is what a print file argues about.
 fn plate(
     content: &mut String,
@@ -488,6 +542,7 @@ fn plate(
     y: f64,
     size: f64,
     over_photo: bool,
+    encre: [f64; 3],
     s: &str,
 ) {
     if s.is_empty() {
@@ -497,7 +552,7 @@ fn plate(
         pdf::text_op(content, ecrivain, 1, x + SHADOW_OFFSET, y - SHADOW_OFFSET, size, SHADOW, s);
         pdf::text_op(content, ecrivain, 1, x, y, size, PAPER, s);
     } else {
-        pdf::text_op(content, ecrivain, 1, x, y, size, pdf::TEXT_INK, s);
+        pdf::text_op(content, ecrivain, 1, x, y, size, encre, s);
     }
 }
 
@@ -743,6 +798,7 @@ mod tests {
             subtitle: String::new(),
             photo: None,
             back_text: String::new(),
+            fond: None,
         });
         assert_eq!(titre_du_livre(&a), "Un été");
         // A cover left blank falls back to the album, it never prints nothing.
@@ -762,8 +818,9 @@ mod tests {
             subtitle: String::new(),
             photo: None,
             back_text: String::new(),
+            fond: None,
         };
-        draw_text(&mut content, &mut pdf::Ecrivain::incorporee(), &g, &album_de(12), &cover);
+        draw_text(&mut content, &mut pdf::Ecrivain::incorporee(), &g, &album_de(12), &cover, pdf::TEXT_INK);
         // The title is on the front and nowhere else: one occurrence. Under
         // Identity-H a string in the stream is glyph ids, so the title is
         // looked for the way it is written.
@@ -815,6 +872,7 @@ mod tests {
             subtitle: "septembre 2013".into(),
             photo: Some(crate::model::Slot::new("a.jpg".into(), [0.5, 0.42])),
             back_text: "Trois semaines sur la côte est.".into(),
+            fond: None,
         });
         fs::write(dir.join("album.json"), serde_json::to_string(&album).unwrap()).unwrap();
 
@@ -857,6 +915,147 @@ mod tests {
         assert!((media[2] - trim[2] - 3.0).abs() < 0.01, "{trim:?}");
 
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// L'empreinte de [`feuille_figee`] sans fond, relevée sur `main`.
+    const EMPREINTE_SANS_FOND: [u8; 16] =
+        [19, 2, 9, 147, 82, 176, 165, 153, 253, 117, 128, 169, 66, 81, 45, 156];
+
+    /// Un album de test sans photo, à couverture complète, posé dans un
+    /// dossier à lui, et sa feuille rendue à un instant figé. Sans photo, le
+    /// fichier ne dépend que de la face du projet et de l'arithmétique : il
+    /// rend les mêmes octets sur les trois OS du gate.
+    fn feuille_figee(nom: &str, fond: Option<&str>) -> Vec<u8> {
+        use chrono::{Local, TimeZone};
+        let dir = std::env::temp_dir()
+            .join(format!("colophon-fond-{nom}-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let mut album = album_de(48);
+        album.root = dir.to_string_lossy().to_string();
+        album.cover = Some(Cover {
+            title: "Corse".into(),
+            subtitle: "septembre 2013".into(),
+            photo: None,
+            back_text: "Trois semaines sur la côte est.".into(),
+            fond: fond.map(str::to_string),
+        });
+        fs::write(dir.join("album.json"), serde_json::to_string(&album).unwrap()).unwrap();
+        let out = dir.join("album-cover.pdf");
+        let t = Local.with_ymd_and_hms(2026, 10, 18, 11, 0, 0).unwrap();
+        render_cover_pdf_at(&dir, PrinterProfile::par_id("cloudprinter").unwrap(), &out, t)
+            .expect("rendu");
+        let octets = fs::read(&out).unwrap();
+        let _ = fs::remove_dir_all(&dir);
+        octets
+    }
+
+    /// Sans fond, la feuille est celle d'avant le fond, à l'octet. Le chiffre
+    /// a été relevé sur `main` (481fd68), avant la première ligne de A4 : un
+    /// album qui n'a pas choisi de couleur ne doit rien voir changer.
+    #[test]
+    fn sans_fond_la_feuille_est_celle_d_avant_a_l_octet() {
+        let octets = feuille_figee("aucun", None);
+        assert_eq!(
+            crate::export::empreinte(&octets),
+            EMPREINTE_SANS_FOND,
+            "{} octets",
+            octets.len()
+        );
+    }
+
+    /// Le flux de contenu de la première page d'un PDF, décompressé.
+    fn flux_de(octets: &[u8]) -> String {
+        let doc = lopdf::Document::load_mem(octets).expect("relecture");
+        let page = *doc.get_pages().values().next().unwrap();
+        String::from_utf8_lossy(&doc.get_page_content(page).unwrap()).into_owned()
+    }
+
+    /// Les cotes de la MediaBox, en points.
+    fn media_pt(octets: &[u8]) -> [f64; 2] {
+        let doc = lopdf::Document::load_mem(octets).expect("relecture");
+        let page = *doc.get_pages().values().next().unwrap();
+        let d = doc.get_object(page).unwrap().as_dict().unwrap();
+        let m = d.get(b"MediaBox").unwrap().as_array().unwrap();
+        [f64::from(m[2].as_float().unwrap()), f64::from(m[3].as_float().unwrap())]
+    }
+
+    /// Le fond est un aplat de la feuille entière, fond perdu compris, posé
+    /// avant tout le reste : la photo et le texte passent dessus. La règle
+    /// est mesurée dans le fichier, pas dans l'arithmétique.
+    #[test]
+    fn un_fond_couvre_toute_la_feuille_fond_perdu_compris() {
+        let octets = feuille_figee("noir", Some("#1a1a1a"));
+        let flux = flux_de(&octets);
+        let premiere = flux.lines().next().unwrap_or_default();
+        let ops: Vec<&str> = premiere.split_whitespace().collect();
+        let c = 26.0 / 255.0;
+        assert_eq!(&ops[..2], ["q", &c.to_string()], "{premiere}");
+        assert_eq!(ops[4], "rg", "{premiere}");
+        assert_eq!(&ops[5..7], ["0", "0"], "l'aplat part du coin de la feuille : {premiere}");
+        assert_eq!(&ops[9..], ["re", "f", "Q"], "{premiere}");
+        let [w, h] = media_pt(&octets);
+        let (aw, ah): (f64, f64) = (ops[7].parse().unwrap(), ops[8].parse().unwrap());
+        assert!(aw >= w && aw - w < 0.02, "{aw} contre {w}");
+        assert!(ah >= h && ah - h < 0.02, "{ah} contre {h}");
+        assert_ne!(crate::export::empreinte(&octets), EMPREINTE_SANS_FOND);
+    }
+
+    /// Une valeur hors `#rrggbb` est ignorée : la feuille est celle d'un album
+    /// sans fond, à l'octet, et l'album s'exporte.
+    #[test]
+    fn un_fond_illisible_rend_la_feuille_sans_fond() {
+        for gate in ["terracotta", "#abc", "#12345g"] {
+            let octets = feuille_figee("gate", Some(gate));
+            assert_eq!(crate::export::empreinte(&octets), EMPREINTE_SANS_FOND, "{gate}");
+        }
+    }
+
+    /// Le texte sans photo dessous suit le fond : sur du noir il passe au
+    /// blanc papier, sur du crème il garde l'encre. Dos et quatrième compris.
+    #[test]
+    fn le_texte_prend_l_encre_lisible_sur_le_fond() {
+        let encre = |fond: &str| {
+            let flux = flux_de(&feuille_figee(&format!("encre-{}", &fond[1..]), Some(fond)));
+            let papier = format!("{} {} {} rg", PAPER[0], PAPER[1], PAPER[2]);
+            let ink = format!("{} {} {} rg", pdf::TEXT_INK[0], pdf::TEXT_INK[1], pdf::TEXT_INK[2]);
+            // Une ligne de texte par couleur rencontrée : titre, sous-titre,
+            // dos et quatrième, aucune photo dessous.
+            let textes: Vec<&str> = flux.lines().filter(|l| l.contains("Tj")).collect();
+            assert_eq!(textes.len(), 4, "{flux}");
+            (
+                textes.iter().filter(|l| l.contains(&papier)).count(),
+                textes.iter().filter(|l| l.contains(&ink)).count(),
+            )
+        };
+        assert_eq!(encre("#1a1a1a"), (4, 0), "sur du noir, tout passe au papier");
+        assert_eq!(encre("#f3ead8"), (0, 4), "sur du crème, l'encre reste");
+    }
+
+    /// Le feuillet volant d'un fournisseur qui relie un seul fichier porte le
+    /// même aplat, sur toute la feuille, sous la quatrième.
+    #[test]
+    fn le_feuillet_porte_le_fond_aussi() {
+        let mut album = album_de(12);
+        album.cover = Some(Cover {
+            title: "Corse".into(),
+            subtitle: String::new(),
+            photo: None,
+            back_text: "Pour Marie.".into(),
+            fond: Some("#f3ead8".into()),
+        });
+        let gen = PrinterProfile::par_id("generique").unwrap();
+        let mut w = PdfWriter::new(&album, std::path::Path::new("."));
+        add_cover_page(&mut w, &album, gen, Face::Quatrieme).unwrap();
+        let path = std::env::temp_dir()
+            .join(format!("colophon-feuillet-fond-{}.pdf", std::process::id()));
+        w.save(&path).unwrap();
+        let octets = fs::read(&path).unwrap();
+        let _ = fs::remove_file(&path);
+        let flux = flux_de(&octets);
+        let premiere = flux.lines().next().unwrap_or_default();
+        assert!(premiere.ends_with("re f Q") && premiere.starts_with("q "), "{flux}");
+        let [w, _] = media_pt(&octets);
+        assert!(w > 210.0 * 72.0 / 25.4, "fond perdu compris : {premiere}");
     }
 
     /// A leaf is one panel, trimmed on four sides, with no spine and no fold.
@@ -913,6 +1112,7 @@ mod tests {
             subtitle: "septembre 2013".into(),
             photo: Some(crate::model::Slot::new("a.jpg".into(), [0.5, 0.42])),
             back_text: "Trois semaines sur la côte est.".into(),
+            fond: None,
         });
         fs::write(dir.join("album.json"), serde_json::to_string(&album).unwrap()).unwrap();
 

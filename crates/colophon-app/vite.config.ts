@@ -341,6 +341,27 @@ function albumDevServer(dir: string): Plugin {
           }
         });
       });
+      // L'aperçu de la couverture, que « Feuilleter » ouvre en premier : le
+      // moteur le rend à côté d'`album.json` sous son nom d'aperçu, comme la
+      // commande `render_cover_preview`, au profil demandé.
+      server.middlewares.use("/__dev/couverture", (req, res) => {
+        if (req.method !== "POST") {
+          res.statusCode = 405;
+          res.end();
+          return;
+        }
+        try {
+          const profil = new URL(req.url ?? "", "http://x").searchParams.get("profil") ?? "cloudprinter";
+          execFileSync(engineBinary, ["--cover", "--apercu", "--profil", profil, "-o", dir], {
+            encoding: "utf8",
+            maxBuffer: 16 * 1024 * 1024,
+          });
+          res.end("ok");
+        } catch (e) {
+          res.statusCode = 500;
+          res.end(String(e));
+        }
+      });
       // Le survol d'un dossier de photos par l'écran de création : le
       // harnais « choisit » toujours le dossier des photos de l'album servi,
       // son `root`, et le moteur le lit comme la commande `survol_dossier`.

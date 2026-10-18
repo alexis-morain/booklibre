@@ -481,10 +481,11 @@ une boîte, ou le PDF libre sous « Un autre imprimeur ? » (profil `generique`,
 sans manifeste) ; « Faire imprimer » est A1 ci-dessous. Le « à partir de » de la porte
 vient de la dernière grille vue (`commande.ts::retenirPrix`, mémoire du processus) :
 **jamais une intention créée pour afficher un prix**, jamais un chiffre en dur. À droite,
-le livre (`LivreApercu.tsx`, emplacement de A4) : le plat (`PlanchesView::MiniCouverture`),
-le dos à `fiche.dos_mm` à l'échelle, format en cm, pages, papier tiré du profil
-(`papierEnClair`, jamais ses codes), et « Feuilleter », qui est ⇧⌘P sur la première
-planche. **Liste noire** : fond perdu, zone sûre, PDF/X, sRGB, RVB, CMJN, ppi, dpi, output
+le livre en volume (`Livre3D.tsx`, A4, voir « Le livre en volume et son fond »), son
+fond sous lui, format en cm, pages, papier tiré du profil (`papierEnClair`, jamais ses
+codes), et « Feuilleter », qui est ⇧⌘P **ouvert sur la couverture** quand son aperçu
+vient d'être rendu, sur la première planche sinon (`envoi.ts::ouvertureDuFeuilletage`,
+`basculerFidele(true)`). **Liste noire** : fond perdu, zone sûre, PDF/X, sRGB, RVB, CMJN, ppi, dpi, output
 intent, imposition, prévol, profil ne s'affichent que dans un repli — la fiche sous
 « Pour les imprimeurs » (porte PDF seulement), faux-titre et colophon sous « Pages de
 début et de fin » (ouvert d'office quand un défaut y renvoie). Prodigi et Lulu restent
@@ -649,7 +650,46 @@ sans session payée ; les fichiers montent en `https` et le balayage quotidien r
 les objets dès l'état 100, à trente jours au plus tard ; l'annulation rembourse sous
 l'état 30 ; « en France » seulement quand le relais n'ouvre qu'elle (`livreEnFrance`).
 Rien sur le suivi du colis (le niveau `cp_postal` n'en promet pas) ni sur un délai que la
-grille ne rend pas.
+grille ne rend pas. **Et aucun lien vers Signaler** (A4) : il ouvre une issue GitHub
+publique, quelqu'un y citerait sa commande ; un contact commande attend le réel.
+
+### Le livre en volume et son fond (A4)
+
+**`cover.fond`, un `#rrggbb` additif comme `album.police`, sans montée de schéma** : une
+version plus ancienne l'ignore et le perd à l'enregistrement, la couverture retombe en
+blanc. Il se lit par `Cover::fond_rgb` et rien d'autre ; une valeur hors grammaire vaut
+« pas de fond », se signale au journal (à l'ouverture dans `load_album`, au rendu) et
+n'empêche ni l'ouverture ni l'export. **L'aplat couvre la feuille entière** — fond perdu,
+rempli, mors et dos compris, une seule opération en tête du flux, arrondie au centième de
+point par excès — sur la feuille à plat comme sur les feuillets d'un fournisseur à un
+fichier. **Sans fond, le PDF de couverture est celui d'avant à l'octet**
+(`sans_fond_la_feuille_est_celle_d_avant_a_l_octet`, empreinte relevée sur `main`). Le
+texte posé à même la feuille (titre sans photo, dos, quatrième) prend
+`couleur::encre_lisible` : l'encre du livre tant qu'elle tient 4,5:1 en luminance WCAG,
+sinon la plus contrastée d'elle et du blanc papier ; le texte sur la photo garde le blanc
+et son ombre dure. `couleur.ts::encreSurFond` en est le miroir, `PAPIER` relu dans
+`cover.rs` par le test. Mesures : `docs/mesures/2026-10-18-couleur-couverture.json`.
+
+**`Livre3D.tsx` est en CSS 3D, sans dépendance** : six faces autour d'un centre, cotes de
+`volume.ts::cotesLivre` (format et `fiche.dos_mm` à une seule échelle), avant =
+`MiniCouverture`, dos et arrière à l'aplat du fond avec l'encre de `encreSurFond`, bloc de
+pages blanc cassé rayé. Glisser (souris, trackpad, balayage horizontal à deux doigts) et
+flèches au focus ; relâché, retour au trois-quarts par le chemin court (`repos`). Sous
+`prefers-reduced-motion`, ni glisser ni transition : trois vues fixes au clic
+(`VUES_FIXES`). `role="img"`, nom = format, pages, fond. Le titre de la vignette sur la
+photo est un objet imprimé : blanc papier et ombre dure quel que soit le thème. Le dos se
+lit de bas en haut, comme le PDF — l'éditeur de couverture le montrait de haut en bas
+jusqu'à A4.
+
+**`PaletteFond.tsx`**, sous le livre dans Envoi et dans l'éditeur de couverture (avec un
+petit `Livre3D`) : blanc papier (`null`), crème `#f3ead8`, noir `#1a1a1a`, puis jusqu'à cinq
+teintes de la photo (`fond.ts::teintesDe` : histogramme 4 bits par canal, centres
+déterministes — la case la plus lourde puis la plus éloignée —, Lloyd pondéré, saturation
+HSL plafonnée à `SATURATION_MAX`), puis « Autre… » qui ouvre le sélecteur natif, validé à
+`change`. Un choix est un pas d'annulation (`edits.ts::setFond`, `null` retire le champ) ;
+dans Envoi il s'enregistre aussi (`appliquerDepuisEnvoi`), le dossier préparé devenant
+périmé par l'empreinte. Au harnais, `POST /__dev/couverture?profil=` rend l'aperçu de
+couverture par `--cover --apercu` (caché), que `renderCoverPreview` appelle hors Tauri.
 
 **Le moteur et la CLI gardent CloudCore et S3.** `core::commande` parle à CloudCore
 (`devis`, `commander`, `etat`, `annuler`) derrière le trait `Http`, `Ureq` en vrai
@@ -1367,7 +1407,7 @@ de scène porte un angle et une origine, **jamais une matrice**.
 Autres drapeaux : `--print`, `--cover`, `--prevol --profil <id>`, `--densite`,
 `--variantes`, `--reprise`, `--bascule <FORMAT> [--essai]`, `--dump-scene`,
 `--dump-geometry`, `--dump-ornements`, `--profils`, `--preparer <DOSSIER>`. Cachés :
-`--fiche`, `--releve-album`, `--dates`, `--reserve`, `--recomposer [--vers <FORMAT>]
+`--fiche`, `--releve-album`, `--dates`, `--reserve`, `--cover --apercu`, `--recomposer [--vers <FORMAT>]
 [--rythme <ID>]`, `--devis <album> --pays FR` (le
 code de commande, clé lue dans `CLOUDPRINTER_SANDBOX_API_KEY`, jamais en argument).
 Scripts :
@@ -1412,7 +1452,8 @@ les octets de l'album, `police.ts` les noms et les refus d'une face,
 `ornement.ts` le pack et le seul tracé que les deux rendus partagent,
 `menu.ts`, `signaler.ts`, `pdfview.tsx`, `reasons.ts`, `icons.tsx`, `recents.ts`,
 `envoi.ts` la logique pure d'Envoi, `commande.ts` celle de Commander, `CommandeView.tsx`
-son parcours) plus
+son parcours, `Livre3D.tsx` et `volume.ts` le livre en volume, `fond.ts` et
+`PaletteFond.tsx` le fond de la couverture) plus
 la coquille Tauri, marques d'icône dans `design/marques`.
 
 

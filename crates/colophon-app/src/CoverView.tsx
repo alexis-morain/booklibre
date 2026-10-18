@@ -26,11 +26,18 @@ import { ReglageBloc } from "./ReglageBloc";
 import type { Reglage } from "./album";
 import { filtreDe, useReglages } from "./reglages";
 import { cachedThumb, loadThumb } from "./thumbs";
+import { couleurValide, encreSurFond } from "./couleur";
+import { Livre3D } from "./Livre3D";
+import { PaletteFond } from "./PaletteFond";
+
+/** Le livre en petit, sous la feuille. */
+const HAUTEUR_LIVRE_PX = 84;
 
 export function CoverView({
   album,
   printer,
   onCover,
+  onFond,
   onReglage,
   choixALOuverture = false,
   onChoixOuvert,
@@ -41,6 +48,8 @@ export function CoverView({
    *  supplier building its own cover receives anyway. */
   printer: Printer | null;
   onCover: (cover: Cover) => void;
+  /** Le fond de la couverture et du dos (A4), un pas d'annulation. */
+  onFond: (fond: string | null) => void;
   /** One history step through `edits.ts::setReglage`: the cover photo is
    *  adjustable here even when it sits on no spread — the alternative is a
    *  dead end. */
@@ -115,14 +124,20 @@ export function CoverView({
   };
 
   const sheetAspect = (album.trim_mm.w * 2 + spine) / album.trim_mm.h;
+  // Le fond choisi peint la feuille entière, et le texte posé dessus prend
+  // l'encre que `cover.rs` lui donnera : ce qu'on voit est ce qui s'imprime.
+  const fond = cover.fond && couleurValide(cover.fond) ? cover.fond : null;
+  const peint = fond
+    ? ({ "--couv-fond": fond, "--couv-encre": encreSurFond(fond) } as React.CSSProperties)
+    : {};
   return (
     <div
       className="cover"
       style={{ "--cover-aspect": sheetAspect } as React.CSSProperties}
     >
       <div
-        className="cover-sheet"
-        style={{ aspectRatio: `${album.trim_mm.w * 2 + spine} / ${album.trim_mm.h}` }}
+        className={"cover-sheet" + (fond ? " avec-fond" : "")}
+        style={{ aspectRatio: `${album.trim_mm.w * 2 + spine} / ${album.trim_mm.h}`, ...peint }}
       >
         {/* Back cover: the quatrième, optional. */}
         <div className="cover-back" style={{ flex: album.trim_mm.w }}>
@@ -204,6 +219,18 @@ export function CoverView({
           <ReglageBloc src={cover.photo.src} onCommit={onReglage} />
         </div>
       )}
+
+      {/* Le fond, et le livre en petit qui le montre en volume. */}
+      <div className="cover-fond">
+        <Livre3D
+          album={album}
+          formatMm={[album.trim_mm.w, album.trim_mm.h]}
+          dosMm={sheet.spine ? spine : null}
+          pages={album.spreads.length * 2}
+          hauteurPx={HAUTEUR_LIVRE_PX}
+        />
+        <PaletteFond album={album} onFond={onFond} />
+      </div>
 
       <p className="cover-note">
         {sheet.spine ? (

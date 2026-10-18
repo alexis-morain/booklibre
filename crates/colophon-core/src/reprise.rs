@@ -539,6 +539,9 @@ fn cover_diff(origine: Option<&Cover>, actuel: Option<&Cover>) -> Vec<&'static s
             if a.back_text != b.back_text {
                 out.push("quatrième");
             }
+            if a.fond != b.fond {
+                out.push("fond");
+            }
             out
         }
     }
@@ -725,6 +728,7 @@ mod tests {
             subtitle: String::new(),
             photo: Some(Slot::new("couv.jpg".into(), [0.5, 0.5])),
             back_text: String::new(),
+            fond: None,
         });
         actuel.reglages.insert(
             "couv.jpg".into(),
@@ -988,6 +992,7 @@ mod tests {
             subtitle: String::new(),
             photo: None,
             back_text: String::new(),
+            fond: None,
         });
         let mut b = album(vec![spread("solo", &["a.jpg"])]);
         b.cover = Some(Cover {
@@ -995,9 +1000,14 @@ mod tests {
             subtitle: "juillet".into(),
             photo: None,
             back_text: String::new(),
+            fond: None,
         });
         let r = compare("t", &a, &b);
         assert_eq!(r.planches_touchees, 0);
         assert_eq!(r.couverture, vec!["titre", "sous-titre"]);
+
+        // Une couleur de fond est une retouche de couverture comme une autre.
+        b.cover.as_mut().unwrap().fond = Some("#1a1a1a".into());
+        assert_eq!(compare("t", &a, &b).couverture, vec!["titre", "sous-titre", "fond"]);
     }
 }
