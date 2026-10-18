@@ -20,6 +20,7 @@ import {
   porteEffective,
   portesOffertes,
   libelleDestination,
+  ouvertureDuFeuilletage,
   phrasePreparation,
   phraseSimple,
   ppiDe,
@@ -347,5 +348,12 @@ describe("la phrase simple", () => {
 
   it("une règle inconnue n'a pas de phrase simple : l'écran garde celle du moteur", () => {
     expect(phraseSimple(defaut("regle_future"))).toBeNull();
+  });
+});
+
+describe("Feuilleter", () => {
+  it("ouvre sur la couverture quand son aperçu existe, sur la première planche sinon", () => {
+    expect(ouvertureDuFeuilletage(true)).toBe("couverture");
+    expect(ouvertureDuFeuilletage(false)).toBe("premiere");
   });
 });

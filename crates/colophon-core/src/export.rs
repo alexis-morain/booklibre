@@ -56,6 +56,11 @@ pub const NOM: &str = "export.json";
 pub const LIVRAISON_INTERIEUR: &str = "album-print.pdf";
 pub const LIVRAISON_COUVERTURE: &str = "album-cover.pdf";
 
+/// Le nom de l'aperçu de la couverture, posé à côté d'`album.json` par l'app
+/// et par `--cover --apercu` (le harnais) : un aperçu change de profil au gré
+/// de qui regarde, il ne se note pas au manifeste et le prévol ne le juge pas.
+pub const APERCU_COUVERTURE: &str = "album-cover.apercu.pdf";
+
 /// Ce qu'un rendu a écrit : le fichier, pour qui, depuis quel album.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Artefact {
@@ -881,6 +886,7 @@ mod tests {
             subtitle: "Du 21 au 29 octobre 2013".into(),
             photo: Some(Slot::new("a.jpg".into(), [0.5, 0.5])),
             back_text: String::new(),
+            fond: None,
         });
         fs::write(dir.join("album.json"), serde_json::to_string_pretty(&a).unwrap()).unwrap();
         dir

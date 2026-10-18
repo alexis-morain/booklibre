@@ -218,3 +218,11 @@ export function phraseSimple(d: Defaut): string | null {
   const cle = `envoi.simple.${d.regle}`;
   return estCle(cle) ? t(cle) : null;
 }
+
+/** Où « Feuilleter » ouvre le livre (A4, décision 11) : sur la couverture
+ *  quand son aperçu vient d'être rendu, sur la première planche sinon — un
+ *  rendu de couverture peut échouer (un dossier de photos déplacé) sans
+ *  coûter l'aperçu de l'intérieur. */
+export function ouvertureDuFeuilletage(couvertureRendue: boolean): "couverture" | "premiere" {
+  return couvertureRendue ? "couverture" : "premiere";
+}

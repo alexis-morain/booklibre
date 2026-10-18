@@ -22,6 +22,7 @@ import {
   templateForCount,
   titreDuLivre,
 } from "./album";
+import { couleurValide } from "./couleur";
 import { REGLAGE_BORNE, estIdentite } from "./reglage";
 import { ObjetColle } from "./pressePapier";
 import { Cote, coteDe, recouvre, retenirAuPli } from "./scene";
@@ -886,6 +887,23 @@ export function removeSpread(album: Album, at: number): Album {
 /** Replace the album's cover. */
 export function setCover(album: Album, cover: Cover): Album {
   return avecTitreDuLivre({ ...album, cover });
+}
+
+/**
+ * La couleur du fond de la couverture et du dos (A4), un pas d'annulation
+ * comme une retouche. `null` est le blanc papier, c'est-à-dire l'absence :
+ * le champ quitte la couverture, et `album.json` redevient celui d'avant.
+ * La même couleur, ou une chaîne hors `#rrggbb`, ne pose aucun pas.
+ * Un album sans couverture en reçoit une, au titre de l'album, comme
+ * l'éditeur de couverture la sème.
+ */
+export function setFond(album: Album, fond: string | null): Album {
+  if (fond !== null && !couleurValide(fond)) return album;
+  const f = fond?.toLowerCase() ?? null;
+  const cover: Cover = album.cover ?? { title: album.title };
+  if ((cover.fond?.toLowerCase() ?? null) === f) return album;
+  const { fond: _ancien, ...reste } = cover;
+  return { ...album, cover: f === null ? reste : { ...reste, fond: f } };
 }
 
 /**

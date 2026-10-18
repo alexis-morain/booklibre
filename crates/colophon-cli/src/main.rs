@@ -127,6 +127,12 @@ struct Cli {
     #[arg(long)]
     cover: bool,
 
+    /// Avec --cover : écrit l'aperçu de l'app (album-cover.apercu.pdf) au
+    /// lieu de la livraison, sans le noter au manifeste. Pour le serveur de
+    /// dev, qui fournit ainsi à « Feuilleter » la couverture qu'il ouvre.
+    #[arg(long, hide = true, requires = "cover")]
+    apercu: bool,
+
     /// Preflight the album already built in --out against a printer profile:
     /// resolution, pagination, bleed, colour space, fonts, safe zone. Prints
     /// the report plus the spec sheet. Exits non-zero on a blocking defect.
@@ -569,6 +575,17 @@ fn main() -> Result<()> {
         if !report.ok {
             std::process::exit(1);
         }
+        return Ok(());
+    }
+
+    if cli.cover && cli.apercu {
+        let profil = profil(&cli.profil)?;
+        let out = colophon_core::cover::render_cover_pdf(
+            &cli.out,
+            profil,
+            &cli.out.join(colophon_core::export::APERCU_COUVERTURE),
+        )?;
+        eprintln!("aperçu : {}", out.display());
         return Ok(());
     }
 

@@ -154,6 +154,9 @@ fn load_album(path: &Path) -> Result<(PathBuf, Album, ThumbIndex), String> {
         .map_err(|e| format!("lecture de {} : {e}", json.display()))?;
     let album: Album =
         serde_json::from_str(&text).map_err(|e| format!("album.json illisible : {e}"))?;
+    // Un fond de couverture gâté à la main se lit « pas de fond » et se
+    // signale au journal, ici une fois à l'ouverture ; il ne ferme rien.
+    let _ = album.cover.as_ref().map(|c| c.fond_rgb());
 
     let thumbs: ThumbIndex = std::fs::read_to_string(dir.join("thumbs.json"))
         .ok()
@@ -2109,8 +2112,9 @@ const APERCU_INTERIEUR: &str = "album.pdf";
 /// deux fois : le prévol refusait une feuille que personne n'avait demandé à
 /// exporter, et une couverture d'aperçu pouvait partir à la presse sous le nom
 /// de la commande. `album-cover.apercu.pdf` est le style de la maison pour un
-/// fichier qualifié, comme `album.origin.json` ou `album.json.bak`.
-const APERCU_COUVERTURE: &str = "album-cover.apercu.pdf";
+/// fichier qualifié, comme `album.origin.json` ou `album.json.bak`. Il vit
+/// dans le moteur, que la CLI du harnais (`--cover --apercu`) écrit aussi.
+use colophon_core::export::APERCU_COUVERTURE;
 
 /// Le nom de la livraison de la couverture, celui que `--cover` écrit et que
 /// le prévol juge (`prevol::FichiersPoses::lire`). Il n'est nommé ici que pour

@@ -1042,10 +1042,15 @@ export async function albumPdfBytes(
 }
 
 /** Render the flat cover sheet into the album folder, for its preview. Same
- *  renderer the export uses, same profile. */
+ *  renderer the export uses, same profile. The harness asks its dev server,
+ *  which runs the same renderer (`--cover --apercu`). */
 export async function renderCoverPreview(profil: string): Promise<string> {
   if (!inTauri) {
-    throw new Error("La couverture se rend dans l’application, pas au navigateur.");
+    const res = await fetch(`/__dev/couverture?profil=${encodeURIComponent(profil)}`, {
+      method: "POST",
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return "album-cover.apercu.pdf";
   }
   return invoke<string>("render_cover_preview", { profil });
 }

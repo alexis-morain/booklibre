@@ -28,6 +28,7 @@ import { phraseDefaut, texteMoteur } from "./moteur";
 import { Album } from "./album";
 import {
   Defaut,
+  Fiche,
   Preparation,
   Printer,
   PrevolReport,
@@ -44,6 +45,7 @@ import {
   Destination,
   actionsDefaut,
   destinationDe,
+  formatEnCm,
   imprimeurAffiche,
   libelleDestination,
   papierEnClair,
@@ -55,7 +57,8 @@ import {
 } from "./envoi";
 import { Niveau, Relais, clePrix, livreEnFrance, prixConnu, prixDeCentimes, retenirPrix } from "./commande";
 import { t, useLangue } from "./i18n";
-import { LivreApercu } from "./LivreApercu";
+import { Livre3D } from "./Livre3D";
+import { PaletteFond } from "./PaletteFond";
 import { LazyThumb } from "./TriView";
 import { VERDICT_URL } from "./signaler";
 
@@ -113,8 +116,9 @@ export type EnvoiViewProps = {
   absents: string[];
   /** « Feuilleter » : l'aperçu fidèle, le livre tel que le PDF l'imprimera. */
   onFeuilleter: () => void;
-  /** « Une question ? » : Signaler, la seule porte que l'app ouvre vers nous. */
-  onSignaler: () => void;
+  /** Le fond de la couverture et du dos choisi sous le livre : un pas
+   *  d'annulation, enregistré. `null` : le blanc papier. */
+  onFond: (fond: string | null) => void;
   /** Où en est la préparation qui tourne, en pages rendues ; null sinon. */
   progresExport: { done: number; total: number } | null;
 };
@@ -218,7 +222,7 @@ export function EnvoiPage(props: EnvoiPageProps) {
     policeManquante,
     absents,
     onFeuilleter,
-    onSignaler,
+    onFond,
     progresExport,
     report,
     running,
@@ -446,8 +450,14 @@ export function EnvoiPage(props: EnvoiPageProps) {
       </div>
 
       <div className="envoi-droite">
-        <LivreApercu album={album} fiche={report?.fiche ?? null} papier={papier} onFeuilleter={onFeuilleter} />
-        {ouverte === "colophon" && <Rassurance enFrance={enFrance} onSignaler={onSignaler} />}
+        <LivreEnvoi
+          album={album}
+          fiche={report?.fiche ?? null}
+          papier={papier}
+          onFeuilleter={onFeuilleter}
+          onFond={onFond}
+        />
+        {ouverte === "colophon" && <Rassurance enFrance={enFrance} />}
       </div>
     </div>
   );
@@ -750,5 +760,57 @@ function ResolutionLigne({
         )}
       </span>
     </div>
+  );
+}
+
+/** La hauteur du livre dans Envoi, en pixels : la largeur et le dos suivent
+ *  à la même échelle. */
+const HAUTEUR_LIVRE_PX = 260;
+
+/** Le livre, dans la colonne de droite d'Envoi : en volume (A4), le choix de
+ *  son fond dessous, puis trois lignes en clair et « Feuilleter ». Rien n'y
+ *  est calculé qui ne vienne du moteur : le dos est `fiche.dos_mm`, le format
+ *  `fiche.format_page_mm`, le papier le profil (`envoi.ts::papierEnClair`). */
+function LivreEnvoi({
+  album,
+  fiche,
+  papier,
+  onFeuilleter,
+  onFond,
+}: {
+  album: Album;
+  /** Null tant que le contrôle n'a pas rendu sa fiche : le format vient
+   *  alors de l'album, et ni le dos ni les pages ne se disent. */
+  fiche: Fiche | null;
+  /** Le papier en clair, quand l'imprimeur est connu ; sinon rien. */
+  papier: string | null;
+  onFeuilleter: () => void;
+  onFond: (fond: string | null) => void;
+}) {
+  const format: [number, number] = fiche?.format_page_mm ?? [album.trim_mm.w, album.trim_mm.h];
+  return (
+    <section className="envoi-livre" aria-label={t("envoi.livre")}>
+      <Livre3D
+        album={album}
+        formatMm={format}
+        dosMm={fiche?.dos_mm ?? null}
+        pages={fiche?.pages_interieur ?? null}
+        hauteurPx={HAUTEUR_LIVRE_PX}
+      />
+      <PaletteFond album={album} onFond={onFond} />
+      <ul className="livre-lignes">
+        <li>{formatEnCm(format)}</li>
+        {fiche && <li>{t("envoi.livre.pages", { n: fiche.pages_interieur })}</li>}
+        {papier && <li>{papier}</li>}
+      </ul>
+      <button
+        type="button"
+        className="livre-feuilleter"
+        title={t("envoi.livre.feuilleter.titre")}
+        onClick={onFeuilleter}
+      >
+        {t("envoi.livre.feuilleter")}
+      </button>
+    </section>
   );
 }

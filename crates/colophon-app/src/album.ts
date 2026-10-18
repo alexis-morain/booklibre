@@ -89,6 +89,9 @@ export type Cover = {
   subtitle?: string;
   photo?: Slot;
   back_text?: string;
+  /** Le fond de la couverture et du dos, `#rrggbb` ; absent, le blanc
+   *  papier. Miroir de `model.rs::Cover::fond`. */
+  fond?: string;
 };
 
 /** One photograph's adjustments, mirror of `model.rs::Reglage`. The

@@ -47,6 +47,7 @@ import {
   setSlotCaption,
   setSlotCrop,
   setCover,
+  setFond,
   setGarde,
   setObjet,
   setObjetTexte,
@@ -938,5 +939,41 @@ describe("daterLegendes et dedaterLegendes", () => {
     expect(pile[0]).toBe(a);
     expect(JSON.stringify(a)).toBe(avant);
     expect(apres.spreads.every((s) => s.edited)).toBe(true);
+  });
+});
+
+describe("setFond", () => {
+  it("pose la couleur du fond en un pas d'annulation, l'album d'avant intact", () => {
+    const a = setCover(album(spread("duo", 2)), { title: "Corse" });
+    const b = setFond(a, "#1a1a1a");
+    expect(b).not.toBe(a);
+    expect(b.cover?.fond).toBe("#1a1a1a");
+    expect(b.cover?.title).toBe("Corse");
+    // Le pas d'annulation est l'album d'avant, tel quel : ⌘Z le rend.
+    expect(a.cover?.fond).toBeUndefined();
+  });
+
+  it("ne pose aucun pas pour la couleur déjà là", () => {
+    const b = setFond(setCover(album(spread("duo", 2)), { title: "Corse" }), "#1a1a1a");
+    expect(setFond(b, "#1a1a1a")).toBe(b);
+    expect(setFond(b, "#1A1A1A")).toBe(b);
+  });
+
+  it("retire le champ pour le blanc papier, qui est l'absence", () => {
+    const b = setFond(setCover(album(spread("duo", 2)), { title: "Corse" }), "#f3ead8");
+    const c = setFond(b, null);
+    expect(c.cover).toBeDefined();
+    expect("fond" in (c.cover ?? {})).toBe(false);
+    expect(setFond(c, null)).toBe(c);
+  });
+
+  it("crée la couverture d'un album qui n'en a pas, au titre de l'album", () => {
+    const a = album(spread("duo", 2));
+    expect(setFond(a, "#1a1a1a").cover).toEqual({ title: a.title, fond: "#1a1a1a" });
+  });
+
+  it("refuse une couleur hors #rrggbb", () => {
+    const a = album(spread("duo", 2));
+    expect(setFond(a, "noir")).toBe(a);
   });
 });

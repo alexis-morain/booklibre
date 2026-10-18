@@ -122,7 +122,7 @@ const rendu = (lang: Lang, relais: Relais | null, porte: Porte | null, profil = 
     policeManquante: false,
     absents: [],
     onFeuilleter: () => {},
-    onSignaler: () => {},
+    onFond: () => {},
     progresExport: null,
     report: REPORT,
     running: false,
@@ -215,6 +215,31 @@ describe("Envoi, pour quelqu'un qui fait un album", () => {
     expect(html.indexOf("envoi-defauts")).toBeGreaterThan(-1);
     expect(html.indexOf("envoi-defauts")).toBeLessThan(html.indexOf('role="radiogroup"'));
     expect(visible(html)).toContain("Choisir une autre photo");
+  });
+});
+
+describe("Comment ça se passe", () => {
+  // Signaler ouvre une issue GitHub publique : quelqu'un y citerait sa
+  // commande. L'encadré n'y mène donc nulle part (A4, décision 10).
+  for (const lang of ["fr", "en"] as const) {
+    it(`ne mène jamais à Signaler (${lang})`, () => {
+      const html = rendu(lang, FRANCE, "colophon");
+      const encadre = html.match(/<aside class="rassurance"[\s\S]*?<\/aside>/)?.[0];
+      expect(encadre).toBeDefined();
+      expect(encadre).not.toMatch(/<button|<a /);
+      expect(encadre).not.toMatch(/Signaler|Report a problem|Une question|A question/);
+    });
+  }
+});
+
+describe("le livre et son fond", () => {
+  it("montre le livre en volume, et les huit pastilles sous lui", () => {
+    setLangue("fr");
+    const html = rendu("fr", FRANCE, "colophon");
+    expect(html).toContain("livre3d");
+    expect(html).toContain("La couleur du fond de la couverture et du dos.");
+    expect(html.match(/class="fond-pastille[^"]*"/g)?.length).toBeGreaterThanOrEqual(3);
+    expect(visible(html)).toContain("Autre…");
   });
 });
 

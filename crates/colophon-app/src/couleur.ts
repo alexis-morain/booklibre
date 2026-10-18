@@ -1,4 +1,5 @@
-// La couleur d'un objet libre, côté écran.
+// La couleur d'un objet libre, et l'encre du texte sur le fond de la
+// couverture, côté écran.
 //
 // Le moteur lit `#rrggbb` (`couleur.rs::parse`) et retombe sur un défaut pour
 // tout le reste : l'encre de texte du livre pour un bloc, le noir pour un
@@ -37,6 +38,46 @@ export const ENCRE_ORNEMENT = "#000000";
 /** La grammaire de `couleur::parse` : un dièse et six hexadécimaux. */
 export function couleurValide(s: string): boolean {
   return /^#[0-9a-fA-F]{6}$/.test(s);
+}
+
+// ---- le texte posé sur le fond de la couverture (A4) ----------------------
+
+/** `cover.rs::PAPER`, le blanc papier du texte de couverture. */
+export const PAPIER: readonly [number, number, number] = [0.99, 0.97, 0.94];
+
+/** `couleur.rs::CONTRASTE_MIN`, le seuil de WCAG pour un texte courant. */
+export const CONTRASTE_MIN = 4.5;
+
+/** `#rrggbb` en trois composantes de 0 à 1 ; null hors grammaire. */
+export function versRgb(hex: string): [number, number, number] | null {
+  if (!couleurValide(hex)) return null;
+  return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number];
+}
+
+/** `couleur.rs::luminance`, la luminance relative de WCAG 2. */
+export function luminance(rgb: readonly [number, number, number]): number {
+  const lin = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * lin(rgb[0]) + 0.7152 * lin(rgb[1]) + 0.0722 * lin(rgb[2]);
+}
+
+/** `couleur.rs::contraste`, de 1 à 21. */
+export function contraste(
+  a: readonly [number, number, number],
+  b: readonly [number, number, number],
+): number {
+  const [la, lb] = [luminance(a), luminance(b)];
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/** L'encre du texte de couverture posé sur `fond`, comme `cover.rs` la
+ *  choisit (`couleur::encre_lisible`) : l'encre du livre tant qu'elle tient
+ *  4,5:1, sinon la plus contrastée d'elle et du blanc papier. Sans fond, ou
+ *  sur un fond hors grammaire, l'encre du livre, comme au PDF. */
+export function encreSurFond(fond: string | null | undefined): string {
+  const f = fond ? versRgb(fond) : null;
+  if (!f) return ENCRE_LIVRE;
+  const ce = contraste(f, TEXT_INK);
+  return ce >= CONTRASTE_MIN || ce >= contraste(f, PAPIER) ? ENCRE_LIVRE : versHex(PAPIER);
 }
 
 /** La couleur dans laquelle un objet s'imprime. */

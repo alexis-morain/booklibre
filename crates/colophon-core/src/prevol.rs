@@ -1403,6 +1403,7 @@ mod tests {
             subtitle: String::new(),
             photo: Some(Slot::new("couverture.jpg".into(), [0.5, 0.5])),
             back_text: String::new(),
+            fond: None,
         });
         for i in 0..n {
             a.spreads.push(Spread {
@@ -2085,6 +2086,7 @@ mod tests {
             subtitle: String::new(),
             photo: Some(Slot::new("couv.jpg".into(), [0.5, 0.5])),
             back_text: String::new(),
+            fond: None,
         });
         let mut dims: HashMap<String, (u32, u32)> = (0..24)
             .map(|i| (format!("{i}.jpg"), (5000u32, 5000u32)))

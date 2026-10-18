@@ -202,6 +202,15 @@ Ink crosses it — a white line in the groove shows on every copy — but nothin
 meant to be read may sit in it, the way nothing readable sits in the bleed.
 _Avoid_: charnière, gorge, hinge, groove
 
+**Fond**:
+The colour of the cover card under the photograph and the type: one flat fill
+of the whole flat sheet, bleed, rempli and spine included, because the front,
+the spine and the back are one piece of card. Absent means paper white. It is
+`cover.fond` in `album.json`, a `#rrggbb`, and the type that sits on it takes
+whichever ink reads there.
+_Avoid_: background, couleur de couverture, teinte (a teinte is one of the five
+colours proposed from the cover photograph, not the chosen fond)
+
 **Media box**:
 The whole printed surface of a spread: two trimmed pages plus bleed all round.
 The rectangle the PDF declares, and the frame every geometry is expressed in.

@@ -797,6 +797,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                         .unwrap_or_default(),
                     photo: Some(model::Slot::new(src.to_string(), focal)),
                     back_text: String::new(),
+                    fond: None,
                 }
             });
         }
@@ -1763,6 +1764,7 @@ mod tests {
             subtitle: "à la main".into(),
             photo: None,
             back_text: "quatrième".into(),
+            fond: None,
         };
         let opts = BuildOptions { cover: Some(main.clone()), ..options_datees() };
         let repris = build_album(&photos, &out, opts).unwrap().album;

@@ -20,6 +20,7 @@
 // page zéro et se parcourt avec le reste ; ce qu'elle porte dedans attend
 // la session qui lui donnera une scène.
 
+import { couleurValide, encreSurFond } from "./couleur";
 import { useEffect, useRef, useState } from "react";
 import { t } from "./i18n";
 import { Album, Spread, spreadGeometry, slotsFor } from "./album";
@@ -437,13 +438,21 @@ function CoverCell({
  *  zéro de la table lumineuse, et le livre d'Envoi. */
 export function MiniCouverture({ album }: { album: Album }) {
   const cover = album.cover ?? { title: album.title };
+  // Le fond de la couverture (A4) se voit là où la photo ne couvre pas, et
+  // le titre posé dessus prend l'encre que `cover.rs` lui donnera.
+  const fond = cover.fond && couleurValide(cover.fond) ? cover.fond : undefined;
   return (
     <div
       className="mini-cover"
-      style={{ aspectRatio: `${album.trim_mm.w} / ${album.trim_mm.h}` }}
+      style={{ aspectRatio: `${album.trim_mm.w} / ${album.trim_mm.h}`, background: fond }}
     >
       {cover.photo && <MiniImg slot={cover.photo} />}
-      <span className="mini-cover-title">{cover.title || album.title}</span>
+      <span
+        className="mini-cover-title"
+        style={fond && !cover.photo ? { color: encreSurFond(fond) } : undefined}
+      >
+        {cover.title || album.title}
+      </span>
     </div>
   );
 }
