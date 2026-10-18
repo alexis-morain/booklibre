@@ -23,7 +23,13 @@ import {
   nomNiveau,
   part,
   dejaPayee,
+  etapeVisible,
+  etapesDuParcours,
+  jalonsAtteints,
+  livreEnFrance,
   paiementRecu,
+  prixAPartirDe,
+  referenceCourte,
   payable,
   phraseConfirmation,
   phraseErreur,
@@ -586,5 +592,111 @@ describe("le parcours", () => {
     }
     const p = avancer(repos, { type: "commander", pays: PAYS });
     expect(avancer(p, { type: "offre", offre: { ...OFFRE, grille: [] } })).toBe(p);
+  });
+});
+
+// ---- A3 : le parcours à étapes, la frise du suivi ---------------------------
+
+describe("etapeVisible", () => {
+  const suite = (p: Parcours, ...es: Parameters<typeof avancer>[1][]) => es.reduce(avancer, p);
+  const FRANCE: Pays[] = [{ code: "FR", nom: "France", require_state: false }];
+
+  it("ne montre aucune étape au repos, « Votre livre » pendant la préparation, « Suivi » après un paiement", () => {
+    expect(etapeVisible({ etape: "repos" })).toBeNull();
+    expect(etapeVisible({ etape: "repos" }, { preparation: true })).toBe("livre");
+    expect(etapeVisible({ etape: "repos" }, { suivi: true })).toBe("suivi");
+  });
+
+  it("fait correspondre chaque état de la machine à une étape, sans en ajouter un", () => {
+    const pays = avancer({ etape: "repos" }, { type: "commander", pays: PAYS });
+    expect(etapeVisible(pays)).toBe("livraison");
+    // Un seul pays : rien à choisir, la grille se demande, c'est déjà le prix.
+    expect(etapeVisible(avancer({ etape: "repos" }, { type: "commander", pays: FRANCE }))).toBe("prix");
+    const grille = suite(pays, { type: "offre", offre: OFFRE });
+    expect(etapeVisible(grille)).toBe("prix");
+    const envoi = suite(grille, { type: "envoyer" });
+    expect(etapeVisible(envoi)).toBe("fichiers");
+    const confirmation = suite(envoi, { type: "envoye" });
+    expect(etapeVisible(confirmation)).toBe("paiement");
+    expect(etapeVisible(suite(confirmation, { type: "retour" }))).toBe("paiement");
+    const paiement = suite(confirmation, { type: "payer" });
+    expect(etapeVisible(paiement)).toBe("paiement");
+    expect(etapeVisible(suite(paiement, { type: "ouvert" }))).toBe("paiement");
+    expect(etapeVisible(suite(paiement, { type: "recu" }))).toBe("suivi");
+    expect(etapeVisible({ etape: "erreur", phrase: "x" })).toBe("paiement");
+  });
+});
+
+describe("etapesDuParcours", () => {
+  const suite = (p: Parcours, ...es: Parameters<typeof avancer>[1][]) => es.reduce(avancer, p);
+  const grille = suite({ etape: "repos" }, { type: "commander", pays: PAYS }, { type: "offre", offre: OFFRE });
+
+  it("rend les six étapes dans l'ordre : passées, la courante, futures", () => {
+    const pas = etapesDuParcours(grille)!;
+    expect(pas.map((x) => x.etape)).toEqual(["livre", "livraison", "prix", "fichiers", "paiement", "suivi"]);
+    expect(pas.map((x) => x.etat)).toEqual(["passee", "passee", "courante", "future", "future", "future"]);
+    expect(etapesDuParcours({ etape: "repos" })).toBeNull();
+  });
+
+  it("n'offre un retour que là où la machine l'accepte : la livraison depuis la grille", () => {
+    const pas = etapesDuParcours(grille)!;
+    expect(pas.find((x) => x.etape === "livraison")!.retour).toEqual({ type: "changer" });
+    expect(avancer(grille, pas.find((x) => x.etape === "livraison")!.retour!)).toMatchObject({ etape: "pays" });
+    for (const x of pas.filter((x) => x.etape !== "livraison")) expect(x.retour, x.etape).toBeNull();
+    // Les fichiers partis, plus de retour : la machine ne revient pas en arrière.
+    const envoi = suite(grille, { type: "envoyer" });
+    for (const x of etapesDuParcours(envoi)!) expect(x.retour, x.etape).toBeNull();
+    const pret = suite(envoi, { type: "envoye" }, { type: "retour" });
+    for (const x of etapesDuParcours(pret)!) expect(x.retour, x.etape).toBeNull();
+  });
+
+  it("coche tout jusqu'au suivi", () => {
+    const pas = etapesDuParcours({ etape: "repos" }, { suivi: true })!;
+    expect(pas.map((x) => x.etat)).toEqual(["passee", "passee", "passee", "passee", "passee", "courante"]);
+  });
+});
+
+describe("jalonsAtteints", () => {
+  it("place la commande sur la frise d'après l'état du relais et le code de Cloudprinter", () => {
+    expect(jalonsAtteints(intention("attente_fichiers"))).toBe(0);
+    expect(jalonsAtteints(intention("attente_paiement"))).toBe(0);
+    expect(jalonsAtteints(intention("payee"))).toBe(1);
+    expect(jalonsAtteints(intention("commandee", null))).toBe(1);
+    expect(jalonsAtteints(intention("commandee", 10))).toBe(1);
+    expect(jalonsAtteints(intention("commandee", 30))).toBe(2);
+    expect(jalonsAtteints(intention("commandee", 45))).toBe(2);
+    expect(jalonsAtteints(intention("commandee", 100))).toBe(3);
+  });
+
+  it("ne pose aucun jalon sur un état inconnu ou hors du chemin", () => {
+    for (const etat of ["dans_les_limbes", "annulee", "echec_remboursee", "remboursement_en_cours", "abandonnee", "purgee"]) {
+      expect(jalonsAtteints(intention(etat)), etat).toBe(0);
+    }
+    // Annulée chez Cloudprinter, terminée au sandbox, un code que leur doc ne nomme pas.
+    for (const code of [500, 501, 77]) expect(jalonsAtteints(intention("commandee", code)), String(code)).toBe(0);
+  });
+
+  it("n'atteint jamais « Livrée » : aucun état ne le dit", () => {
+    for (const code of [null, 1, 5, 10, 15, 30, 45, 100, 500, 501]) {
+      expect(jalonsAtteints(intention("commandee", code))).toBeLessThan(4);
+    }
+  });
+});
+
+describe("le prix « à partir de », la livraison et la référence", () => {
+  it("prend le moins cher de la grille, et rien sans grille", () => {
+    expect(prixAPartirDe(OFFRE.grille)).toBe(4600);
+    expect(prixAPartirDe([])).toBeNull();
+  });
+
+  it("ne dit « en France » que quand le relais n'ouvre que la France", () => {
+    expect(livreEnFrance([{ code: "FR", nom: "France", require_state: false }])).toBe(true);
+    expect(livreEnFrance(PAYS)).toBe(false);
+    expect(livreEnFrance([])).toBe(false);
+  });
+
+  it("raccourcit la référence à huit signes", () => {
+    expect(referenceCourte("zNRsXsjGDfnOhog10i579Q")).toBe("zNRsXsjG");
+    expect(referenceCourte("abc")).toBe("abc");
   });
 });

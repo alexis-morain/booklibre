@@ -43,6 +43,9 @@ export type IntentionVue = {
   dernier_code: number | null;
   /** Le niveau d'expédition choisi, gardé dès le choix. */
   niveau: string | null;
+  /** Le jour de la création, `AAAA-MM-JJ` ; absent d'un moteur plus ancien
+   *  que la fenêtre. */
+  date?: string;
 };
 
 export type Quel = "interieur" | "couverture";
@@ -438,4 +441,120 @@ export function niveauChoisi(p: { offre: Offre; niveau: string }): Niveau {
 /** La part d'un fichier déjà partie, de 0 à 1. */
 export function part(x: { envoyes: number; total: number }): number {
   return x.total > 0 ? Math.min(1, x.envoyes / x.total) : 0;
+}
+
+// ---- le parcours à étapes (A3) ----------------------------------------------
+
+/** Les six étapes que le parcours montre en tête. La machine (`avancer`)
+ *  garde ses états ; ceci n'est que leur habit. */
+export type Etape = "livre" | "livraison" | "prix" | "fichiers" | "paiement" | "suivi";
+
+export const ETAPES: Etape[] = ["livre", "livraison", "prix", "fichiers", "paiement", "suivi"];
+
+/** Ce que l'écran sait en plus de la machine : la préparation des fichiers
+ *  tourne (avant tout état du parcours), ou un paiement vient d'aboutir et
+ *  la commande se suit. */
+export type Contexte = { preparation?: boolean; suivi?: boolean };
+
+/** L'étape qu'un état du parcours montre. Null au repos, quand rien n'est en
+ *  cours : le parcours ne s'affiche pas. Un seul pays sans région n'a rien à
+ *  choisir et demande la grille tout de suite : c'est déjà le prix. */
+export function etapeVisible(p: Parcours, ctx: Contexte = {}): Etape | null {
+  switch (p.etape) {
+    case "repos":
+      return ctx.suivi ? "suivi" : ctx.preparation ? "livre" : null;
+    case "pays":
+      return p.saute ? "prix" : "livraison";
+    case "grille":
+      return "prix";
+    case "envoi":
+      return "fichiers";
+    case "attente":
+      return p.recu ? "suivi" : "paiement";
+    case "confirmation":
+    case "pret":
+    case "paiement":
+    case "erreur":
+      return "paiement";
+  }
+}
+
+/** Le retour qu'une étape passée offre d'un clic, quand la machine
+ *  l'accepte, et seulement alors : la livraison depuis la grille. Les
+ *  fichiers partis, rien ne revient en arrière. */
+function retourVers(p: Parcours, e: Etape): Evenement | null {
+  if (e !== "livraison") return null;
+  const changer: Evenement = { type: "changer" };
+  return avancer(p, changer) !== p ? changer : null;
+}
+
+export type PasEtape = { etape: Etape; etat: "passee" | "courante" | "future"; retour: Evenement | null };
+
+/** Les six étapes du bandeau, chacune passée, courante ou future, avec le
+ *  retour qu'elle offre. Null quand aucune étape n'est visible. */
+export function etapesDuParcours(p: Parcours, ctx: Contexte = {}): PasEtape[] | null {
+  const ici = etapeVisible(p, ctx);
+  if (ici === null) return null;
+  const rang = ETAPES.indexOf(ici);
+  return ETAPES.map((etape, i) => {
+    const etat = i < rang ? "passee" : i === rang ? "courante" : "future";
+    return { etape, etat, retour: etat === "passee" ? retourVers(p, etape) : null };
+  });
+}
+
+/** Les quatre jalons de la frise d'une commande. « Livrée » n'est jamais
+ *  atteint : ni le relais ni Cloudprinter ne rendent d'état de livraison,
+ *  la frise dit où va la commande sans inventer qu'elle y est arrivée. */
+export type Jalon = "payee" | "fabrication" | "expediee" | "livree";
+
+export const JALONS: Jalon[] = ["payee", "fabrication", "expediee", "livree"];
+
+/** Combien de jalons la commande a passés, de 0 à 3. Payée dès `payee` ; en
+ *  fabrication quand Cloudprinter rend un état de production (30 à 45) ;
+ *  expédiée à 100. Un état inconnu, ou hors du chemin (annulée, remboursée,
+ *  abandonnée), n'en pose aucun : la phrase dit le reste. */
+export function jalonsAtteints(i: IntentionVue): number {
+  if (i.etat === "payee") return 1;
+  if (i.etat !== "commandee") return 0;
+  const c = i.dernier_code;
+  if (c === 100) return 3;
+  if (c !== null && c >= 30 && c <= 45) return 2;
+  if (c === null || c === 1 || (c >= 5 && c <= 7) || (c >= 10 && c <= 15)) return 1;
+  return 0;
+}
+
+/** Le moins cher de la grille, en centimes : le « à partir de » de la porte
+ *  Colophon. Null sans grille : l'écran ne dit alors aucun prix. */
+export function prixAPartirDe(grille: Niveau[]): number | null {
+  return grille.length ? Math.min(...grille.map((n) => n.prix_ttc_centimes)) : null;
+}
+
+/** La dernière grille vue pendant cette ouverture de l'app, par produit et
+ *  nombre de pages. Demander une grille crée une intention au relais : on
+ *  n'en crée jamais une pour afficher un prix, on se souvient de la
+ *  dernière. */
+const grillesVues = new Map<string, number>();
+
+export function clePrix(produit: string | undefined, pages: number): string | null {
+  return produit ? `${produit}|${pages}` : null;
+}
+
+export function retenirPrix(cle: string | null, grille: Niveau[]): void {
+  const p = prixAPartirDe(grille);
+  if (cle !== null && p !== null) grillesVues.set(cle, p);
+}
+
+export function prixConnu(cle: string | null): number | null {
+  return cle === null ? null : (grillesVues.get(cle) ?? null);
+}
+
+/** Le relais n'ouvre que la France : la porte et l'encadré peuvent le dire. */
+export function livreEnFrance(pays: Pays[]): boolean {
+  return pays.length === 1 && pays[0].code === "FR";
+}
+
+/** La référence d'une intention, en huit signes : l'identifiant entier
+ *  reste au survol. */
+export function referenceCourte(id: string): string {
+  return id.slice(0, 8);
 }

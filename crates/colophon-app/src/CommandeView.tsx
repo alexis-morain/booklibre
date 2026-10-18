@@ -11,6 +11,14 @@
 // bouton de la grille enchaîne l'envoi et la confirmation : trois gestes
 // jusqu'à Stripe.
 //
+// A3 : le parcours se montre en six étapes, d'un bandeau en tête (Votre
+// livre · Livraison · Prix · Fichiers · Paiement · Suivi), la machine gardant
+// ses états (`commande.ts::etapeVisible`). « Votre livre » est l'écran de la
+// préparation, barre comprise ; « Suivi » est la carte de la commande, avec la
+// frise de ses jalons. Ce qui rassure n'est pas ici mais à côté, dans un
+// encadré fixe (`Rassurance`), et chaque phrase y est un fait que le relais
+// tient.
+//
 // Rien ne s'affiche sans relais compilé, sans dossier préparé dans cette
 // ouverture d'Envoi ou sans contrôle vert (`commandePossible`) : jamais un
 // bouton grisé. Un relais compilé qui ne répond pas se dit, à la place de
@@ -19,7 +27,11 @@
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { Dialogue } from "./Dialogue";
+import type { Album } from "./album";
+import { formatEnCm } from "./envoi";
+import { MiniCouverture } from "./PlanchesView";
 import {
+  Fiche,
   Preparation,
   ouvrirPaiement,
   relaisAnnuler,
@@ -31,7 +43,10 @@ import {
   relaisRelire,
 } from "./bridge";
 import {
+  ETAPES,
   IntentionVue,
+  JALONS,
+  Niveau,
   Parcours,
   Relais,
   aRelire,
@@ -45,7 +60,9 @@ import {
   avancer,
   commandeDirecte,
   commandePossible,
+  etapesDuParcours,
   formatInvendable,
+  jalonsAtteints,
   niveauChoisi,
   nomNiveau,
   part,
@@ -54,6 +71,7 @@ import {
   phraseIntention,
   phraseLivraison,
   prixDeCentimes,
+  referenceCourte,
   relaisDe,
   relaisIndisponible,
   visibles,
@@ -104,11 +122,26 @@ export function CommandeView({
   relais,
   sonde,
   sonder,
+  album,
+  fiche,
+  preparant,
+  progres,
+  onGrille,
 }: {
   preparationNeuve: Preparation | null;
   relais: Relais | null;
   sonde: boolean;
   sonder: () => void;
+  album: Album;
+  /** La fiche du contrôle, pour résumer le livre commandé. */
+  fiche: Fiche | null;
+  /** « Faire imprimer » prépare les fichiers en ce moment : l'étape « Votre
+   *  livre » se montre avant tout état du parcours. */
+  preparant: boolean;
+  /** La préparation, en pages rendues. */
+  progres: { done: number; total: number } | null;
+  /** Une grille est venue : Envoi en tire son « à partir de ». */
+  onGrille: (grille: Niveau[]) => void;
 }) {
   const langue = useLangue();
   const [intentions, setIntentions] = useState<IntentionVue[]>([]);
@@ -116,10 +149,19 @@ export function CommandeView({
   const [occupe, setOccupe] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // La commande qu'un paiement vient de faire aboutir : le bandeau reste, à
+  // l'étape Suivi, jusqu'à « Fermer » ou la commande suivante.
+  const [suivi, setSuivi] = useState<string | null>(null);
+  const parcoursRef = useRef(parcours);
+  parcoursRef.current = parcours;
 
   const recevoir = useCallback((liste: IntentionVue[]) => {
     setIntentions(liste);
-    for (const i of liste) envoyer({ type: "etat", intention: i });
+    const p = parcoursRef.current;
+    for (const i of liste) {
+      if (p.etape === "attente" && i.id === p.offre.id && dejaPayee(i.etat)) setSuivi(i.id);
+      envoyer({ type: "etat", intention: i });
+    }
   }, []);
 
   // À l'ouverture d'Envoi : où en sont les commandes.
@@ -177,7 +219,9 @@ export function CommandeView({
     void tenter(
       t("commande.devis.encours"),
       async () => {
-        envoyer({ type: "offre", offre: await relaisCreer(parcours.choisi, parcours.region) });
+        const offre = await relaisCreer(parcours.choisi, parcours.region);
+        onGrille(offre.grille);
+        envoyer({ type: "offre", offre });
       },
       () => envoyer({ type: "echec" }),
     );
@@ -190,6 +234,7 @@ export function CommandeView({
   useEffect(() => {
     if (!direct || !pays || parcours.etape !== "repos" || ouvertPour === preparationNeuve) return;
     setOuvertPour(preparationNeuve);
+    setSuivi(null);
     envoyer({ type: "commander", pays });
   }, [direct, pays, parcours.etape, ouvertPour, preparationNeuve]);
 
@@ -299,6 +344,13 @@ export function CommandeView({
     );
 
   const liste = visibles(intentions, "offre" in parcours ? parcours.offre.id : null);
+  // Entre la fin de la préparation et l'ouverture du parcours, « Votre
+  // livre » reste à l'écran : le bandeau ne clignote pas.
+  const ouvrira = direct && parcours.etape === "repos" && ouvertPour !== preparationNeuve;
+  const pas = etapesDuParcours(parcours, { preparation: preparant || ouvrira, suivi: suivi !== null });
+  const ici = pas?.find((x) => x.etat === "courante")?.etape ?? null;
+  const offreEnCours = "offre" in parcours ? parcours.offre : null;
+  const sandbox = offreEnCours?.mode === "sandbox" || (suivi !== null && intentions.find((i) => i.id === suivi)?.mode === "sandbox");
 
   return (
     <>
@@ -319,25 +371,94 @@ export function CommandeView({
         </div>
       )}
 
-      {possible && parcours.etape === "repos" && (!direct || ouvertPour === preparationNeuve) && (
+      {possible && parcours.etape === "repos" && suivi === null && (!direct || ouvertPour === preparationNeuve) && (
         <div className="commande-ouvrir">
           <button
             className="envoi-exporter"
             title={t("commande.commander.titre")}
-            onClick={() => pays && envoyer({ type: "commander", pays })}
+            onClick={() => {
+              if (!pays) return;
+              setSuivi(null);
+              envoyer({ type: "commander", pays });
+            }}
           >
             {t("commande.commander")}
           </button>
         </div>
       )}
 
-      {parcours.etape !== "repos" && (
+      {pas !== null && (
         <section className="commande" aria-label={t("commande.titre")}>
           <h3>{t("commande.titre")}</h3>
 
-          {"offre" in parcours && parcours.offre.mode === "sandbox" && (
+          <ol className="etapes" aria-label={t("commande.etapes")}>
+            {pas.map((x) => {
+              const nom = t(`commande.etape.${x.etape}`);
+              const libelle =
+                x.etat === "passee"
+                  ? t("commande.etape.faite", { etape: nom })
+                  : x.etat === "courante"
+                    ? t("commande.etape.courante", { etape: nom })
+                    : nom;
+              const contenu = (
+                <>
+                  <span className="etape-signe" aria-hidden="true">
+                    {x.etat === "passee" ? "✓" : ETAPES.indexOf(x.etape) + 1}
+                  </span>
+                  <span className="etape-nom">{nom}</span>
+                </>
+              );
+              return (
+                <li
+                  key={x.etape}
+                  className={"etape " + x.etat}
+                  aria-current={x.etat === "courante" ? "step" : undefined}
+                  aria-label={libelle}
+                >
+                  {x.retour ? (
+                    <button
+                      type="button"
+                      title={t("commande.etape.revenir")}
+                      disabled={occupe !== null}
+                      onClick={() => envoyer(x.retour!)}
+                    >
+                      {contenu}
+                    </button>
+                  ) : (
+                    <span>{contenu}</span>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+
+          {sandbox && (
             <p className="commande-sandbox" role="note">
               {t("commande.sandbox.bandeau")}
+            </p>
+          )}
+
+          {ici === "livre" && (
+            <VotreLivre album={album} fiche={fiche} preparant={preparant} progres={progres} />
+          )}
+          {pas.some((x) => x.etape === "livre" && x.etat === "passee") && ici !== "suivi" && (
+            <p className="commande-resume">
+              <span className="commande-resume-coche" aria-hidden="true">✓</span>
+              {resumeLivre(fiche)}
+            </p>
+          )}
+
+          {ici === "suivi" && (
+            <div className="commande-gestes">
+              <button className="link" onClick={() => setSuivi(null)}>
+                {t("commande.fermer")}
+              </button>
+            </div>
+          )}
+
+          {parcours.etape === "pays" && parcours.saute && occupe === null && (
+            <p className="envoi-sub" role="status">
+              {t("commande.devis.encours")}
             </p>
           )}
 
@@ -547,17 +668,8 @@ export function CommandeView({
         <section className="commandes">
           <h3>{t("commandes.titre")}</h3>
           <ul>
-            {liste.map((i) => (
-              <li key={i.id}>
-                <span className="commandes-ref">
-                  {t("commandes.ligne", {
-                    reference: i.id,
-                    mode: t(i.mode === "sandbox" ? "commande.mode.sandbox" : "commande.mode.reel"),
-                  })}
-                </span>
-                <span className="commandes-etat" role="status">
-                  {phraseIntention(i)}
-                </span>
+            {(suivi ? [...liste].sort((a, b) => Number(b.id === suivi) - Number(a.id === suivi)) : liste).map((i) => (
+              <CarteCommande key={i.id} i={i} langue={langue}>
                 {(annulableIntention(i) || payable(i) || abandonnable(i)) && (
                   <span className="commandes-gestes">
                     {payable(i) && (
@@ -583,11 +695,142 @@ export function CommandeView({
                   </span>
                 )}
                 {abandonnable(i) && <span className="commandes-note">{t("commandes.abandonner.note")}</span>}
-              </li>
+              </CarteCommande>
             ))}
           </ul>
         </section>
       )}
     </>
+  );
+}
+
+/** Une ligne pour le livre une fois l'étape passée. */
+function resumeLivre(fiche: Fiche | null): string {
+  const morceaux = fiche
+    ? [formatEnCm(fiche.format_page_mm), t("envoi.livre.pages", { n: fiche.pages_interieur })]
+    : [];
+  return [...morceaux, t("commande.livre.verifies")].join(" · ");
+}
+
+/** La première étape : ce qu'on commande, et la préparation de ses
+ *  fichiers, avec sa barre, avant qu'aucun appel au relais ne parte. */
+function VotreLivre({
+  album,
+  fiche,
+  preparant,
+  progres,
+}: {
+  album: Album;
+  fiche: Fiche | null;
+  preparant: boolean;
+  progres: { done: number; total: number } | null;
+}) {
+  return (
+    <div className="commande-livre">
+      <div className="commande-livre-plat" aria-hidden="true">
+        <MiniCouverture album={album} />
+      </div>
+      <div className="commande-livre-quoi">
+        {fiche && (
+          <p>
+            {formatEnCm(fiche.format_page_mm)} · {t("envoi.livre.pages", { n: fiche.pages_interieur })}
+          </p>
+        )}
+        {preparant ? (
+          <div className="commande-barre" role="status">
+            <label htmlFor="commande-barre-preparation">{t("commande.livre.preparation")}</label>
+            <progress
+              id="commande-barre-preparation"
+              max={1}
+              value={progres && progres.total > 0 ? Math.min(1, progres.done / progres.total) : undefined}
+            />
+          </div>
+        ) : (
+          <p className="commande-livre-verifies">
+            <span aria-hidden="true">✓ </span>
+            {t("commande.livre.verifies")}
+          </p>
+        )}
+        <p className="commande-explique">{t("commande.explique.preparation")}</p>
+      </div>
+    </div>
+  );
+}
+
+/** Une date de création, `AAAA-MM-JJ`, dite dans la langue de l'écran. */
+function dateDite(iso: string | undefined, langue: string): string | null {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return null;
+  const d = new Date(`${iso.slice(0, 10)}T12:00:00Z`);
+  return new Intl.DateTimeFormat(langue === "fr" ? "fr-FR" : "en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(d);
+}
+
+/** Une commande, en carte : sa référence courte, sa date, « test » en
+ *  sandbox, la frise de ses quatre jalons, sa phrase et ses gestes. Un état
+ *  inconnu garde la frise, sans jalon, et sa phrase neutre. */
+function CarteCommande({ i, langue, children }: { i: IntentionVue; langue: string; children?: React.ReactNode }) {
+  const n = jalonsAtteints(i);
+  const date = dateDite(i.date, langue);
+  return (
+    <li className="commande-carte">
+      <div className="commande-carte-tete">
+        <span className="commandes-ref" title={i.id}>
+          {referenceCourte(i.id)}
+        </span>
+        {date && <span className="commande-carte-date">{date}</span>}
+        {i.mode === "sandbox" && <span className="commande-badge">{t("commande.badge.test")}</span>}
+      </div>
+      <ol className="jalons" aria-label={t("commande.jalons")}>
+        {JALONS.map((j, k) => (
+          <li
+            key={j}
+            className={"jalon" + (k < n ? " atteint" : "") + (k === n - 1 ? " dernier" : "")}
+            aria-current={k === n - 1 ? "step" : undefined}
+          >
+            <span className="jalon-point" aria-hidden="true">
+              {k < n ? "✓" : ""}
+            </span>
+            <span className="jalon-nom">{t(`commande.jalon.${j}`)}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="commandes-etat" role="status">
+        {phraseIntention({ ...i, id: referenceCourte(i.id) })}
+      </p>
+      {children}
+    </li>
+  );
+}
+
+/** Ce qui se passe, en faits que le relais tient (A3, décision 10). Chaque
+ *  phrase a sa preuve dans `colophon-relais` : Stripe Checkout encaisse sur
+ *  sa page (le relais ne voit qu'une session) ; rien n'est débité sans
+ *  session payée ; les fichiers montent en `https` (l'app refuse toute autre
+ *  URL de dépôt) et le balayage quotidien retire les objets dès l'état 100
+ *  ou à 30 jours ; l'annulation rembourse sous l'état 30 ; la France n'est
+ *  dite que quand le relais n'ouvre qu'elle. Rien sur le suivi du colis ni
+ *  sur un délai : la grille ne promet ni l'un ni l'autre. */
+export function Rassurance({ enFrance, onSignaler }: { enFrance: boolean; onSignaler: () => void }) {
+  return (
+    <aside className="rassurance" aria-label={t("commande.rassure.titre")}>
+      <h3>{t("commande.rassure.titre")}</h3>
+      <ul>
+        <li>{t("commande.rassure.stripe")}</li>
+        <li>{t("commande.rassure.debit")}</li>
+        <li>{t("commande.rassure.fichiers")}</li>
+        <li>{t("commande.rassure.annuler")}</li>
+        {enFrance && <li>{t("commande.rassure.france")}</li>}
+        <li>
+          {t("commande.rassure.question")}{" "}
+          <button type="button" className="link" onClick={onSignaler}>
+            {t("menu.signaler.bug")}
+          </button>
+        </li>
+      </ul>
+    </aside>
   );
 }

@@ -541,7 +541,9 @@ function geometryParity(): Plugin {
  * paiement d'une intention qui n'attend plus le sien rend le 409 `etat`.
  * `POST /__dev/relais/panne {"pays": true}` fait échouer `pays` comme le
  * sandbox le 13/10 (502), jusqu'à `{"pays": false}` : de quoi voir l'écran
- * dire la panne et « Réessayer ».
+ * dire la panne et « Réessayer ». `{"absent": true}` rend `pays` nul, comme
+ * un build sans relais compilé (la release publique) : Envoi sans porte
+ * Colophon, jusqu'à `{"absent": false}`.
  */
 function relaisDev() {
   type Intention = {
@@ -550,11 +552,13 @@ function relaisDev() {
     etat: string;
     dernier_code: number | null;
     niveau: string | null;
+    date: string;
   };
   const intentions: Intention[] = [];
   // La réponse forcée du prochain abandon, puis la route reprend la main.
   let abandonForce: 200 | 404 | 409 | 502 | null = null;
   let paysEnPanne = false;
+  let relaisAbsent = false;
   const vue = () => [...intentions].reverse();
   const trouver = (id: string) => {
     const i = intentions.find((x) => x.id === id);
@@ -567,16 +571,25 @@ function relaisDev() {
   const actions: Record<string, (b: any) => unknown> = {
     // La France seule, comme au relais réel.
     pays: () => {
+      if (relaisAbsent) return null;
       if (paysEnPanne) throw new Error("relais : injoignable (502)");
       return [{ code: "FR", nom: "France", require_state: false }];
     },
     panne: (b) => {
-      paysEnPanne = b.pays === true;
-      return { pays: paysEnPanne };
+      if ("pays" in b) paysEnPanne = b.pays === true;
+      if ("absent" in b) relaisAbsent = b.absent === true;
+      return { pays: paysEnPanne, absent: relaisAbsent };
     },
     creer: () => {
       const id = `faux${Date.now().toString(36)}`;
-      intentions.push({ id, mode: "sandbox", etat: "attente_fichiers", dernier_code: null, niveau: null });
+      intentions.push({
+        id,
+        mode: "sandbox",
+        etat: "attente_fichiers",
+        dernier_code: null,
+        niveau: null,
+        date: new Date().toISOString().slice(0, 10),
+      });
       return {
         id,
         mode: "sandbox",

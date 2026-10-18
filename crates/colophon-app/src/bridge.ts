@@ -800,6 +800,9 @@ export type Printer = {
   min_ppi: number;
   certitude: Certitude;
   reserves: string[];
+  /** Les options choisies à la commande, sous les codes du fournisseur
+   *  (`printer.rs::OptionsCommande`). Null chez qui ne commande rien. */
+  commande?: { papier: string; couverture: string; finition: string } | null;
 };
 
 export type Certitude = "confirme" | "provisoire";
