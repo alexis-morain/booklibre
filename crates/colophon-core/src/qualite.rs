@@ -16,6 +16,13 @@
 //! netteté de son dossier. Sous `pipeline::PETIT_DOSSIER`, où la curation
 //! coupe ses propres règles statistiques, le décile se coupe aussi : sur
 //! cinq photos, il désignerait toujours la moins nette, floue ou non.
+//!
+//! Un dossier entièrement net a donc toujours un dixième de photos dites
+//! floues. Un seuil absolu devait le corriger ; il a été cherché
+//! (`banc_seuil_de_flou`, `docs/mesures/2026-10-17-seuil-de-flou.json`) et
+//! n'existe pas sur cette mesure : floutée d'un gaussien σ = 3, une scène
+//! texturée garde une variance du laplacien (jusqu'à 936) bien au-dessus du
+//! 2ᵉ centile des originales (63). La netteté dit la texture avant le flou.
 
 use crate::analyze;
 use crate::releve::Releve;
@@ -286,6 +293,117 @@ mod tests {
         assert!(nette.nettete > floue.nettete);
         assert_eq!(r.seuil_flou, None, "deux photos, aucun décile");
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// Les centiles d'une population, par rang le plus proche.
+    fn centiles(v: &[f64]) -> serde_json::Value {
+        let mut v = v.to_vec();
+        v.sort_by(f64::total_cmp);
+        let rang = |p: f64| v[((v.len() as f64 * p).ceil() as usize).clamp(1, v.len()) - 1];
+        serde_json::json!({
+            "n": v.len(),
+            "min": v[0],
+            "p1": rang(0.01),
+            "p2": rang(0.02),
+            "p5": rang(0.05),
+            "p10": rang(0.10),
+            "p50": rang(0.50),
+            "p90": rang(0.90),
+            "max": v[v.len() - 1],
+        })
+    }
+
+    /// Le seuil absolu de flou se mesure. Chaque vignette des trois jeux et
+    /// des huit RAW, prise par le chemin même de l'analyse
+    /// (`ThumbCache::get`), est mesurée telle quelle, puis floutée d'un
+    /// gaussien σ = 1,5 et σ = 3 px à sa taille. Le seuil est le haut des
+    /// floutées σ = 3, s'il reste sous le 2ᵉ centile des originales ; sinon
+    /// aucun chiffre n'est réglé au jugé. Écrit la mesure dans
+    /// `docs/mesures/` (`COLOPHON_MESURE`) et le compte de photos floues par
+    /// jeu, avant (le décile seul) et après.
+    /// `cargo test -p colophon-core --release banc_seuil_de_flou -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn banc_seuil_de_flou() {
+        let home = PathBuf::from(std::env::var("HOME").unwrap());
+        let jeux = home.join("Pictures/colophon-testsets");
+        let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let cache = crate::thumb::ThumbCache::new(&repo.join(".albums/banc-flou")).unwrap();
+        let mut par_jeu = Vec::new();
+        let (mut tous_o, mut tous_15, mut tous_3) = (Vec::new(), Vec::new(), Vec::new());
+        for jeu in ["corse-2013", "mauritanie-2019", "random-2024", "raw"] {
+            let images = crate::scan::scan(&jeux.join(jeu)).images;
+            assert!(!images.is_empty(), "{jeu} absent");
+            let mesures: Vec<(f64, f64, f64)> = images
+                .par_iter()
+                .filter_map(|p| {
+                    let m = crate::meta::read(p);
+                    let img = cache.get(p, m.orientation).ok()?;
+                    let net = |i: &image::DynamicImage| analyze::nettete_et_exposition(i).0;
+                    let flou = |s: f32| image::DynamicImage::ImageRgba8(image::imageops::blur(&img, s));
+                    Some((net(&img), net(&flou(1.5)), net(&flou(3.0))))
+                })
+                .collect();
+            println!("{jeu} : {} photos sur {}", mesures.len(), images.len());
+            let o: Vec<f64> = mesures.iter().map(|m| m.0).collect();
+            tous_o.extend(&o);
+            tous_15.extend(mesures.iter().map(|m| m.1));
+            tous_3.extend(mesures.iter().map(|m| m.2));
+            par_jeu.push((jeu, o, mesures));
+        }
+        let haut_3 = tous_3.iter().copied().fold(f64::MIN, f64::max);
+        let mut triees = tous_o.clone();
+        triees.sort_by(f64::total_cmp);
+        let p2 = triees[((triees.len() as f64 * 0.02).ceil() as usize).max(1) - 1];
+        let tient = haut_3 < p2;
+        let mut jeux_json = serde_json::Map::new();
+        for (jeu, o, mesures) in &par_jeu {
+            let decile = {
+                let mut v = o.clone();
+                v.sort_by(f64::total_cmp);
+                v[((v.len() as f64 * PART_FLOUE).ceil() as usize).max(1) - 1]
+            };
+            let avant = o.iter().filter(|&&n| n <= decile).count();
+            let apres = o.iter().filter(|&&n| n <= decile.min(haut_3)).count();
+            let floutees_3 = mesures.iter().filter(|m| m.2 <= decile.min(haut_3)).count();
+            println!(
+                "{jeu:<16} décile {decile:>9.2}  avant {avant:>3}  après {apres:>3}  floutées σ=3 attrapées {floutees_3}/{}",
+                mesures.len()
+            );
+            jeux_json.insert(
+                jeu.to_string(),
+                serde_json::json!({
+                    "photos": o.len(),
+                    "seuil_decile": decile,
+                    "floues_avant": avant,
+                    "floues_apres": if tient { serde_json::json!(apres) } else { serde_json::Value::Null },
+                    "floutees_sigma_3_attrapees": floutees_3,
+                    "originales": centiles(o),
+                    "sigma_1_5": centiles(&mesures.iter().map(|m| m.1).collect::<Vec<_>>()),
+                    "sigma_3": centiles(&mesures.iter().map(|m| m.2).collect::<Vec<_>>()),
+                }),
+            );
+        }
+        println!("haut des floutées σ=3 : {haut_3:.3} ; 2ᵉ centile des originales : {p2:.3} ; tient : {tient}");
+        let mesure = serde_json::json!({
+            "banc": "qualite::tests::banc_seuil_de_flou",
+            "mesure": "analyze::nettete_et_exposition sur la vignette de ThumbCache::get (1600 px), floutée par image::imageops::blur",
+            "regle": "seuil = haut des floutées σ = 3 s'il reste sous le 2e centile des originales",
+            "haut_sigma_3": haut_3,
+            "p2_originales": p2,
+            "tient": tient,
+            "seuil_absolu": if tient { serde_json::json!(haut_3) } else { serde_json::Value::Null },
+            "ensemble": {
+                "originales": centiles(&tous_o),
+                "sigma_1_5": centiles(&tous_15),
+                "sigma_3": centiles(&tous_3),
+            },
+            "jeux": jeux_json,
+        });
+        if let Ok(chemin) = std::env::var("COLOPHON_MESURE") {
+            fs::write(&chemin, serde_json::to_string_pretty(&mesure).unwrap() + "\n").unwrap();
+            println!("écrit : {chemin}");
+        }
     }
 
     #[test]

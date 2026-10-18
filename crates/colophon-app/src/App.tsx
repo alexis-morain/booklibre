@@ -168,6 +168,7 @@ import { ApercuFidele } from "./pdfview";
 import { forgetPdfs } from "./raster";
 import { Tourneur } from "./Feuilletage";
 import { chargerReleve } from "./photos";
+import { LegendeQualite } from "./LegendeQualite";
 import { cachedThumb, loadThumb, resetThumbs } from "./thumbs";
 import "./styles.css";
 
@@ -2807,6 +2808,7 @@ export default function App() {
         <PlanchesFoot
           album={album}
           index={Math.max(index, 0)}
+          onSeek={setIndex}
           status={status}
           onInsert={(kind) => {
             const at = Math.max(index, 0);
@@ -3473,19 +3475,22 @@ function BookFoot({
           ne la voit pas — et posée sur le conteneur, qui lui existe avant
           le message, faute de quoi certains lecteurs d'écran ne verraient
           jamais naître la région. */}
-      <div className="foot-line" role="status">
-        {rendering ? (
-          <span className="foot-render">
-            {status ?? t("export.rendu")}{" "}
-            <button className="link" onClick={onCancelExport}>
-              {t("export.annuler")}
-            </button>
-          </span>
-        ) : (
-          <span className={overflow && !status ? "foot-overflow" : undefined}>
-            {status ?? overflow ?? ""}
-          </span>
-        )}
+      <div className="foot-bas">
+        <div className="foot-line" role="status">
+          {rendering ? (
+            <span className="foot-render">
+              {status ?? t("export.rendu")}{" "}
+              <button className="link" onClick={onCancelExport}>
+                {t("export.annuler")}
+              </button>
+            </span>
+          ) : (
+            <span className={overflow && !status ? "foot-overflow" : undefined}>
+              {status ?? overflow ?? ""}
+            </span>
+          )}
+        </div>
+        <LegendeQualite album={album} index={index} onSeek={onSeek} />
       </div>
     </footer>
   );
@@ -3499,9 +3504,11 @@ function PlanchesFoot({
   onInsert,
   onDuplicate,
   onRemove,
+  onSeek,
 }: {
   album: Album;
   index: number;
+  onSeek: (i: number) => void;
   status: string | null;
   onInsert: (kind: "vide" | "texte") => void;
   onDuplicate: () => void;
@@ -3529,9 +3536,12 @@ function PlanchesFoot({
           {t("stockage.supprimer")}
         </button>
       </div>
-      <p className="foot-line" role="status">
-        {status ?? t("planches.hint")}
-      </p>
+      <div className="foot-bas">
+        <p className="foot-line" role="status">
+          {status ?? t("planches.hint")}
+        </p>
+        <LegendeQualite album={album} index={index} onSeek={onSeek} />
+      </div>
     </footer>
   );
 }

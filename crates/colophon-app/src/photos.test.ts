@@ -15,7 +15,9 @@ import {
   alertesDeReserve,
   badgesDe,
   chargerReleve,
+  detailDAlerte,
   nomDAlerte,
+  phraseDAlerte,
   releveCourant,
 } from "./photos";
 import { resetThumbs } from "./thumbs";
@@ -156,10 +158,36 @@ describe("le nom d'une alerte, pour la voix", () => {
   it("dit le ppi et le plancher", () => {
     setLangue("fr");
     expect(nomDAlerte({ code: "sous_resolution", ppi: 220 })).toBe("220 ppi, sous 250");
-    expect(nomDAlerte({ code: "floue" })).toBe("floue");
+    expect(nomDAlerte({ code: "floue" })).toBe("peu nette");
     setLangue("en");
     expect(nomDAlerte({ code: "sous_resolution", ppi: 220 })).toBe("220 ppi, under 250");
     expect(nomDAlerte({ code: "sombre" })).toBe("dark");
+  });
+});
+
+describe("la bulle d'une alerte", () => {
+  it("dit la phrase simple, sans chiffre, et garde le ppi pour le détail", () => {
+    setLangue("fr");
+    const petite = { code: "sous_resolution" as const, ppi: 220 };
+    expect(phraseDAlerte(petite)).toBe(
+      "Trop petite pour cette case : elle risque d’imprimer floue. Remplacez-la ou donnez-lui une case plus petite.",
+    );
+    expect(phraseDAlerte(petite)).not.toMatch(/\d/);
+    expect(detailDAlerte(petite)).toBe("220 ppi, sous 250");
+    expect(phraseDAlerte({ code: "sombre" })).toBe(
+      "Photo sombre : elle imprimera plus sombre qu’à l’écran.",
+    );
+    expect(detailDAlerte({ code: "sombre" })).toBeNull();
+    expect(detailDAlerte({ code: "floue" })).toBeNull();
+  });
+
+  it("dit la demi-page pour une photo de la réserve", () => {
+    setLangue("en");
+    const petite = { code: "sous_resolution" as const, ppi: 220 };
+    expect(phraseDAlerte(petite, "reserve")).toBe(
+      "Too small for half a page: it may print blurry. Give it a smaller cell.",
+    );
+    expect(phraseDAlerte({ code: "floue" }, "reserve")).toBe(phraseDAlerte({ code: "floue" }));
   });
 });
 

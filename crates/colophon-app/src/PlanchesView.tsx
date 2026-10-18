@@ -24,6 +24,8 @@ import { useEffect, useRef, useState } from "react";
 import { t } from "./i18n";
 import { Album, Spread, spreadGeometry, slotsFor } from "./album";
 import { badgesDe, useReleve } from "./photos";
+import { signesDePlanche } from "./qualite";
+import { SignesAlerte } from "./SignesAlerte";
 import { reglagePose, useReglages } from "./reglages";
 import { thumbCropStyle } from "./SpreadView";
 import { cachedThumb, loadThumb } from "./thumbs";
@@ -290,12 +292,14 @@ function PlancheCell({
   const releve = useReleve();
   const [sombres, setSombres] = useState<ReadonlySet<number>>(() => new Set());
   const rects = slotsFor(spread.template, spread.slots.length, spreadGeometry(album));
-  const enAlerte = spread.slots.filter((slot, i) => {
+  const parCase = spread.slots.map((slot, i) => {
     const r = rects[i];
-    if (!r) return false;
+    if (!r) return [];
     const b = badgesDe(slot.src, null, r, 1, slot.zoom ?? 1, undefined, releve);
-    return b.alertes.length > 0 || sombres.has(i);
-  }).length;
+    return sombres.has(i) ? [...b.alertes, { code: "sombre" as const }] : b.alertes;
+  });
+  const enAlerte = parCase.filter((a) => a.length > 0).length;
+  const signes = signesDePlanche(parCase);
   const surSombre = (i: number, sombre: boolean) =>
     setSombres((avant) => {
       if (avant.has(i) === sombre) return avant;
@@ -365,7 +369,7 @@ function PlancheCell({
               title={t("table.editee")}
             />
           )}
-          {ditAlerte && <span className="badge-alerte" title={ditAlerte} />}
+          <SignesAlerte alertes={signes} enLigne />
           <button
             className={"lock" + (spread.locked ? " locked" : "")}
             onClick={(e) => {
@@ -574,3 +578,4 @@ function MiniImg({
   }, [slot.src]);
   return url ? <img ref={img} src={url} alt="" style={thumbCropStyle(slot)} /> : null;
 }
+

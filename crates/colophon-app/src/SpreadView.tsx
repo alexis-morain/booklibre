@@ -48,7 +48,7 @@ import {
 } from "./album";
 import { captionSuggestion, detectedFocal, PoliceOfferte } from "./bridge";
 import { auRognage, SceneProxies } from "./SceneProxies";
-import { PastilleAlerte } from "./icons";
+import { SignesAlerte } from "./SignesAlerte";
 import { fontLoaded, measureMm, pile, substituer, surLaFace, tourDeFace } from "./font";
 
 import {
@@ -57,7 +57,6 @@ import {
   imageDe,
   ROOM_EPSILON,
   surImage,
-  texteDAlerte,
   useReleve,
 } from "./photos";
 import { filtreDe, reglagePose, useReglages } from "./reglages";
@@ -173,6 +172,9 @@ export function SpreadView({
   const [draftObjet, setDraftObjet] = useState<PoseObjet | null>(null);
   /** Le bloc dont le champ de saisie est ouvert. */
   const [ecrit, setEcrit] = useState<number | null>(null);
+  /** La case dont la boîte de clavier a le focus : sa bulle d'alerte
+   *  s'ouvre, comme au survol. */
+  const [caseFocus, setCaseFocus] = useState<number | null>(null);
   const [editingCaption, setEditingCaption] = useState(false);
   // The text block's editing state lives here rather than inside the block,
   // because the keyboard opens it from the proxy layer and the mouse opens
@@ -1192,25 +1194,23 @@ export function SpreadView({
           onSpreadCaption &&
           chapitre(null, captionAnchor(spread.template, spread.slots.length, geom))}
 
-        {/* The alert a case wears, under both renderers: one triangle in
-            the corner of the case as the page shows it (a full-bleed photo
-            would lose a corner to the trim), its sentences in the title.
-            Décor for the accessibility tree: the proxy's name says it. */}
+        {/* The alerts a case wears, under both renderers: one sign per
+            cause in the corner of the case as the page shows it (a
+            full-bleed photo would lose a corner to the trim), the most
+            serious first, and a bubble that opens on hover or when the
+            case's proxy holds the focus. */}
         {onSelect &&
           [...alertes].map(([cell, liste]) => {
             const r = cellRects.get(cell);
             if (!r) return null;
             const vue = auRognage(r, trim);
             return (
-              <span
+              <SignesAlerte
                 key={`alerte-${cell}`}
-                className="slot-alerte"
+                alertes={liste}
+                ouverte={caseFocus === cell}
                 style={{ left: `${vue.x * mm}px`, top: `${vue.y * mm}px` }}
-                title={liste.map(texteDAlerte).join("\n")}
-                aria-hidden="true"
-              >
-                <PastilleAlerte />
-              </span>
+              />
             );
           })}
 
@@ -1274,6 +1274,7 @@ export function SpreadView({
           onActivate={activer}
           onEchap={() => onSelect?.(null)}
           onPlanche={onPlanche}
+          onFocusCase={setCaseFocus}
         />
       </div>
       <div className="gutter" aria-hidden="true" />

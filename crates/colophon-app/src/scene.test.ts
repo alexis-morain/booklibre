@@ -215,7 +215,7 @@ describe("what the keyboard calls an object", () => {
     expect(nomDObjet(scene.objects[0], scene, alertes)).toBe("Photo 1 sur 2, 0.jpg");
     setLangue("en");
     const deux = new Map([[0, [{ code: "sombre" as const }, { code: "floue" as const }]]]);
-    expect(nomDObjet(scene.objects[0], scene, deux)).toBe("Photo 1 of 2, 0.jpg, dark, blurry");
+    expect(nomDObjet(scene.objects[0], scene, deux)).toBe("Photo 1 of 2, 0.jpg, dark, not sharp");
   });
 
   it("says a folder out loud to nobody", () => {

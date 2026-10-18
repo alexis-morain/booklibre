@@ -4,11 +4,10 @@
 // derived from the thumbnail index.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MIN_EFFECTIVE_PPI } from "./album";
 import { TriEntry } from "./edits";
 import { t } from "./i18n";
-import { PastilleAlerte } from "./icons";
-import { Alerte, alertesDeReserve, nomDAlerte, texteDAlerte, useReleve } from "./photos";
+import { SignesAlerte } from "./SignesAlerte";
+import { Alerte, alertesDeReserve, useReleve } from "./photos";
 import { REASON_KEYS, reasonLabel } from "./reasons";
 import { filtreDe, useReglages } from "./reglages";
 import { cachedThumb, loadThumb } from "./thumbs";
@@ -95,14 +94,6 @@ export function TriView({
   );
 }
 
-/** Le remède d'une alerte de la réserve : une photo sans case se dit trop
- *  petite pour une demi-page, pas pour une case. */
-function texteDeReserve(a: Alerte): string {
-  return a.code === "sous_resolution"
-    ? t("tri.alerte.sous_resolution", { ppi: a.ppi, plancher: MIN_EFFECTIVE_PPI })
-    : texteDAlerte(a);
-}
-
 function Cell({
   entry,
   alertes,
@@ -135,16 +126,7 @@ function Cell({
       }
     >
       <LazyThumb src={entry.src} />
-      {alertes.length > 0 && (
-        <span
-          className="slot-alerte"
-          role="img"
-          aria-label={alertes.map(nomDAlerte).join(", ")}
-          title={alertes.map(texteDeReserve).join("\n")}
-        >
-          <PastilleAlerte />
-        </span>
-      )}
+      <SignesAlerte alertes={alertes} lieu="reserve" ouverte={selected} />
     </figure>
   );
 }

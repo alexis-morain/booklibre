@@ -152,7 +152,7 @@ export function useReleve(): ReleveAlbum | null {
 // ---- the alerts ------------------------------------------------------------
 
 /** Ce qu'une case dit d'elle-même : trois alertes, un code chacune, dans
- *  cet ordre. Le texte est à `nomDAlerte` et `texteDAlerte`. */
+ *  cet ordre. Le texte est à `nomDAlerte`, `phraseDAlerte` et `detailDAlerte`. */
 export type Alerte =
   | { code: "sous_resolution"; ppi: number }
   | { code: "sombre" }
@@ -177,16 +177,31 @@ export function nomDAlerte(a: Alerte): string {
   }
 }
 
-/** L'alerte avec son remède, pour l'infobulle d'une case. */
-export function texteDAlerte(a: Alerte): string {
+/** Où la photo vit : une case de planche, ou la réserve, où elle n'a pas
+ *  de case et se mesure sur une demi-page. */
+export type LieuDAlerte = "case" | "reserve";
+
+/** L'alerte et son geste, dans la bulle d'un signe : une phrase simple,
+ *  sans chiffre technique. Le chiffre est à `detailDAlerte`. */
+export function phraseDAlerte(a: Alerte, lieu: LieuDAlerte = "case"): string {
   switch (a.code) {
     case "sous_resolution":
-      return t("planche.warn.ppi", { ppi: a.ppi, plancher: MIN_EFFECTIVE_PPI });
+      return t(
+        lieu === "reserve"
+          ? "alerte.phrase.reserve.sous_resolution"
+          : "alerte.phrase.sous_resolution",
+      );
     case "sombre":
-      return t("planche.warn.sombre");
+      return t("alerte.phrase.sombre");
     case "floue":
-      return t("planche.warn.floue");
+      return t("alerte.phrase.floue");
   }
+}
+
+/** Le chiffre, sous la phrase et en petit, pour qui le veut : le ppi d'une
+ *  photo trop petite. Les deux autres n'en ont aucun qui parle. */
+export function detailDAlerte(a: Alerte): string | null {
+  return a.code === "sous_resolution" ? nomDAlerte(a) : null;
 }
 
 /** Under half a pixel each way, no gesture can move anything. Read by the
