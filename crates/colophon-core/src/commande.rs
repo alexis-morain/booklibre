@@ -101,6 +101,18 @@ pub fn produit_pour(format: &str) -> Option<&'static str> {
     }
 }
 
+/// Les formats que l'écran de création offre : ceux de `format::FORMATS` qui
+/// ont un produit, dans le même ordre. La liste se déduit de `produit_pour`
+/// au lieu de se recopier, si bien qu'un produit ajouté ou retiré la suit.
+/// Les autres formats, et la taille libre, restent à la ligne de commande.
+pub fn formats_imprimables() -> Vec<&'static str> {
+    crate::format::FORMATS
+        .iter()
+        .map(|(nom, ..)| *nom)
+        .filter(|nom| produit_pour(nom).is_some())
+        .collect()
+}
+
 // ---- le secret ---------------------------------------------------------------
 
 /// La clé CloudCore. Elle dépense l'argent du compte : son `Debug` et son
@@ -737,6 +749,26 @@ mod tests {
     use std::cell::RefCell;
 
     const CLE: &str = "cle-de-test-0123456789abcdef";
+
+    /// L'écran de création n'offre que ce que Colophon sait faire imprimer :
+    /// les formats à produit, dans l'ordre de `format::FORMATS`, le défaut en
+    /// tête. Un format qui gagne ou perd son produit change cette liste sans
+    /// qu'on la touche, et ce test le dit.
+    #[test]
+    fn les_formats_imprimables_sont_ceux_qui_ont_un_produit() {
+        let imprimables = formats_imprimables();
+        assert_eq!(
+            imprimables,
+            ["carre-21", "carre-30", "portrait-a4", "paysage-a4", "portrait-20x25"]
+        );
+        for nom in &imprimables {
+            assert!(produit_pour(nom).is_some(), "{nom} sans produit");
+        }
+        for (nom, ..) in crate::format::FORMATS {
+            assert_eq!(imprimables.contains(nom), produit_pour(nom).is_some(), "{nom}");
+        }
+        assert!(!imprimables.contains(&"paysage-28x21"));
+    }
 
     /// Un faux CloudCore : rejoue une réponse écrite à la main d'après la
     /// note API du 26/09 et garde ce qu'on lui a envoyé.

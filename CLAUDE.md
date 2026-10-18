@@ -1030,6 +1030,21 @@ se parcourt au clavier** (un arrêt de tabulation, flèches, verticales d'une ra
 **La légende proposée** : champ vide, fantôme gris (`legende::proposition`), Tab la pose
 et marque `edited`. Les badges de case sont l'alerte de qualité (voir plus bas).
 
+**L'écran Nouvel album n'offre que ce qui s'imprime, et ne laisse aucune colonne vide**
+(C1-C2). Cinq formats, ceux de `commande::formats_imprimables` (déduite de
+`produit_pour`, commande `formats_imprimables`) ; 28 × 21 et la taille libre restent à la
+CLI. Plus de rythme : `equilibree` part toujours, C3 rouvre le choix dans Recomposer. À
+droite, dès qu'un dossier est choisi : une couverture proposée (`nouvelAlbum.ts::couvertureProposee`,
+dite « aperçu », pas celle du Composer), la **visionneuse de format** et trois lignes
+(`estimerLivre`, la règle du Composer, « environ »). Tout vient du **survol**
+(`core::survol`, commande `survol_dossier`, CLI cachée `--survol`) : le compte de `scan`
+et huit **miniatures** lues dans l'en-tête des fichiers, jamais un original, budget
+200 ms — 4 ms sur corse, 70 sur mauritanie, mesuré le 18/10. `VisionneuseFormat.tsx`
+ne sait rien de l'écran qui l'appelle : une échelle commune à tous les formats
+(`visionneuse.ts::BOITE_MM`, une constante, jamais calculée sur la liste offerte), les
+cases du moteur (`slotsFor`), une main de 19 cm, la cote ouverte, des aplats sans
+vignette, la taille animée en 250 ms.
+
 **Le sélecteur de gabarits montre des dispositions** (`gabarit.ts`) : verso, bande de
 légende et forme de cellule repliés, une entrée par disposition, groupées par nombre
 de photos — les 171 gabarits qu'une planche de quatre photos peut prendre deviennent

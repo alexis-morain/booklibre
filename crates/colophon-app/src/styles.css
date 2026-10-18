@@ -1537,7 +1537,7 @@ input[type="radio"] {
 
 .setup-layout {
   display: grid;
-  grid-template-columns: minmax(0, 26rem) auto;
+  grid-template-columns: minmax(0, 28rem) auto;
   gap: 56px;
   align-items: start;
 }
@@ -2908,21 +2908,22 @@ input[type="radio"] {
   max-width: 62ch;
 }
 
-/* Each format is an open double page at its true proportions; the fold is
-   the gap between the two pages. The shape does the explaining. */
+/* Each format is an open double page drawn at the scale all cards share:
+   the 30 × 30 is visibly the large one, the fold is the gap between the two
+   pages. The shape and the size do the explaining. */
 .format-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   align-items: stretch;
 }
 
 .format-card {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   justify-items: center;
   align-content: end;
-  padding: 8px 10px 6px;
+  padding: 14px 10px 10px;
   border: 1px solid var(--rule);
   background: transparent;
   transition: border-color var(--turn), background var(--turn);
@@ -2937,23 +2938,27 @@ input[type="radio"] {
   background: var(--surface);
 }
 
+/* A fixed height, pages aligned on the bottom edge: the cards compare as
+   books standing on one shelf. */
 .format-preview {
   display: flex;
   gap: 2px;
   align-items: end;
-  margin-bottom: 6px;
+  height: 64px;
+  margin-bottom: 8px;
 }
 
 .format-page {
   background: rgb(var(--text-rgb) / 0.22);
 }
 
+/* Terracotta for the chosen one: paper would vanish on the light surface. */
 .format-card.active .format-page {
-  background: var(--paper);
+  background: var(--accent);
 }
 
 .format-name {
-  font-size: var(--fs-12);
+  font-size: var(--fs-13);
   color: var(--text);
   white-space: nowrap;
 }
@@ -2965,35 +2970,123 @@ input[type="radio"] {
   white-space: nowrap;
 }
 
-/* The chosen format at scale: real margins, real gutter, cm measurements.
-   It doubles as the backdrop of the build progress. */
-.format-large {
-  margin: 26px 0 0;
+/* ---- le livre à venir, à droite de la création ------------------------- */
+
+.setup-livre {
   display: grid;
-  gap: 8px;
+  gap: 18px;
   justify-items: start;
 }
 
-.format-large-cote {
-  color: var(--muted);
-  font-size: var(--fs-12);
-  font-family: var(--font-mono);
-  justify-self: center;
+.setup-couverture {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
 }
 
-.format-large-spread {
+/* The front cover: the photo inset like the Composer's cover, the title
+   under it, on paper. */
+.setup-couverture-plat {
   position: relative;
   background: var(--paper);
   box-shadow: var(--shadow-paper);
   transition: width var(--turn), height var(--turn);
 }
 
-.format-large-slot {
+.setup-couverture-photo {
   position: absolute;
-  background: rgb(var(--ink-rgb) / 0.16);
+  left: 10%;
+  right: 10%;
+  top: 10%;
+  height: 62%;
+  width: 80%;
+  object-fit: cover;
+  display: block;
 }
 
-.format-large-fold {
+.setup-couverture-photo.aplat {
+  background: var(--case-fill);
+}
+
+.setup-couverture-titre {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 77%;
+  font-family: var(--font-book, var(--font-display));
+  font-size: var(--fs-12);
+  line-height: 1.2;
+  color: rgb(var(--ink-rgb));
+  text-align: center;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+
+.setup-chiffres {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  font-size: var(--fs-15);
+  color: var(--text);
+}
+
+.setup-chiffres li:not(:first-child) {
+  color: var(--muted);
+}
+
+/* ---- la visionneuse de format ------------------------------------------ */
+
+/* One scale for every format (`visionneuse.ts`), the spread on the left
+   edge of the scene and a life-size hand on the right as the yardstick.
+   The spread's size animates when the format changes; a reader who asked
+   for less motion gets the rule at the end of this file, which stops it. */
+.visionneuse {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.visionneuse-scene {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+}
+
+.visionneuse-main {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  color: rgb(var(--text-rgb) / 0.1);
+}
+
+.visionneuse-planche {
+  position: relative;
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+  transition: width 250ms cubic-bezier(0.2, 0, 0, 1), height 250ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.visionneuse-photo,
+.visionneuse-aplat {
+  position: absolute;
+  display: block;
+}
+
+.visionneuse-photo {
+  object-fit: cover;
+}
+
+.visionneuse-aplat {
+  background: var(--case-fill);
+}
+
+.visionneuse-pli {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -3007,14 +3100,17 @@ input[type="radio"] {
   );
 }
 
-.format-large figcaption {
+/* The open width, as a dimension line under the spread: it follows the
+   spread's width as it animates. */
+.visionneuse-cote {
+  border-top: 1px solid var(--muted);
+  padding-top: 4px;
+  text-align: center;
   color: var(--muted);
-  font-size: var(--fs-13);
-}
-
-.format-large figcaption strong {
-  color: var(--text);
-  font-weight: 600;
+  font-size: var(--fs-12);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  transition: width 250ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* ---- build progress ---------------------------------------------------- */
@@ -4439,72 +4535,6 @@ button.envoi-defaut-ou:focus-visible {
 .envoi-foot {
   grid-template-rows: 34px;
   align-content: center;
-}
-
-/* ---- le rythme de composition ------------------------------------------ */
-
-/* Three choices side by side, each one saying what it does and showing it.
-   Wider than tall: the shape of a double page, which is what is on offer. */
-/* As many columns as there are paces on offer: no reserved empty track. */
-.densites {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 8px;
-}
-
-.densite {
-  display: grid;
-  gap: 5px;
-  align-content: start;
-  text-align: left;
-  padding: 11px 12px 12px;
-  border: 1px solid var(--rule);
-  transition: border-color var(--turn), background var(--turn);
-}
-
-.densite:hover {
-  border-color: var(--muted);
-}
-
-.densite.active {
-  border-color: var(--accent);
-  background: var(--surface);
-}
-
-.densite-nom {
-  font-family: var(--font-display);
-  font-size: var(--fs-15);
-}
-
-.densite-about {
-  color: var(--muted);
-  font-size: var(--fs-12);
-  line-height: var(--lh-ui);
-}
-
-/* Two facing pages, with the cells this pace puts on them. */
-.densite-apercu {
-  display: flex;
-  gap: 2px;
-  margin-top: 4px;
-  height: 24px;
-}
-
-.densite-page {
-  display: grid;
-  gap: 2px;
-  flex: 1;
-  padding: 3px;
-  background: var(--paper);
-}
-
-.densite-case {
-  background: var(--case-fill);
-}
-
-.densite.active .densite-case {
-  background: var(--case-fill-active);
 }
 
 /* ---- moins de mouvement -------------------------------------------------- */

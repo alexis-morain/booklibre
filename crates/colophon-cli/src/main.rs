@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 #[command(after_help = FORMAT_HELP.as_str())]
 struct Cli {
     /// Folder of photos to build the album from
-    #[arg(required_unless_present_any = ["formats", "profils", "profils_json", "dump_geometry", "dump_ornements", "dump_lut", "dump_scene", "print", "cover", "audit", "reprise", "prevol", "preparer", "sheets", "bascule", "proposition", "gabarits", "reserve", "devis", "fiche", "releve_album", "dates", "banc_gabarits", "depuis_fiches"])]
+    #[arg(required_unless_present_any = ["formats", "profils", "profils_json", "dump_geometry", "dump_ornements", "dump_lut", "dump_scene", "print", "cover", "audit", "reprise", "prevol", "preparer", "sheets", "bascule", "proposition", "gabarits", "reserve", "devis", "fiche", "releve_album", "survol", "dates", "banc_gabarits", "depuis_fiches"])]
     photos: Option<PathBuf>,
 
     /// Output directory (album.json, album.pdf, thumbnail cache)
@@ -224,6 +224,13 @@ struct Cli {
     #[arg(long, hide = true)]
     releve_album: bool,
 
+    /// Print the survol the creation screen takes of a photo folder before
+    /// any composition: how many photos, and a handful of miniatures as
+    /// data URLs, with the time it took on stderr. Feeds the dev album
+    /// server and the 300 ms measure.
+    #[arg(long, value_name = "DIR", hide = true)]
+    survol: Option<PathBuf>,
+
     /// Print the trusted date of every placed photo of the album in --out,
     /// as a JSON object `{src: "28 octobre 2013"}`, worded like the caption
     /// suggestion. Feeds the dev album server, which reads the album on
@@ -412,6 +419,20 @@ fn main() -> Result<()> {
         )?)?;
         let fiche = colophon_core::fiche::fiche(&cli.out, Path::new(&album.root), src)?;
         println!("{}", serde_json::to_string(&fiche)?);
+        return Ok(());
+    }
+
+    if let Some(dir) = &cli.survol {
+        use colophon_core::survol;
+        let debut = std::time::Instant::now();
+        let a = survol::survol(dir, survol::PLACES, survol::BUDGET);
+        eprintln!(
+            "survol: {} photos, {} miniatures en {} ms",
+            a.photos,
+            a.miniatures.len(),
+            debut.elapsed().as_millis()
+        );
+        println!("{}", serde_json::to_string(&a)?);
         return Ok(());
     }
 

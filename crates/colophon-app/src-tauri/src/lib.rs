@@ -861,6 +861,26 @@ fn list_formats() -> Vec<FormatPreset> {
         .collect()
 }
 
+/// The formats the creation screen offers: those Colophon can have printed
+/// (`commande::formats_imprimables`). The others stay with the CLI.
+#[tauri::command]
+fn formats_imprimables() -> Vec<&'static str> {
+    colophon_core::commande::formats_imprimables()
+}
+
+/// The creation screen's survol of a photo folder, before any composition:
+/// its photo count and a handful of miniatures the files embed. Never an
+/// original decoded, and bounded in time (`survol::BUDGET`).
+#[tauri::command]
+async fn survol_dossier(dir: String) -> Result<colophon_core::survol::Survol, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        use colophon_core::survol;
+        survol::survol(Path::new(&dir), survol::PLACES, survol::BUDGET)
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
 /// One album folder per source folder, keyed by its absolute path so two
 /// folders sharing a name never collide, inside the app's own data dir.
 fn album_out_dir(app: &tauri::AppHandle, photos: &Path) -> Result<PathBuf, String> {
@@ -2595,6 +2615,8 @@ pub fn run() {
             preparer_pour_commande,
             montrer_dossier_prepare,
             list_formats,
+            formats_imprimables,
+            survol_dossier,
             build_album_from_folder,
             recompose_album,
             bascule_album,
