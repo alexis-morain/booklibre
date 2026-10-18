@@ -58,6 +58,9 @@ pub struct IntentionVue {
     pub etat: String,
     pub dernier_code: Option<i64>,
     pub niveau: Option<String>,
+    /// Le jour de la création, `AAAA-MM-JJ` : la carte de la commande le dit.
+    /// Ce n'est pas un secret.
+    pub date: String,
 }
 
 /// Les quatre états que plus rien ne fait bouger (la machine du relais).
@@ -139,6 +142,7 @@ impl Stock {
                 etat: i.etat.clone(),
                 dernier_code: i.dernier_code,
                 niveau: i.niveau.clone(),
+                date: i.date.clone(),
             })
             .collect()
     }
@@ -620,10 +624,12 @@ mod tests {
         .unwrap();
         let s = Stock::lire(&dir).unwrap();
         assert_eq!(s.intentions[0].niveau.as_deref(), Some("cp_ground"));
+        // Le jour de la création voyage (la carte de la commande le dit),
+        // jamais une heure.
         let vue = serde_json::to_value(s.vue(Some(Mode::Sandbox))).unwrap();
         assert_eq!(
             vue,
-            serde_json::json!([{"id": "a", "mode": "sandbox", "etat": "attente_paiement", "dernier_code": null, "niveau": "cp_ground"}])
+            serde_json::json!([{"id": "a", "mode": "sandbox", "etat": "attente_paiement", "dernier_code": null, "niveau": "cp_ground", "date": "2026-10-10"}])
         );
         s.ecrire(&dir).unwrap();
         assert!(!std::fs::read_to_string(dir.join(FICHIER)).unwrap().contains("paiement_ouvert_le"));

@@ -4245,42 +4245,57 @@ kbd {
 
 /* ---- où envoyer ce PDF -------------------------------------------------- */
 
-/* Two columns on a wide window: the verdict and its defects lead, the
-   supplier list and the spec sheet sit beside them. Nothing is a card. */
+/* Two columns on a wide window (A2): on the left what blocks, the two doors,
+   the button and what follows it; on the right the book, and beside the
+   order what reassures. The right column stays in view while the left one
+   scrolls. */
 .envoi {
   overflow-y: auto;
   padding: 26px 28px 40px;
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
-  /* Two columns that do not share their rows: the printer list spans the
-     verdict and its defects, the fiche spans the rest. With one area per
-     row, the verdict row stretched to the printer list's height and left
-     two hundred pixels of nothing between the sentence and the defects it
-     announced — measured at 1440 × 900, verdict 326 px tall for 80 px of
-     text. */
-  grid-template-areas:
-    "verdict imprimeurs"
-    "defauts imprimeurs"
-    "colophon fiche"
-    "actions fiche"
-    "appel fiche";
   align-items: start;
   gap: 0 44px;
   align-content: start;
 }
 
+.envoi-gauche {
+  min-width: 0;
+}
+
+.envoi-droite {
+  position: sticky;
+  top: 0;
+  display: grid;
+  gap: 26px;
+  justify-items: start;
+}
+
 @media (max-width: 900px) {
   .envoi {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "verdict" "defauts" "colophon" "actions" "appel" "imprimeurs" "fiche";
+  }
+  .envoi-droite {
+    position: static;
+    margin-top: 30px;
   }
 }
 
 .envoi-verdict {
-  grid-area: verdict;
   max-width: 62ch;
+}
+
+/* Vert : une ligne, une coche. */
+.envoi-pret {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.envoi-coche {
+  flex: none;
+  color: var(--accent);
 }
 
 .envoi h2 {
@@ -4319,7 +4334,6 @@ kbd {
 }
 
 .envoi-defauts {
-  grid-area: defauts;
   margin: 22px 0 0;
   max-width: 68ch;
 }
@@ -4412,11 +4426,31 @@ button.envoi-defaut-ou:focus-visible {
   gap: 4px 16px;
 }
 
-.envoi-imprimeurs {
-  grid-area: imprimeurs;
+/* « Pour les imprimeurs » et « Pages de début et de fin » : deux replis
+   fermés, nommés pour qui les cherche, discrets pour qui ne les cherche pas. */
+.envoi-imprimeurs,
+.envoi-colophon {
+  margin-top: 22px;
+  max-width: 62ch;
 }
 
-.envoi-imprimeurs h3,
+.envoi-imprimeurs > summary,
+.envoi-colophon > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: var(--fs-13);
+}
+
+.envoi-imprimeurs > summary:hover,
+.envoi-colophon > summary:hover {
+  color: var(--text);
+}
+
+.envoi-imprimeurs[open] > summary,
+.envoi-colophon[open] > summary {
+  margin-bottom: 12px;
+}
+
 .envoi-fiche h3 {
   margin: 0 0 10px;
   font-family: var(--font-display);
@@ -4467,8 +4501,7 @@ button.envoi-defaut-ou:focus-visible {
 }
 
 .envoi-fiche {
-  grid-area: fiche;
-  margin-top: 26px;
+  margin-top: 18px;
 }
 
 .envoi-fiche dl {
@@ -4517,13 +4550,8 @@ button.envoi-defaut-ou:focus-visible {
 /* The one thing on this screen that changes the book rather than reporting
    on it. Quiet, and above the export button: it costs two pages, and the
    page count is what the sheet beside it is about. */
-.envoi-colophon {
-  grid-area: colophon;
-  margin-top: 26px;
-  max-width: 62ch;
-}
-
 .envoi-colophon label {
+  margin-top: 6px;
   display: flex;
   gap: 8px;
   align-items: baseline;
@@ -4539,8 +4567,184 @@ button.envoi-defaut-ou:focus-visible {
 }
 
 .envoi-actions {
-  grid-area: actions;
+  margin-top: 22px;
+}
+
+/* ---- les deux portes (A2) ---- */
+
+.envoi-portes {
   margin-top: 26px;
+  max-width: 68ch;
+}
+
+.envoi-portes-cartes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .envoi-portes-cartes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.envoi-porte {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px 16px;
+  text-align: left;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  transition: border-color var(--turn), box-shadow var(--turn);
+}
+
+.envoi-porte:hover {
+  border-color: var(--muted);
+}
+
+.envoi-porte.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.envoi-porte:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.envoi-porte-titre {
+  font-family: var(--font-display);
+  font-size: var(--fs-18);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.envoi-porte-texte {
+  color: var(--text);
+  line-height: var(--lh-ui);
+}
+
+.envoi-porte-prix {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.envoi-porte-partenaire {
+  margin-top: auto;
+  padding-top: 4px;
+  font-size: var(--fs-12);
+  color: var(--muted);
+}
+
+/* Sans relais compilé : un titre et le bouton, pas une carte. */
+.envoi-porte-seule h3 {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: var(--fs-18);
+  font-weight: 600;
+}
+
+.envoi-porte-seule p {
+  margin: 0;
+  color: var(--muted);
+  max-width: 58ch;
+}
+
+/* ---- le livre, à droite (A2 ; le volume complet est A4) ---- */
+
+.envoi-livre {
+  display: grid;
+  gap: 14px;
+  justify-items: start;
+}
+
+.livre {
+  perspective: 1200px;
+  padding: 10px 0 18px 30px;
+}
+
+.livre-objet {
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateY(28deg);
+  transform-origin: left center;
+}
+
+.livre-plat {
+  position: absolute;
+  inset: 0;
+  box-shadow: 0 14px 28px -12px rgb(var(--ink-rgb) / 0.45), 0 0 0 1px rgb(var(--ink-rgb) / 0.08);
+}
+
+.livre-plat .mini-cover {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.livre-plat .mini-cover-title {
+  font-size: var(--fs-15);
+}
+
+/* Le dos, à sa largeur réelle et à l'échelle du plat, posé à gauche du plat
+   et rabattu vers l'arrière autour de son bord droit : sa face regarde vers
+   l'extérieur, et son titre se lit à l'endroit. Un gris mêlé du papier et de
+   l'encre, pour qu'il se détache sur le fond clair comme sur le sombre. */
+.livre-dos {
+  position: absolute;
+  top: 0;
+  right: 100%;
+  height: 100%;
+  transform-origin: right center;
+  transform: rotateY(-90deg);
+  background: color-mix(in srgb, var(--paper) 62%, rgb(var(--ink-rgb)) 38%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.livre-dos span {
+  writing-mode: vertical-rl;
+  font-family: var(--font-book);
+  font-size: var(--fs-12);
+  color: var(--paper-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 90%;
+}
+
+.livre-lignes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+  font-size: var(--fs-15);
+}
+
+.livre-lignes li:first-child {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.livre-feuilleter {
+  padding: 7px 16px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: var(--fs-13);
+  transition: background var(--turn), color var(--turn);
+}
+
+.livre-feuilleter:hover {
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .envoi-exporter {
@@ -4596,7 +4800,6 @@ button.envoi-defaut-ou:focus-visible {
 /* The verdict call, shown once a print PDF exists: a rule above, no card.
    It asks for ten seconds, it must not look like a banner. */
 .envoi-verdict-appel {
-  grid-area: appel;
   margin-top: 30px;
   padding-top: 14px;
   border-top: 1px solid var(--rule);
@@ -4794,7 +4997,7 @@ button.envoi-defaut-ou:focus-visible {
   margin: 22px 0 0;
   padding-top: 14px;
   border-top: 1px solid var(--rule);
-  max-width: 62ch;
+  max-width: 74ch;
 }
 
 .commande h3,
@@ -4982,12 +5185,253 @@ button.envoi-defaut-ou:focus-visible {
   padding: 0;
 }
 
-.commandes li {
+/* Une commande, une carte (A3) : référence, date, la frise, la phrase, les
+   gestes. */
+.commandes > ul {
   display: grid;
-  gap: 2px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--rule);
+  gap: 12px;
+}
+
+.commande-carte {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  background: var(--surface);
   font-size: var(--fs-13);
+}
+
+.commande-carte-tete {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.commande-carte-date {
+  color: var(--muted);
+}
+
+.commande-badge {
+  padding: 0 6px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: var(--fs-12);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.commandes-etat {
+  margin: 0;
+  line-height: var(--lh-ui);
+}
+
+/* La frise : quatre jalons sur un trait, les passés pleins. */
+.jalons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jalon {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: var(--fs-12);
+  text-align: center;
+}
+
+.jalon::before {
+  content: "";
+  position: absolute;
+  top: 9px;
+  left: -50%;
+  right: 50%;
+  height: 2px;
+  background: var(--rule);
+}
+
+.jalon:first-child::before {
+  display: none;
+}
+
+.jalon.atteint::before {
+  background: var(--accent);
+}
+
+.jalon-point {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--rule);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--on-accent);
+  font-size: var(--fs-12);
+  line-height: 1;
+}
+
+.jalon.atteint .jalon-point {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.jalon.atteint {
+  color: var(--text);
+}
+
+.jalon.dernier .jalon-nom {
+  font-weight: 600;
+}
+
+/* ---- le bandeau d'étapes (A3) ---- */
+
+.etapes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 4px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-13);
+}
+
+.etape > span,
+.etape > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 0;
+  color: inherit;
+}
+
+.etape + .etape::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 1px;
+  margin-right: 6px;
+  vertical-align: middle;
+  background: var(--rule);
+}
+
+.etape {
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+}
+
+.etape-signe {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  font-size: var(--fs-12);
+  font-variant-numeric: tabular-nums;
+}
+
+.etape.passee {
+  color: var(--text);
+}
+
+.etape.passee .etape-signe {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.etape.courante {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.etape.courante .etape-signe {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.etape > button:hover .etape-nom,
+.etape > button:focus-visible .etape-nom {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.commande-resume {
+  margin: 0 0 12px;
+  font-size: var(--fs-13);
+  color: var(--muted);
+}
+
+.commande-resume-coche {
+  margin-right: 6px;
+  color: var(--accent);
+}
+
+/* « Votre livre » : la couverture, ce qu'on commande, la barre. */
+.commande-livre {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 8px;
+}
+
+.commande-livre-plat .mini-cover {
+  position: relative;
+  width: 100%;
+  background: var(--paper);
+  overflow: hidden;
+  box-shadow: 0 6px 14px -8px rgb(var(--ink-rgb) / 0.5);
+}
+
+.commande-livre-quoi p {
+  margin: 0 0 8px;
+}
+
+.commande-livre-verifies {
+  color: var(--text);
+}
+
+.commande-livre-verifies span {
+  color: var(--accent);
+}
+
+.commande-livre .commande-barre {
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin-bottom: 8px;
+}
+
+/* ---- ce qui rassure, à droite du parcours (A3) ---- */
+
+.rassurance {
+  width: 100%;
+  max-width: 44ch;
+  padding: 14px 16px;
+  border: 1px solid var(--rule);
+  border-left: 2px solid var(--accent);
+  font-size: var(--fs-13);
+}
+
+.rassurance h3 {
+  margin: 0 0 8px;
+  font-size: var(--fs-15);
+  font-weight: 600;
+}
+
+.rassurance ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0 0 0 16px;
+  line-height: var(--lh-ui);
 }
 
 .commandes-ref {

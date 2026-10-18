@@ -14,7 +14,11 @@ import {
   actionEnvoi,
   actionsDefaut,
   destinationDe,
+  formatEnCm,
   imprimeurAffiche,
+  papierEnClair,
+  porteEffective,
+  portesOffertes,
   libelleDestination,
   phrasePreparation,
   phraseSimple,
@@ -72,37 +76,85 @@ describe("imprimeurAffiche", () => {
 });
 
 describe("actionEnvoi", () => {
-  it("prépare un dossier chez qui relie deux fichiers", () => {
+  it("télécharge le PDF par la porte PDF : le dossier préparé chez Cloudprinter, sans boîte de commande", () => {
     setLangue("fr");
-    const a = actionEnvoi(PROFILS[0]);
-    expect(a.prepare).toBe(true);
-    expect(a.texte).toBe("Préparer pour Cloudprinter");
-  });
-
-  it("enregistre un PDF, comme avant, sous le profil sans contrainte", () => {
-    setLangue("fr");
-    const a = actionEnvoi(PROFILS[3]);
-    expect(a.prepare).toBe(false);
-    expect(a.texte).toBe("Enregistrer le PDF d’impression");
-  });
-
-  it("devient « Faire imprimer » chez Cloudprinter quand le relais répond", () => {
-    setLangue("fr");
-    const a = actionEnvoi(PROFILS[0], true);
-    expect(a).toMatchObject({ prepare: true, commande: true, texte: "Faire imprimer" });
+    const a = actionEnvoi(PROFILS[0], "pdf");
+    expect(a).toMatchObject({ prepare: true, commande: false, texte: "Télécharger le PDF" });
     setLangue("en");
-    expect(actionEnvoi(PROFILS[0], true).texte).toBe("Have it printed");
+    expect(actionEnvoi(PROFILS[0], "pdf").texte).toBe("Download the PDF");
   });
 
-  it("reste « Préparer » sans relais joignable, et ne commande jamais ailleurs que chez Cloudprinter", () => {
+  it("enregistre un seul PDF, comme avant, sous le profil sans contrainte", () => {
     setLangue("fr");
-    expect(actionEnvoi(PROFILS[0], false)).toMatchObject({
-      prepare: true,
-      commande: false,
-      texte: "Préparer pour Cloudprinter",
-    });
+    const a = actionEnvoi(PROFILS[3], "pdf");
+    expect(a).toMatchObject({ prepare: false, commande: false, texte: "Télécharger le PDF" });
+  });
+
+  it("devient « Faire imprimer » par la porte Colophon, chez Cloudprinter seulement", () => {
+    setLangue("fr");
+    expect(actionEnvoi(PROFILS[0], "colophon")).toMatchObject({ prepare: true, commande: true, texte: "Faire imprimer" });
+    setLangue("en");
+    expect(actionEnvoi(PROFILS[0], "colophon").texte).toBe("Have it printed");
+    for (const p of PROFILS.slice(1)) expect(actionEnvoi(p, "colophon").commande, p.id).toBe(false);
+  });
+
+  it("garde la porte PDF par défaut", () => {
     expect(actionEnvoi(PROFILS[0])).toMatchObject({ commande: false });
-    for (const p of PROFILS.slice(1)) expect(actionEnvoi(p, true).commande, p.id).toBe(false);
+  });
+});
+
+describe("les deux portes", () => {
+  it("n'offrent que le PDF sans relais compilé, ou tant que le relais n'a pas répondu", () => {
+    expect(portesOffertes(null)).toEqual(["pdf"]);
+    expect(portesOffertes({ etat: "absent" })).toEqual(["pdf"]);
+  });
+
+  it("offrent les deux dès qu'un relais est compilé, même en panne", () => {
+    expect(portesOffertes({ etat: "joignable", pays: [] })).toEqual(["pdf", "colophon"]);
+    expect(portesOffertes({ etat: "injoignable" })).toEqual(["pdf", "colophon"]);
+  });
+
+  it("ouvrent sur Colophon quand le relais répond, sur le PDF sinon, et gardent le choix fait", () => {
+    const joignable = { etat: "joignable" as const, pays: [] };
+    expect(porteEffective(null, joignable)).toBe("colophon");
+    expect(porteEffective(null, { etat: "injoignable" })).toBe("pdf");
+    expect(porteEffective("pdf", joignable)).toBe("pdf");
+    expect(porteEffective("colophon", { etat: "injoignable" })).toBe("colophon");
+    // Une porte qui n'existe plus ne reste pas choisie.
+    expect(porteEffective("colophon", { etat: "absent" })).toBe("pdf");
+    expect(porteEffective("colophon", null)).toBe("pdf");
+  });
+});
+
+describe("le livre en clair", () => {
+  it("dit le format en centimètres, à la virgule de la langue", () => {
+    setLangue("fr");
+    expect(formatEnCm([210, 210])).toBe("21 × 21 cm");
+    expect(formatEnCm([203.2, 254])).toBe("20,3 × 25,4 cm");
+    setLangue("en");
+    expect(formatEnCm([203.2, 254])).toBe("20.3 × 25.4 cm");
+    expect(formatEnCm([297, 210])).toBe("29.7 × 21 cm");
+  });
+
+  it("tire le papier du profil : grammage, couverture rigide quand elle est cartonnée, finition connue", () => {
+    const cp: Printer = {
+      ...PROFILS[0],
+      rempli_mm: 18,
+      commande: { papier: "pageblock_150mcs", couverture: "cover_130mcg", finition: "cover_finish_matte" },
+    };
+    setLangue("fr");
+    expect(papierEnClair(cp, 150)).toBe("Papier 150 g, couverture rigide mate");
+    setLangue("en");
+    expect(papierEnClair(cp, 150)).toBe("150 gsm paper, matte hardcover");
+    // Une finition que l'app ne connaît pas ne s'invente pas.
+    setLangue("fr");
+    expect(papierEnClair({ ...cp, commande: { ...cp.commande!, finition: "cover_finish_x" } }, 150)).toBe(
+      "Papier 150 g, couverture rigide",
+    );
+  });
+
+  it("ne dit rien du papier sans options de commande : l'imprimeur choisi le décidera", () => {
+    expect(papierEnClair(PROFILS[3], 150)).toBeNull();
   });
 });
 
@@ -126,7 +178,7 @@ describe("phrasePreparation", () => {
   it("dit en une phrase que le dossier est prêt, et lequel", () => {
     setLangue("fr");
     expect(phrasePreparation(preparation(0))).toBe(
-      "Dossier « Corse – Cloudprinter » prêt : les deux PDF relus, rien ne s’oppose à la commande.",
+      "Dossier « Corse – Cloudprinter » prêt : les deux PDF relus, rien ne s’oppose à l’impression.",
     );
   });
 

@@ -356,6 +356,8 @@ export default function App() {
   // The faithful preview: the book view reads the PDF instead of drawing it.
   // `pdfCle` counts re-renders, so pdf.js drops a document it has parsed.
   const [fidele, setFidele] = useState(false);
+  // La préparation qui tourne, page par page : la barre de « Votre livre ».
+  const [progresExport, setProgresExport] = useState<{ done: number; total: number } | null>(null);
   // À propos : version, licence, et les trois actifs sous licence tierce.
   const [apropos, setApropos] = useState(false);
   // Préférences (⌘,) : la langue, et une note sur l'apparence.
@@ -886,6 +888,7 @@ export default function App() {
       }
     } finally {
       setRendering(false);
+      setProgresExport(null);
     }
   }, [save, rendering, hist, profil]);
 
@@ -899,10 +902,14 @@ export default function App() {
     if (rendering || !hist || !(await save())) return;
     setRendering(true);
     setStatus(t("export.rendu"));
+    setProgresExport(null);
     try {
       let dernier = 0;
       const progres = (done: number, total: number) => {
         const now = performance.now();
+        // La barre d'Envoi suit chaque page ; la ligne de statut, une fois
+        // par seconde.
+        setProgresExport({ done, total });
         if (done < total && now - dernier < 1000) return;
         dernier = now;
         setStatus(t("export.progress", { done, total }));
@@ -2666,6 +2673,18 @@ export default function App() {
           onGarde={(on) => void toggleGarde(on)}
           policeManquante={policeInfo?.manquante ?? false}
           absents={absents}
+          onFeuilleter={() => {
+            // L'aperçu fidèle, ouvert sur la première planche : le même
+            // chemin que ⇧⌘P, qui rend le PDF s'il a vieilli. Aucun second
+            // lecteur. Pas sur la couverture, dont le rendu peut échouer sans
+            // coûter l'aperçu (`basculerFidele`) : on feuillette l'intérieur.
+            setIndex(0);
+            setSelected(null);
+            setView("livre");
+            void basculerFidele();
+          }}
+          onSignaler={() => fire("menu", "signaler-bug")}
+          progresExport={progresExport}
         />
 
       ) : view === "planches" ? (

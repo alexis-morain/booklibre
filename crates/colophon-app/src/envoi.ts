@@ -9,7 +9,8 @@
 
 import type { Album } from "./album";
 import type { Defaut, Preparation, Printer } from "./bridge";
-import { Cle, FR, t } from "./i18n";
+import type { Relais } from "./commande";
+import { Cle, FR, langue, t } from "./i18n";
 
 /** L'imprimeur que l'écran nomme et prépare. */
 export const PROFIL_ENVOI = "cloudprinter";
@@ -28,26 +29,73 @@ export function imprimeurAffiche(
   return printers.find((p) => p.id === id) ?? null;
 }
 
-/** Le bouton de l'écran. Chez qui relie deux fichiers, il prépare un
- *  dossier ; sinon il enregistre un PDF, comme il l'a toujours fait. Chez
- *  Cloudprinter, quand le relais répond, il devient « Faire imprimer » : la
- *  préparation se fait sans boîte, dans le dossier de données, et mène droit
- *  à la commande (`commande`). Sans relais joignable, rien ne change. */
+/** Les deux portes d'Envoi : le PDF, pour l'imprimeur de son choix, et le
+ *  livre que Colophon fait imprimer (A2). */
+export type Porte = "pdf" | "colophon";
+
+/** Les portes que l'écran offre. Sans relais compilé, la porte Colophon
+ *  n'existe pas, et rien ne l'annonce : la release publique ne montre que
+ *  le PDF. Tant que le relais n'a pas répondu, pareil. Un relais compilé en
+ *  panne garde sa porte, qui dit la panne. */
+export function portesOffertes(relais: Relais | null): Porte[] {
+  return relais === null || relais.etat === "absent" ? ["pdf"] : ["pdf", "colophon"];
+}
+
+/** La porte ouverte : celle qu'on a choisie si elle existe encore, sinon
+ *  Colophon quand le relais répond, le PDF dans tous les autres cas. */
+export function porteEffective(choisie: Porte | null, relais: Relais | null): Porte {
+  const offertes = portesOffertes(relais);
+  if (choisie !== null && offertes.includes(choisie)) return choisie;
+  return relais?.etat === "joignable" ? "colophon" : "pdf";
+}
+
+/** Le bouton de l'écran, qui suit la porte. Par la porte PDF il télécharge :
+ *  chez qui relie deux fichiers, le dossier préparé dans une boîte qu'on
+ *  choisit ; sinon un seul PDF. Par la porte Colophon, chez Cloudprinter, il
+ *  devient « Faire imprimer » : la préparation se fait sans boîte, dans le
+ *  dossier de données, et mène droit à la commande (`commande`). */
 export function actionEnvoi(
   p: Printer,
-  relaisJoignable = false,
+  porte: Porte = "pdf",
 ): { prepare: boolean; commande: boolean; texte: string; titre: string } {
-  if (p.fichiers !== "deux") {
-    return { prepare: false, commande: false, texte: t("envoi.exporter"), titre: t("envoi.exporter.titre") };
+  if (porte === "colophon" && p.id === PROFIL_ENVOI && p.fichiers === "deux") {
+    return { prepare: true, commande: true, texte: t("envoi.faire_imprimer"), titre: t("envoi.faire_imprimer.titre") };
   }
-  return relaisJoignable && p.id === PROFIL_ENVOI
-    ? { prepare: true, commande: true, texte: t("envoi.faire_imprimer"), titre: t("envoi.faire_imprimer.titre") }
-    : {
-        prepare: true,
-        commande: false,
-        texte: t("envoi.preparer", { imprimeur: p.nom }),
-        titre: t("envoi.preparer.titre"),
-      };
+  return p.fichiers === "deux"
+    ? { prepare: true, commande: false, texte: t("envoi.telecharger"), titre: t("envoi.preparer.titre") }
+    : { prepare: false, commande: false, texte: t("envoi.telecharger"), titre: t("envoi.exporter.titre") };
+}
+
+/** Le format d'une page, en centimètres, à la virgule de la langue. */
+export function formatEnCm([w, h]: [number, number]): string {
+  const cm = (mm: number) => {
+    const v = Math.round(mm) / 10;
+    return (Number.isInteger(v) ? String(v) : v.toFixed(1)).replace(".", langue() === "fr" ? "," : ".");
+  };
+  return `${cm(w)} × ${cm(h)} cm`;
+}
+
+const FINITIONS: Record<string, Cle> = {
+  cover_finish_matte: "envoi.papier.finition.matte",
+  cover_finish_gloss: "envoi.papier.finition.gloss",
+  cover_finish_soft_touch: "envoi.papier.finition.soft_touch",
+};
+
+/** Le papier en clair, tiré du profil et jamais de ses codes : le grammage
+ *  de la fiche, « couverture rigide » quand le profil cartonne (un rempli
+ *  autour des plats), et la finition quand l'app la connaît. Null pour un
+ *  profil sans options de commande : c'est l'imprimeur choisi qui décide. */
+export function papierEnClair(p: Printer, grammage: number): string | null {
+  if (!p.commande) return null;
+  const papier = t("envoi.papier.grammage", { g: grammage });
+  if (p.rempli_mm <= 0) return papier;
+  const f = Object.prototype.hasOwnProperty.call(FINITIONS, p.commande.finition)
+    ? FINITIONS[p.commande.finition]
+    : null;
+  const couverture = f
+    ? t("envoi.papier.rigide.finition", { finition: t(f) })
+    : t("envoi.papier.rigide");
+  return `${papier}, ${couverture}`;
 }
 
 /** Une phrase : le dossier est prêt, ou ce que le contrôle relu sur ses

@@ -470,10 +470,26 @@ rétablit, et c'est elle que l'utilisateur lit.
 
 ## Envoi, le dossier préparé et la commande
 
-**Envoi ne vise qu'un imprimeur, Cloudprinter** (K-s1, `EnvoiView.tsx`, `envoi.ts`).
-Le lien « Un autre imprimeur ? » bascule sur le profil `generique` : un seul PDF sans
-contrainte, `export_pdf`, sans manifeste. Prodigi et Lulu restent dans `printer.rs` et
-la CLI (`--profil`), avec tous leurs tests. Cloudprinter relie de 24 à 800 pages.
+**Envoi parle à qui fait un album, pas à un imprimeur** (A2, `EnvoiView.tsx`, `envoi.ts`).
+`EnvoiView` tient l'état, `EnvoiPage` le dessine et se rend sans navigateur
+(`envoi-page.test.tsx`). Les défauts d'abord, puis **deux portes** en cartes radio
+(`envoi.ts::portesOffertes`, `porteEffective`) : « Télécharger le PDF » et « Faire imprimer
+par Colophon ». **Sans relais compilé, la seconde n'existe pas** et la première n'est pas
+une carte : rien n'annonce la commande (test). Le bouton suit la porte
+(`actionEnvoi(p, porte)`) : « Télécharger le PDF » prépare le dossier Cloudprinter dans
+une boîte, ou le PDF libre sous « Un autre imprimeur ? » (profil `generique`, `export_pdf`,
+sans manifeste) ; « Faire imprimer » est A1 ci-dessous. Le « à partir de » de la porte
+vient de la dernière grille vue (`commande.ts::retenirPrix`, mémoire du processus) :
+**jamais une intention créée pour afficher un prix**, jamais un chiffre en dur. À droite,
+le livre (`LivreApercu.tsx`, emplacement de A4) : le plat (`PlanchesView::MiniCouverture`),
+le dos à `fiche.dos_mm` à l'échelle, format en cm, pages, papier tiré du profil
+(`papierEnClair`, jamais ses codes), et « Feuilleter », qui est ⇧⌘P sur la première
+planche. **Liste noire** : fond perdu, zone sûre, PDF/X, sRGB, RVB, CMJN, ppi, dpi, output
+intent, imposition, prévol, profil ne s'affichent que dans un repli — la fiche sous
+« Pour les imprimeurs » (porte PDF seulement), faux-titre et colophon sous « Pages de
+début et de fin » (ouvert d'office quand un défaut y renvoie). Prodigi et Lulu restent
+dans `printer.rs` et la CLI (`--profil`). Cloudprinter relie de 24 à 800 pages. Au
+harnais, `POST /__dev/relais/panne {"absent": true}` rejoue un build sans relais.
 
 **« Préparer pour Cloudprinter » est `export::preparer`** (commande `preparer_dossier`,
 CLI `--preparer`) : la boîte native choisit un dossier, l'app y crée
@@ -487,14 +503,14 @@ jamais dans un `match` sur l'identifiant. MD5 et SHA-256 sont écrits à la main
 crate de hachage et n'en gagne pas. Le chemin du dossier reste dans `AppState`
 (`montrer_dossier_prepare`), le front n'en reçoit que le nom.
 
-**Quand le relais répond, le bouton s'appelle « Faire imprimer »** (A1,
-`envoi.ts::actionEnvoi(p, relaisJoignable)`) : `preparer_pour_commande(titre)`, le même
+**Par la porte Colophon, le bouton s'appelle « Faire imprimer »** (A1,
+`envoi.ts::actionEnvoi(p, "colophon")`) : `preparer_pour_commande(titre)`, le même
 `export::preparer` sous Cloudprinter, **sans boîte ni Finder**, dans
 `<données>/commandes/<Titre> – Cloudprinter` (`dossier_pour_commande`, qui vide
 `commandes/` d'abord : une préparation à la fois, jamais hors du dossier de données).
 `Preparation.commande` vaut alors vrai et `commandeDirecte` ouvre le parcours tout seul,
-sans « Commander » (qui revient si l'on retourne au repos). Relais `absent` ou
-`injoignable` : « Préparer pour Cloudprinter » et la boîte, comme avant. L'état du relais
+sans « Commander » (qui revient si l'on retourne au repos). Relais `injoignable` : la porte
+reste et dit la panne, avec « Réessayer ». L'état du relais
 est tenu par Envoi (`useRelais`) et passé à `CommandeView`. Au harnais,
 `POST /__dev/preparer-commande`.
 
@@ -615,6 +631,25 @@ ouverture** d'Envoi : la vue retient la préparation trouvée à son montage. Au
 l'état suivant, et `POST /__dev/relais/abandon {"reponse": 200|404|409|502}` la réponse du
 prochain abandon. Banc : `banc_relais_sandbox` (`#[ignore]`, en debug, aucune clé),
 `docs/mesures/2026-10-09-commander-sandbox.json`.
+
+**Le parcours se montre en six étapes** (A3) : *Votre livre · Livraison · Prix · Fichiers
+· Paiement · Suivi*, un bandeau en tête. **La machine ne change pas d'états** :
+`commande.ts::etapeVisible(parcours, { preparation, suivi })` en est l'habit, et
+`etapesDuParcours` rend passées, courante, futures, avec le seul retour que `avancer`
+accepte — la Livraison depuis la grille ; les fichiers partis, rien ne revient en
+arrière. « Votre livre » est l'écran de la préparation (`progresExport` d'App, page par
+page) ; « Suivi » tient tant qu'un paiement vient d'aboutir (état local `suivi`,
+« Fermer » le lâche). Chaque commande est une carte : `referenceCourte` (huit signes,
+l'identifiant entier au survol), la date d'`IntentionVue`, « test » en sandbox, la frise
+`JALONS` placée par `jalonsAtteints` — **« Livrée » n'est jamais atteinte**, aucun état ne
+la dit ; un état inconnu ou hors du chemin ne pose aucun jalon. **À droite du parcours,
+`Rassurance`** : chaque phrase est un fait du relais, et une phrase qu'on ne prouve plus
+s'en va. Stripe Checkout encaisse (le relais ne voit qu'une session) ; rien n'est débité
+sans session payée ; les fichiers montent en `https` et le balayage quotidien retire
+les objets dès l'état 100, à trente jours au plus tard ; l'annulation rembourse sous
+l'état 30 ; « en France » seulement quand le relais n'ouvre qu'elle (`livreEnFrance`).
+Rien sur le suivi du colis (le niveau `cp_postal` n'en promet pas) ni sur un délai que la
+grille ne rend pas.
 
 **Le moteur et la CLI gardent CloudCore et S3.** `core::commande` parle à CloudCore
 (`devis`, `commander`, `etat`, `annuler`) derrière le trait `Http`, `Ureq` en vrai

@@ -405,7 +405,6 @@ function CoverCell({
   onOpen: () => void;
   onKey: (e: React.KeyboardEvent) => void;
 }) {
-  const cover = album.cover ?? { title: album.title };
   return (
     <figure
       role="listitem"
@@ -425,18 +424,27 @@ function CoverCell({
       aria-label={t("table.couverture")}
       onKeyDown={onKey}
     >
-      <div
-        className="mini-cover"
-        style={{ aspectRatio: `${album.trim_mm.w} / ${album.trim_mm.h}` }}
-      >
-        {cover.photo && <MiniImg slot={cover.photo} />}
-        <span className="mini-cover-title">{cover.title || album.title}</span>
-      </div>
+      <MiniCouverture album={album} />
       <figcaption className="planche-meta">
         <span className="planche-num">C</span>
         <span className="planche-chapter">{t("table.couverture")}</span>
       </figcaption>
     </figure>
+  );
+}
+
+/** Le plat de la couverture en vignette, à l'aspect de la page : la case
+ *  zéro de la table lumineuse, et le livre d'Envoi. */
+export function MiniCouverture({ album }: { album: Album }) {
+  const cover = album.cover ?? { title: album.title };
+  return (
+    <div
+      className="mini-cover"
+      style={{ aspectRatio: `${album.trim_mm.w} / ${album.trim_mm.h}` }}
+    >
+      {cover.photo && <MiniImg slot={cover.photo} />}
+      <span className="mini-cover-title">{cover.title || album.title}</span>
+    </div>
   );
 }
 

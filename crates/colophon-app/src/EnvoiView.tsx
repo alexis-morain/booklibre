@@ -1,27 +1,29 @@
-// Où envoyer ce PDF. The last screen before a file leaves the machine.
+// Envoi : le dernier écran avant que le livre quitte la machine (A2).
 //
-// Three things at once, in the order a human needs them: what is wrong and
-// where (clickable, each defect jumps to its spread; a photo too small for
-// its cell carries its own gestures, and removing it always works), the
-// printer the file is for, and the sheet of specifications a printer asks
-// for on the phone.
+// Il parle à quelqu'un qui fait un album, pas à un imprimeur. D'abord ce qui
+// bloque, et où (chaque défaut mène à ce qui le répare ; une photo trop
+// petite pour sa case porte ses propres gestes). Puis deux portes, une seule
+// ouverte : « Télécharger le PDF », pour l'imprimeur de son choix, et « Faire
+// imprimer par Colophon », le livre relié livré chez soi. Le bouton suit la
+// porte. À droite, le livre : sa couverture, trois lignes en clair, et
+// « Feuilleter ». La fiche technique, que demande un imprimeur au téléphone,
+// est repliée sous « Pour les imprimeurs », sous la porte PDF seulement.
 //
-// One printer, Cloudprinter, and its button prepares the folder of the
-// order. The PDF without constraints stays one link away; Prodigi and Lulu
-// are engine and command-line profiles only (`envoi.ts`). Under the prepared
-// folder, Commander sends it to the relay (`CommandeView`), only when this
-// opening of the screen prepared it. When the relay answers, the button is
-// « Faire imprimer »: no dialog, the folder goes to the app's data folder,
-// and the order opens straight after.
+// Sans relais compilé (la release publique), la porte Colophon n'existe pas
+// et rien ne l'annonce : le PDF seul, sans carte. Sous la porte Colophon,
+// « Faire imprimer » prépare sans boîte et la commande s'ouvre derrière
+// (`CommandeView`), avec à droite ce qu'on peut vérifier de ce qui se passe
+// (`Rassurance`).
 //
-// Nothing here is computed in the browser. The preflight, the spec sheet and
-// the spine all come from the engine, per profile: two suppliers disagree on
-// every field, and a second copy of their specs in TypeScript would be a
-// second thing to keep true.
+// Rien ici n'est calculé dans le navigateur. Le contrôle, la fiche et le dos
+// viennent du moteur, par profil : deux fournisseurs ne s'accordent sur aucun
+// champ, et une seconde copie de leurs specs en TypeScript serait une chose
+// de plus à garder vraie. `EnvoiView` tient l'état ; `EnvoiPage` le dessine,
+// et se rend sans navigateur (`envoi-page.test.tsx`).
 
 import { useEffect, useState } from "react";
 import { phraseAbsents } from "./PoliceView";
-import { CommandeView, useRelais } from "./CommandeView";
+import { CommandeView, Rassurance, useRelais } from "./CommandeView";
 import { phraseDefaut, texteMoteur } from "./moteur";
 import { Album } from "./album";
 import {
@@ -36,6 +38,7 @@ import {
 import {
   PROFIL_ENVOI,
   PROFIL_LIBRE,
+  Porte,
   actionEnvoi,
   ActionDefaut,
   Destination,
@@ -43,42 +46,22 @@ import {
   destinationDe,
   imprimeurAffiche,
   libelleDestination,
+  papierEnClair,
   phrasePreparation,
   phraseSimple,
+  porteEffective,
+  portesOffertes,
   ppiDe,
 } from "./envoi";
-import { t } from "./i18n";
+import { Niveau, Relais, clePrix, livreEnFrance, prixConnu, prixDeCentimes, retenirPrix } from "./commande";
+import { t, useLangue } from "./i18n";
+import { LivreApercu } from "./LivreApercu";
 import { LazyThumb } from "./TriView";
 import { VERDICT_URL } from "./signaler";
 
 const mm = (v: number) => v.toFixed(1).replace(".", ",");
 
-export function EnvoiView({
-  album,
-  printers,
-  profil,
-  onProfil,
-  onJump,
-  onCouverture,
-  onFormat,
-  onVoir,
-  onRemplacer,
-  onRetirer,
-  reserveVide,
-  onExport,
-  onPrepare,
-  preparation,
-  exporting,
-  exporte,
-  dirty,
-  colophonPossible,
-  colophonActif,
-  onColophon,
-  gardeActif,
-  onGarde,
-  policeManquante,
-  absents,
-}: {
+export type EnvoiViewProps = {
   album: Album;
 
   /** Loaded once by the window, shared with the cover editor. */
@@ -128,8 +111,16 @@ export function EnvoiView({
   policeManquante: boolean;
   /** The album's characters its face cannot draw: printed as « ? ». */
   absents: string[];
-}) {
+  /** « Feuilleter » : l'aperçu fidèle, le livre tel que le PDF l'imprimera. */
+  onFeuilleter: () => void;
+  /** « Une question ? » : Signaler, la seule porte que l'app ouvre vers nous. */
+  onSignaler: () => void;
+  /** Où en est la préparation qui tourne, en pages rendues ; null sinon. */
+  progresExport: { done: number; total: number } | null;
+};
 
+export function EnvoiView(props: EnvoiViewProps) {
+  const { album, profil, dirty, preparation } = props;
   const [report, setReport] = useState<PrevolReport | null>(null);
   // The folder prepared before this opening of the screen is not offered to
   // Commander: the screen unmounts when left, so what it found on arrival
@@ -137,6 +128,7 @@ export function EnvoiView({
   const [prepareeAvant] = useState(preparation);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [porte, setPorte] = useState<Porte | null>(null);
 
   // Re-run on every profile change, on every arrival, and the moment the
   // album stops being dirty: the preflight reads the disk, so a save is what
@@ -156,13 +148,121 @@ export function EnvoiView({
   }, [profil, album, dirty]);
 
   const { relais, sonde, sonder } = useRelais();
+  const cle = clePrix(report?.fiche.produit, report?.fiche.pages_interieur ?? 0);
+  const [prixVu, setPrixVu] = useState<{ cle: string | null; centimes: number | null }>({ cle: null, centimes: null });
+  const prixMin = prixVu.cle === cle && prixVu.centimes !== null ? prixVu.centimes : prixConnu(cle);
+  const onGrille = (grille: Niveau[]) => {
+    retenirPrix(cle, grille);
+    setPrixVu({ cle, centimes: prixConnu(cle) });
+  };
+
+  return (
+    <EnvoiPage
+      {...props}
+      report={report}
+      running={running}
+      error={error}
+      relais={relais}
+      sonde={sonde}
+      sonder={sonder}
+      porte={porte}
+      onPorte={setPorte}
+      prixMin={prixMin}
+      onGrille={onGrille}
+      prepareeAvant={prepareeAvant}
+    />
+  );
+}
+
+export type EnvoiPageProps = EnvoiViewProps & {
+  report: PrevolReport | null;
+  running: boolean;
+  error: string | null;
+  relais: Relais | null;
+  sonde: boolean;
+  sonder: () => void;
+  /** La porte choisie ; null tant qu'on n'a rien choisi (`porteEffective`). */
+  porte: Porte | null;
+  onPorte: (p: Porte) => void;
+  /** Le « à partir de » de la porte Colophon, en centimes, quand une grille
+   *  du relais l'a dit ; null sinon, et alors aucun prix. */
+  prixMin: number | null;
+  onGrille: (grille: Niveau[]) => void;
+  prepareeAvant: Preparation | null;
+};
+
+export function EnvoiPage(props: EnvoiPageProps) {
+  const {
+    album,
+    printers,
+    profil,
+    onProfil,
+    onJump,
+    onCouverture,
+    onFormat,
+    onVoir,
+    onRemplacer,
+    onRetirer,
+    reserveVide,
+    onExport,
+    onPrepare,
+    preparation,
+    exporting,
+    exporte,
+    dirty,
+    colophonPossible,
+    colophonActif,
+    onColophon,
+    gardeActif,
+    onGarde,
+    policeManquante,
+    absents,
+    onFeuilleter,
+    onSignaler,
+    progresExport,
+    report,
+    running,
+    error,
+    relais,
+    sonde,
+    sonder,
+    porte,
+    onPorte,
+    prixMin,
+    onGrille,
+    prepareeAvant,
+  } = props;
+  const langue = useLangue();
   const chosen = imprimeurAffiche(printers, profil);
   const libre = profil === PROFIL_LIBRE;
-  const action = chosen ? actionEnvoi(chosen, relais?.etat === "joignable") : null;
+  const offertes = portesOffertes(relais);
+  // Le PDF sans contrainte est une affaire de la porte PDF : y être arrivé
+  // l'ouvre, tant qu'on n'a pas choisi l'autre.
+  const ouverte: Porte = libre && porte === null ? "pdf" : porteEffective(porte, relais);
+  const action = chosen ? actionEnvoi(chosen, ouverte) : null;
+  const choisir = (p: Porte) => {
+    onPorte(p);
+    // Colophon ne fait imprimer que chez Cloudprinter.
+    if (p === "colophon" && libre) onProfil(PROFIL_ENVOI);
+  };
   // « Préparer à nouveau » refait la préparation de la même façon.
   const preparerEncore = () => onPrepare(preparation?.commande === true);
   const bloquants = report?.defauts.filter((d) => d.bloquant) ?? [];
   const avertissements = report?.defauts.filter((d) => !d.bloquant) ?? [];
+  // Un défaut dont le geste est une case de « Pages de début et de fin »
+  // ouvre ce repli : on ne cache pas ce qu'une ligne demande de décocher.
+  const pagesOuvertes = (report?.defauts ?? []).some((d) => destinationDe(d) === "ici");
+  const enFrance = relais?.etat === "joignable" && livreEnFrance(relais.pays);
+  const indisponible = ouverte === "colophon" && relais?.etat === "injoignable";
+  // « Faire imprimer » a préparé ce dossier dans cette ouverture : le
+  // parcours a pris la main, et « Commander » le rouvre au repos. Le bouton
+  // ne se répète pas au-dessus, où il relancerait une préparation.
+  const parcoursOuvert =
+    ouverte === "colophon" &&
+    preparation?.commande === true &&
+    preparation !== prepareeAvant &&
+    preparation.rapport.ok;
+  const papier = ouverte === "colophon" && chosen ? papierEnClair(chosen, report?.fiche.grammage_g_m2 ?? 0) : null;
   // Ce que chaque destination fait d'un clic. « Préparer à nouveau » ne
   // s'offre que sous le dossier préparé : les fichiers ne se jugent plus
   // ailleurs, et avant lui le bouton du bas est déjà la porte.
@@ -190,256 +290,326 @@ export function EnvoiView({
 
   return (
     <div className="envoi">
-      <section className="envoi-verdict">
-        {libre && (
-          <p className="envoi-libre">
-            {t("envoi.libre.tete")}{" "}
-            <button className="link" onClick={() => onProfil(PROFIL_ENVOI)}>
-              {t("envoi.libre.retour")}
-            </button>
-          </p>
-        )}
-        {policeManquante && (
-          <p className="envoi-dirty">{t("police.manquante")}</p>
-        )}
-        {absents.length > 0 && (
-          <p className="envoi-dirty">{phraseAbsents(absents)}</p>
-        )}
-        {dirty && (
-          <p className="envoi-dirty">{t("envoi.dirty")}</p>
-
-        )}
-        {error ? (
-          <>
-            <h2 className="envoi-ko">{t("envoi.prevol.echec")}</h2>
-            <details className="fault-detail">
-              <summary>{t("erreur.detail")}</summary>
-              <pre>{error}</pre>
-            </details>
-          </>
-        ) : running || !report ? (
-          <h2 className="envoi-wait">{t("envoi.controle")}</h2>
-        ) : report.ok ? (
-          <>
-            <h2 className="envoi-ok">
-              {t("envoi.ok", { imprimeur: report.fiche.imprimeur })}
+      <div className="envoi-gauche">
+        <section className="envoi-verdict">
+          {policeManquante && <p className="envoi-dirty">{t("police.manquante")}</p>}
+          {absents.length > 0 && <p className="envoi-dirty">{phraseAbsents(absents)}</p>}
+          {dirty && <p className="envoi-dirty">{t("envoi.dirty")}</p>}
+          {error ? (
+            <>
+              <h2 className="envoi-ko">{t("envoi.prevol.echec")}</h2>
+              <details className="fault-detail">
+                <summary>{t("erreur.detail")}</summary>
+                <pre>{error}</pre>
+              </details>
+            </>
+          ) : running || !report ? (
+            <h2 className="envoi-wait">{t("envoi.controle")}</h2>
+          ) : report.ok ? (
+            <h2 className="envoi-ok envoi-pret">
+              <SigneCoche />
+              {t("envoi.pret")}
             </h2>
-            <p className="envoi-sub">
-              {report.fiche.fichiers === "deux"
-                ? t("envoi.ok.deux", {
-                    planches: report.fiche.planches,
-                    pages: report.fiche.pages_interieur,
-                  })
-                : t("envoi.ok.un", {
-                    planches: report.fiche.planches,
-                    pages: report.fiche.pages_interieur,
-                    fichier: report.fiche.pages_fichier ?? 0,
-                  })}
-            </p>
-          </>
-        ) : (
-          <>
-            <h2 className="envoi-ko">
-              {bloquants.length === 1
-                ? t("envoi.ko.un")
-                : t("envoi.ko", { n: bloquants.length })}
-            </h2>
-            <p className="envoi-sub">{t("envoi.ko.sub")}</p>
-          </>
-        )}
-      </section>
-
-      {(bloquants.length > 0 || avertissements.length > 0) && (
-        <section className="envoi-defauts">
-          {bloquants.some((d) => d.regle === "resolution") && (
-            <p className="envoi-resolution-tete">{t("envoi.resolution.tete")}</p>
+          ) : (
+            <>
+              <h2 className="envoi-ko">
+                {bloquants.length === 1 ? t("envoi.ko.un") : t("envoi.ko", { n: bloquants.length })}
+              </h2>
+              <p className="envoi-sub">{t("envoi.ko.sub")}</p>
+            </>
           )}
-          {bloquants.map((d, i) => ligne(d, `b${i}`))}
-          {avertissements.map((d, i) => ligne(d, `a${i}`))}
         </section>
-      )}
 
-      {chosen && (
-        <section className="envoi-imprimeurs">
-          <h3>{t("envoi.imprimeur")}</h3>
-          <div className="envoi-imprimeur active">
-            <span className="envoi-imprimeur-nom">{chosen.nom}</span>
-            <span className="envoi-imprimeur-quoi">
-              {chosen.pdf_x === "x4" ? "PDF/X-4" : t("envoi.pdf.simple")} ·{" "}
-              {chosen.espace === "rgb" ? t("envoi.rvb") : t("envoi.cmjn")} ·{" "}
-              {chosen.fichiers === "deux"
-                ? t("envoi.deux.fichiers")
-                : t("envoi.un.fichier")}{" "}
-              · {chosen.dos.mode === "calcule" ? t("envoi.dos.fournir") : t("envoi.dos.non")}
-            </span>
-            {chosen.certitude === "provisoire" && (
-              <span className="envoi-provisoire" title={chosen.reserves.map(texteMoteur).join(" · ")}>
-                {t("envoi.provisoire")}
-              </span>
+        {(bloquants.length > 0 || avertissements.length > 0) && (
+          <section className="envoi-defauts">
+            {bloquants.some((d) => d.regle === "resolution") && (
+              <p className="envoi-resolution-tete">{t("envoi.resolution.tete")}</p>
             )}
-          </div>
-        </section>
-      )}
+            {bloquants.map((d, i) => ligne(d, `b${i}`))}
+            {avertissements.map((d, i) => ligne(d, `a${i}`))}
+          </section>
+        )}
 
-      {report && (
-        <section className="envoi-fiche">
-          <h3>{t("envoi.fiche.titre")}</h3>
-          <dl>
-            <Ligne k={t("envoi.fiche.format")}>
-              {mm(report.fiche.format_page_mm[0])} × {mm(report.fiche.format_page_mm[1])} mm
-            </Ligne>
-            <Ligne k={t("envoi.fiche.interieur")}>
-              {t("envoi.fiche.interieur.v", {
-                planches: report.fiche.planches,
-                pages: report.fiche.pages_interieur,
-              })}
-            </Ligne>
-            <Ligne k={t("envoi.fiche.fond")}>
-              {t("envoi.fiche.fond.v", {
-                haut: mm(report.fiche.fond_perdu_mm.haut),
-                bas: mm(report.fiche.fond_perdu_mm.bas),
-                ext: mm(report.fiche.fond_perdu_mm.exterieur),
-                dos: mm(report.fiche.fond_perdu_mm.dos),
-              })}
-            </Ligne>
-            <Ligne k={t("envoi.fiche.zone")}>{t("envoi.fiche.zone.v", { mm: mm(report.fiche.zone_sure_mm) })}</Ligne>
-            <Ligne k={t("envoi.fiche.espace")}>
-              {report.fiche.espace === "rgb" ? t("envoi.rvb") : t("envoi.fiche.espace.cmjn")} ·{" "}
-              {report.fiche.output_intent}
-            </Ligne>
-            <Ligne k={t("envoi.fiche.conformite")}>
-              {report.fiche.conformite === "x4"
-                ? t("envoi.fiche.conformite.x4")
-                : t("envoi.fiche.conformite.aucune")}
-            </Ligne>
-            <Ligne k={t("envoi.fiche.livraison")}>
-              {report.fiche.fichiers === "deux"
-                ? t("envoi.fiche.livraison.deux")
-                : t("envoi.fiche.livraison.un", {
-                    n: report.fiche.pages_fichier ?? 0,
-                  })}
-            </Ligne>
-            {report.fiche.feuille_couverture_mm !== undefined && (
-              <Ligne k={t("envoi.fiche.feuille")}>
-                {mm(report.fiche.feuille_couverture_mm[0])} ×{" "}
-                {mm(report.fiche.feuille_couverture_mm[1])} mm
-              </Ligne>
-            )}
-            {report.fiche.dos_mm !== undefined && (
-              <Ligne k={t("envoi.fiche.dos")}>
-                {t("envoi.fiche.dos.v", {
-                  mm: mm(report.fiche.dos_mm),
-                  pages: report.fiche.pages_interieur,
-                  g: report.fiche.grammage_g_m2 ?? 0,
-                })}
-              </Ligne>
-            )}
-            <Ligne k={t("envoi.fiche.resolution")}>{t("envoi.fiche.resolution.v", { dpi: report.fiche.resolution_cible_dpi })}</Ligne>
-          </dl>
-
-          {(report.reserves?.length ?? 0) > 0 && (
-            <div className="envoi-reserves">
-              <h4>{t("envoi.reserves")}</h4>
-              <ul>
-                {report.reserves!.map((r, i) => (
-                  <li key={i}>{texteMoteur(r)}</li>
-                ))}
-              </ul>
+        <section className="envoi-portes">
+          {offertes.length > 1 ? (
+            <Portes
+              ouverte={ouverte}
+              onChoisir={choisir}
+              enFrance={enFrance}
+              prix={prixMin === null ? null : prixDeCentimes(prixMin, langue)}
+            />
+          ) : (
+            <div className="envoi-porte-seule">
+              <h3>{t("envoi.porte.pdf.titre")}</h3>
+              <p>{t("envoi.porte.pdf.texte")}</p>
             </div>
           )}
-          {(report.notes?.length ?? 0) > 0 && (
-            <div className="envoi-notes">
-              {report.notes!.map((n, i) => (
-                <p key={i}>{texteMoteur(n)}</p>
-              ))}
-            </div>
+          {ouverte === "pdf" && libre && (
+            <p className="envoi-libre">
+              {t("envoi.libre.tete")}{" "}
+              <button className="link" onClick={() => onProfil(PROFIL_ENVOI)}>
+                {t("envoi.libre.retour")}
+              </button>
+            </p>
           )}
         </section>
-      )}
 
-      {colophonPossible && (
-        <section className="envoi-colophon">
-          <label>
-            <input
-              type="checkbox"
-              checked={gardeActif}
-              onChange={(e) => onGarde(e.target.checked)}
-            />
-            {t("envoi.garde.label")}
-          </label>
-          <p>{t("envoi.garde.note")}</p>
-          <label>
-            <input
-              type="checkbox"
-              checked={colophonActif}
-              onChange={(e) => onColophon(e.target.checked)}
-            />
-            {t("envoi.colophon.label")}
-          </label>
-          <p>{t("envoi.colophon.note")}</p>
-        </section>
-      )}
-
-      <section className="envoi-actions">
-        <button
-          className="envoi-exporter"
-          onClick={action?.prepare ? () => onPrepare(action.commande) : onExport}
-          disabled={exporting || !report?.ok || !action}
-          title={report?.ok ? action?.titre : t("envoi.exporter.bloque")}
-        >
-          {exporting ? t("envoi.exporter.rendu") : action?.texte ?? t("envoi.exporter")}
-        </button>
-        {exporting && action?.commande && (
-          <p className="commande-explique" role="status">
-            {t("commande.explique.preparation")}
-          </p>
-        )}
-        {preparation && action?.prepare && (
-          <div className="envoi-prepare">
-            <p className={preparation.rapport.ok ? "envoi-prepare-ok" : "envoi-prepare-ko"}>
-              {phrasePreparation(preparation)}
+        <section className="envoi-actions">
+          {indisponible ? (
+            <div className="commande-ouvrir">
+              <p className="commande-erreur" role="status">
+                {t("commande.indisponible")}
+              </p>
+              <button className="link" disabled={sonde} onClick={() => sonder()}>
+                {t("commande.reessayer")}
+              </button>
+            </div>
+          ) : parcoursOuvert ? null : (
+            <button
+              className="envoi-exporter"
+              onClick={action?.prepare ? () => onPrepare(action.commande) : onExport}
+              disabled={exporting || !report?.ok || !action}
+              title={report?.ok ? action?.titre : t("envoi.exporter.bloque")}
+            >
+              {exporting ? t("envoi.exporter.rendu") : (action?.texte ?? t("envoi.telecharger"))}
+            </button>
+          )}
+          {preparation && action?.prepare && (!preparation.commande || !preparation.rapport.ok) && (
+            <div className="envoi-prepare">
+              {!preparation.commande && (
+                <p className={preparation.rapport.ok ? "envoi-prepare-ok" : "envoi-prepare-ko"}>
+                  {phrasePreparation(preparation)}
+                </p>
+              )}
+              {preparation.rapport.defauts.some((d) => d.bloquant) && (
+                <div className="envoi-defauts">
+                  {preparation.rapport.defauts
+                    .filter((d) => d.bloquant)
+                    .map((d, i) => (
+                      <DefautLigne key={i} d={d} gestes={gestes(preparerEncore)} />
+                    ))}
+                </div>
+              )}
+              {!preparation.commande && (
+                <button className="link" onClick={() => void montrerDossierPrepare()}>
+                  {t("envoi.prepare.montrer")}
+                </button>
+              )}
+            </div>
+          )}
+          <CommandeView
+            preparationNeuve={action?.prepare && preparation !== prepareeAvant ? preparation : null}
+            relais={relais}
+            sonde={sonde}
+            sonder={sonder}
+            album={album}
+            fiche={report?.fiche ?? null}
+            preparant={exporting && action?.commande === true}
+            progres={progresExport}
+            onGrille={onGrille}
+          />
+          {ouverte === "pdf" && !libre && (
+            <p className="envoi-autre">
+              <button className="link" onClick={() => onProfil(PROFIL_LIBRE)}>
+                {t("envoi.autre")}
+              </button>
             </p>
-            {preparation.rapport.defauts.some((d) => d.bloquant) && (
-              <div className="envoi-defauts">
-                {preparation.rapport.defauts
-                  .filter((d) => d.bloquant)
-                  .map((d, i) => (
-                    <DefautLigne key={i} d={d} gestes={gestes(preparerEncore)} />
-                  ))}
-              </div>
-            )}
-            <button className="link" onClick={() => void montrerDossierPrepare()}>
-              {t("envoi.prepare.montrer")}
-            </button>
-          </div>
-        )}
-        <CommandeView
-          preparationNeuve={
-            action?.prepare && preparation !== prepareeAvant ? preparation : null
-          }
-          relais={relais}
-          sonde={sonde}
-          sonder={sonder}
-        />
-        {!libre && (
-          <p className="envoi-autre">
-            <button className="link" onClick={() => onProfil(PROFIL_LIBRE)}>
-              {t("envoi.autre")}
-            </button>
-          </p>
-        )}
-      </section>
-
-      {exporte && (
-        <section className="envoi-verdict-appel">
-          <h3>{t("envoi.verdict.titre")}</h3>
-          <p>{t("envoi.verdict.texte")}</p>
-          <button className="link" onClick={() => void openReportUrl(VERDICT_URL)}>
-            {t("envoi.verdict.bouton")}
-          </button>
+          )}
+          {ouverte === "pdf" && report && <PourLesImprimeurs report={report} chosen={chosen} />}
         </section>
+
+        {colophonPossible && (
+          <details className="envoi-colophon" open={pagesOuvertes}>
+            <summary>{t("envoi.pages")}</summary>
+            <label>
+              <input type="checkbox" checked={gardeActif} onChange={(e) => onGarde(e.target.checked)} />
+              {t("envoi.garde.label")}
+            </label>
+            <p>{t("envoi.garde.note")}</p>
+            <label>
+              <input type="checkbox" checked={colophonActif} onChange={(e) => onColophon(e.target.checked)} />
+              {t("envoi.colophon.label")}
+            </label>
+            <p>{t("envoi.colophon.note")}</p>
+          </details>
+        )}
+
+        {exporte && (
+          <section className="envoi-verdict-appel">
+            <h3>{t("envoi.verdict.titre")}</h3>
+            <p>{t("envoi.verdict.texte")}</p>
+            <button className="link" onClick={() => void openReportUrl(VERDICT_URL)}>
+              {t("envoi.verdict.bouton")}
+            </button>
+          </section>
+        )}
+      </div>
+
+      <div className="envoi-droite">
+        <LivreApercu album={album} fiche={report?.fiche ?? null} papier={papier} onFeuilleter={onFeuilleter} />
+        {ouverte === "colophon" && <Rassurance enFrance={enFrance} onSignaler={onSignaler} />}
+      </div>
+    </div>
+  );
+}
+
+/** La coche du verdict vert, dessinée. */
+function SigneCoche() {
+  return (
+    <svg className="envoi-coche" viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
+      <path d="M 3 8.5 L 6.5 12 L 13 4.5" fill="none" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+/** Les deux portes, en cartes : un groupe de boutons radio, un seul choisi,
+ *  les flèches passant de l'un à l'autre. */
+function Portes({
+  ouverte,
+  onChoisir,
+  enFrance,
+  prix,
+}: {
+  ouverte: Porte;
+  onChoisir: (p: Porte) => void;
+  enFrance: boolean;
+  prix: string | null;
+}) {
+  const ordre: Porte[] = ["pdf", "colophon"];
+  const clavier = (e: React.KeyboardEvent) => {
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+    e.preventDefault();
+    const autre = ordre[(ordre.indexOf(ouverte) + 1) % 2];
+    onChoisir(autre);
+    (e.currentTarget.querySelector(`[data-porte="${autre}"]`) as HTMLElement | null)?.focus();
+  };
+  const carte = (p: Porte, contenu: React.ReactNode) => (
+    <button
+      type="button"
+      role="radio"
+      data-porte={p}
+      aria-checked={ouverte === p}
+      tabIndex={ouverte === p ? 0 : -1}
+      className={"envoi-porte" + (ouverte === p ? " active" : "")}
+      onClick={() => onChoisir(p)}
+    >
+      {contenu}
+    </button>
+  );
+  return (
+    <div className="envoi-portes-cartes" role="radiogroup" aria-label={t("envoi.portes")} onKeyDown={clavier}>
+      {carte(
+        "pdf",
+        <>
+          <span className="envoi-porte-titre">{t("envoi.porte.pdf.titre")}</span>
+          <span className="envoi-porte-texte">{t("envoi.porte.pdf.texte")}</span>
+        </>,
+      )}
+      {carte(
+        "colophon",
+        <>
+          <span className="envoi-porte-titre">{t("envoi.porte.colophon.titre")}</span>
+          <span className="envoi-porte-texte">
+            {t(enFrance ? "envoi.porte.colophon.texte.france" : "envoi.porte.colophon.texte")}
+          </span>
+          {prix && <span className="envoi-porte-prix">{t("envoi.porte.colophon.prix", { prix })}</span>}
+          <span className="envoi-porte-partenaire">{t("envoi.porte.colophon.partenaire")}</span>
+        </>,
       )}
     </div>
+  );
+}
+
+/** La fiche technique, repliée : ce qu'un imprimeur demande au téléphone. */
+function PourLesImprimeurs({ report, chosen }: { report: PrevolReport; chosen: Printer | null }) {
+  return (
+    <details className="envoi-imprimeurs">
+      <summary>{t("envoi.imprimeurs")}</summary>
+      {chosen && (
+        <div className="envoi-imprimeur active">
+          <span className="envoi-imprimeur-nom">{chosen.nom}</span>
+          <span className="envoi-imprimeur-quoi">
+            {chosen.pdf_x === "x4" ? "PDF/X-4" : t("envoi.pdf.simple")} ·{" "}
+            {chosen.espace === "rgb" ? t("envoi.rvb") : t("envoi.cmjn")} ·{" "}
+            {chosen.fichiers === "deux" ? t("envoi.deux.fichiers") : t("envoi.un.fichier")} ·{" "}
+            {chosen.dos.mode === "calcule" ? t("envoi.dos.fournir") : t("envoi.dos.non")}
+          </span>
+          {chosen.certitude === "provisoire" && (
+            <span className="envoi-provisoire" title={chosen.reserves.map(texteMoteur).join(" · ")}>
+              {t("envoi.provisoire")}
+            </span>
+          )}
+        </div>
+      )}
+      <div className="envoi-fiche">
+        <h3>{t("envoi.fiche.titre")}</h3>
+        <dl>
+          <Ligne k={t("envoi.fiche.format")}>
+            {mm(report.fiche.format_page_mm[0])} × {mm(report.fiche.format_page_mm[1])} mm
+          </Ligne>
+          <Ligne k={t("envoi.fiche.interieur")}>
+            {t("envoi.fiche.interieur.v", {
+              planches: report.fiche.planches,
+              pages: report.fiche.pages_interieur,
+            })}
+          </Ligne>
+          <Ligne k={t("envoi.fiche.fond")}>
+            {t("envoi.fiche.fond.v", {
+              haut: mm(report.fiche.fond_perdu_mm.haut),
+              bas: mm(report.fiche.fond_perdu_mm.bas),
+              ext: mm(report.fiche.fond_perdu_mm.exterieur),
+              dos: mm(report.fiche.fond_perdu_mm.dos),
+            })}
+          </Ligne>
+          <Ligne k={t("envoi.fiche.zone")}>{t("envoi.fiche.zone.v", { mm: mm(report.fiche.zone_sure_mm) })}</Ligne>
+          <Ligne k={t("envoi.fiche.espace")}>
+            {report.fiche.espace === "rgb" ? t("envoi.rvb") : t("envoi.fiche.espace.cmjn")} · {report.fiche.output_intent}
+          </Ligne>
+          <Ligne k={t("envoi.fiche.conformite")}>
+            {report.fiche.conformite === "x4" ? t("envoi.fiche.conformite.x4") : t("envoi.fiche.conformite.aucune")}
+          </Ligne>
+          <Ligne k={t("envoi.fiche.livraison")}>
+            {report.fiche.fichiers === "deux"
+              ? t("envoi.fiche.livraison.deux")
+              : t("envoi.fiche.livraison.un", { n: report.fiche.pages_fichier ?? 0 })}
+          </Ligne>
+          {report.fiche.feuille_couverture_mm !== undefined && (
+            <Ligne k={t("envoi.fiche.feuille")}>
+              {mm(report.fiche.feuille_couverture_mm[0])} × {mm(report.fiche.feuille_couverture_mm[1])} mm
+            </Ligne>
+          )}
+          {report.fiche.dos_mm !== undefined && (
+            <Ligne k={t("envoi.fiche.dos")}>
+              {t("envoi.fiche.dos.v", {
+                mm: mm(report.fiche.dos_mm),
+                pages: report.fiche.pages_interieur,
+                g: report.fiche.grammage_g_m2 ?? 0,
+              })}
+            </Ligne>
+          )}
+          <Ligne k={t("envoi.fiche.resolution")}>
+            {t("envoi.fiche.resolution.v", { dpi: report.fiche.resolution_cible_dpi })}
+          </Ligne>
+        </dl>
+        {(report.reserves?.length ?? 0) > 0 && (
+          <div className="envoi-reserves">
+            <h4>{t("envoi.reserves")}</h4>
+            <ul>
+              {report.reserves!.map((r, i) => (
+                <li key={i}>{texteMoteur(r)}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {(report.notes?.length ?? 0) > 0 && (
+          <div className="envoi-notes">
+            {report.notes!.map((n, i) => (
+              <p key={i}>{texteMoteur(n)}</p>
+            ))}
+          </div>
+        )}
+      </div>
+    </details>
   );
 }
 
