@@ -311,6 +311,24 @@ function albumDevServer(dir: string): Plugin {
           res.end(String(e));
         }
       });
+      // Le survol d'un dossier de photos par l'écran de création : le
+      // harnais « choisit » toujours le dossier des photos de l'album servi,
+      // son `root`, et le moteur le lit comme la commande `survol_dossier`.
+      server.middlewares.use("/__dev/survol", (_req, res) => {
+        try {
+          const album = JSON.parse(read("album.json").toString());
+          res.setHeader("Content-Type", "application/json");
+          res.end(
+            execFileSync(engineBinary, ["--survol", album.root], {
+              encoding: "utf8",
+              maxBuffer: 16 * 1024 * 1024,
+            }),
+          );
+        } catch (e) {
+          res.statusCode = 500;
+          res.end(String(e));
+        }
+      });
       // La date fiable de chaque photo posée, par src, lue sur l'album.json
       // du disque comme la réserve : le harnais enregistre avant de dater.
       server.middlewares.use("/__dev/dates", (req, res) => {

@@ -353,6 +353,22 @@ sensor is decoded — the platform's rendering, not the camera's — only when
 the preview falls short. Resolution is always judged on the sensor.
 _Avoid_: thumbnail (that is the album's cache), embedded JPEG, proxy
 
+**Survol**:
+The creation screen's look at a photo folder before anything is composed: how
+many photos `scan` would keep, and a handful of miniatures spread across the
+folder, read in a bounded time (`survol.rs`). Nothing is decoded, nothing is
+cached, and no number it shows is the Composer's: the screen says « environ »
+and « aperçu ».
+_Avoid_: glance, scan (that is the walk itself), preview, aperçu
+
+**Miniature**:
+The small image a photo carries for quick display: in a JPEG, the one the
+camera wrote in its EXIF block (160 × 120 on most bodies), read from the
+header alone; in a HEIC or a RAW, what the system decoder hands back without
+computing pixels — for a RAW, its preview, scaled. Only the survol reads
+them. Never the album's thumbnail cache, never printed.
+_Avoid_: thumbnail, vignette (those are the album's cache), embedded JPEG
+
 **Fiche**:
 What one reading of one photo measured — metadata, analysis, original size,
 faces — exactly as the composer consumes it. A fiche is the `Photo` struct

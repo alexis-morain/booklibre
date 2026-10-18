@@ -33,8 +33,10 @@ import {
   policeAbsents,
   legendeProposee,
   listDensities,
-  DensitePreset,
   listFormats,
+  formatsImprimables,
+  survolDossier,
+  Survol,
   chargeOrnements,
   listPrinters,
   onBuildProgress,
@@ -146,10 +148,12 @@ import { Drawer } from "./Drawer";
 import { PlanchesView, LockGlyph } from "./PlanchesView";
 import { CoverView } from "./CoverView";
 import { EnvoiView } from "./EnvoiView";
-import { Cle, FR, langue, t, useLangue } from "./i18n";
+import { langue, t, useLangue } from "./i18n";
 import { etatRacine, refusRevoir } from "./racine";
 import { jusquAuRendu } from "./mesure";
-import { aboutDensite, aboutFormat, nomDensite } from "./moteur";
+import VisionneuseFormat from "./VisionneuseFormat";
+import { cm, echelleCommune, formatLabel, planchePx } from "./visionneuse";
+import { couvertureProposee, estimerLivre, formatsOfferts } from "./nouvelAlbum";
 import { RaccourcisView } from "./Raccourcis";
 import { BasculeView } from "./BasculeView";
 import { chargerFace, chargerFacesObjet, oublierFacesObjet, setAbsents } from "./font";
@@ -3617,12 +3621,10 @@ function MiniThumb({ src }: { src: string }) {
   );
 }
 
-/** The engine's format identifiers stay in the data; the screen reads the
- *  dictionaries (`format.*`), raw identifier when no entry exists. */
-function formatLabel(name: string): string {
-  const cle = `format.${name}`;
-  return cle in FR ? t(cle as Cle) : name.replace(/-/g, " ");
-}
+/** The pace every new album is composed at: the engine's default. The
+ *  creation screen no longer asks (the difference did not show); Recomposer
+ *  offers the other one. */
+const RYTHME_DE_CREATION = "equilibree";
 
 function Empty({
   onOpen,
@@ -3651,32 +3653,50 @@ function Empty({
   recents: RecentAlbum[];
   onOpenRecent: (dir: string) => void;
 }) {
-  const [formats, setFormats] = useState<FormatPreset[]>([]);
-  const [densities, setDensities] = useState<DensitePreset[]>([]);
+  const [tousFormats, setTousFormats] = useState<FormatPreset[]>([]);
+  const [imprimables, setImprimables] = useState<string[] | null>(null);
+  const [parPlanche, setParPlanche] = useState<number | null>(null);
   const [dir, setDir] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [format, setFormat] = useState("carre-21");
   const [spreads, setSpreads] = useState(48);
-  const [densite, setDensite] = useState("equilibree");
 
-  // Formats plus their geometry dumps: the large preview draws the real
-  // spread grid, and every rectangle comes from the engine, never from here.
-  const [geoPrets, setGeoPrets] = useState<Record<string, boolean>>({});
+  // The formats Colophon can have printed, and their geometry dumps loaded
+  // ahead: the preview draws the engine's own cells, and switching format
+  // should not flash the placeholder while a dump is fetched.
   useEffect(() => {
     listFormats().then((f) => {
-      setFormats(f);
-      f.forEach((preset) =>
-        chargeGeometrieFormat(preset.w, preset.h, 0).then(
-          () => setGeoPrets((g) => ({ ...g, [preset.name]: true })),
-          () => {},
-        ),
-      );
+      setTousFormats(f);
+      f.forEach((preset) => void chargeGeometrieFormat(preset.w, preset.h, 0).catch(() => {}));
     }, () => {});
-    listDensities().then(setDensities, () => {});
+    formatsImprimables().then(setImprimables, () => {});
+    listDensities().then((d) => {
+      const r = d.find((x) => x.id === RYTHME_DE_CREATION);
+      if (r) setParPlanche(r.photos_par_planche);
+    }, () => {});
   }, []);
+  const formats = formatsOfferts(tousFormats, imprimables);
+
+  // The folder's survol, before any composition: its photo count and a
+  // handful of miniatures the files embed (`survol.rs`). `"echec"` keeps the
+  // column drawn, in flat tints, without claiming the folder is empty.
+  const [survol, setSurvol] = useState<Survol | "echec" | null>(null);
+  useEffect(() => {
+    setSurvol(null);
+    if (!dir) return;
+    let vivant = true;
+    survolDossier(dir).then(
+      (a) => vivant && setSurvol(a),
+      () => vivant && setSurvol("echec"),
+    );
+    return () => {
+      vivant = false;
+    };
+  }, [dir]);
 
   const folderName = dir?.split("/").pop() ?? "";
   const chosen = formats.find((f) => f.name === format);
+  const titreVu = title.trim() || folderName;
 
   const pick = async () => {
     const picked = await pickPhotosFolder();
@@ -3905,7 +3925,7 @@ function Empty({
                 className="setup"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  onCreate(dir, format, spreads, densite, title.trim() || null);
+                  onCreate(dir, format, spreads, RYTHME_DE_CREATION, title.trim() || null);
                 }}
               >
                 <h1 className="setup-heading">{t("setup.nouvel")}</h1>
@@ -3959,26 +3979,6 @@ function Empty({
                   </div>
                 </div>
 
-                <div className="setup-field">
-                  <span className="setup-label">{t("setup.rythme")}</span>
-                  <div className="densites">
-                    {densities.map((d) => (
-                      <button
-                        key={d.id}
-                        type="button"
-                        className={"densite" + (d.id === densite ? " active" : "")}
-                        onClick={() => setDensite(d.id)}
-                        aria-pressed={d.id === densite}
-                      >
-                        <span className="densite-nom">{nomDensite(d)}</span>
-                        <span className="densite-about">{aboutDensite(d)}</span>
-                        <DensiteApercu photos={d.photos_par_planche} />
-                      </button>
-                    ))}
-                  </div>
-                  <span className="setup-hint">{t("setup.rythme.hint")}</span>
-                </div>
-
                 <p className="setup-actions">
                   <button className="cta" type="submit">
                     {t("setup.composer")}
@@ -4006,7 +4006,15 @@ function Empty({
               </div>
             )}
 
-            {chosen && geoPrets[chosen.name] && <FormatSpreadPreview f={chosen} />}
+            {dir && chosen && (
+              <LivreAVenir
+                format={chosen}
+                titre={titreVu}
+                survol={survol}
+                planches={spreads}
+                parPlanche={parPlanche}
+              />
+            )}
           </div>
         )}
 
@@ -4016,37 +4024,104 @@ function Empty({
   );
 }
 
-/** Three spreads' worth of cells at this pace, drawn small. Shows what the
- *  sentence says: how crowded a double page gets. */
-function DensiteApercu({ photos }: { photos: number }) {
-  // The average, rounded to the shapes a template actually lays out.
-  const n = photos <= 2 ? 2 : photos <= 3.5 ? 4 : 6;
-  const cols = n === 2 ? 1 : 2;
+/**
+ * The right column of the creation screen, drawn as soon as a folder is
+ * chosen: a small cover (the photo we would propose, the title as it is
+ * typed), the format viewer filled with the folder's own miniatures, and
+ * three lines saying what the book will hold. Every number is an estimate
+ * of what the Composer does, and says so.
+ */
+function LivreAVenir({
+  format,
+  titre,
+  survol,
+  planches,
+  parPlanche,
+}: {
+  format: FormatPreset;
+  titre: string;
+  survol: Survol | "echec" | null;
+  planches: number;
+  parPlanche: number | null;
+}) {
+  const lu = survol !== null && survol !== "echec" ? survol : null;
+  const miniatures = lu?.miniatures ?? [];
+  const couverture = couvertureProposee(miniatures);
+  const interieur = miniatures
+    .filter((v) => v !== couverture)
+    .map((v) => ({ url: v.url, ratio: v.w / v.h }));
+  const estimation =
+    lu && parPlanche !== null
+      ? estimerLivre({ photos: lu.photos, petit: lu.petit, planches, parPlanche })
+      : null;
   return (
-    <span className="densite-apercu" aria-hidden="true">
-      {[0, 1].map((page) => (
-        <span
-          key={page}
-          className="densite-page"
-          style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
-        >
-          {Array.from({ length: n / 2 }, (_, i) => (
-            <span key={i} className="densite-case" />
-          ))}
-        </span>
-      ))}
-    </span>
+    <aside className="setup-livre" aria-label={t("setup.livre.nom")}>
+      <CouvertureProposee format={format} url={couverture?.url ?? null} titre={titre} />
+      <VisionneuseFormat format={format} vignettes={interieur} titre={titre} />
+      <ul className="setup-chiffres" role="status">
+        {survol === null && <li>{t("setup.dossier.lecture")}</li>}
+        {lu && lu.photos === 0 && <li>{t("setup.dossier.vide")}</li>}
+        {lu && lu.photos > 0 && (
+          <>
+            <li>
+              {t(lu.photos === 1 ? "setup.dossier.photo" : "setup.dossier.photos", {
+                n: lu.photos,
+              })}
+            </li>
+            {estimation && (
+              <>
+                <li>{t("setup.livre.photos", { n: estimation.photos })}</li>
+                <li>
+                  {t("setup.livre.planches", {
+                    planches: estimation.planches,
+                    pages: estimation.pages,
+                  })}
+                </li>
+              </>
+            )}
+          </>
+        )}
+      </ul>
+    </aside>
   );
 }
 
-const cm = (mm: number) =>
-  (mm / 10).toLocaleString(langue() === "fr" ? "fr-FR" : "en-GB", {
-    maximumFractionDigits: 1,
-  });
+/** The front cover, small, at the format's proportions: the proposed photo
+ *  over the title. The screen says « aperçu »: the Composer picks its own. */
+function CouvertureProposee({
+  format,
+  url,
+  titre,
+}: {
+  format: FormatPreset;
+  url: string | null;
+  titre: string;
+}) {
+  const h = 150;
+  const w = (format.w / format.h) * h;
+  return (
+    <figure className="setup-couverture">
+      <div className="setup-couverture-plat" style={{ width: w, height: h }}>
+        {url ? (
+          <img className="setup-couverture-photo" src={url} alt="" />
+        ) : (
+          <span className="setup-couverture-photo aplat" />
+        )}
+        <span className="setup-couverture-titre">{titre || t("compo.album.defaut")}</span>
+      </div>
+      <figcaption className="setup-hint">{t("setup.couverture.apercu")}</figcaption>
+    </figure>
+  );
+}
+
+/** Every card draws at this scale, so the shapes compare in size as well as
+ *  in proportion: the 30 × 30 is the large one. */
+const ECHELLE_CARTE = echelleCommune(140);
 
 /**
- * One page format, drawn as an open double page at its true proportions:
- * the shapes differ, so the choice is visible before any vocabulary.
+ * One page format, drawn as an open double page at the scale all cards
+ * share: the shapes and the sizes differ, so the choice is visible before
+ * any vocabulary. The name comes from the dictionaries, never the engine.
  */
 function FormatCard({
   f,
@@ -4057,67 +4132,23 @@ function FormatCard({
   active: boolean;
   onPick: () => void;
 }) {
-  const pageH = 32;
-  const pageW = (f.w / f.h) * pageH;
+  const p = planchePx(f, ECHELLE_CARTE);
   return (
     <button
       type="button"
       className={"format-card" + (active ? " active" : "")}
       onClick={onPick}
-      title={aboutFormat(f)}
+      aria-pressed={active}
     >
       <span className="format-preview">
-        <span className="format-page" style={{ width: pageW, height: pageH }} />
-        <span className="format-page" style={{ width: pageW, height: pageH }} />
+        <span className="format-page" style={{ width: p.w / 2, height: p.h }} />
+        <span className="format-page" style={{ width: p.w / 2, height: p.h }} />
       </span>
       <span className="format-name">{formatLabel(f.name)}</span>
       <span className="format-dims">
         {cm(f.w)} × {cm(f.h)} cm
       </span>
     </button>
-  );
-}
-
-/**
- * The chosen format, drawn large with the real spread geometry: the actual
- * margins, gutter and a six-photo template from the engine's own arithmetic,
- * plus its measurements. What you pick is what the press trims.
- */
-function FormatSpreadPreview({ f }: { f: FormatPreset }) {
-  const album = { trim_mm: { w: f.w, h: f.h }, bleed_mm: 0 } as Album;
-  const geom = spreadGeometry(album);
-  const rects = slotsFor("six", 6, geom);
-  const width = 320;
-  const scale = width / geom.w;
-
-  return (
-    <figure className="format-large">
-      <span className="format-large-cote">{t("setup.cm.ouvert", { cm: cm(f.w * 2) })}</span>
-      <div
-        className="format-large-spread"
-        style={{ width: geom.w * scale, height: geom.h * scale }}
-      >
-        {rects.map((r, i) => (
-          <span
-            key={i}
-            className="format-large-slot"
-            style={{
-              left: r.x * scale,
-              top: r.y * scale,
-              width: r.w * scale,
-              height: r.h * scale,
-            }}
-          />
-        ))}
-        <span className="format-large-fold" />
-      </div>
-      <figcaption>
-        <strong>
-          {cm(f.w)} × {cm(f.h)} cm
-        </strong>{" "}
-        {t("setup.la.page")} · {aboutFormat(f)}
-      </figcaption>
-    </figure>
   );
 }
 

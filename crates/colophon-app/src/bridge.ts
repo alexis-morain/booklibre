@@ -62,6 +62,35 @@ const DEV_FORMATS: FormatPreset[] = [
   { name: "portrait-20x25", w: 203.2, h: 254, about: "portrait 20 × 25, le 8 × 10 pouces" },
 ];
 
+/** The formats Colophon can have printed (`commande::formats_imprimables`),
+ *  the only ones the creation screen offers. Mirrored for the browser
+ *  harness like the formats themselves. */
+export async function formatsImprimables(): Promise<string[]> {
+  if (!inTauri) return DEV_IMPRIMABLES;
+  return invoke<string[]>("formats_imprimables");
+}
+
+const DEV_IMPRIMABLES = ["carre-21", "carre-30", "portrait-a4", "paysage-a4", "portrait-20x25"];
+
+/** The miniature a photo embeds, oriented, as a data URL (`survol.rs`).
+ *  Never the album's thumbnail cache, which does not exist yet. */
+export type Miniature = { src: string; w: number; h: number; url: string };
+
+/** The creation screen's survol of a photo folder, before any composition. */
+export type Survol = { photos: number; petit: boolean; miniatures: Miniature[] };
+
+/** Count a folder's photos and read a handful of miniatures, never an
+ *  original. In the browser, the dev album's photo folder stands in for
+ *  whatever was "picked". */
+export async function survolDossier(dir: string): Promise<Survol> {
+  if (!inTauri) {
+    const res = await fetch("/__dev/survol");
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+  return invoke<Survol>("survol_dossier", { dir });
+}
+
 /** A composition pace offered at the first build, as the engine names it. */
 export type DensitePreset = {
   id: string;
