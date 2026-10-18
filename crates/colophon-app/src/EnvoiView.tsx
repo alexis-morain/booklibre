@@ -10,7 +10,9 @@
 // order. The PDF without constraints stays one link away; Prodigi and Lulu
 // are engine and command-line profiles only (`envoi.ts`). Under the prepared
 // folder, Commander sends it to the relay (`CommandeView`), only when this
-// opening of the screen prepared it.
+// opening of the screen prepared it. When the relay answers, the button is
+// « Faire imprimer »: no dialog, the folder goes to the app's data folder,
+// and the order opens straight after.
 //
 // Nothing here is computed in the browser. The preflight, the spec sheet and
 // the spine all come from the engine, per profile: two suppliers disagree on
@@ -19,7 +21,7 @@
 
 import { useEffect, useState } from "react";
 import { phraseAbsents } from "./BasculeView";
-import { CommandeView } from "./CommandeView";
+import { CommandeView, useRelais } from "./CommandeView";
 import { phraseDefaut, texteMoteur } from "./moteur";
 import { Album } from "./album";
 import {
@@ -99,8 +101,9 @@ export function EnvoiView({
   reserveVide: boolean;
   /** Le PDF sans contrainte : un fichier, où la boîte le pose. */
   onExport: () => void;
-  /** Chez qui relie deux fichiers : le dossier de la commande. */
-  onPrepare: () => void;
+  /** Chez qui relie deux fichiers : le dossier de la commande. `commande` :
+   *  « Faire imprimer », sans boîte, et la commande s'ouvre derrière. */
+  onPrepare: (commande: boolean) => void;
   /** Ce que la dernière préparation a écrit et ce que le contrôle relu en
    *  dit. Null tant que rien n'a été préparé pour cet album. */
   preparation: Preparation | null;
@@ -152,9 +155,12 @@ export function EnvoiView({
     };
   }, [profil, album, dirty]);
 
+  const { relais, sonde, sonder } = useRelais();
   const chosen = imprimeurAffiche(printers, profil);
   const libre = profil === PROFIL_LIBRE;
-  const action = chosen ? actionEnvoi(chosen) : null;
+  const action = chosen ? actionEnvoi(chosen, relais?.etat === "joignable") : null;
+  // « Préparer à nouveau » refait la préparation de la même façon.
+  const preparerEncore = () => onPrepare(preparation?.commande === true);
   const bloquants = report?.defauts.filter((d) => d.bloquant) ?? [];
   const avertissements = report?.defauts.filter((d) => !d.bloquant) ?? [];
   // Ce que chaque destination fait d'un clic. « Préparer à nouveau » ne
@@ -377,12 +383,17 @@ export function EnvoiView({
       <section className="envoi-actions">
         <button
           className="envoi-exporter"
-          onClick={action?.prepare ? onPrepare : onExport}
+          onClick={action?.prepare ? () => onPrepare(action.commande) : onExport}
           disabled={exporting || !report?.ok || !action}
           title={report?.ok ? action?.titre : t("envoi.exporter.bloque")}
         >
           {exporting ? t("envoi.exporter.rendu") : action?.texte ?? t("envoi.exporter")}
         </button>
+        {exporting && action?.commande && (
+          <p className="commande-explique" role="status">
+            {t("commande.explique.preparation")}
+          </p>
+        )}
         {preparation && action?.prepare && (
           <div className="envoi-prepare">
             <p className={preparation.rapport.ok ? "envoi-prepare-ok" : "envoi-prepare-ko"}>
@@ -393,7 +404,7 @@ export function EnvoiView({
                 {preparation.rapport.defauts
                   .filter((d) => d.bloquant)
                   .map((d, i) => (
-                    <DefautLigne key={i} d={d} gestes={gestes(onPrepare)} />
+                    <DefautLigne key={i} d={d} gestes={gestes(preparerEncore)} />
                   ))}
               </div>
             )}
@@ -406,6 +417,9 @@ export function EnvoiView({
           preparationNeuve={
             action?.prepare && preparation !== prepareeAvant ? preparation : null
           }
+          relais={relais}
+          sonde={sonde}
+          sonder={sonder}
         />
         {!libre && (
           <p className="envoi-autre">

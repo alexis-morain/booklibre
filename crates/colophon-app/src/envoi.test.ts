@@ -85,6 +85,25 @@ describe("actionEnvoi", () => {
     expect(a.prepare).toBe(false);
     expect(a.texte).toBe("Enregistrer le PDF d’impression");
   });
+
+  it("devient « Faire imprimer » chez Cloudprinter quand le relais répond", () => {
+    setLangue("fr");
+    const a = actionEnvoi(PROFILS[0], true);
+    expect(a).toMatchObject({ prepare: true, commande: true, texte: "Faire imprimer" });
+    setLangue("en");
+    expect(actionEnvoi(PROFILS[0], true).texte).toBe("Have it printed");
+  });
+
+  it("reste « Préparer » sans relais joignable, et ne commande jamais ailleurs que chez Cloudprinter", () => {
+    setLangue("fr");
+    expect(actionEnvoi(PROFILS[0], false)).toMatchObject({
+      prepare: true,
+      commande: false,
+      texte: "Préparer pour Cloudprinter",
+    });
+    expect(actionEnvoi(PROFILS[0])).toMatchObject({ commande: false });
+    for (const p of PROFILS.slice(1)) expect(actionEnvoi(p, true).commande, p.id).toBe(false);
+  });
 });
 
 const rapport = (bloquants: number): PrevolReport =>

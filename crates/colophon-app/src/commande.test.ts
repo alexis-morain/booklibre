@@ -14,6 +14,7 @@ import {
   annulable,
   annulableIntention,
   avancer,
+  commandeDirecte,
   commandePossible,
   formatInvendable,
   formatPrix,
@@ -28,6 +29,7 @@ import {
   phraseErreur,
   phraseEtat,
   phraseIntention,
+  phraseLivraison,
   prixDeCentimes,
   refusDefinitif,
   relaisDe,
@@ -136,6 +138,48 @@ describe("commandePossible", () => {
     expect(formatInvendable(true, p)).toBe(false);
     expect(formatInvendable(false, sansProduit)).toBe(false);
     expect(formatInvendable(true, null)).toBe(false);
+  });
+});
+
+describe("commandeDirecte", () => {
+  const pourCommande = (ok: boolean): Preparation => ({ ...preparation(ok), commande: true });
+
+  it("ouvre le parcours sans « Commander » sur une préparation faite par « Faire imprimer »", () => {
+    expect(commandeDirecte(true, pourCommande(true))).toBe(true);
+  });
+
+  it("garde « Commander » pour un dossier préparé à la main, et rien sans relais ni vert", () => {
+    expect(commandeDirecte(true, preparation(true))).toBe(false);
+    expect(commandeDirecte(false, pourCommande(true))).toBe(false);
+    expect(commandeDirecte(true, pourCommande(false))).toBe(false);
+    expect(commandeDirecte(true, null)).toBe(false);
+    const p = pourCommande(true);
+    const sansProduit = { ...p, rapport: { ...p.rapport, fiche: { ...p.rapport.fiche, produit: undefined } } };
+    expect(commandeDirecte(true, sansProduit)).toBe(false);
+  });
+});
+
+describe("les phrases du parcours", () => {
+  const CLES = [
+    "commande.explique.preparation",
+    "commande.explique.envoi",
+    "commande.explique.paiement",
+    "commande.sandbox.bandeau",
+  ] as const;
+
+  it("disent chaque étape en une ligne, dans les deux langues, sans mot technique", () => {
+    for (const langue of ["fr", "en"] as const) {
+      setLangue(langue);
+      for (const c of CLES) {
+        const s = t(c);
+        expect(s, c).not.toBe(c);
+        expect(s, c).not.toMatch(/PDF\/X|ppi|dpi|fond perdu|bleed|sRGB/i);
+      }
+    }
+    setLangue("fr");
+    expect(t("commande.explique.envoi")).toBe("Vos fichiers partent chez l’imprimeur. Rien n’est encore payé.");
+    expect(t("commande.sandbox.bandeau")).toBe("Mode test : aucun livre ne sera imprimé ni facturé.");
+    expect(t("commande.explique.paiement")).toContain("Stripe");
   });
 });
 
@@ -464,6 +508,69 @@ describe("le parcours", () => {
     expect(avancer(erreur, { type: "retour" })).toEqual({ etape: "repos" });
     // Recommencer n'a de sens que depuis l'erreur.
     expect(avancer(paiement, { type: "recommencer", pays: PAYS })).toBe(paiement);
+  });
+
+  // A1 : « Faire imprimer » mène à Stripe en trois gestes.
+  const FRANCE: Pays[] = [{ code: "FR", nom: "France", require_state: false }];
+
+  it("saute l'étape pays quand il n'y a qu'un pays sans région", () => {
+    expect(avancer({ etape: "repos" }, { type: "commander", pays: FRANCE })).toMatchObject({
+      etape: "pays",
+      choisi: "FR",
+      saute: true,
+    });
+    // Plusieurs pays, ou un seul qui demande un État : on choisit.
+    expect(avancer({ etape: "repos" }, { type: "commander", pays: PAYS })).toMatchObject({ saute: false });
+    expect(avancer({ etape: "repos" }, { type: "commander", pays: [PAYS[2]] })).toMatchObject({
+      saute: false,
+      region: "M",
+    });
+  });
+
+  it("revient au choix du pays si les prix n'ont pas pu venir, sans boucler", () => {
+    const p = avancer({ etape: "repos" }, { type: "commander", pays: FRANCE });
+    const rate = avancer(p, { type: "echec" });
+    expect(rate).toMatchObject({ etape: "pays", choisi: "FR", saute: false });
+  });
+
+  it("rappelle la livraison dans la grille, et « Changer » ramène au pays sans le resauter", () => {
+    const grille = suite({ etape: "repos" }, { type: "commander", pays: FRANCE }, { type: "offre", offre: OFFRE });
+    expect(grille).toMatchObject({
+      etape: "grille",
+      livraison: { pays: FRANCE, choisi: "FR", region: null },
+    });
+    const change = avancer(grille, { type: "changer" });
+    expect(change).toEqual({ etape: "pays", pays: FRANCE, choisi: "FR", region: null, saute: false });
+    // Changer n'a de sens que dans la grille.
+    const envoi = avancer(grille, { type: "envoyer" });
+    expect(avancer(envoi, { type: "changer" })).toBe(envoi);
+    expect(avancer({ etape: "repos" }, { type: "changer" })).toEqual({ etape: "repos" });
+  });
+
+  it("dit la livraison en une ligne, la région quand il y en a une", () => {
+    setLangue("fr");
+    expect(phraseLivraison({ pays: FRANCE, choisi: "FR", region: null })).toBe("Livraison : France");
+    expect(phraseLivraison({ pays: PAYS, choisi: "ES", region: "M" })).toBe("Livraison : Spain, Madrid");
+    setLangue("en");
+    expect(phraseLivraison({ pays: FRANCE, choisi: "FR", region: null })).toBe("Delivery: France");
+    // Un code que la liste ne nomme pas reste un code.
+    expect(phraseLivraison({ pays: FRANCE, choisi: "XX", region: null })).toBe("Delivery: XX");
+  });
+
+  it("enchaîne l'envoi des fichiers et la confirmation sans geste entre deux", () => {
+    const confirmation = suite(
+      { etape: "repos" },
+      { type: "commander", pays: FRANCE },
+      { type: "offre", offre: OFFRE },
+      { type: "envoyer" },
+      { type: "envoye" },
+    );
+    expect(confirmation).toMatchObject({ etape: "confirmation", niveau: "cp_ground" });
+    // Le prix rappelé sur le bouton est celui que la confirmation dira.
+    setLangue("fr");
+    expect(t("commande.continuer", { prix: "46,00 €" })).toBe("Continuer vers le paiement · 46,00 €");
+    setLangue("en");
+    expect(t("commande.continuer", { prix: "€46.00" })).toBe("Continue to payment · €46.00");
   });
 
   it("ignore un événement qui ne concerne pas l'étape", () => {
