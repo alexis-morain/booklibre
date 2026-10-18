@@ -917,16 +917,65 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
     }
 
-    /// L'empreinte de [`feuille_figee`] sans fond, relevée sur `main`.
+    /// L'empreinte de [`feuille_figee`] sans fond, ses dates neutralisées
+    /// ([`neutre`]). Relevée en deux temps, parce que les dates suivent le
+    /// fuseau de la machine : l'empreinte brute du fichier a d'abord été
+    /// relevée sur `main` (481fd68) en UTC+2 et retrouvée à l'identique par
+    /// le code de A4, puis ce sont ces mêmes octets, neutralisés, qui ont
+    /// donné le chiffre ci-dessous, valable sous tous les fuseaux.
     const EMPREINTE_SANS_FOND: [u8; 16] =
-        [19, 2, 9, 147, 82, 176, 165, 153, 253, 117, 128, 169, 66, 81, 45, 156];
+        [193, 145, 59, 195, 179, 36, 234, 16, 146, 231, 39, 226, 158, 62, 117, 113];
+
+    /// L'instant figé de [`feuille_figee`].
+    fn instant() -> chrono::DateTime<chrono::Local> {
+        use chrono::TimeZone;
+        chrono::Local.with_ymd_and_hms(2026, 10, 18, 11, 0, 0).unwrap()
+    }
+
+    /// Les octets d'une feuille dont on a masqué les trois écritures de
+    /// l'instant — `/CreationDate` et `/ModDate`, les dates du paquet XMP,
+    /// l'`/ID` qui en dérive. Elles s'écrivent en heure locale, donc le même
+    /// instant donne d'autres chiffres en UTC sur la CI qu'en UTC+2 sur le
+    /// Mac ; leur longueur, elle, ne bouge pas, ni rien d'autre du fichier.
+    /// Chacune doit être trouvée : un masque qui ne masque rien laisserait
+    /// le test redevenir dépendant du fuseau sans le dire.
+    fn neutre(octets: &[u8]) -> Vec<u8> {
+        let t = instant();
+        let id: String = crate::pdfx::fingerprint("Corse", t)
+            .iter()
+            .map(|b| format!("{b:02X}"))
+            .collect();
+        let mut out = octets.to_vec();
+        for (motif, attendu) in [
+            (crate::pdfx::pdf_date(t), 2),
+            (crate::pdfx::xmp_date(t), 3),
+            (id.clone(), 2),
+            (id.to_lowercase(), 0),
+        ] {
+            let m = motif.as_bytes();
+            let mut n = 0;
+            let mut i = 0;
+            while i + m.len() <= out.len() {
+                if &out[i..i + m.len()] == m {
+                    out[i..i + m.len()].fill(b'0');
+                    n += 1;
+                    i += m.len();
+                } else {
+                    i += 1;
+                }
+            }
+            if attendu > 0 {
+                assert_eq!(n, attendu, "{motif} trouvé {n} fois");
+            }
+        }
+        out
+    }
 
     /// Un album de test sans photo, à couverture complète, posé dans un
     /// dossier à lui, et sa feuille rendue à un instant figé. Sans photo, le
     /// fichier ne dépend que de la face du projet et de l'arithmétique : il
     /// rend les mêmes octets sur les trois OS du gate.
     fn feuille_figee(nom: &str, fond: Option<&str>) -> Vec<u8> {
-        use chrono::{Local, TimeZone};
         let dir = std::env::temp_dir()
             .join(format!("colophon-fond-{nom}-{}", std::process::id()));
         fs::create_dir_all(&dir).unwrap();
@@ -941,8 +990,7 @@ mod tests {
         });
         fs::write(dir.join("album.json"), serde_json::to_string(&album).unwrap()).unwrap();
         let out = dir.join("album-cover.pdf");
-        let t = Local.with_ymd_and_hms(2026, 10, 18, 11, 0, 0).unwrap();
-        render_cover_pdf_at(&dir, PrinterProfile::par_id("cloudprinter").unwrap(), &out, t)
+        render_cover_pdf_at(&dir, PrinterProfile::par_id("cloudprinter").unwrap(), &out, instant())
             .expect("rendu");
         let octets = fs::read(&out).unwrap();
         let _ = fs::remove_dir_all(&dir);
@@ -956,7 +1004,7 @@ mod tests {
     fn sans_fond_la_feuille_est_celle_d_avant_a_l_octet() {
         let octets = feuille_figee("aucun", None);
         assert_eq!(
-            crate::export::empreinte(&octets),
+            crate::export::empreinte(&neutre(&octets)),
             EMPREINTE_SANS_FOND,
             "{} octets",
             octets.len()
@@ -997,7 +1045,7 @@ mod tests {
         let (aw, ah): (f64, f64) = (ops[7].parse().unwrap(), ops[8].parse().unwrap());
         assert!(aw >= w && aw - w < 0.02, "{aw} contre {w}");
         assert!(ah >= h && ah - h < 0.02, "{ah} contre {h}");
-        assert_ne!(crate::export::empreinte(&octets), EMPREINTE_SANS_FOND);
+        assert_ne!(crate::export::empreinte(&neutre(&octets)), EMPREINTE_SANS_FOND);
     }
 
     /// Une valeur hors `#rrggbb` est ignorée : la feuille est celle d'un album
@@ -1006,7 +1054,7 @@ mod tests {
     fn un_fond_illisible_rend_la_feuille_sans_fond() {
         for gate in ["terracotta", "#abc", "#12345g"] {
             let octets = feuille_figee("gate", Some(gate));
-            assert_eq!(crate::export::empreinte(&octets), EMPREINTE_SANS_FOND, "{gate}");
+            assert_eq!(crate::export::empreinte(&neutre(&octets)), EMPREINTE_SANS_FOND, "{gate}");
         }
     }
 

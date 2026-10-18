@@ -168,7 +168,7 @@ fn text(s: &str) -> Object {
 }
 
 /// `D:YYYYMMDDHHmmSSOHH'mm'`, the only date syntax `/Info` accepts.
-fn pdf_date(t: DateTime<Local>) -> String {
+pub(crate) fn pdf_date(t: DateTime<Local>) -> String {
     let base = t.format("D:%Y%m%d%H%M%S").to_string();
     let off = t.format("%z").to_string(); // +0200
     format!("{base}{}{}'{}'", &off[..1], &off[1..3], &off[3..5])
@@ -176,14 +176,14 @@ fn pdf_date(t: DateTime<Local>) -> String {
 
 /// The same instant in the ISO 8601 form XMP wants. `/Info` and the packet
 /// disagreeing is a conformance defect on its own.
-fn xmp_date(t: DateTime<Local>) -> String {
+pub(crate) fn xmp_date(t: DateTime<Local>) -> String {
     t.format("%Y-%m-%dT%H:%M:%S%:z").to_string()
 }
 
 /// Two identical 16-byte halves derived from the title and the stamp. The
 /// pair exists because the format asks for one; the halves match because the
 /// file has never been revised since it was created.
-fn fingerprint(title: &str, stamp: DateTime<Local>) -> Vec<u8> {
+pub(crate) fn fingerprint(title: &str, stamp: DateTime<Local>) -> Vec<u8> {
     // FNV-1a, twice with a different offset basis. A document identifier
     // needs to differ between documents, not to resist an adversary — and an
     // album's export manifest needs exactly the same thing, which is why the
