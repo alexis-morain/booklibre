@@ -350,8 +350,14 @@ function albumDevServer(dir: string): Plugin {
           res.end();
           return;
         }
+        const profil = new URL(req.url ?? "", "http://x").searchParams.get("profil") ?? "cloudprinter";
+        // Un identifiant de profil, jamais un drapeau qu'on glisserait au moteur.
+        if (!/^[a-z0-9][a-z0-9_-]*$/.test(profil)) {
+          res.statusCode = 400;
+          res.end("profil invalide");
+          return;
+        }
         try {
-          const profil = new URL(req.url ?? "", "http://x").searchParams.get("profil") ?? "cloudprinter";
           execFileSync(engineBinary, ["--cover", "--apercu", "--profil", profil, "-o", dir], {
             encoding: "utf8",
             maxBuffer: 16 * 1024 * 1024,

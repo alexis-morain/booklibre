@@ -76,9 +76,11 @@ export function teintesDe(px: Uint8ClampedArray, w: number, h: number, k = TEINT
   const d2 = (a: Case, b: Case) => (a.r - b.r) ** 2 + (a.g - b.g) ** 2 + (a.b - b.b) ** 2;
 
   // Les centres : la case la plus lourde, puis la plus éloignée des centres
-  // déjà posés parmi celles qui pèsent assez.
-  const candidates = pts.filter((p) => p.n >= Math.max(1, total * POIDS_CENTRE));
-  const premiere = candidates.reduce((m, p) => (p.n > m.n ? p : m), candidates[0] ?? pts[0]);
+  // déjà posés parmi celles qui pèsent assez. Une image trop étalée pour
+  // qu'aucune case pèse assez part de toutes, sinon elle n'aurait qu'une teinte.
+  const lourdes = pts.filter((p) => p.n >= Math.max(1, total * POIDS_CENTRE));
+  const candidates = lourdes.length > 0 ? lourdes : pts;
+  const premiere = candidates.reduce((m, p) => (p.n > m.n ? p : m), candidates[0]);
   const centres: Case[] = [{ ...premiere }];
   while (centres.length < k) {
     let loin: Case | null = null;

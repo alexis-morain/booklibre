@@ -83,6 +83,16 @@ describe("les teintes de la photo", () => {
     expect(teintesDe(new Uint8ClampedArray(0), 0, 0)).toEqual([]);
   });
 
+  it("trouve plusieurs teintes quand aucune case ne pèse un demi-pour-cent", () => {
+    // 512 cases de 4 bits, une colonne chacune : chaque case pèse 0,2 %.
+    const couleurs: [number, number, number][] = [];
+    for (let i = 0; i < 512; i++) couleurs.push([(i & 7) * 32 + 8, ((i >> 3) & 7) * 32 + 8, (i >> 6) * 32 + 8]);
+    const { px, w, h } = bandes(couleurs, couleurs.map(() => 1));
+    const teintes = teintesDe(px, w, h);
+    expect(teintes.length).toBeGreaterThan(1);
+    expect(teintesDe(px.slice(), w, h)).toEqual(teintes);
+  });
+
   it("ignore les pixels transparents", () => {
     const { px, w, h } = bandes([[200, 40, 30], [30, 90, 200]], [10, 10]);
     for (let i = 0; i < px.length; i += 4) if ((i / 4) % w >= 10) px[i + 3] = 0;
