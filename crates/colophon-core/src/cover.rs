@@ -1080,30 +1080,51 @@ mod tests {
     }
 
     /// Le feuillet volant d'un fournisseur qui relie un seul fichier porte le
-    /// même aplat, sur toute la feuille, sous la quatrième.
+    /// même aplat, sur toute la feuille fond perdu compris, sous la photo de
+    /// la première comme sous la quatrième.
     #[test]
     fn le_feuillet_porte_le_fond_aussi() {
+        let dir = std::env::temp_dir()
+            .join(format!("colophon-feuillet-fond-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let img = image::RgbImage::from_pixel(2400, 1600, image::Rgb([70, 110, 160]));
+        image::DynamicImage::ImageRgb8(img)
+            .save_with_format(dir.join("a.jpg"), image::ImageFormat::Jpeg)
+            .unwrap();
         let mut album = album_de(12);
+        album.root = dir.to_string_lossy().to_string();
         album.cover = Some(Cover {
             title: "Corse".into(),
             subtitle: String::new(),
-            photo: None,
+            photo: Some(crate::model::Slot::new("a.jpg".into(), [0.5, 0.42])),
             back_text: "Pour Marie.".into(),
             fond: Some("#f3ead8".into()),
         });
         let gen = PrinterProfile::par_id("generique").unwrap();
-        let mut w = PdfWriter::new(&album, std::path::Path::new("."));
-        add_cover_page(&mut w, &album, gen, Face::Quatrieme).unwrap();
-        let path = std::env::temp_dir()
-            .join(format!("colophon-feuillet-fond-{}.pdf", std::process::id()));
-        w.save(&path).unwrap();
-        let octets = fs::read(&path).unwrap();
-        let _ = fs::remove_file(&path);
-        let flux = flux_de(&octets);
-        let premiere = flux.lines().next().unwrap_or_default();
-        assert!(premiere.ends_with("re f Q") && premiere.starts_with("q "), "{flux}");
-        let [w, _] = media_pt(&octets);
-        assert!(w > 210.0 * 72.0 / 25.4, "fond perdu compris : {premiere}");
+        for (face, nom) in [(Face::Premiere, "premiere"), (Face::Quatrieme, "quatrieme")] {
+            let mut w = PdfWriter::new(&album, &dir);
+            add_cover_page(&mut w, &album, gen, face).unwrap();
+            let path = dir.join(format!("{nom}.pdf"));
+            w.save(&path).unwrap();
+            let octets = fs::read(&path).unwrap();
+            let flux = flux_de(&octets);
+            let premiere = flux.lines().next().unwrap_or_default();
+            let ops: Vec<&str> = premiere.split_whitespace().collect();
+            assert_eq!(ops.len(), 12, "{nom} : {flux}");
+            assert_eq!(ops[0], "q", "{nom} : {premiere}");
+            assert_eq!(ops[4], "rg", "{nom} : {premiere}");
+            assert_eq!(&ops[5..7], ["0", "0"], "{nom} : {premiere}");
+            assert_eq!(&ops[9..], ["re", "f", "Q"], "{nom} : {premiere}");
+            let [w, h] = media_pt(&octets);
+            let (aw, ah): (f64, f64) = (ops[7].parse().unwrap(), ops[8].parse().unwrap());
+            assert!(aw >= w && aw - w < 0.02, "{nom} : {aw} contre {w}");
+            assert!(ah >= h && ah - h < 0.02, "{nom} : {ah} contre {h}");
+            assert!(w > 210.0 * 72.0 / 25.4, "{nom} : fond perdu compris");
+            if face == Face::Premiere {
+                assert!(flux.contains(" Do"), "la photo passe sur l'aplat : {flux}");
+            }
+        }
+        let _ = fs::remove_dir_all(&dir);
     }
 
     /// A leaf is one panel, trimmed on four sides, with no spine and no fold.
