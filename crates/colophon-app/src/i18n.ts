@@ -1028,6 +1028,11 @@ export const FR = {
   "bilan.hint.ecartees":
     "Rien n’est supprimé : chaque photo écartée attend dans la vue Tri, avec sa raison, et un double-clic la repêche.",
   "bilan.hint.toutes": "Toutes les photos du dossier sont dans l’album.",
+  "bilan.trop_petites.un":
+    "1 photo trop petite pour être bien imprimée est restée dans la réserve. Vous pouvez la poser quand même.",
+  "bilan.trop_petites":
+    "{n} photos trop petites pour être bien imprimées sont restées dans la réserve. Vous pouvez les poser quand même.",
+  "bilan.chapitre_vide": "Un chapitre n’a gardé aucune photo : {titre}.",
   "bilan.ouvrir": "Ouvrir l’album",
   "bilan.revue": "Passer les {n} écartées en revue",
   "bilan.garde":
@@ -2144,6 +2149,11 @@ export const EN: Record<Cle, string> = {
   "bilan.hint.ecartees":
     "Nothing is deleted: every photo set aside waits in the Sort view, with its reason, and a double-click rescues it.",
   "bilan.hint.toutes": "Every photo in the folder is in the album.",
+  "bilan.trop_petites.un":
+    "1 photo too small to print well stayed in the reserve. You can place it anyway.",
+  "bilan.trop_petites":
+    "{n} photos too small to print well stayed in the reserve. You can place them anyway.",
+  "bilan.chapitre_vide": "A chapter kept no photo: {titre}.",
   "bilan.ouvrir": "Open the album",
   "bilan.revue": "Review the {n} discards",
   "bilan.garde":

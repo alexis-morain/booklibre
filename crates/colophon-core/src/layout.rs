@@ -182,6 +182,9 @@ pub struct Composer {
     family_run: (String, usize),
     geom: SpreadGeometry,
     densite: Densite,
+    /// Sources left in the reserve because no cell prints them at the floor,
+    /// in the order met: the build report says so (1.1-a2).
+    pub trop_petites: Vec<String>,
 }
 
 impl Composer {
@@ -196,6 +199,7 @@ impl Composer {
             family_run: (String::new(), 0),
             geom: pdf::geometry(album),
             densite,
+            trop_petites: Vec::new(),
         }
     }
 
@@ -326,7 +330,10 @@ impl Composer {
                     // the reserve, where its alert says so (1.1-a). Measured:
                     // sharing a spread put it in a cell no smaller.
                     if !printable(p, &pdf::slots_for(&solo, 1, &self.geom)[0]) {
-                        photos.remove(i);
+                        let p = photos.remove(i);
+                        self.trop_petites.push(
+                            p.path.strip_prefix(root).unwrap_or(&p.path).to_string_lossy().to_string(),
+                        );
                         continue 'photos;
                     }
                     break (solo, vec![0]);
@@ -810,10 +817,26 @@ mod tests {
         photos[4] = photo(4, 960, 960);
         let chapter = Chapter { start: photos[0].meta.taken, end: photos[8].meta.taken, photos };
         let album = Album::new("t", std::path::Path::new("/"), crate::model::Size { w: 210.0, h: 210.0 });
-        let spreads = Composer::new(&album).compose(&chapter, None, std::path::Path::new("/"));
+        let mut composer = Composer::new(&album);
+        let spreads = composer.compose(&chapter, None, std::path::Path::new("/"));
         let posees: Vec<&str> = spreads.iter().flat_map(|s| s.slots.iter().map(|sl| sl.src.as_str())).collect();
         assert!(!posees.contains(&"p04.jpg"), "{posees:?}");
         assert_eq!(posees.len(), 8);
+        // 1.1-a2 : et il le dit, pour que le bilan le dise.
+        assert_eq!(composer.trop_petites, vec!["p04.jpg".to_string()]);
+    }
+
+    /// 1.1-a2 : un chapitre fait seulement de photos de 960 px ne produit
+    /// aucune planche, et toutes ses photos sont comptées comme écartées.
+    #[test]
+    fn un_chapitre_de_photos_trop_petites_ne_produit_rien_et_les_compte() {
+        let photos: Vec<Photo> = (0..4).map(|n| photo(n, 960, 960)).collect();
+        let chapter = Chapter { start: photos[0].meta.taken, end: photos[3].meta.taken, photos };
+        let album = Album::new("t", std::path::Path::new("/"), crate::model::Size { w: 210.0, h: 210.0 });
+        let mut composer = Composer::new(&album);
+        let spreads = composer.compose(&chapter, None, std::path::Path::new("/"));
+        assert!(spreads.is_empty(), "{:?}", spreads.iter().map(|s| &s.template).collect::<Vec<_>>());
+        assert_eq!(composer.trop_petites.len(), 4);
     }
 
     /// Le même dernier recours garde une photo qui tient sa page : seules les

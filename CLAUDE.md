@@ -416,7 +416,10 @@ ouverture au quartile haut, jamais quatre gabarits d'affilée. Plancher 250 ppi 
 **pas garanti** : l'audit en tolère trois, le prévol aucun. **Une photo sous le plancher
 même seule sur sa page n'est pas posée** (1.1-a) : aucune case du catalogue du Composer
 ne la tiendrait, partager une planche la mettait dans une case pas plus petite (mesuré),
-elle reste dans la réserve avec son signe. Sur les trois jeux × cinq formats, plus une
+elle reste dans la réserve avec son signe, et le bilan le dit (1.1-a2 :
+`Composer::trop_petites`, `BuildReport::trop_petites` et `chapitres_vides`, une ligne à
+l'écran du bilan et dans la CLI ; un chapitre vidé n'invente aucune planche, son titre est
+nommé). Sur les trois jeux × cinq formats, plus une
 case sous le seuil (`docs/mesures/2026-10-19-badges-pleine-page.json`, banc
 `qualite::banc_badges_pleine_page`) ; l'écran et le moteur y lisent les mêmes tailles.
 
