@@ -85,7 +85,7 @@ export const PHRASES_EN: Record<string, string> = {
     "the album is composed with {album_mm} mm of bleed, {imprimeur} asks for {requis_mm}",
   "fond_perdu.recomposer":
     "recompose the album at the profile’s bleed: the bleed is set when the album is composed",
-  espace: "{imprimeur} prints in CMYK {intent} and Colophon only exports RGB",
+  espace: "{imprimeur} prints in CMYK {intent} and Booklibre only exports RGB",
   "espace.choisir": "choose a profile that accepts RGB, or ask the printer to convert",
   conformite:
     "{imprimeur} asks for PDF/X-4 and the file does not declare itself as such: the fonts are embedded, but the OutputIntent and the XMP metadata are still missing",

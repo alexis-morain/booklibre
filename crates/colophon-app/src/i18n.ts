@@ -43,10 +43,10 @@ export const FR = {
   "bar.nouveau.titre": "Fermer et composer un autre album",
 
   // -- l'écran d'accueil
-  "accueil.kicker": "Colophon",
+  "accueil.kicker": "Booklibre",
   "accueil.titre": "Un dossier de photos,\nun album à feuilleter.",
   "accueil.lede":
-    "Colophon lit vos photos, écarte les doublons et les ratés, compose les planches et rend un PDF prêt à relire. Tout se retouche ensuite : gabarits, ordre, photos repêchées.",
+    "Booklibre lit vos photos, écarte les doublons et les ratés, compose les planches et rend un PDF prêt à relire. Tout se retouche ensuite : gabarits, ordre, photos repêchées.",
   "accueil.choisir": "Choisir un dossier de photos…",
   "accueil.ou.ouvrir": "ou Ouvrir un album existant",
   "accueil.recents": "Albums récents",
@@ -58,7 +58,7 @@ export const FR = {
   "accueil.ou.photos": "ou Importer un album de Photos",
   "photos.titre": "Importer depuis Photos",
   "photos.retour": "Retour",
-  "photos.demander": "Colophon a besoin d’accéder à votre photothèque pour en lire les albums. Il copie les photos que vous choisissez, et n’écrit jamais rien dans la bibliothèque.",
+  "photos.demander": "Booklibre a besoin d’accéder à votre photothèque pour en lire les albums. Il copie les photos que vous choisissez, et n’écrit jamais rien dans la bibliothèque.",
   "photos.demander.bouton": "Autoriser l’accès…",
   "photos.refuse": "L’accès à la photothèque est refusé. Il se rend dans Réglages Système, Confidentialité et sécurité, Photos.",
   "photos.injoignable": "La photothèque système est introuvable. macOS la cherche à l’emplacement {chemin}, qui n’existe plus. Ouvrez Photos, puis Réglages, Général, et cliquez « Utiliser comme photothèque système ».",
@@ -85,9 +85,9 @@ export const FR = {
   "stockage.titre": "Stockage",
   "stockage.mesure": "Mesure du dossier de données…",
   "stockage.total.suite":
-    "sur ce disque, {n} albums. Les photos d’origine ne sont pas comptées ici : Colophon ne les copie jamais.",
+    "sur ce disque, {n} albums. Les photos d’origine ne sont pas comptées ici : Booklibre ne les copie jamais.",
   "stockage.total.suite.un":
-    "sur ce disque, 1 album. Les photos d’origine ne sont pas comptées ici : Colophon ne les copie jamais.",
+    "sur ce disque, 1 album. Les photos d’origine ne sont pas comptées ici : Booklibre ne les copie jamais.",
   "stockage.ouvert": "ouvert",
   "stockage.supprimer": "Supprimer",
   "stockage.vide": "Aucun album composé sur cette machine.",
@@ -95,7 +95,7 @@ export const FR = {
   "stockage.purger": "Vider les caches de vignettes ({poids})",
   "stockage.ouvrir.dossier": "Ouvrir le dossier",
   "stockage.note":
-    "Un album supprimé ne se récupère pas. Le dossier de photos, lui, reste intact : rien ici n’écrit ou n’efface hors du dossier de Colophon.",
+    "Un album supprimé ne se récupère pas. Le dossier de photos, lui, reste intact : rien ici n’écrit ou n’efface hors du dossier de Booklibre.",
   "stockage.planches": "{n} planches",
   "stockage.date.inconnue": "date inconnue",
   "stockage.confirme.supprimer":
@@ -106,11 +106,13 @@ export const FR = {
   "stockage.purge": "Caches vidés, {poids} libérés.",
 
   // -- À propos
-  "apropos.titre": "À propos de Colophon",
+  "apropos.titre": "À propos de Booklibre",
   "apropos.version": "Version {version}, sous licence",
   "apropos.licence": "GNU General Public License v3.0",
   "apropos.quoi":
     "Un dossier de photos en entrée, un album composé, tout modifiable, un PDF prêt à imprimer. Le code source est public : vous pouvez le lire, le modifier et le redistribuer aux mêmes conditions.",
+  "apropos.site": "Site :",
+  "apropos.contact": "contact :",
   "apropos.actifs": "Ce qui voyage à l’intérieur",
   "apropos.police.quoi":
     "La police du livre et de l’interface. C’est elle que le PDF incorpore.",
@@ -188,7 +190,7 @@ export const FR = {
   "fidele.aria": "Aperçu fidèle, rendu depuis le PDF",
 
   // -- la mise à jour
-  "maj.dispo": "Colophon {version} est disponible.",
+  "maj.dispo": "Booklibre {version} est disponible.",
   "maj.attente": " Le téléchargement et le redémarrage prennent une minute.",
   "maj.encours": " Téléchargement en cours, l’app redémarrera toute seule.",
   "maj.installer": "Installer maintenant",
@@ -202,12 +204,12 @@ export const FR = {
     "La ligne de commande et les messages du moteur restent en anglais : ils parlent à un développeur, pas à quelqu’un qui fabrique un album.",
   "prefs.theme": "Apparence",
   "prefs.theme.note":
-    "Colophon suit le réglage du système. Le papier des planches, lui, ne change jamais de teinte : c’est du papier.",
+    "Booklibre suit le réglage du système. Le papier des planches, lui, ne change jamais de teinte : c’est du papier.",
   "prefs.maj": "Mises à jour",
   "prefs.maj.au.lancement": "Vérifier au lancement",
   "prefs.maj.jamais": "Ne rien vérifier",
   "prefs.maj.note":
-    "C’est la seule chose qui sorte de votre machine. Au démarrage, Colophon demande à GitHub s’il existe une version plus récente. Ce qui part est une requête vers la page des versions ; ce que GitHub en voit est votre adresse IP et le nom de votre système, rien de vos photographies, rien de votre album, aucun identifiant que Colophon fabriquerait. Rien ne s’installe sans un clic de votre part. Coupée, l’application ne joint plus rien du tout, et les versions se téléchargent à la main depuis la page des versions.",
+    "C’est la seule chose qui sorte de votre machine. Au démarrage, Booklibre demande à son site, booklibre.app (servi par Cloudflare), s’il existe une version plus récente, puis à GitHub si le site ne répond pas. Ce qui part est une requête pour ce seul fichier ; ce que Cloudflare ou GitHub en voit est votre adresse IP et le nom de votre système, rien de vos photographies, rien de votre album, aucun identifiant que Booklibre fabriquerait. Rien ne s’installe sans un clic de votre part. Coupée, l’application ne joint plus rien du tout, et les versions se téléchargent à la main depuis la page des versions.",
 
   // -- création, composition, formats
   "setup.nouvel": "Nouvel album",
@@ -254,9 +256,9 @@ export const FR = {
   // -- le panneau Recomposer
   "recomposer.titre": "Recomposer l’album",
   "recomposer.intro":
-    "Colophon refait la mise en page des planches à partir de vos photos, au format choisi.",
+    "Booklibre refait la mise en page des planches à partir de vos photos, au format choisi.",
   "recomposer.section.format": "Le format",
-  "recomposer.non_imprimable": "non imprimable par Colophon",
+  "recomposer.non_imprimable": "non imprimable par Booklibre",
   "recomposer.aeree": "Moins de photos, plus grandes",
   "recomposer.aeree.note": "Moins de photos par page, chacune plus grande.",
   "recomposer.gardees": "{n} planches que vous avez modifiées restent telles quelles.",
@@ -355,7 +357,7 @@ export const FR = {
   // -- la police de l'album, dans le panneau Police
   "police.intro":
     "Une police pour tout le livre : légendes, titres de chapitre, page de garde, colophon, couverture et dos. La police choisie est copiée dans le dossier de l’album, donc l’album s’ouvre et s’imprime pareil sur une machine qui ne l’a pas. Rien n’est recomposé : seules les coupures de ligne suivent.",
-  "police.projet": "La police de Colophon",
+  "police.projet": "La police de Booklibre",
   "police.projet.note": "Source Sans 3, celle des albums qui n’ont rien choisi",
   "police.suggerees": "Dix familles, une par voix",
   "police.suggerees.note":
@@ -378,13 +380,13 @@ export const FR = {
   "police.filtre": "Filtrer",
   "police.filtre.exemple": "Helvetica, Optima, Times…",
   "police.poids": "{ko} Ko dans l’album",
-  "police.rendre": "Revenir à celle de Colophon",
-  "police.rendue": "Retour à la police de Colophon (⌘Z annule)",
+  "police.rendre": "Revenir à celle de Booklibre",
+  "police.rendue": "Retour à la police de Booklibre (⌘Z annule)",
   "police.choisie": "Album composé en {nom} (⌘Z annule, ⌘S enregistre)",
   "police.reste": "{n} familles de plus : filtrez pour les voir.",
   "police.aucune": "Aucune police ne correspond.",
   "police.manquante":
-    "La police de cet album est introuvable dans son dossier. L’album s’affiche et s’exporte dans celle de Colophon : rechoisissez-en une, ou remettez le fichier en place.",
+    "La police de cet album est introuvable dans son dossier. L’album s’affiche et s’exporte dans celle de Booklibre : rechoisissez-en une, ou remettez le fichier en place.",
   "erreur.police": "Police impossible à choisir",
   "police.refus.illisible": "illisible",
   "police.refus.embarquement_interdit": "sa licence interdit de l’incorporer",
@@ -464,11 +466,11 @@ export const FR = {
   "raison.illisible": "Illisibles : fichiers endommagés ou tronqués",
 
   // -- le menu natif
-  "menu.apropos": "À propos de Colophon",
-  "menu.masquer": "Masquer Colophon",
+  "menu.apropos": "À propos de Booklibre",
+  "menu.masquer": "Masquer Booklibre",
   "menu.masquer.autres": "Masquer les autres",
   "menu.tout.afficher": "Tout afficher",
-  "menu.quitter": "Quitter Colophon",
+  "menu.quitter": "Quitter Booklibre",
   "menu.preferences": "Préférences…",
   "menu.fichier": "Fichier",
   "menu.nouveau": "Nouveau…",
@@ -537,7 +539,7 @@ export const FR = {
   // qui ne va pas et le geste, sans un chiffre. Le détail reste la phrase du
   // moteur, sous « Détails ».
   "envoi.simple.conformite":
-    "Cet imprimeur exige une norme de fichier que Colophon ne déclare pas encore : demandez-lui s’il accepte un PDF simple.",
+    "Cet imprimeur exige une norme de fichier que Booklibre ne déclare pas encore : demandez-lui s’il accepte un PDF simple.",
   "envoi.simple.couverture_resolution":
     "Cette photo est trop petite pour la couverture : choisissez-en une autre.",
   "envoi.simple.couverture_vide":
@@ -547,7 +549,7 @@ export const FR = {
   "envoi.simple.dos_nu":
     "Le dos est trop mince pour porter le titre : la tranche sortira nue, à moins d’ajouter des planches.",
   "envoi.simple.espace":
-    "Cet imprimeur n’accepte que des fichiers en CMJN, et Colophon exporte en RVB : demandez-lui s’il convertit lui-même.",
+    "Cet imprimeur n’accepte que des fichiers en CMJN, et Booklibre exporte en RVB : demandez-lui s’il convertit lui-même.",
   "envoi.simple.fichier_couverture":
     "La couverture préparée n’a pas les dimensions que l’imprimeur attend : préparez le dossier à nouveau.",
   "envoi.simple.fichier_interieur":
@@ -580,7 +582,7 @@ export const FR = {
     "Une légende est près de la coupe : elle risque d’être rognée.",
   "envoi.defaut.planche": "Planche {n}",
   "envoi.resolution.tete":
-    "Ces photos sont trop petites pour leur case. Colophon n’imprime jamais sous 250 ppi.",
+    "Ces photos sont trop petites pour leur case. Booklibre n’imprime jamais sous 250 ppi.",
   "envoi.resolution.ou": "Planche {n}, {ppi} ppi",
   "envoi.resolution.voir": "Voir",
   "envoi.resolution.remplacer": "Remplacer",
@@ -628,10 +630,10 @@ export const FR = {
     "Un seul fichier, couverture comprise, enregistré où vous voulez",
   "envoi.exporter.bloque": "Corrigez d’abord ce qui bloque",
   "envoi.preparer.titre":
-    "L’intérieur et la couverture, prêts à imprimer, dans un dossier que vous choisissez ; Colophon les relit une fois écrits",
+    "L’intérieur et la couverture, prêts à imprimer, dans un dossier que vous choisissez ; Booklibre les relit une fois écrits",
   "envoi.faire_imprimer": "Faire imprimer",
   "envoi.faire_imprimer.titre":
-    "Colophon prépare les fichiers de votre livre, puis vous choisissez la livraison et le prix avant de payer",
+    "Booklibre prépare les fichiers de votre livre, puis vous choisissez la livraison et le prix avant de payer",
   "envoi.autre": "Un autre imprimeur ? PDF sans contrainte",
   "envoi.libre.tete":
     "PDF sans contrainte, pour l’imprimeur de votre choix : un seul fichier, couverture comprise, sans dos ni feuille à plat. Le contrôle ne vise plus Cloudprinter.",
@@ -649,11 +651,11 @@ export const FR = {
   "envoi.portes": "Comment recevoir votre livre",
   "envoi.porte.pdf.titre": "Télécharger le PDF",
   "envoi.porte.pdf.texte": "Un fichier prêt à imprimer, chez l’imprimeur de votre choix. Gratuit, sans compte.",
-  "envoi.porte.colophon.titre": "Faire imprimer par Colophon",
+  "envoi.porte.colophon.titre": "Faire imprimer par Booklibre",
   "envoi.porte.colophon.texte":
-    "Un livre relié, couverture rigide, livré chez vous. Colophon s’occupe de tout, de l’impression à la livraison.",
+    "Un livre relié, couverture rigide, livré chez vous. Booklibre s’occupe de tout, de l’impression à la livraison.",
   "envoi.porte.colophon.texte.france":
-    "Un livre relié, couverture rigide, livré chez vous en France. Colophon s’occupe de tout, de l’impression à la livraison.",
+    "Un livre relié, couverture rigide, livré chez vous en France. Booklibre s’occupe de tout, de l’impression à la livraison.",
   "envoi.porte.colophon.partenaire": "Imprimé et relié par notre partenaire Cloudprinter.",
   "envoi.porte.colophon.prix": "à partir de {prix}",
   "envoi.imprimeurs": "Pour les imprimeurs",
@@ -706,7 +708,7 @@ export const FR = {
   "commande.livre.verifies": "Fichiers vérifiés",
   "commande.livre.preparation": "Préparation des fichiers…",
   "commande.rassure.titre": "Comment ça se passe",
-  "commande.rassure.stripe": "Paiement par Stripe, sur sa page sécurisée. Colophon ne voit jamais votre carte.",
+  "commande.rassure.stripe": "Paiement par Stripe, sur sa page sécurisée. Booklibre ne voit jamais votre carte.",
   "commande.rassure.debit": "Rien n’est débité avant la page de paiement.",
   "commande.rassure.fichiers":
     "Vos fichiers voyagent chiffrés. Notre copie est effacée une fois le livre expédié, au plus tard un mois après la commande.",
@@ -736,7 +738,7 @@ export const FR = {
   "commande.livraison": "Livraison : {pays}",
   "commande.livraison.region": "Livraison : {pays}, {region}",
   "commande.changer": "Changer",
-  "commande.explique.preparation": "Colophon prépare les fichiers d’impression de votre livre.",
+  "commande.explique.preparation": "Booklibre prépare les fichiers d’impression de votre livre.",
   "commande.explique.envoi": "Vos fichiers partent chez l’imprimeur. Rien n’est encore payé.",
   "commande.explique.paiement": "Le paiement se fait sur la page sécurisée de Stripe, dans votre navigateur.",
   "commande.sandbox.bandeau": "Mode test : aucun livre ne sera imprimé ni facturé.",
@@ -771,7 +773,7 @@ export const FR = {
   "commandes.annuler": "Annuler la commande",
   "commande.indisponible": "La commande est indisponible pour le moment. Réessayez plus tard ; l’export PDF, lui, marche toujours.",
   "commande.reessayer": "Réessayer",
-  "commande.format.invendable": "Ce format ne se commande pas depuis Colophon : Cloudprinter n’imprime que le carré 21 ou 30, l’A4 portrait ou paysage et le 20 × 25. Changez-le dans Recomposer, ou envoyez ce dossier à un autre imprimeur.",
+  "commande.format.invendable": "Ce format ne se commande pas depuis Booklibre : Cloudprinter n’imprime que le carré 21 ou 30, l’A4 portrait ou paysage et le 20 × 25. Changez-le dans Recomposer, ou envoyez ce dossier à un autre imprimeur.",
   "commande.papier": "Ce dossier est préparé pour un autre papier que celui de l’imprimeur : préparez-le pour Cloudprinter.",
   "commande.relais.attente_fichiers": "Les fichiers ne sont pas encore partis.",
   "commande.relais.attente_paiement": "En attente du paiement, dans votre navigateur.",
@@ -1158,7 +1160,7 @@ export const FR = {
   "racine.introuvable":
     "Dossier photo introuvable ({dossier}). L’aperçu tourne sur le cache de vignettes, l’export pleine résolution ne marchera pas.",
   "racine.a.revoir":
-    "Colophon a besoin de revoir le dossier de photos ({dossier}) pour lire les originaux. L’aperçu tourne sur les vignettes en attendant.",
+    "Booklibre a besoin de revoir le dossier de photos ({dossier}) pour lire les originaux. L’aperçu tourne sur les vignettes en attendant.",
   "racine.a.revoir.bouton": "Retrouver le dossier…",
   "racine.a.revoir.titre": "Retrouver le dossier de photos de cet album",
   "racine.revoir.autre.nom": "Ce n’est pas le dossier de cet album : il s’appelait « {nom} ».",
@@ -1167,7 +1169,7 @@ export const FR = {
   "envoi.prevol.echec": "Le contrôle avant impression n’a pas pu tourner.",
   "signaler.diagnostic.absent":
     "Le diagnostic de la machine n’a pas pu être lu : le rapport part sans lui, décrivez ce qui s’est passé.",
-  "frontiere.titre": "Colophon a rencontré une erreur qu’il ne sait pas rattraper.",
+  "frontiere.titre": "Booklibre a rencontré une erreur qu’il ne sait pas rattraper.",
   "frontiere.lede":
     "Rien n’est perdu de ce qui a été enregistré : l’album est sur le disque, dans son dossier. Les modifications non enregistrées depuis le dernier ⌘S ne le sont pas.",
   "frontiere.recharger": "Relancer l’écran",
@@ -1218,10 +1220,10 @@ export const EN: Record<Cle, string> = {
   "bar.envoi.titre": "⌘4 · the check before printing",
   "bar.nouveau.titre": "Close and compose another album",
 
-  "accueil.kicker": "Colophon",
+  "accueil.kicker": "Booklibre",
   "accueil.titre": "A folder of photographs,\na book to leaf through.",
   "accueil.lede":
-    "Colophon reads your photographs, sets aside the duplicates and the misses, lays out every spread and hands you a PDF to argue with. Everything can be changed afterwards: templates, order, rescued photos.",
+    "Booklibre reads your photographs, sets aside the duplicates and the misses, lays out every spread and hands you a PDF to argue with. Everything can be changed afterwards: templates, order, rescued photos.",
   "accueil.choisir": "Choose a folder of photographs…",
   "accueil.ou.ouvrir": "or Open an existing album",
   "accueil.recents": "Recent albums",
@@ -1229,7 +1231,7 @@ export const EN: Record<Cle, string> = {
   "accueil.ou.photos": "or Import an album from Photos",
   "photos.titre": "Import from Photos",
   "photos.retour": "Back",
-  "photos.demander": "Colophon needs access to your photo library to read its albums. It copies the photographs you pick, and never writes anything back to the library.",
+  "photos.demander": "Booklibre needs access to your photo library to read its albums. It copies the photographs you pick, and never writes anything back to the library.",
   "photos.demander.bouton": "Grant access…",
   "photos.refuse": "Access to the photo library is denied. You can grant it in System Settings, Privacy & Security, Photos.",
   "photos.injoignable": "The system photo library cannot be found. macOS looks for it at {chemin}, which no longer exists. Open Photos, then Settings, General, and click “Use as System Photo Library”.",
@@ -1254,9 +1256,9 @@ export const EN: Record<Cle, string> = {
   "stockage.titre": "Storage",
   "stockage.mesure": "Measuring the data folder…",
   "stockage.total.suite":
-    "on this disk, {n} albums. Your original photographs are not counted here: Colophon never copies them.",
+    "on this disk, {n} albums. Your original photographs are not counted here: Booklibre never copies them.",
   "stockage.total.suite.un":
-    "on this disk, 1 album. Your original photographs are not counted here: Colophon never copies them.",
+    "on this disk, 1 album. Your original photographs are not counted here: Booklibre never copies them.",
   "stockage.ouvert": "open",
   "stockage.supprimer": "Delete",
   "stockage.vide": "No album composed on this machine.",
@@ -1264,7 +1266,7 @@ export const EN: Record<Cle, string> = {
   "stockage.purger": "Empty the thumbnail caches ({poids})",
   "stockage.ouvrir.dossier": "Open the folder",
   "stockage.note":
-    "A deleted album does not come back. The photo folder stays untouched: nothing here writes or erases outside Colophon’s own folder.",
+    "A deleted album does not come back. The photo folder stays untouched: nothing here writes or erases outside Booklibre’s own folder.",
   "stockage.planches": "{n} spreads",
   "stockage.date.inconnue": "date unknown",
   "stockage.confirme.supprimer":
@@ -1274,11 +1276,13 @@ export const EN: Record<Cle, string> = {
   "stockage.supprime": "“{titre}” deleted, {poids} freed.",
   "stockage.purge": "Caches emptied, {poids} freed.",
 
-  "apropos.titre": "About Colophon",
+  "apropos.titre": "About Booklibre",
   "apropos.version": "Version {version}, under the",
   "apropos.licence": "GNU General Public License v3.0",
   "apropos.quoi":
     "A folder of photographs in, a composed album, everything editable, a print-ready PDF. The source code is public: you may read it, change it and redistribute it under the same terms.",
+  "apropos.site": "Website:",
+  "apropos.contact": "contact:",
   "apropos.actifs": "What travels inside",
   "apropos.police.quoi":
     "The face of the book and of the interface. It is the one the PDF embeds.",
@@ -1352,7 +1356,7 @@ export const EN: Record<Cle, string> = {
   "fidele.harnais": "Faithful preview: the dev folder’s PDF, not necessarily current",
   "fidele.aria": "Faithful preview, rendered from the PDF",
 
-  "maj.dispo": "Colophon {version} is available.",
+  "maj.dispo": "Booklibre {version} is available.",
   "maj.attente": " Downloading and restarting take about a minute.",
   "maj.encours": " Downloading; the app will restart on its own.",
   "maj.installer": "Install now",
@@ -1365,12 +1369,12 @@ export const EN: Record<Cle, string> = {
     "The command line and the engine’s messages stay in English: they speak to a developer, not to somebody making an album.",
   "prefs.theme": "Appearance",
   "prefs.theme.note":
-    "Colophon follows the system setting. The paper of the spreads never changes shade: it is paper.",
+    "Booklibre follows the system setting. The paper of the spreads never changes shade: it is paper.",
   "prefs.maj": "Updates",
   "prefs.maj.au.lancement": "Check at launch",
   "prefs.maj.jamais": "Never check",
   "prefs.maj.note":
-    "This is the only thing that leaves your machine. At startup, Colophon asks GitHub whether a newer version exists. What goes out is a request to the releases page; what GitHub sees of it is your IP address and the name of your system, nothing of your photographs, nothing of your album, no identifier Colophon would have made up. Nothing installs without a click from you. Turned off, the application reaches nothing at all, and versions are downloaded by hand from the releases page.",
+    "This is the only thing that leaves your machine. At startup, Booklibre asks its website, booklibre.app (served by Cloudflare), whether a newer version exists, then GitHub if the site does not answer. What goes out is a request for that one file; what Cloudflare or GitHub sees of it is your IP address and the name of your system, nothing of your photographs, nothing of your album, no identifier Booklibre would have made up. Nothing installs without a click from you. Turned off, the application reaches nothing at all, and versions are downloaded by hand from the releases page.",
 
   "setup.nouvel": "New album",
   "setup.changer.dossier": "Change folder",
@@ -1414,9 +1418,9 @@ export const EN: Record<Cle, string> = {
   "erreur.compo": "The composition failed.",
   "recomposer.titre": "Recompose the album",
   "recomposer.intro":
-    "Colophon lays out the spreads again from your photos, in the format you choose.",
+    "Booklibre lays out the spreads again from your photos, in the format you choose.",
   "recomposer.section.format": "The format",
-  "recomposer.non_imprimable": "not printable through Colophon",
+  "recomposer.non_imprimable": "not printable through Booklibre",
   "recomposer.aeree": "Fewer photos, larger",
   "recomposer.aeree.note": "Fewer photos per page, each one larger.",
   "recomposer.gardees": "{n} spreads you edited stay exactly as they are.",
@@ -1509,7 +1513,7 @@ export const EN: Record<Cle, string> = {
   // -- the album's typeface, in the Typeface panel
   "police.intro":
     "One typeface for the whole book: captions, chapter titles, half-title, colophon, cover and spine. The face you pick is copied into the album’s folder, so the album opens and prints the same on a machine that does not have it. Nothing is recomposed: only the line breaks follow.",
-  "police.projet": "Colophon’s own typeface",
+  "police.projet": "Booklibre’s own typeface",
   "police.projet.note": "Source Sans 3, the one albums use when they pick none",
   "police.suggerees": "Ten families, one per voice",
   "police.suggerees.note":
@@ -1532,13 +1536,13 @@ export const EN: Record<Cle, string> = {
   "police.filtre": "Filter",
   "police.filtre.exemple": "Helvetica, Optima, Times…",
   "police.poids": "{ko} kB in the album",
-  "police.rendre": "Back to Colophon’s",
-  "police.rendue": "Back to Colophon’s typeface (⌘Z undoes)",
+  "police.rendre": "Back to Booklibre’s",
+  "police.rendue": "Back to Booklibre’s typeface (⌘Z undoes)",
   "police.choisie": "Album set in {nom} (⌘Z undoes, ⌘S saves)",
   "police.reste": "{n} more families: filter to see them.",
   "police.aucune": "No typeface matches.",
   "police.manquante":
-    "This album’s typeface is missing from its folder. The album shows and exports in Colophon’s own: pick one again, or put the file back.",
+    "This album’s typeface is missing from its folder. The album shows and exports in Booklibre’s own: pick one again, or put the file back.",
   "erreur.police": "Cannot use that typeface",
   "police.refus.illisible": "unreadable",
   "police.refus.embarquement_interdit": "its licence forbids embedding",
@@ -1601,11 +1605,11 @@ export const EN: Record<Cle, string> = {
   "etat.auto.rendue": "Spread {n} given back to the machine (⌘Z brings it back)",
   "etat.auto.insertion":
     "Spread {n}: inserted by hand, it has no automatic version",
-  "menu.apropos": "About Colophon",
-  "menu.masquer": "Hide Colophon",
+  "menu.apropos": "About Booklibre",
+  "menu.masquer": "Hide Booklibre",
   "menu.masquer.autres": "Hide Others",
   "menu.tout.afficher": "Show All",
-  "menu.quitter": "Quit Colophon",
+  "menu.quitter": "Quit Booklibre",
   "menu.preferences": "Preferences…",
   "menu.fichier": "File",
   "menu.nouveau": "New…",
@@ -1670,7 +1674,7 @@ export const EN: Record<Cle, string> = {
   "envoi.geste.preparer": "Prepare again",
   "envoi.details": "Details",
   "envoi.simple.conformite":
-    "This printer requires a file standard Colophon does not declare yet: ask them whether they accept a plain PDF.",
+    "This printer requires a file standard Booklibre does not declare yet: ask them whether they accept a plain PDF.",
   "envoi.simple.couverture_resolution": "This photo is too small for the cover: choose another one.",
   "envoi.simple.couverture_vide": "The cover has no photo and would print blank: choose one.",
   "envoi.simple.dos":
@@ -1678,7 +1682,7 @@ export const EN: Record<Cle, string> = {
   "envoi.simple.dos_nu":
     "The spine is too thin to carry the title: it will come out bare, unless you add spreads.",
   "envoi.simple.espace":
-    "This printer only accepts CMYK files, and Colophon exports RGB: ask them whether they convert it themselves.",
+    "This printer only accepts CMYK files, and Booklibre exports RGB: ask them whether they convert it themselves.",
   "envoi.simple.fichier_couverture":
     "The prepared cover does not have the size the printer expects: prepare the folder again.",
   "envoi.simple.fichier_interieur":
@@ -1707,7 +1711,7 @@ export const EN: Record<Cle, string> = {
   "envoi.simple.zone_sure": "A caption sits close to the trim: it may be cut off.",
   "envoi.defaut.planche": "Spread {n}",
   "envoi.resolution.tete":
-    "These photos are too small for their cell. Colophon never prints below 250 ppi.",
+    "These photos are too small for their cell. Booklibre never prints below 250 ppi.",
   "envoi.resolution.ou": "Spread {n}, {ppi} ppi",
   "envoi.resolution.voir": "Show",
   "envoi.resolution.remplacer": "Replace",
@@ -1754,10 +1758,10 @@ export const EN: Record<Cle, string> = {
     "One file, cover included, saved wherever you like",
   "envoi.exporter.bloque": "Fix what blocks first",
   "envoi.preparer.titre":
-    "The interior and the cover, ready to print, in a folder you choose; Colophon checks them again once written",
+    "The interior and the cover, ready to print, in a folder you choose; Booklibre checks them again once written",
   "envoi.faire_imprimer": "Have it printed",
   "envoi.faire_imprimer.titre":
-    "Colophon prepares your book’s files, then you choose the delivery and the price before paying",
+    "Booklibre prepares your book’s files, then you choose the delivery and the price before paying",
   "envoi.autre": "Another printer? A PDF without constraints",
   "envoi.libre.tete":
     "A PDF without constraints, for the printer of your choice: one file, cover included, no spine and no flat sheet. The check no longer aims at Cloudprinter.",
@@ -1775,11 +1779,11 @@ export const EN: Record<Cle, string> = {
   "envoi.portes": "How to get your book",
   "envoi.porte.pdf.titre": "Download the PDF",
   "envoi.porte.pdf.texte": "A print-ready file, for the printer of your choice. Free, no account.",
-  "envoi.porte.colophon.titre": "Have Colophon print it",
+  "envoi.porte.colophon.titre": "Have Booklibre print it",
   "envoi.porte.colophon.texte":
-    "A bound book, hardcover, delivered to your door. Colophon takes care of everything, from printing to delivery.",
+    "A bound book, hardcover, delivered to your door. Booklibre takes care of everything, from printing to delivery.",
   "envoi.porte.colophon.texte.france":
-    "A bound book, hardcover, delivered to your door in France. Colophon takes care of everything, from printing to delivery.",
+    "A bound book, hardcover, delivered to your door in France. Booklibre takes care of everything, from printing to delivery.",
   "envoi.porte.colophon.partenaire": "Printed and bound by our partner Cloudprinter.",
   "envoi.porte.colophon.prix": "from {prix}",
   "envoi.imprimeurs": "For printers",
@@ -1832,7 +1836,7 @@ export const EN: Record<Cle, string> = {
   "commande.livre.verifies": "Files checked",
   "commande.livre.preparation": "Preparing the files…",
   "commande.rassure.titre": "How it works",
-  "commande.rassure.stripe": "Payment by Stripe, on its secure page. Colophon never sees your card.",
+  "commande.rassure.stripe": "Payment by Stripe, on its secure page. Booklibre never sees your card.",
   "commande.rassure.debit": "Nothing is charged before the payment page.",
   "commande.rassure.fichiers":
     "Your files travel encrypted. Our copy is deleted once the book has shipped, at the latest a month after the order.",
@@ -1862,7 +1866,7 @@ export const EN: Record<Cle, string> = {
   "commande.livraison": "Delivery: {pays}",
   "commande.livraison.region": "Delivery: {pays}, {region}",
   "commande.changer": "Change",
-  "commande.explique.preparation": "Colophon is preparing your book’s print files.",
+  "commande.explique.preparation": "Booklibre is preparing your book’s print files.",
   "commande.explique.envoi": "Your files are on their way to the printer. Nothing has been paid yet.",
   "commande.explique.paiement": "Payment happens on Stripe’s secure page, in your browser.",
   "commande.sandbox.bandeau": "Test mode: no book will be printed or charged.",
@@ -1897,7 +1901,7 @@ export const EN: Record<Cle, string> = {
   "commandes.annuler": "Cancel the order",
   "commande.indisponible": "Ordering is unavailable for now. Try again later; the PDF export always works.",
   "commande.reessayer": "Try again",
-  "commande.format.invendable": "This size can’t be ordered from Colophon: Cloudprinter only prints the 21 or 30 cm square, A4 portrait or landscape, and 8 × 10 in. Change it in Recompose, or send this folder to another printer.",
+  "commande.format.invendable": "This size can’t be ordered from Booklibre: Cloudprinter only prints the 21 or 30 cm square, A4 portrait or landscape, and 8 × 10 in. Change it in Recompose, or send this folder to another printer.",
   "commande.papier": "This folder was prepared for another paper than the printer’s: prepare it for Cloudprinter.",
   "commande.relais.attente_fichiers": "The files have not left yet.",
   "commande.relais.attente_paiement": "Waiting for payment, in your browser.",
@@ -2279,7 +2283,7 @@ export const EN: Record<Cle, string> = {
   "racine.introuvable":
     "Photo folder not found ({dossier}). The preview runs on the thumbnail cache; the full-resolution export will not work.",
   "racine.a.revoir":
-    "Colophon needs to see the photo folder again ({dossier}) to read the originals. The preview runs on the thumbnails meanwhile.",
+    "Booklibre needs to see the photo folder again ({dossier}) to read the originals. The preview runs on the thumbnails meanwhile.",
   "racine.a.revoir.bouton": "Find the folder…",
   "racine.a.revoir.titre": "Find this album’s photo folder",
   "racine.revoir.autre.nom": "This is not this album’s folder: it was called “{nom}”.",
@@ -2288,7 +2292,7 @@ export const EN: Record<Cle, string> = {
   "envoi.prevol.echec": "The preflight could not run.",
   "signaler.diagnostic.absent":
     "The machine’s diagnostic could not be read: the report goes without it, describe what happened.",
-  "frontiere.titre": "Colophon hit an error it cannot recover from.",
+  "frontiere.titre": "Booklibre hit an error it cannot recover from.",
   "frontiere.lede":
     "Nothing saved is lost: the album is on disk, in its folder. Changes made since the last ⌘S are not.",
   "frontiere.recharger": "Restart the screen",

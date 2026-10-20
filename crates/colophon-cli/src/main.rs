@@ -5,9 +5,9 @@ use clap::Parser;
 use colophon_core::{build_album, format, pdf, Album, BuildOptions};
 use std::path::{Path, PathBuf};
 
-/// Colophon: from a folder of photos to a print-ready album.
+/// Booklibre: from a folder of photos to a print-ready album.
 #[derive(Parser)]
-#[command(name = "colophon", version, about)]
+#[command(name = "booklibre", version, about)]
 #[command(after_help = FORMAT_HELP.as_str())]
 struct Cli {
     /// Folder of photos to build the album from

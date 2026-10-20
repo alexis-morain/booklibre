@@ -1,14 +1,14 @@
-# Contributing to Colophon
+# Contributing to Booklibre
 
 Bug reports are worth as much as patches here. The three issue templates tell
 you exactly what to paste, and the app's Help menu builds the whole report
-for you, one entry per template; outside the app, `colophon --audit` prints
+for you, one entry per template; outside the app, `booklibre --audit` prints
 the numbers it quotes. Read on if you want to change the code.
 
 ## Where to start
 
 The issues labelled
-[good first issue](https://github.com/alexis-morain/colophon/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+[good first issue](https://github.com/alexis-morain/booklibre/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 each describe the expected result and the files involved, and none needs to
 know the composer: reading TIFF files, exporting spreads as JPEG, dropping a
 folder on the welcome screen. Say in the issue that you are taking one, so two
@@ -25,7 +25,7 @@ cargo build --release
 ```
 
 ```bash
-./target/release/colophon ~/Pictures/some-folder -o .albums/test --format carre-21
+./target/release/booklibre ~/Pictures/some-folder -o .albums/test --format carre-21
 ```
 
 The editor runs from `crates/colophon-app` with `npm install` then
@@ -112,7 +112,7 @@ saying no to them is the design.
 ## Reporting a problem instead
 
 Three issue templates: a bug, a bad spread, a bad crop. Each one asks for the
-album's diagnostic block, which `colophon --audit` prints today and which the
+album's diagnostic block, which `booklibre --audit` prints today and which the
 app will one day paste for you, because a report with the album's counters in
 it is a report someone can act on, and a free-form form produces "it does not
 work".
@@ -124,5 +124,5 @@ Suggestions and questions go to Discussions.
 GPL-3.0-or-later. By contributing you agree your contribution is licensed
 under it. Keep the header on files you create. You also grant, for your
 contribution, the additional permission written in
-[LICENSE-APPSTORE.md](LICENSE-APPSTORE.md), so that Colophon can keep being
+[LICENSE-APPSTORE.md](LICENSE-APPSTORE.md), so that Booklibre can keep being
 distributed through the Mac App Store.

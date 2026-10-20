@@ -27,7 +27,7 @@ for flux in (sys.stdout, sys.stderr):
         flux.reconfigure(encoding="utf-8", errors="replace")
 
 RACINE = Path(__file__).resolve().parent.parent
-BIN = RACINE / "target" / "release" / ("colophon.exe" if sys.platform == "win32" else "colophon")
+BIN = RACINE / "target" / "release" / ("booklibre.exe" if sys.platform == "win32" else "booklibre")
 SEUIL = 25
 
 

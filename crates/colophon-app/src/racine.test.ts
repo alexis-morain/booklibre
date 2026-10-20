@@ -47,7 +47,7 @@ describe("l'état du dossier de photos", () => {
 
   it("le dit dans les deux langues, avec un bouton qui nomme le geste", () => {
     setLangue("fr");
-    expect(t("racine.a.revoir")).toContain("Colophon a besoin de revoir le dossier de photos");
+    expect(t("racine.a.revoir")).toContain("Booklibre a besoin de revoir le dossier de photos");
     expect(t("racine.a.revoir.bouton")).not.toBe("");
     setLangue("en");
     expect(t("racine.a.revoir")).toContain("photo folder");

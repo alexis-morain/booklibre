@@ -20,7 +20,7 @@ const TEMPLATE: Record<SignalKind, string> = {
   recadrage: "3-bad-crop.yml",
 };
 
-const ISSUE_BASE = "https://github.com/alexis-morain/colophon/issues/new";
+const ISSUE_BASE = "https://github.com/alexis-morain/booklibre/issues/new";
 
 /** The verdict form of the launch protocol: two questions, no diagnostic.
  *  Offered from the Envoi screen once an export succeeded, because that is
@@ -143,7 +143,7 @@ export function buildReport(
   attach: boolean,
   logLines = 30,
 ): string {
-  const blocks: string[][] = [[`Colophon ${data.version}, ${data.os}`]];
+  const blocks: string[][] = [[`Booklibre ${data.version}, ${data.os}`]];
   if (album) {
     blocks.push([
       t("rapport.album", {

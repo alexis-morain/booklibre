@@ -11,7 +11,7 @@ body:
 
         The app writes this report for you: put the offending spread on
         screen and pick **Help → Report a bad spread**. From the command
-        line, `colophon --audit -o <album>` prints the numbers this form
+        line, `booklibre --audit -o <album>` prints the numbers this form
         asks for.
 
   - type: input
@@ -53,7 +53,7 @@ body:
     id: diagnostic
     attributes:
       label: Diagnostic block
-      description: The output of `colophon --audit -o <album>`. It carries the album's counters; add anything you can see about the spread (template, which cells).
+      description: The output of `booklibre --audit -o <album>`. It carries the album's counters; add anything you can see about the spread (template, which cells).
       render: text
     validations:
       required: true

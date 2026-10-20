@@ -1,7 +1,7 @@
 #!/bin/bash
 # La version Mac App Store : la même app, compilée autrement.
 #
-#   mas.sh build              Colophon.app universel, bac à sable, sans updater
+#   mas.sh build              Booklibre.app universel, bac à sable, sans updater
 #   mas.sh build --essai      la même, signée ad hoc même si les identités existent
 #   mas.sh pkg                le .pkg signé « 3rd Party Mac Developer Installer »
 #   mas.sh valider            xcrun altool --validate-app sur le .pkg
@@ -39,8 +39,8 @@ APP_DIR="crates/colophon-app"
 TAURI="$APP_DIR/src-tauri"
 CIBLE="universal-apple-darwin"
 SORTIE="target/mas"
-BUNDLE="target/$CIBLE/release/bundle/macos/Colophon.app"
-PKG="$SORTIE/Colophon.pkg"
+BUNDLE="target/$CIBLE/release/bundle/macos/Booklibre.app"
+PKG="$SORTIE/Booklibre.pkg"
 GESTION="${COLOPHON_GESTION:-$HOME/Documents/08_IA/02_Outputs/colophon}"
 
 echouer() { echo "mas : $*" >&2; exit 1; }
@@ -140,8 +140,8 @@ PY
   # L'attribut de quarantaine est refusé par le Store depuis le 18/02/2025.
   xattr -cr "$BUNDLE"
   prouver "$identite" "$numero"
-  ditto "$BUNDLE" "$SORTIE/Colophon.app"
-  echo "mas : $SORTIE/Colophon.app"
+  ditto "$BUNDLE" "$SORTIE/Booklibre.app"
+  echo "mas : $SORTIE/Booklibre.app"
 }
 
 # Les preuves, sur les fichiers produits.
@@ -175,10 +175,10 @@ pkg() {
   local installeur
   installeur="$(lire APPLE_MAS_INSTALLER)"
   [ -n "$installeur" ] || echouer "APPLE_MAS_INSTALLER manque : pas de .pkg sans l'identité « 3rd Party Mac Developer Installer »"
-  [ -d "$SORTIE/Colophon.app" ] || echouer "pas d'app : mas.sh build d'abord"
-  [ -f "$SORTIE/Colophon.app/Contents/embedded.provisionprofile" ] \
+  [ -d "$SORTIE/Booklibre.app" ] || echouer "pas d'app : mas.sh build d'abord"
+  [ -f "$SORTIE/Booklibre.app/Contents/embedded.provisionprofile" ] \
     || echouer "app signée ad hoc : elle ne part pas chez Apple, refaire build avec les identités"
-  productbuild --component "$SORTIE/Colophon.app" /Applications --sign "$installeur" "$PKG"
+  productbuild --component "$SORTIE/Booklibre.app" /Applications --sign "$installeur" "$PKG"
   echo "mas : $PKG"
 }
 

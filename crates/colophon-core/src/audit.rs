@@ -1,5 +1,5 @@
 //! Album linter: a read pass over a composed album folder that counts the
-//! defect classes a human should never have to report. `colophon --audit`
+//! defect classes a human should never have to report. `booklibre --audit`
 //! prints the JSON report and exits non-zero when a *deciding* counter passes
 //! son seuil; check.sh runs it on the reference sets as a non-regression gate.
 //! A counter without a `seuil` warns and never decides — see [`Counter`].

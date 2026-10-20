@@ -74,7 +74,7 @@ export function BilanView({
   return (
     <div className="empty">
       <div className="empty-block">
-        <p className="kicker">Colophon</p>
+        <p className="kicker">Booklibre</p>
         <div className="setup bilan">
           <h1 className="setup-heading">{t("bilan.titre", { titre: album.title })}</h1>
           <p className="bilan-lead">

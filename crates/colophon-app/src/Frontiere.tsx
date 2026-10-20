@@ -56,7 +56,7 @@ export class Frontiere extends React.Component<
     return (
       <div className="empty frontiere" role="alert">
         <div className="empty-block">
-          <p className="kicker">Colophon</p>
+          <p className="kicker">Booklibre</p>
           <div className="setup">
             <h1 className="setup-heading">{t("frontiere.titre")}</h1>
             <p className="lede">{t("frontiere.lede")}</p>

@@ -1,4 +1,4 @@
-# Colophon, pilote technique
+# Booklibre (ex-Colophon), pilote technique
 
 Ce fichier possède la **technique** : le moteur, l'app, le gate, les pièges de code,
 l'architecture. La **gestion** (le cap, la publication, les fournisseurs, le verdict
@@ -14,6 +14,25 @@ modifiable, PDF prêt à imprimer. Tauri 2 (Rust + React), GPL-3.0, version 1.0.
 geste d'Alexis, et `release.yml` le refuse si les quatre fichiers de version ou la section
 `## [1.0.1]` du CHANGELOG manquent. Le tag `v1.0.0` (`b222272`) existe, ne sort jamais (import
 Photos cassé) et ne se repose pas ; le Mac App Store garde sa 1.0.0 (build 173, déjà corrigé).
+
+**Le logiciel s'appelle Booklibre (R-s1), le code s'appelle encore Colophon.** Tout ce
+qu'un utilisateur lit dit Booklibre : `productName`, fenêtre, menus, i18n, installeurs,
+CLI `booklibre`, page de fin (« Composé le … avec Booklibre {version}. », titre
+« Colophon » inchangé), `/Producer` et `x:xmptk`, liens (`booklibre.app`,
+`hello@booklibre.app`, `github.com/alexis-morain/booklibre`). Ne bougent pas, exprès :
+l'identifiant `fr.morain.colophon`, les crates et modules, `COLOPHON_*`, `album.json`,
+le dossier d'import `~/Pictures/Colophon` (`photos::dossier_propose`, les photos déjà
+importées y vivent) et **l'`UpgradeCode` du MSI**, épinglé dans `tauri.conf.json` à la
+valeur lue par `msiinfo` dans le MSI publié de `v1.0.1` (le UUID v5 de
+`Colophon.exe.app.x64`) : sans lui, Tauri le dérive du `productName` et la 1.1
+s'installerait à côté de la 1.0.1. `i18n.test.ts` refuse « Colophon » dans toute chaîne
+sauf trois anglaises qui nomment la page ; `le_renommage_garde_l_identifiant_et_l_upgrade_code`
+tient la configuration. L'updater interroge `booklibre.app/latest.json` puis GitHub ;
+`maj-site.yml` publie le premier à la publication d'une release, inerte sans
+`CLOUDFLARE_API_TOKEN`. Le nom est dans chaque PDF : le banc
+`banc_octets_d_un_album_sans_objet_libre` rend désormais **214 821 o** (les 214 814 cités
+plus bas sont ceux de l'ancien nom, et le code de R-s1 les rend encore avec lui), et
+`EMPREINTE_SANS_FOND` de `cover.rs` a été reprise de même.
 
 ## Si tu es une session cloud, commence par ça
 
@@ -1412,7 +1431,7 @@ de scène porte un angle et une origine, **jamais une matrice**.
 ```
 
 ```bash
-./target/release/colophon ~/Pictures/colophon-testsets/corse-2013 -o .albums/corse-2013 --format carre-21 && ./target/release/colophon --audit -o .albums/corse-2013
+./target/release/booklibre ~/Pictures/colophon-testsets/corse-2013 -o .albums/corse-2013 --format carre-21 && ./target/release/booklibre --audit -o .albums/corse-2013
 ```
 
 Autres drapeaux : `--print`, `--cover`, `--prevol --profil <id>`, `--densite`,

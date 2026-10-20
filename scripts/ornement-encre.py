@@ -26,7 +26,7 @@ import tempfile
 
 from PIL import Image
 
-BIN = sys.argv[1] if len(sys.argv) > 1 else "target/release/colophon"
+BIN = sys.argv[1] if len(sys.argv) > 1 else "target/release/booklibre"
 FORMAT = "carre-21"
 # Voir plus bas : il faut un intérieur de planches doubles, et lui seul en rend.
 PROFIL = "lulu"

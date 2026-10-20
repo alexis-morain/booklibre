@@ -6,7 +6,7 @@ members = ["crates/colophon-core", "crates/colophon-cli", "crates/colophon-app/s
 version = "1.0.1"
 edition = "2021"
 license = "GPL-3.0-or-later"
-repository = "https://github.com/alexis-morain/colophon"
+repository = "https://github.com/alexis-morain/booklibre"
 
 [workspace.dependencies]
 anyhow = "1"

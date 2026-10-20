@@ -1,6 +1,6 @@
 # Notices des licences tierces
 
-Colophon est distribué sous GPL-3.0. Il embarque les bibliothèques
+Booklibre est distribué sous GPL-3.0. Il embarque les bibliothèques
 ci-dessous, chacune sous ses propres termes, reproduits ici comme
 elles l'exigent.
 

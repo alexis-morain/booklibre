@@ -12,7 +12,7 @@ import fixture from "./reglage.fixture.json";
 import { appliquer, estIdentite, filtreCss, lutDe } from "./reglage";
 
 const BINARY = fileURLToPath(
-  new URL("../../../target/release/colophon", import.meta.url),
+  new URL("../../../target/release/booklibre", import.meta.url),
 );
 
 type Entree = { expo: number; contraste: number; lut: number[] };

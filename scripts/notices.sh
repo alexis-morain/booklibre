@@ -20,7 +20,7 @@ trap 'rm -f "$tmp"' EXIT
 {
   echo "# Notices des licences tierces"
   echo
-  echo "Colophon est distribué sous GPL-3.0. Il embarque les bibliothèques"
+  echo "Booklibre est distribué sous GPL-3.0. Il embarque les bibliothèques"
   echo "ci-dessous, chacune sous ses propres termes, reproduits ici comme"
   echo "elles l'exigent."
   echo

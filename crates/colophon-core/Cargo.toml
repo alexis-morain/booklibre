@@ -1,6 +1,6 @@
 [package]
 name = "colophon-core"
-description = "Colophon engine: scan, curate, lay out and render a photo album"
+description = "Booklibre engine: scan, curate, lay out and render a photo album"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

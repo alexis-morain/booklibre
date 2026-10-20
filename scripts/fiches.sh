@@ -29,7 +29,7 @@ for jeu in $JEUX; do
     echo "jeu $jeu absent de $TESTSETS : les trois se relèvent ensemble" >&2
     exit 1
   fi
-  ./target/release/colophon "$TESTSETS/$jeu" -o "$TRAVAIL/$jeu" \
+  ./target/release/booklibre "$TESTSETS/$jeu" -o "$TRAVAIL/$jeu" \
     --dump-fiches "$FICHES/$jeu.json"
   total=$(( total + $(wc -c < "$FICHES/$jeu.json") ))
 done

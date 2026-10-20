@@ -91,7 +91,7 @@ export async function installMenu(
   const sep = () => PredefinedMenuItem.new({ item: "Separator" });
 
   const appMenu = await Submenu.new({
-    text: "Colophon",
+    text: "Booklibre",
     items: [
       // Ours, not the system panel: the system panel cannot carry the
       // GeoNames attribution, and that attribution is a licence condition.

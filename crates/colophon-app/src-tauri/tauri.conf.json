@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Colophon",
+  "productName": "Booklibre",
   "version": "1.0.1",
   "identifier": "fr.morain.colophon",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Colophon",
+        "title": "Booklibre",
         "width": 1280,
         "height": 820,
         "minWidth": 900,
@@ -31,7 +31,8 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVBNDdFQzhGQzNGMEU3RUMKUldUczUvRERqK3hINmdVMVRyQW1yYlY3UkV3Zi9TRGsrU2NSa1hIZ1dlMTZMaG41d3FGSWxYa3AK",
       "endpoints": [
-        "https://github.com/alexis-morain/colophon/releases/latest/download/latest.json"
+        "https://booklibre.app/latest.json",
+        "https://github.com/alexis-morain/booklibre/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"
@@ -44,6 +45,11 @@
     "macOS": {
       "minimumSystemVersion": "11.0",
       "entitlements": "entitlements.plist"
+    },
+    "windows": {
+      "wix": {
+        "upgradeCode": "cb2663c5-3aee-5fd5-af7a-926975a728b8"
+      }
     },
     "category": "Photography",
     "shortDescription": "Libre photo book creator",
