@@ -416,7 +416,8 @@ fn gabarits_compatibles(
 
 /// La réserve classée pour une planche : les photos qu'aucune planche ne
 /// montre, du même jour d'abord, sans les quasi-doublons de la planche,
-/// douze au plus (`reserve::reserve_classee`). L'album voyage en argument
+/// douze au plus (`reserve::reserve_classee`). Avec `cellule` (« Remplacer
+/// par… »), celles qui tiennent cette case à 250 ppi d'abord. L'album voyage en argument
 /// parce que l'éditeur en tient une version que le disque n'a pas encore.
 /// Les vignettes se rouvrent pour mesurer, des centaines sur un gros
 /// dossier : hors du fil principal, comme le prévol.
@@ -424,6 +425,7 @@ fn gabarits_compatibles(
 async fn reserve_classee(
     album: Album,
     planche: usize,
+    cellule: Option<usize>,
     state: State<'_, AppState>,
 ) -> Result<colophon_core::reserve::Reserve, String> {
     let dir = {
@@ -431,7 +433,7 @@ async fn reserve_classee(
         guard.as_ref().ok_or("aucun album ouvert")?.dir.clone()
     };
     tauri::async_runtime::spawn_blocking(move || {
-        colophon_core::reserve::reserve_classee(&dir, &album, planche)
+        colophon_core::reserve::reserve_classee(&dir, &album, planche, cellule)
     })
     .await
     .map_err(|e| e.to_string())?

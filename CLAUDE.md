@@ -394,7 +394,18 @@ avant comparaison, une étoilée vaut ×1,18 par étoile. `album.json.bak` à ch
 **Le Composer garantit** : jamais un portrait dans une case paysage (écart ≤ 1,4), les
 visages à 4 % des bords au moins, jamais deux quasi-doublons sur une planche, une
 ouverture au quartile haut, jamais quatre gabarits d'affilée. Plancher 250 ppi visé,
-**pas garanti** : l'audit en tolère trois, le prévol aucun.
+**pas garanti** : l'audit en tolère trois, le prévol aucun. **Une photo sous le plancher
+même seule sur sa page n'est pas posée** (1.1-a) : aucune case du catalogue du Composer
+ne la tiendrait, partager une planche la mettait dans une case pas plus petite (mesuré),
+elle reste dans la réserve avec son signe. Sur les trois jeux × cinq formats, plus une
+case sous le seuil (`docs/mesures/2026-10-19-badges-pleine-page.json`, banc
+`qualite::banc_badges_pleine_page`) ; l'écran et le moteur y lisent les mêmes tailles.
+
+**« Remplacer par… » classe pour la case** (`reserve::classer`, `cellule`) : chaque
+candidate porte son ppi dans cette case au cadrage par défaut, celles qui la tiennent
+passent devant dans l'ordre d'hier, les autres suivent avec le signe de la case à la
+place de leur date (`reserve.ts::alerteDeCandidat`), et le plafond de douze tombe après
+ce rangement. Sans case (« Ajouter une photo… »), la liste est celle d'hier à l'octet.
 
 **La bascule (`core::bascule`) n'est pas une recomposition.** `core::recomposition` rebâtit
 tout ce qui n'est pas épinglé ; la bascule ne rebâtit rien — mêmes planches, même ordre,

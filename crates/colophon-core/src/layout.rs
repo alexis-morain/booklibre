@@ -214,7 +214,7 @@ impl Composer {
 
         let mut spreads: Vec<Spread> = Vec::new();
         let mut i = 0;
-        while i < photos.len() {
+        'photos: while i < photos.len() {
             let remaining = photos.len() - i;
             let last_was_feature =
                 spreads.last().is_some_and(|s: &Spread| s.slots.len() == 1);
@@ -320,7 +320,16 @@ impl Composer {
                     // by the aspect rule or the twin rule. The linter counts
                     // what lands here and the preflight refuses to export it,
                     // which is the escape hatch working as designed.
-                    break (self.with_flip(solo_family(p)), vec![0]);
+                    let solo = self.with_flip(solo_family(p));
+                    // Unless the page itself prints it under the floor: then
+                    // no cell of the catalogue would, and the photo stays in
+                    // the reserve, where its alert says so (1.1-a). Measured:
+                    // sharing a spread put it in a cell no smaller.
+                    if !printable(p, &pdf::slots_for(&solo, 1, &self.geom)[0]) {
+                        photos.remove(i);
+                        continue 'photos;
+                    }
+                    break (solo, vec![0]);
                 }
                 match self.pick(&photos[i..i + take]) {
                     Some(x) => break x,
@@ -754,6 +763,71 @@ fn face_safe_focal(p: &Photo, cell: &Rect) -> [f64; 2] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn photo(n: u64, w: u32, h: u32) -> Photo {
+        Photo {
+            path: std::path::PathBuf::from(format!("p{n:02}.jpg")),
+            meta: crate::meta::PhotoMeta {
+                taken: chrono::NaiveDate::from_ymd_opt(2013, 10, 27)
+                    .unwrap()
+                    .and_hms_opt(10, 0, 0)
+                    .unwrap()
+                    + chrono::Duration::minutes(10 * n as i64),
+                taken_reliable: true,
+                orientation: 1,
+                gps: None,
+                model: None,
+                rating: None,
+                make: None,
+                lens: None,
+                f_number: None,
+                exposure_time: None,
+                iso: None,
+                focal_mm: None,
+            },
+            analysis: crate::analyze::Analysis {
+                // Far apart, so no two of them are twins.
+                dhash: (n + 1).wrapping_mul(0x9E37_79B9_7F4A_7C15),
+                phash: (n + 1).wrapping_mul(0xC2B2_AE3D_27D4_EB4F),
+                colorsig: [0; 12],
+                sharpness: 50.0,
+                exposure: 1.0,
+                width: w.min(1600),
+                height: h * w.min(1600) / w,
+            },
+            orig: (w, h),
+            faces: Vec::new(),
+            focal: None,
+        }
+    }
+
+    /// 1.1-a : une photo trop petite pour toute case, seule de sa forme dans
+    /// sa fenêtre, partait en page solo par le dernier recours, à 130 ppi.
+    /// Elle reste désormais dans la réserve ; les autres sont toutes posées.
+    #[test]
+    fn une_photo_sous_le_seuil_meme_seule_ne_prend_pas_de_page() {
+        let mut photos: Vec<Photo> = (0..9).map(|n| photo(n, 4000, 3000)).collect();
+        photos[4] = photo(4, 960, 960);
+        let chapter = Chapter { start: photos[0].meta.taken, end: photos[8].meta.taken, photos };
+        let album = Album::new("t", std::path::Path::new("/"), crate::model::Size { w: 210.0, h: 210.0 });
+        let spreads = Composer::new(&album).compose(&chapter, None, std::path::Path::new("/"));
+        let posees: Vec<&str> = spreads.iter().flat_map(|s| s.slots.iter().map(|sl| sl.src.as_str())).collect();
+        assert!(!posees.contains(&"p04.jpg"), "{posees:?}");
+        assert_eq!(posees.len(), 8);
+    }
+
+    /// Le même dernier recours garde une photo qui tient sa page : seules les
+    /// règles de forme l'y ont menée, pas sa taille.
+    #[test]
+    fn une_photo_qui_tient_sa_page_garde_le_dernier_recours() {
+        let mut photos: Vec<Photo> = (0..9).map(|n| photo(n, 4000, 3000)).collect();
+        photos[4] = photo(4, 4000, 4000);
+        let chapter = Chapter { start: photos[0].meta.taken, end: photos[8].meta.taken, photos };
+        let album = Album::new("t", std::path::Path::new("/"), crate::model::Size { w: 210.0, h: 210.0 });
+        let spreads = Composer::new(&album).compose(&chapter, None, std::path::Path::new("/"));
+        let posees = spreads.iter().flat_map(|s| s.slots.iter()).count();
+        assert_eq!(posees, 9);
+    }
 
     #[test]
     fn clamp_take_never_leaves_a_lonely_photo() {

@@ -2466,7 +2466,8 @@ export default function App() {
   const ouvrirChoix = (mode: ModeChoix, point: { x: number; y: number }, at = index) => {
     setChoix({ mode, at, point });
     setReserve(null);
-    void reserveClassee(album, at).then(
+    const cellule = mode.type === "remplacer" ? mode.cell : undefined;
+    void reserveClassee(album, at, cellule).then(
       (r) => setReserve(r),
       (e) => setReserve({ candidats: [], note: String(e) }),
     );

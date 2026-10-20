@@ -665,7 +665,6 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                     pipeline::cap_chapter(c, cap);
                 }
             }
-            let kept = trial.iter().map(|c| c.photos.len()).sum();
 
             let mut composer = layout::Composer::avec_densite(&album, densite);
             // Captions are worked out for the run of chapters at once, not one
@@ -677,6 +676,9 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                 .zip(captions)
                 .flat_map(|(c, caption)| composer.compose(c, caption, &root))
                 .collect();
+            // What the spreads show, not what the chapters held: the composer
+            // leaves a photo no cell prints in the reserve (1.1-a).
+            let kept = spreads.iter().map(|s| s.slots.len()).sum();
 
             let got = spreads.len();
             let off = got.abs_diff(cible) * 100 / cible.max(1);

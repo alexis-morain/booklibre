@@ -1,0 +1,678 @@
+{
+  "date": "2026-10-19",
+  "session": "1.1-a",
+  "question": "Pourquoi le badge « trop petite » sur les pleines pages, et ce que propose « Remplacer par… » en tête",
+  "banc": "qualite::tests::banc_badges_pleine_page (#[ignore]) : COLOPHON_MESURE=<chemin absolu> cargo test -p colophon-core --release --lib banc_badges_pleine_page -- --ignored",
+  "methode": [
+    "Trois jeux composés bruts depuis leurs fiches (crates/colophon-core/fiches), dans les cinq formats imprimables, rythme equilibree.",
+    "Chaque case mesurée trois fois : moteur (case de la scène, taille de la fiche lue par le Composer, print::effective_ppi), écran (case de slots_for, taille de qualite::releve_album, ce que lit photos.ts::badgesDe), et en-tête de l'original sur le disque (meta + heic::oriented_dimensions, ce que lit un album composé depuis ses photos, sans relevé).",
+    "Pleine page : case d'au moins la moitié de la surface d'une page.",
+    "Remplacer : pour chaque pleine page, la première candidate de reserve_classee sans case (avant) et avec la case (après), mesurée dans cette case."
+  ],
+  "conclusion": [
+    "Écran et moteur ne divergent jamais : 0 écart sur 1464 cases, l'en-tête des originaux rend la même taille que les fiches. Pas de faux badge.",
+    "Le Composer posait 5 photos sous 250 ppi, toutes en pleine page, toutes par le dernier recours solo (960 px à 130-140 ppi, 2448 px à 234 ppi en 30 × 30). Aucune case du catalogue du Composer ne les tient : partager une planche les mettait dans une case pas plus petite (113 ppi en trio). Corrigé : elles restent dans la réserve. Après : 0.",
+    "« Remplacer par… » mettait en tête une photo sous le seuil sur 98 des 639 pleines pages (15 %), 0 après 1.1-a. Sur l'album réel « Corsica 2013 » (30 × 30), la seule case sous le seuil (203 ppi, planche 9) est une photo posée à la main, absente d'album.origin.json : c'est cette piste-là."
+  ],
+  "piste_restante": "Photos de Photos en version allégée (iCloud « Optimiser le stockage ») : non mesurable sur ces jeux, vérifiable par Alexis seul. L'import refuse le réseau et écrit l'original à l'octet ; rien n'est codé sur cette supposition.",
+  "album_reel": {
+    "album": "Corsica 2013 (carre-30, 47 planches)",
+    "sous_resolution": 1,
+    "case": {
+      "planche": 9,
+      "gabarit": "trio",
+      "src": "2013-10-27_160215_IMG_2653.jpg",
+      "ppi": 203,
+      "origine": "posée à la main, planche éditée"
+    }
+  },
+  "composer_main": {
+    "albums": [
+      {
+        "cases": 98,
+        "detail_sous_resolution": [
+          {
+            "case": 0,
+            "gabarit": "solo_carre_verso",
+            "planche": 9,
+            "pleine_page": true,
+            "ppi": 130.0,
+            "src": "2013-10-28_144537_IMG_2217.jpg"
+          },
+          {
+            "case": 0,
+            "gabarit": "solo_carre_verso",
+            "planche": 19,
+            "pleine_page": true,
+            "ppi": 130.0,
+            "src": "2013-10-30_153204_IMG_2257.jpg"
+          }
+        ],
+        "ecarts_moteur_ecran": [],
+        "format": "carre-21",
+        "jeu": "corse-2013",
+        "planches": 50,
+        "pleines_pages": 57,
+        "pleines_pages_sous_resolution": 2,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 6
+        },
+        "sous_resolution": {
+          "ecran": 2,
+          "entete_original": 2,
+          "moteur": 2
+        }
+      },
+      {
+        "cases": 96,
+        "detail_sous_resolution": [
+          {
+            "case": 0,
+            "gabarit": "solo_carre_verso",
+            "planche": 31,
+            "pleine_page": true,
+            "ppi": 234.0,
+            "src": "2013-10-31_121152_IMG_2265.jpg"
+          }
+        ],
+        "ecarts_moteur_ecran": [],
+        "format": "carre-30",
+        "jeu": "corse-2013",
+        "planches": 53,
+        "pleines_pages": 61,
+        "pleines_pages_sous_resolution": 1,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 13
+        },
+        "sous_resolution": {
+          "ecran": 1,
+          "entete_original": 1,
+          "moteur": 1
+        }
+      },
+      {
+        "cases": 96,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "portrait-a4",
+        "jeu": "corse-2013",
+        "planches": 53,
+        "pleines_pages": 21,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 10
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 97,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "paysage-a4",
+        "jeu": "corse-2013",
+        "planches": 51,
+        "pleines_pages": 45,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 3
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 97,
+        "detail_sous_resolution": [
+          {
+            "case": 0,
+            "gabarit": "solo_verso",
+            "planche": 9,
+            "pleine_page": true,
+            "ppi": 140.0,
+            "src": "2013-10-28_153751_IMG_2222.jpg"
+          },
+          {
+            "case": 0,
+            "gabarit": "solo",
+            "planche": 20,
+            "pleine_page": true,
+            "ppi": 140.0,
+            "src": "2013-10-30_153126_IMG_2256.jpg"
+          }
+        ],
+        "ecarts_moteur_ecran": [],
+        "format": "portrait-20x25",
+        "jeu": "corse-2013",
+        "planches": 53,
+        "pleines_pages": 64,
+        "pleines_pages_sous_resolution": 2,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 6
+        },
+        "sous_resolution": {
+          "ecran": 2,
+          "entete_original": 2,
+          "moteur": 2
+        }
+      },
+      {
+        "cases": 97,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "carre-21",
+        "jeu": "mauritanie-2019",
+        "planches": 59,
+        "pleines_pages": 25,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 2
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 100,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "carre-30",
+        "jeu": "mauritanie-2019",
+        "planches": 60,
+        "pleines_pages": 28,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 10
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 97,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "portrait-a4",
+        "jeu": "mauritanie-2019",
+        "planches": 57,
+        "pleines_pages": 31,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 9
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 97,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "paysage-a4",
+        "jeu": "mauritanie-2019",
+        "planches": 55,
+        "pleines_pages": 39,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 7
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 97,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "portrait-20x25",
+        "jeu": "mauritanie-2019",
+        "planches": 57,
+        "pleines_pages": 49,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 10
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 99,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "carre-21",
+        "jeu": "random-2024",
+        "planches": 52,
+        "pleines_pages": 49,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 1
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 97,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "carre-30",
+        "jeu": "random-2024",
+        "planches": 58,
+        "pleines_pages": 59,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 11
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 99,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "portrait-a4",
+        "jeu": "random-2024",
+        "planches": 52,
+        "pleines_pages": 37,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 5
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 98,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "paysage-a4",
+        "jeu": "random-2024",
+        "planches": 58,
+        "pleines_pages": 22,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 3
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 99,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "portrait-20x25",
+        "jeu": "random-2024",
+        "planches": 52,
+        "pleines_pages": 52,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 2
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      }
+    ],
+    "banc": "qualite::tests::banc_badges_pleine_page",
+    "date": "2026-10-19",
+    "pleine_page": "case d'au moins la moitié de la surface d'une page",
+    "seuil_ppi": 250.0,
+    "totaux": {
+      "cases": 1464,
+      "pleines_pages": 639,
+      "pleines_pages_sous_resolution": 5,
+      "remplacer_tete_sous_resolution": {
+        "apres": 0,
+        "avant": 98
+      },
+      "sous_resolution": 5
+    }
+  },
+  "composer_1_1_a": {
+    "albums": [
+      {
+        "cases": 106,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "carre-21",
+        "jeu": "corse-2013",
+        "planches": 54,
+        "pleines_pages": 57,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 6
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 95,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "carre-30",
+        "jeu": "corse-2013",
+        "planches": 53,
+        "pleines_pages": 64,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 13
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 96,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "portrait-a4",
+        "jeu": "corse-2013",
+        "planches": 53,
+        "pleines_pages": 21,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 10
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 97,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "paysage-a4",
+        "jeu": "corse-2013",
+        "planches": 51,
+        "pleines_pages": 45,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 3
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 95,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "portrait-20x25",
+        "jeu": "corse-2013",
+        "planches": 54,
+        "pleines_pages": 74,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 8
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 97,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "carre-21",
+        "jeu": "mauritanie-2019",
+        "planches": 59,
+        "pleines_pages": 25,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 2
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 100,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "carre-30",
+        "jeu": "mauritanie-2019",
+        "planches": 60,
+        "pleines_pages": 28,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 10
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 97,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "portrait-a4",
+        "jeu": "mauritanie-2019",
+        "planches": 57,
+        "pleines_pages": 31,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 9
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 97,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "paysage-a4",
+        "jeu": "mauritanie-2019",
+        "planches": 55,
+        "pleines_pages": 39,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 7
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 97,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "portrait-20x25",
+        "jeu": "mauritanie-2019",
+        "planches": 57,
+        "pleines_pages": 49,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 10
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 99,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "carre-21",
+        "jeu": "random-2024",
+        "planches": 52,
+        "pleines_pages": 49,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 1
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 97,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "carre-30",
+        "jeu": "random-2024",
+        "planches": 58,
+        "pleines_pages": 59,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 11
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 99,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "portrait-a4",
+        "jeu": "random-2024",
+        "planches": 52,
+        "pleines_pages": 37,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 5
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 98,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "paysage-a4",
+        "jeu": "random-2024",
+        "planches": 58,
+        "pleines_pages": 22,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 3
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      },
+      {
+        "cases": 99,
+        "detail_sous_resolution": [],
+        "ecarts_moteur_ecran": [],
+        "format": "portrait-20x25",
+        "jeu": "random-2024",
+        "planches": 52,
+        "pleines_pages": 52,
+        "pleines_pages_sous_resolution": 0,
+        "remplacer_tete_sous_resolution": {
+          "apres": 0,
+          "avant": 2
+        },
+        "sous_resolution": {
+          "ecran": 0,
+          "entete_original": 0,
+          "moteur": 0
+        }
+      }
+    ],
+    "banc": "qualite::tests::banc_badges_pleine_page",
+    "date": "2026-10-19",
+    "pleine_page": "case d'au moins la moitié de la surface d'une page",
+    "seuil_ppi": 250.0,
+    "totaux": {
+      "cases": 1469,
+      "pleines_pages": 652,
+      "pleines_pages_sous_resolution": 0,
+      "remplacer_tete_sous_resolution": {
+        "apres": 0,
+        "avant": 100
+      },
+      "sous_resolution": 0
+    }
+  }
+}
