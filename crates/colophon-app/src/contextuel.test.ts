@@ -43,6 +43,44 @@ describe("entreesPour", () => {
       "reglages",
     ]);
   });
+
+  it("une planche : dupliquer, insérer avant et après, recomposer, mise en page, supprimer", () => {
+    const e = entreesPour(
+      { type: "planche", index: 2, origine: true, photos: true },
+      { fiche: true },
+    );
+    expect(e.map((x) => x.id)).toEqual([
+      "dupliquer",
+      "inserer-avant",
+      "inserer-apres",
+      "recomposer-planche",
+      "mise-en-page",
+      "supprimer",
+    ]);
+    expect(e.every((x) => x.desactive === undefined)).toBe(true);
+  });
+
+  it("une planche insérée à la main ne se recompose pas, et le dit", () => {
+    const e = entreesPour(
+      { type: "planche", index: 0, origine: false, photos: true },
+      { fiche: true },
+    );
+    expect(e.find((x) => x.id === "recomposer-planche")?.desactive).toBe("ctx.planche.sans.origine");
+  });
+
+  it("tant que l'origine n'est pas connue, Recomposer reste active", () => {
+    const e = entreesPour({ type: "planche", index: 0, photos: true }, { fiche: true });
+    expect(e.find((x) => x.id === "recomposer-planche")?.desactive).toBeUndefined();
+  });
+
+  it("une planche sans photo n'a pas de mise en page à changer", () => {
+    const e = entreesPour(
+      { type: "planche", index: 0, origine: true, photos: false },
+      { fiche: true },
+    );
+    expect(e.find((x) => x.id === "mise-en-page")?.desactive).toBe("ctx.planche.sans.photo");
+    expect(e.filter((x) => x.desactive).map((x) => x.id)).toEqual(["mise-en-page"]);
+  });
 });
 
 describe("placerMenu", () => {

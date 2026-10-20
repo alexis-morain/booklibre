@@ -339,6 +339,20 @@ describe("spread manipulation", () => {
     expect(b.spreads[1].template).toBe("vide");
     expect(removeSpread(b, 1).spreads).toHaveLength(1);
   });
+
+  it("inserts before a spread with at - 1, the first one included", () => {
+    const a = album(spread("solo", 1), spread("duo", 2));
+    expect(insertSpread(a, 1 - 1, "vide").spreads.map((s) => s.template)).toEqual([
+      "solo",
+      "vide",
+      "duo",
+    ]);
+    expect(insertSpread(a, 0 - 1, "vide").spreads.map((s) => s.template)).toEqual([
+      "vide",
+      "solo",
+      "duo",
+    ]);
+  });
 });
 
 describe("placePhoto", () => {

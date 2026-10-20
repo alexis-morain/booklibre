@@ -3380,9 +3380,30 @@ kbd {
   transition: color var(--turn), border-color var(--turn);
 }
 
-.lock:hover {
+.lock:hover,
+.corbeille:hover {
   color: var(--text);
   border-color: var(--rule);
+}
+
+/* La corbeille de la vignette (1.1-e) : le cadenas au trait, visible au
+   survol et au focus seulement. L'opacité la cache aux yeux, jamais au
+   lecteur d'écran ni au clavier. */
+.corbeille {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid transparent;
+  color: var(--muted);
+  opacity: 0;
+  transition: color var(--turn), border-color var(--turn), opacity var(--turn);
+}
+
+.planche-cell:hover .corbeille,
+.planche-cell:focus-within .corbeille {
+  opacity: 1;
 }
 
 .lock.locked {

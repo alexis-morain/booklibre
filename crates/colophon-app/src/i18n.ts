@@ -323,6 +323,9 @@ export const FR = {
   "planche.texte.inseree":
     "Planche de texte insérée : double-clic pour l’ouvrir et écrire",
   "planche.supprimee": "Planche {n} supprimée (⌘Z la ramène)",
+  "planche.sous.minimum":
+    "L’album a maintenant {pages} pages, sous les {min} que demande ce format : l’impression le refusera tant qu’il en manque",
+  "planche.supprimer": "Supprimer la planche {n}",
   // Le changement de format sans recomposer : on n'y arrive que par le
   // lien du panneau Recomposer, et son titre est ce lien.
   "bascule.titre": "Changer de format sans recomposer",
@@ -889,6 +892,12 @@ export const FR = {
   "ctx.informations": "Informations…",
   "ctx.fiche.plus.tard": "Arrive avec la fiche photo",
   "ctx.ajouter.photo": "Ajouter une photo…",
+  "ctx.inserer.avant": "Insérer une planche vide avant",
+  "ctx.inserer.apres": "Insérer une planche vide après",
+  "ctx.recomposer.planche": "Recomposer cette planche",
+  "ctx.mise.en.page": "Changer de mise en page…",
+  "ctx.planche.sans.origine": "Insérée à la main, elle n’a pas de version automatique",
+  "ctx.planche.sans.photo": "Une planche sans photo n’a pas de mise en page à changer",
 
   "fiche.photo.dabord": "Choisissez d’abord une photo sur la planche.",
   "fiche.chargement": "Lecture du fichier…",
@@ -1486,6 +1495,9 @@ export const EN: Record<Cle, string> = {
   "planche.vide.inseree": "Empty spread inserted: a breath",
   "planche.texte.inseree": "Text spread inserted: double-click to open it and write",
   "planche.supprimee": "Spread {n} deleted (⌘Z brings it back)",
+  "planche.sous.minimum":
+    "The album now has {pages} pages, below the {min} this format requires: printing will refuse it while pages are missing",
+  "planche.supprimer": "Delete spread {n}",
   "bascule.titre": "Change format without recomposing",
 
   "bascule.intro":
@@ -2013,6 +2025,12 @@ export const EN: Record<Cle, string> = {
   "ctx.informations": "Get info…",
   "ctx.fiche.plus.tard": "Comes with the photo sheet",
   "ctx.ajouter.photo": "Add a photo…",
+  "ctx.inserer.avant": "Insert an empty spread before",
+  "ctx.inserer.apres": "Insert an empty spread after",
+  "ctx.recomposer.planche": "Recompose this spread",
+  "ctx.mise.en.page": "Change layout…",
+  "ctx.planche.sans.origine": "Inserted by hand, it has no automatic version",
+  "ctx.planche.sans.photo": "A spread without photos has no layout to change",
 
   "fiche.photo.dabord": "Choose a photo on the spread first.",
   "fiche.chargement": "Reading the file…",

@@ -3,9 +3,11 @@
 // que le dessiner. Tout ce qui se décide ici se teste sans fenêtre, comme
 // `popover.ts`.
 //
-// Trois cibles et pas une de plus (plan E, décision E2) : une photo, le
-// papier nu d'une page, un objet libre. Le contenu de chaque menu est une
-// liste fermée, dans l'ordre où elle s'affiche.
+// Quatre cibles et pas une de plus : une photo, le papier nu d'une page, un
+// objet libre (plan E, décision E2), et la vignette d'une planche sur la
+// table, ajoutée par le plan des retours 1.1 (19/10, session 1.1-e). Le
+// contenu de chaque menu est une liste fermée, dans l'ordre où elle
+// s'affiche.
 
 import { Cle } from "./i18n";
 
@@ -13,7 +15,10 @@ import { Cle } from "./i18n";
 export type Cible =
   | { type: "photo"; cell: number; src: string }
   | { type: "page"; droite: boolean; point: { x: number; y: number } }
-  | { type: "objet"; index: number };
+  | { type: "objet"; index: number }
+  /** `origine` : la planche a une version automatique, inconnu tant que le
+   *  moteur n'a pas répondu ; `photos` : son gabarit porte des photos. */
+  | { type: "planche"; index: number; origine?: boolean; photos: boolean };
 
 export type EntreeId =
   | "remplacer"
@@ -26,6 +31,10 @@ export type EntreeId =
   | "ornement"
   | "couper"
   | "dupliquer"
+  | "inserer-avant"
+  | "inserer-apres"
+  | "recomposer-planche"
+  | "mise-en-page"
   | "supprimer"
   | "reglages";
 
@@ -64,6 +73,23 @@ export function entreesPour(cible: Cible, options: { fiche: boolean }): Entree[]
         { id: "dupliquer", cle: "ctx.dupliquer" },
         { id: "supprimer", cle: "ctx.supprimer" },
         { id: "reglages", cle: "ctx.reglages" },
+      ];
+    case "planche":
+      return [
+        { id: "dupliquer", cle: "ctx.dupliquer" },
+        { id: "inserer-avant", cle: "ctx.inserer.avant" },
+        { id: "inserer-apres", cle: "ctx.inserer.apres" },
+        {
+          id: "recomposer-planche",
+          cle: "ctx.recomposer.planche",
+          desactive: cible.origine === false ? "ctx.planche.sans.origine" : undefined,
+        },
+        {
+          id: "mise-en-page",
+          cle: "ctx.mise.en.page",
+          desactive: cible.photos ? undefined : "ctx.planche.sans.photo",
+        },
+        { id: "supprimer", cle: "ctx.supprimer" },
       ];
   }
 }
