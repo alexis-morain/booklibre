@@ -151,6 +151,7 @@ import { choixOfferts, faceFor, cleDeForme, formeDe } from "./gabarit";
 import { RevueView, TriView } from "./TriView";
 import { Drawer } from "./Drawer";
 import { PlanchesView, LockGlyph } from "./PlanchesView";
+import { ditSuppression } from "./planches";
 import { CoverView } from "./CoverView";
 import { EnvoiView } from "./EnvoiView";
 import { langue, t, useLangue } from "./i18n";
@@ -286,6 +287,9 @@ export default function App() {
   const [menu, setMenu] = useState<{ cible: Cible; point: { x: number; y: number } } | null>(
     null,
   );
+  /** « Changer de mise en page… » depuis la table : le sélecteur s'ouvre
+   *  une fois le livre monté. */
+  const [gabaritAOuvrir, setGabaritAOuvrir] = useState(false);
   /** Le choix d'une photo de la réserve, et la réserve classée pour lui
    *  (`null` tant que le moteur classe). */
   const [choix, setChoix] = useState<{
@@ -322,6 +326,12 @@ export default function App() {
   // said. Dies with the album it judged, like the verdict offer above.
   const [preparation, setPreparation] = useState<Preparation | null>(null);
   const [view, setView] = useState<View>("livre");
+  useEffect(() => {
+    if (!gabaritAOuvrir || view !== "livre") return;
+    setGabaritAOuvrir(false);
+    fire("menu", "gabarit");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gabaritAOuvrir, view]);
   const [curation, setCuration] = useState<Discard[]>([]);
   const [triSelected, setTriSelected] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -1378,6 +1388,31 @@ export default function App() {
     }
   };
 
+  /** Supprimer une planche : ⌫, le pied de la table, sa corbeille, son menu
+   *  et le menu Fichier passent tous ici. Sous le minimum du produit, le
+   *  message le dit, rien ne bloque (1.1-e). */
+  const supprimerPlanche = (at: number) => {
+    if (!album?.spreads[at]) return;
+    apply((a) => removeSpread(a, at));
+    // La corbeille d'une autre vignette : la planche courante garde sa place.
+    if (at < index) setIndex(index - 1);
+    setStatus(
+      ditSuppression(
+        at + 1,
+        album.spreads.length - 1,
+        printers?.find((p) => p.id === profil) ?? null,
+      ),
+    );
+  };
+
+  /** Insérer une planche sans photo après `apres` (-1 : en tête), et la
+   *  choisir. */
+  const insererPlanche = (kind: "vide" | "texte", apres: number) => {
+    apply((a) => insertSpread(a, apres, kind));
+    setIndex(apres + 1);
+    setStatus(kind === "vide" ? t("planche.vide.inseree") : t("planche.texte.inseree"));
+  };
+
   // Every command of the app, by name. The window's keydown handler and the
   // native menu both land here, so a chord and its menu item are one code
   // path with one guard each.
@@ -1494,17 +1529,11 @@ export default function App() {
     },
     "inserer-vide": () => {
       if (!album || view !== "livre" && view !== "planches") return;
-      const at = Math.max(index, 0);
-      apply((a) => insertSpread(a, at, "vide"));
-      setIndex(at + 1);
-      setStatus(t("planche.vide.inseree"));
+      insererPlanche("vide", Math.max(index, 0));
     },
     "inserer-texte": () => {
       if (!album || view !== "livre" && view !== "planches") return;
-      const at = Math.max(index, 0);
-      apply((a) => insertSpread(a, at, "texte"));
-      setIndex(at + 1);
-      setStatus(t("planche.texte.inseree"));
+      insererPlanche("texte", Math.max(index, 0));
     },
     // Dater tout l'album, ou retirer ces dates : les dates viennent du
     // moteur en un appel, l'édition est un seul pas d'annulation.
@@ -1522,8 +1551,7 @@ export default function App() {
     },
     "supprimer-planche": () => {
       if (!album || index < 0 || (view !== "livre" && view !== "planches")) return;
-      apply((a) => removeSpread(a, index));
-      setStatus(t("planche.supprimee", { n: index + 1 }));
+      supprimerPlanche(index);
     },
     // The four overlays are one place at a time: opening one closes the
     // others. Two panels stacked, neither trapping the keyboard, is how
@@ -2133,8 +2161,7 @@ export default function App() {
       if (view === "planches") {
         if ((e.key === "Backspace" || e.key === "Delete") && index >= 0) {
           e.preventDefault();
-          apply((a) => removeSpread(a, index));
-          setStatus(t("planche.supprimee", { n: index + 1 }));
+          supprimerPlanche(index);
           return;
         }
         // Escape behaves like everywhere else: it lets go of the current
@@ -2529,6 +2556,29 @@ export default function App() {
     setMenu({ cible, point });
   };
 
+  /** Le menu d'une vignette de la table : la planche se choisit d'abord, et
+   *  « Recomposer cette planche » s'éteint quand le moteur dit qu'elle n'a
+   *  pas de version automatique. Hors Tauri ou en échec, elle reste active,
+   *  et la commande dit pourquoi comme avant. */
+  const surMenuPlanche = (at: number, point: { x: number; y: number }) => {
+    const s = album.spreads[at];
+    if (!s) return;
+    setIndex(at);
+    const cible: Cible = {
+      type: "planche",
+      index: at,
+      photos: templateCapacity(s.template) > 0,
+    };
+    setMenu({ cible, point });
+    void originSpread(album, at).then(
+      (origin) =>
+        setMenu((m) =>
+          m?.cible === cible ? { ...m, cible: { ...cible, origine: origin !== null } } : m,
+        ),
+      () => {},
+    );
+  };
+
   /** Ouvrir le choix de la réserve pour la planche affichée, et demander le
    *  classement au moteur : l'album voyage tel que l'éditeur le tient. */
   const ouvrirChoix = (mode: ModeChoix, point: { x: number; y: number }, at = index) => {
@@ -2573,6 +2623,10 @@ export default function App() {
         fire("menu", "dupliquer");
         return;
       case "supprimer":
+        if (cible.type === "planche") {
+          supprimerPlanche(cible.index);
+          return;
+        }
         if (cible.type !== "objet") return;
         setObjet(null);
         apply((a) => removeObjet(a, index, cible.index));
@@ -2606,6 +2660,23 @@ export default function App() {
         return;
       case "informations":
         if (cible.type === "photo") setFiche({ src: cible.src, cell: cible.cell });
+        return;
+      case "inserer-avant":
+        if (cible.type === "planche") insererPlanche("vide", cible.index - 1);
+        return;
+      case "inserer-apres":
+        if (cible.type === "planche") insererPlanche("vide", cible.index);
+        return;
+      case "recomposer-planche":
+        fire("menu", "rendre-auto");
+        return;
+      case "mise-en-page":
+        // Comme l'entrée « Gabarit… », une fois le livre monté : le
+        // sélecteur n'écoute qu'en vue livre.
+        if (cible.type !== "planche") return;
+        setSelected(null);
+        setView("livre");
+        setGabaritAOuvrir(true);
         return;
     }
   };
@@ -2784,6 +2855,8 @@ export default function App() {
             setStatus(t("planche.deplacee", { n: to + 1 }));
           }}
           onLock={(at) => apply((a) => toggleLock(a, at))}
+          onRemove={supprimerPlanche}
+          onMenu={surMenuPlanche}
         />
       ) : (
         <main className="stage">
@@ -2958,26 +3031,13 @@ export default function App() {
           index={Math.max(index, 0)}
           onSeek={setIndex}
           status={statut}
-          onInsert={(kind) => {
-            const at = Math.max(index, 0);
-            apply((a) => insertSpread(a, at, kind));
-            setIndex(at + 1);
-            setStatus(
-              kind === "vide"
-                ? t("planche.vide.inseree")
-                : t("planche.texte.inseree"),
-            );
-          }}
+          onInsert={(kind) => insererPlanche(kind, Math.max(index, 0))}
           onDuplicate={() => {
             const at = Math.max(index, 0);
             apply((a) => duplicateSpread(a, at));
             setIndex(at + 1);
           }}
-          onRemove={() => {
-            const at = Math.max(index, 0);
-            apply((a) => removeSpread(a, at));
-            setStatus(t("planche.supprimee", { n: at + 1 }));
-          }}
+          onRemove={() => supprimerPlanche(Math.max(index, 0))}
         />
       ) : view === "envoi" ? (
         <footer className="foot envoi-foot">
@@ -3020,7 +3080,7 @@ export default function App() {
           onClose={() => setFiche(null)}
         />
       )}
-      {menu && view === "livre" && (
+      {menu && view === (menu.cible.type === "planche" ? "planches" : "livre") && (
         <MenuContextuel
           point={menu.point}
           entrees={entreesPour(menu.cible, { fiche: true })}

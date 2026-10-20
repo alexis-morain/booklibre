@@ -51,6 +51,8 @@ export function PlanchesView({
   onOpen,
   onMove,
   onLock,
+  onRemove,
+  onMenu,
 }: {
   album: Album;
   /** Index of the highlighted cell; -1 is the cover, page zero. */
@@ -60,6 +62,10 @@ export function PlanchesView({
   onOpen: (at: number) => void;
   onMove: (from: number, to: number) => void;
   onLock: (at: number) => void;
+  /** La corbeille de la vignette : un pas d'annulation, sans confirmation. */
+  onRemove: (at: number) => void;
+  /** Le menu d'une planche, au point donné en pixels de la fenêtre. */
+  onMenu: (at: number, point: { x: number; y: number }) => void;
 }) {
   const [dropAt, setDropAt] = useState<number | null>(null);
   const [tenue, setTenue] = useState<{ at: number; dx: number; dy: number } | null>(null);
@@ -212,6 +218,18 @@ export function PlanchesView({
         e.stopPropagation();
         onOpen(at);
         break;
+      // Maj+F10 et la touche Menu : le menu de la planche, posé au coin de
+      // la vignette. La couverture n'en a pas.
+      case "F10":
+      case "ContextMenu":
+        if (at < 0 || (e.key === "F10" && !e.shiftKey)) break;
+        e.preventDefault();
+        e.stopPropagation();
+        {
+          const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          onMenu(at, { x: r.left, y: r.bottom });
+        }
+        break;
     }
   };
 
@@ -235,6 +253,13 @@ export function PlanchesView({
           onSelect={() => onSelect(i)}
           onOpen={() => onOpen(i)}
           onLock={() => onLock(i)}
+          onRemove={() => onRemove(i)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onSelect(i);
+            onMenu(i, { x: e.clientX, y: e.clientY });
+          }}
           onKey={(e) => surTouche(e, i)}
           tenue={tenue?.at === i ? tenue : null}
           onAppui={(e) => surAppui(e, i)}
@@ -261,6 +286,8 @@ function PlancheCell({
   onSelect,
   onOpen,
   onLock,
+  onRemove,
+  onContextMenu,
   onKey,
   tenue,
   onAppui,
@@ -277,6 +304,8 @@ function PlancheCell({
   onSelect: () => void;
   onOpen: () => void;
   onLock: () => void;
+  onRemove: () => void;
+  onContextMenu: (e: React.MouseEvent) => void;
   onKey: (e: React.KeyboardEvent) => void;
   /** Le décalage de la figure quand c'est elle qu'on glisse. */
   tenue: { dx: number; dy: number } | null;
@@ -342,6 +371,7 @@ function PlancheCell({
         e.stopPropagation();
         onOpen();
       }}
+      onContextMenu={onContextMenu}
       title={
         (spread.caption ? `${spread.caption} · ` : "") +
         t("table.cellule.titre", { n: index + 1 })
@@ -381,6 +411,18 @@ function PlancheCell({
             aria-pressed={spread.locked ?? false}
           >
             <LockGlyph open={!spread.locked} />
+          </button>
+          {/* Visible au survol et au focus, toujours lue par VoiceOver. */}
+          <button
+            className="corbeille"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+            title={t("planche.supprimer", { n: index + 1 })}
+            aria-label={t("planche.supprimer", { n: index + 1 })}
+          >
+            <TrashGlyph />
           </button>
         </span>
       </figcaption>
@@ -469,6 +511,17 @@ export function LockGlyph({ open }: { open: boolean }) {
         strokeWidth="1.3"
         transform={open ? "translate(1.6 -1.4) rotate(24 5 3.5)" : undefined}
       />
+    </svg>
+  );
+}
+
+/** Une corbeille au trait, à la taille du cadenas. */
+function TrashGlyph() {
+  return (
+    <svg viewBox="0 0 10 12" width="10" height="12" aria-hidden="true">
+      <path d="M 0.5 2.5 H 9.5 M 3.5 2.5 V 1 H 6.5 V 2.5" fill="none" stroke="currentColor" strokeWidth="1.1" />
+      <path d="M 1.6 2.5 L 2.3 11.3 H 7.7 L 8.4 2.5" fill="none" stroke="currentColor" strokeWidth="1.1" />
+      <path d="M 4 4.5 V 9.5 M 6 4.5 V 9.5" stroke="currentColor" strokeWidth="0.9" />
     </svg>
   );
 }

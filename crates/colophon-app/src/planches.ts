@@ -2,6 +2,9 @@
 // glisser, et sur quelle planche il tombe. `PlanchesView` mesure les
 // rectangles et suit le pointeur ; ici on ne fait que répondre.
 
+import type { Printer } from "./bridge";
+import { t } from "./i18n";
+
 /** Sous ce déplacement, un appui reste un clic : la sélection d'avant. */
 export const SEUIL_GLISSER_PX = 6;
 
@@ -27,4 +30,22 @@ export function cibleSous(rects: RectCellule[], x: number, y: number): number | 
     if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return r.at;
   }
   return null;
+}
+
+/**
+ * Le message d'une suppression. Sous le minimum du produit, il le dit au lieu
+ * de bloquer (1.1-e) : le compte est celui du prévol (`prevol.rs`, deux pages
+ * par planche, plus les deux de la couverture chez qui relie un seul fichier),
+ * sur le profil déjà en mémoire, sans appel au moteur.
+ */
+export function ditSuppression(
+  n: number,
+  planches: number,
+  profil: Pick<Printer, "pages_min" | "fichiers"> | null,
+): string {
+  const dit = t("planche.supprimee", { n });
+  if (!profil) return dit;
+  const pages = planches * 2 + (profil.fichiers === "un" ? 2 : 0);
+  if (pages >= profil.pages_min) return dit;
+  return `${dit}. ${t("planche.sous.minimum", { pages, min: profil.pages_min })}`;
 }
