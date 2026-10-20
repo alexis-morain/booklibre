@@ -20,6 +20,7 @@ export type MenuActions = {
   ouvrir(): void;
   ouvrirRecent(dir: string): void;
   enregistrer(): void;
+  revenir(): void;
   exporter(): void;
   fermerAlbum(): void;
   quitter(): void;
@@ -146,6 +147,7 @@ export async function installMenu(
         accelerator: "CmdOrCtrl+S",
         enabled: albumOpen,
       }),
+      await item("revenir", t("menu.revenir"), { enabled: albumOpen }),
       await item("exporter", t("menu.exporter"), {
         accelerator: "Shift+CmdOrCtrl+E",
         enabled: albumOpen,

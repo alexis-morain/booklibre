@@ -96,7 +96,8 @@ export type EnvoiViewProps = {
   exporting: boolean;
   /** A print PDF was written for this album: the verdict form is offered. */
   exporte: boolean;
-  /** Unsaved edits: the preflight reads the disk, so it would lie. */
+  /** Not on disk yet: the preflight reads the disk, so it re-runs the
+   *  moment the automatic write lands. Never shown: the write is a second away. */
   dirty: boolean;
   /** The album carries the facts the page is made of. False on albums
    *  composed before the page existed: nothing to offer, so nothing shows. */
@@ -213,7 +214,6 @@ export function EnvoiPage(props: EnvoiPageProps) {
     preparation,
     exporting,
     exporte,
-    dirty,
     colophonPossible,
     colophonActif,
     onColophon,
@@ -298,7 +298,6 @@ export function EnvoiPage(props: EnvoiPageProps) {
         <section className="envoi-verdict">
           {policeManquante && <p className="envoi-dirty">{t("police.manquante")}</p>}
           {absents.length > 0 && <p className="envoi-dirty">{phraseAbsents(absents)}</p>}
-          {dirty && <p className="envoi-dirty">{t("envoi.dirty")}</p>}
           {error ? (
             <>
               <h2 className="envoi-ko">{t("envoi.prevol.echec")}</h2>

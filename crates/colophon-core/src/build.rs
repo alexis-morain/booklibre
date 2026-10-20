@@ -1126,9 +1126,10 @@ pub fn variantes_offertes(densite: layout::Densite, spreads: usize) -> Vec<Varia
 /// tient la liste en face de `variantes_offertes`.
 pub const IDS_PROPOSITIONS: [&str; 3] = ["demandee", "autre-rythme", "resserree"];
 
-/// Delete the proposals nobody chose. Called at the first save: past a hand
-/// edit they stop being an offer and become a stale copy of somebody's work.
-/// Missing files are not an error, this runs on every save.
+/// Delete the proposals nobody chose. Called at the closing of the album or
+/// on ⌘S, never by the automatic write: past the session they stop being an
+/// offer and become a stale copy of somebody's work. Missing files are not
+/// an error, this runs on every closing.
 ///
 /// **Les noms sont construits, jamais reconnus.** Le prédicat d'avant était
 /// syntaxique — tout `album.<x>.json` à deux points sauf `album.origin.json`
@@ -1148,6 +1149,18 @@ pub fn oublier_variantes(dir: &Path) -> usize {
         }
     }
     n
+}
+
+/// La copie de l'album tel qu'il s'est ouvert, que « Revenir à l'ouverture
+/// de la séance » relit. Un nom construit, hors d'`IDS_PROPOSITIONS` : aucun
+/// élagage ne peut la toucher.
+pub const OUVERTURE: &str = "album.ouverture.json";
+
+/// Poser la copie d'ouverture, par-dessus celle de la séance d'avant.
+pub fn poser_ouverture(dir: &Path) -> Result<()> {
+    fs::copy(dir.join("album.json"), dir.join(OUVERTURE))
+        .with_context(|| format!("copie de {OUVERTURE}"))?;
+    Ok(())
 }
 
 /// Write `album.json` atomically: temp file then rename, so a crash halfway
@@ -2749,6 +2762,7 @@ mod tests {
             "curation.json",
             "album.origin.json",
             "album.sauvegarde.json",
+            OUVERTURE,
             "curation.mienne.json",
             "album.avant-la-bascule.json",
         ] {
@@ -2767,6 +2781,7 @@ mod tests {
             "curation.json",
             "album.origin.json",
             "album.sauvegarde.json",
+            OUVERTURE,
             "curation.mienne.json",
             "album.avant-la-bascule.json",
         ] {
@@ -2797,6 +2812,22 @@ mod tests {
     fn oublier_dans_un_dossier_absent_ne_compte_rien() {
         assert_eq!(oublier_variantes(&std::env::temp_dir().join("colophon-nulle-part")), 0);
     }
+    /// La copie d'ouverture est celle de la séance qui commence : une
+    /// ouverture suivante l'écrase, octet pour octet.
+    #[test]
+    fn la_copie_d_ouverture_suit_la_derniere_ouverture() {
+        let d = &std::env::temp_dir().join(format!("colophon-ouverture-{}", std::process::id()));
+        let _ = fs::remove_dir_all(d);
+        fs::create_dir_all(d).unwrap();
+        fs::write(d.join("album.json"), b"un").unwrap();
+        poser_ouverture(d).unwrap();
+        fs::write(d.join("album.json"), b"deux").unwrap();
+        poser_ouverture(d).unwrap();
+        assert_eq!(fs::read(d.join(OUVERTURE)).unwrap(), b"deux");
+        assert!(poser_ouverture(&d.join("absent")).is_err());
+        let _ = fs::remove_dir_all(d);
+    }
+
     fn police_d_objet(fichier: &str) -> model::Police {
         model::Police { fichier: fichier.into(), postscript: "X".into(), nom: "X".into() }
     }
@@ -2815,6 +2846,7 @@ mod tests {
             crate::font::POLICE_TTF,
             "objet-Orpheline.otf.tmp",
             "notes.txt",
+            OUVERTURE,
         ] {
             fs::write(dir.join(f), b"x").unwrap();
         }
@@ -2847,7 +2879,7 @@ mod tests {
 
         assert_eq!(elaguer_polices_objet(&dir, &album), 1);
         assert!(!dir.join("objet-Orpheline.otf").exists(), "l'orpheline part");
-        for reste in ["objet-Garde-Bold.ttf", crate::font::POLICE_TTF, "objet-Orpheline.otf.tmp", "notes.txt"] {
+        for reste in ["objet-Garde-Bold.ttf", crate::font::POLICE_TTF, "objet-Orpheline.otf.tmp", "notes.txt", OUVERTURE] {
             assert!(dir.join(reste).exists(), "{reste} reste");
         }
         album.spreads.clear();

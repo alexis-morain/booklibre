@@ -293,7 +293,9 @@ input[type="radio"] {
   cursor: default;
 }
 
-.link.dirty {
+/* Un échec d'écriture automatique tient la ligne d'état, en terracotta,
+   jusqu'à la prochaine écriture réussie. */
+.app.echec-ecriture .foot [role="status"] {
   color: var(--accent);
 }
 

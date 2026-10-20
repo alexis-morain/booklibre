@@ -275,11 +275,13 @@ export const FR = {
   "recomp.ok": "Album recomposé, planches éditées conservées",
   "recomp.annulee": "Recomposition annulée",
   "erreur.recomp": "La recomposition a échoué.",
-  "fermer.confirme": "Des modifications ne sont pas enregistrées. Fermer quand même ?",
-  "ouvrir.confirme":
-    "Des modifications ne sont pas enregistrées. Ouvrir un autre album quand même ?",
   "quitter.confirme":
-    "Des modifications ne sont pas enregistrées. Quitter quand même ?",
+    "L’enregistrement automatique a échoué : les dernières modifications ne sont pas sur le disque. Quitter quand même ?",
+  "auto.echec": "L’enregistrement automatique a échoué : {raison}",
+  "revenir.confirme":
+    "Revenir à l’album tel qu’il était à l’ouverture de la séance ? ⌘Z défait ce retour.",
+  "revenir.fait": "Album rendu à l’ouverture de la séance (⌘Z défait ce retour)",
+  "erreur.revenir": "La copie de l’ouverture de la séance n’a pas pu être relue.",
   "stage.lecture": "lecture du dossier",
   "stage.scan": "inventaire du dossier",
   "stage.analyse.n": "analyse des photos, {i} sur {n}",
@@ -345,7 +347,7 @@ export const FR = {
   "bascule.manquantes":
     "{n} photos n’ont pas pu être mesurées : leurs planches sont gardées telles quelles.",
   "bascule.appliquer": "Appliquer ce format",
-  "bascule.annulable": "⌘Z annule, ⌘S enregistre.",
+  "bascule.annulable": "⌘Z annule.",
   "bascule.faite": "Album basculé en {w} × {h} mm (⌘Z annule)",
   "bascule.geometrie":
     "la géométrie de ce format n’a pas pu être chargée, rien n’a été appliqué",
@@ -382,7 +384,7 @@ export const FR = {
   "police.poids": "{ko} Ko dans l’album",
   "police.rendre": "Revenir à celle de Booklibre",
   "police.rendue": "Retour à la police de Booklibre (⌘Z annule)",
-  "police.choisie": "Album composé en {nom} (⌘Z annule, ⌘S enregistre)",
+  "police.choisie": "Album composé en {nom} (⌘Z annule)",
   "police.reste": "{n} familles de plus : filtrez pour les voir.",
   "police.aucune": "Aucune police ne correspond.",
   "police.manquante":
@@ -438,14 +440,12 @@ export const FR = {
 
   // -- messages d'état et erreurs
   "etat.enregistre": "Enregistré",
-  "etat.titre.modifie": "Titre modifié : ⌘S l’enregistre",
-  "etat.colophon.ajoute":
-    "Page de colophon ajoutée : ⌘S l’enregistre, le prévol recompte les pages",
+  "etat.titre.modifie": "Titre modifié",
+  "etat.colophon.ajoute": "Page de colophon ajoutée : le prévol recompte les pages",
   "etat.colophon.retire": "Page de colophon retirée",
   "etat.colophon.trop.vieux":
     "Cet album a été composé avant la page de colophon : recomposez-le pour l’obtenir",
-  "etat.garde.ajoutee":
-    "Page de garde ajoutée : ⌘S l’enregistre, le prévol recompte les pages",
+  "etat.garde.ajoutee": "Page de garde ajoutée : le prévol recompte les pages",
   "etat.garde.retiree": "Page de garde retirée",
   "etat.garde.trop.vieux":
     "Cet album a été composé avant la page de garde : recomposez-le pour l’obtenir",
@@ -478,6 +478,7 @@ export const FR = {
   "menu.recents": "Albums récents",
   "menu.recents.vide": "Aucun album récent",
   "menu.enregistrer": "Enregistrer",
+  "menu.revenir": "Revenir à l’ouverture de la séance…",
   "menu.exporter": "Exporter…",
   "menu.recomposer": "Recomposer…",
   "menu.police": "Police…",
@@ -517,8 +518,6 @@ export const FR = {
   "menu.signaler.recadrage": "Signaler un recadrage raté…",
 
   // -- l'écran Envoi
-  "envoi.dirty":
-    "Des modifications ne sont pas enregistrées. Le contrôle lit le fichier sur le disque : enregistrez (⌘S) avant de vous fier au verdict.",
   "envoi.controle": "Contrôle du fichier…",
   "envoi.ko.un": "Un défaut arrête l’envoi.",
   "envoi.ko": "{n} défauts arrêtent l’envoi.",
@@ -1176,7 +1175,7 @@ export const FR = {
     "Le diagnostic de la machine n’a pas pu être lu : le rapport part sans lui, décrivez ce qui s’est passé.",
   "frontiere.titre": "Booklibre a rencontré une erreur qu’il ne sait pas rattraper.",
   "frontiere.lede":
-    "Rien n’est perdu de ce qui a été enregistré : l’album est sur le disque, dans son dossier. Les modifications non enregistrées depuis le dernier ⌘S ne le sont pas.",
+    "Rien n’est perdu : l’album s’enregistre seul, il est sur le disque, dans son dossier. Seule la toute dernière seconde de modifications peut manquer.",
   "frontiere.recharger": "Relancer l’écran",
   "frontiere.copier": "Copier le détail",
   "frontiere.copie": "Détail copié",
@@ -1442,10 +1441,13 @@ export const EN: Record<Cle, string> = {
   "recomp.ok": "Album recomposed, edited spreads kept",
   "recomp.annulee": "Recomposition cancelled",
   "erreur.recomp": "The recomposition failed.",
-  "fermer.confirme": "Some changes are not saved. Close anyway?",
-  "ouvrir.confirme":
-    "Some changes are not saved. Open another album anyway?",
-  "quitter.confirme": "Some changes are not saved. Quit anyway?",
+  "quitter.confirme":
+    "Saving automatically failed: the latest changes are not on disk. Quit anyway?",
+  "auto.echec": "Saving automatically failed: {raison}",
+  "revenir.confirme":
+    "Go back to the album as it was when this session opened? ⌘Z undoes it.",
+  "revenir.fait": "Album back to the start of the session (⌘Z undoes it)",
+  "erreur.revenir": "The copy made when this session opened could not be read.",
   "stage.lecture": "reading the folder",
   "stage.scan": "folder inventory",
   "stage.analyse.n": "analysing the photos, {i} of {n}",
@@ -1506,7 +1508,7 @@ export const EN: Record<Cle, string> = {
   "bascule.manquantes":
     "{n} photos could not be measured: their spreads are kept as they are.",
   "bascule.appliquer": "Apply this format",
-  "bascule.annulable": "⌘Z undoes, ⌘S saves.",
+  "bascule.annulable": "⌘Z undoes.",
   "bascule.faite": "Album switched to {w} × {h} mm (⌘Z undoes)",
   "bascule.geometrie":
     "this format’s geometry could not be loaded; nothing was applied",
@@ -1543,7 +1545,7 @@ export const EN: Record<Cle, string> = {
   "police.poids": "{ko} kB in the album",
   "police.rendre": "Back to Booklibre’s",
   "police.rendue": "Back to Booklibre’s typeface (⌘Z undoes)",
-  "police.choisie": "Album set in {nom} (⌘Z undoes, ⌘S saves)",
+  "police.choisie": "Album set in {nom} (⌘Z undoes)",
   "police.reste": "{n} more families: filter to see them.",
   "police.aucune": "No typeface matches.",
   "police.manquante":
@@ -1596,14 +1598,12 @@ export const EN: Record<Cle, string> = {
   "erreur.detail": "Technical detail",
 
   "etat.enregistre": "Saved",
-  "etat.titre.modifie": "Title changed: ⌘S saves it",
-  "etat.colophon.ajoute":
-    "Colophon page added: ⌘S saves it, the preflight recounts the pages",
+  "etat.titre.modifie": "Title changed",
+  "etat.colophon.ajoute": "Colophon page added: the preflight recounts the pages",
   "etat.colophon.retire": "Colophon page removed",
   "etat.colophon.trop.vieux":
     "This album was composed before the colophon page existed: recompose it to get one",
-  "etat.garde.ajoutee":
-    "Half-title added: ⌘S saves it, the preflight recounts the pages",
+  "etat.garde.ajoutee": "Half-title added: the preflight recounts the pages",
   "etat.garde.retiree": "Half-title removed",
   "etat.garde.trop.vieux":
     "This album was composed before the half-title existed: recompose it to get one",
@@ -1622,6 +1622,7 @@ export const EN: Record<Cle, string> = {
   "menu.recents": "Recent albums",
   "menu.recents.vide": "No recent album",
   "menu.enregistrer": "Save",
+  "menu.revenir": "Revert to the start of the session…",
   "menu.exporter": "Export…",
   "menu.recomposer": "Recompose…",
   "menu.police": "Typeface…",
@@ -1660,8 +1661,6 @@ export const EN: Record<Cle, string> = {
   "menu.signaler.planche": "Report a bad spread…",
   "menu.signaler.recadrage": "Report a bad crop…",
 
-  "envoi.dirty":
-    "Some changes are not saved. The check reads the file on disk: save (⌘S) before trusting the verdict.",
   "envoi.controle": "Checking the file…",
   "envoi.ko.un": "One defect stops the send.",
   "envoi.ko": "{n} defects stop the send.",
@@ -2304,7 +2303,7 @@ export const EN: Record<Cle, string> = {
     "The machine’s diagnostic could not be read: the report goes without it, describe what happened.",
   "frontiere.titre": "Booklibre hit an error it cannot recover from.",
   "frontiere.lede":
-    "Nothing saved is lost: the album is on disk, in its folder. Changes made since the last ⌘S are not.",
+    "Nothing is lost: the album saves itself, it is on disk, in its folder. Only the very last second of changes may be missing.",
   "frontiere.recharger": "Restart the screen",
   "frontiere.copier": "Copy the detail",
   "frontiere.copie": "Detail copied",

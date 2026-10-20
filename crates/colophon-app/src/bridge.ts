@@ -780,8 +780,28 @@ export async function policeAbsents(album: Album): Promise<string[]> {
   return invoke<string[]>("police_absents", { album });
 }
 
+/** ⌘S and the closing of the album: the write, then the pruning of the
+ *  proposals and of the block faces nobody names. */
 export async function saveAlbum(album: Album): Promise<void> {
   if (inTauri) return invoke("save_album", { album });
+  return posterAlbum(album);
+}
+
+/** The automatic write: album.json alone, nothing pruned. The harness has
+ *  one way to write, the same for both. */
+export async function ecrireAlbum(album: Album): Promise<void> {
+  if (inTauri) return invoke("ecrire_album", { album });
+  return posterAlbum(album);
+}
+
+/** The album as it opened, for « Revenir à l'ouverture de la séance ». The
+ *  harness keeps no copy. */
+export async function albumOuverture(): Promise<Album> {
+  if (!inTauri) throw new Error("le harnais ne garde pas de copie d'ouverture");
+  return invoke<Album>("album_ouverture");
+}
+
+async function posterAlbum(album: Album): Promise<void> {
   const res = await fetch("/__dev/album", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
