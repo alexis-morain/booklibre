@@ -149,6 +149,32 @@ impl VarianteResume {
     }
 }
 
+/// What a proposal left out by resolution: how many photos, and the titles
+/// of the chapters it emptied.
+type Ecart = (usize, Vec<String>);
+
+/// The line the CLI prints, the same sentence as the app's report screen.
+pub fn phrase_trop_petites(n: usize) -> String {
+    if n == 1 {
+        "1 photo trop petite pour être bien imprimée est restée dans la réserve. \
+         Vous pouvez la poser quand même."
+            .to_string()
+    } else {
+        format!(
+            "{n} photos trop petites pour être bien imprimées sont restées dans la \
+             réserve. Vous pouvez les poser quand même."
+        )
+    }
+}
+
+pub fn phrase_chapitre_vide(titre: &str) -> String {
+    if titre.is_empty() {
+        "Un chapitre n'a gardé aucune photo ; elles sont dans la réserve.".to_string()
+    } else {
+        format!("Un chapitre n'a gardé aucune photo : {titre}. Elles sont dans la réserve.")
+    }
+}
+
 pub struct BuildReport {
     pub album: model::Album,
     pub album_json: PathBuf,
@@ -159,6 +185,13 @@ pub struct BuildReport {
     pub photos_scanned: usize,
     pub photos_kept: usize,
     pub chapters: usize,
+    /// Photos the composer left in the reserve because no cell prints them
+    /// at 250 ppi (1.1-a2). Counted on the proposal asked for.
+    pub trop_petites: usize,
+    /// Title of each chapter none of whose photos found a cell, empty when
+    /// the chapter had none: its photos are in the reserve, no spread is
+    /// made up for it.
+    pub chapitres_vides: Vec<String>,
     /// The alternatives composed beside the album, empty when none were
     /// asked for. Each is on disk as `album.<id>.json`.
     pub variantes: Vec<VarianteResume>,
@@ -638,7 +671,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
 
     let compose_une = |densite: layout::Densite,
                        cible: usize|
-     -> (model::Album, Vec<model::Discard>, usize) {
+     -> (model::Album, Vec<model::Discard>, usize, Ecart) {
         let mut album = model::Album::new(&title, &root, opts.trim);
         album.cover = opts.cover.clone();
         album.densite = densite;
@@ -656,7 +689,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         // Keep the attempt closest to the target: on fragmented sets the
         // spread count can refuse to follow the budget, and the last attempt
         // is then the worst one, not the best.
-        let mut best: Option<(usize, Vec<model::Spread>, usize)> = None;
+        let mut best: Option<(usize, Vec<model::Spread>, usize, Ecart)> = None;
         for attempt in 0..attempts {
             let mut trial = base.clone();
             if !petit {
@@ -671,19 +704,27 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
             // by one: whether a place is worth naming depends on the chapter
             // before it.
             let captions = chapter_captions(&trial, opts.langue);
-            let spreads: Vec<model::Spread> = trial
-                .iter()
-                .zip(captions)
-                .flat_map(|(c, caption)| composer.compose(c, caption, &root))
-                .collect();
+            let mut spreads: Vec<model::Spread> = Vec::new();
+            // A chapter the composer emptied keeps its title here: no blank
+            // spread is made up for it, the report names it (1.1-a2).
+            let mut vides: Vec<String> = Vec::new();
+            for (c, caption) in trial.iter().zip(captions) {
+                let titre = caption.clone().unwrap_or_default();
+                let faites = composer.compose(c, caption, &root);
+                if faites.is_empty() && !c.photos.is_empty() {
+                    vides.push(titre);
+                }
+                spreads.extend(faites);
+            }
             // What the spreads show, not what the chapters held: the composer
             // leaves a photo no cell prints in the reserve (1.1-a).
             let kept = spreads.iter().map(|s| s.slots.len()).sum();
+            let ecart = (composer.trop_petites.len(), vides);
 
             let got = spreads.len();
             let off = got.abs_diff(cible) * 100 / cible.max(1);
-            if best.as_ref().is_none_or(|(b, _, _)| off < *b) {
-                best = Some((off, spreads, kept));
+            if best.as_ref().is_none_or(|(b, ..)| off < *b) {
+                best = Some((off, spreads, kept, ecart));
             }
             if off <= 6 || attempt == attempts - 1 || got == 0 {
                 break;
@@ -694,9 +735,11 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
             let aimed = budget * cible / got;
             budget = ((budget + aimed) / 2).max(cible * 2);
         }
-        if let Some((_, spreads, kept)) = best {
+        let mut ecart = (0, Vec::new());
+        if let Some((_, spreads, kept, e)) = best {
             album.spreads = spreads;
             photos_kept = kept;
+            ecart = e;
         }
 
         // Re-insert the pinned spreads where their photos belong in time. A
@@ -827,7 +870,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
             })
             .collect();
 
-        (album, hors_budget, photos_kept)
+        (album, hors_budget, photos_kept, ecart)
     };
 
     // The proposal the caller asked for comes first and stays the default;
@@ -845,14 +888,19 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
 
     let mut composees: Vec<(VarianteSpec, model::Album, Vec<model::Discard>, usize)> =
         Vec::with_capacity(specs.len());
+    // Only the proposal asked for: the variants' résumés carry no such count.
+    let mut ecart: Ecart = (0, Vec::new());
     for spec in specs {
         anyhow::ensure!(!cancelled(), "composition annulée");
-        let (album, hors_budget, kept) = compose_une(spec.densite, spec.spreads);
-        if !composees.is_empty() {
+        let (album, hors_budget, kept, e) = compose_une(spec.densite, spec.spreads);
+        if composees.is_empty() {
+            ecart = e;
+        } else {
             say(&format!("variante {} : {} planches", spec.id, album.spreads.len()));
         }
         composees.push((spec, album, hors_budget, kept));
     }
+    let (trop_petites, chapitres_vides) = ecart;
     // The first proposal is the one asked for, and the album this build
     // opens. It is written under its own name too: the choice screen has to
     // be able to come back to it after showing another.
@@ -860,6 +908,12 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         let (_, a, h, k) = &composees[0];
         (a.clone(), h.clone(), *k)
     };
+    if trop_petites > 0 {
+        say(&phrase_trop_petites(trop_petites));
+    }
+    for titre in &chapitres_vides {
+        say(&phrase_chapitre_vide(titre));
+    }
 
     say(&format!(
         "chapters: {} (from {natural} natural, {photos_kept} photos kept)",
@@ -957,6 +1011,8 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
             album_pdf: None,
             photos_scanned,
             photos_kept,
+            trop_petites,
+            chapitres_vides,
             variantes,
         });
     }
@@ -1011,6 +1067,8 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         album_pdf: Some(album_pdf),
         photos_scanned,
         photos_kept,
+        trop_petites,
+        chapitres_vides,
         variantes,
     })
 }
@@ -2201,6 +2259,10 @@ mod tests {
     /// repeated structure (stripes, bands) collapses to the same hash.
     /// Files are stamped an hour apart so they are not one burst.
     fn jpeg_imprimable(path: &Path, seed: u32) {
+        jpeg_de(path, seed, 2000);
+    }
+
+    fn jpeg_de(path: &Path, seed: u32, px: u32) {
         let mut rng = seed.wrapping_mul(2654435761).wrapping_add(97);
         let mut cells = [[0u8; 3]; 64];
         for c in cells.iter_mut() {
@@ -2209,8 +2271,9 @@ mod tests {
                 *ch = (rng >> 24) as u8;
             }
         }
-        let img = image::RgbImage::from_fn(2000, 2000, |x, y| {
-            image::Rgb(cells[((y / 250).min(7) * 8 + (x / 250).min(7)) as usize])
+        let case = px / 8;
+        let img = image::RgbImage::from_fn(px, px, |x, y| {
+            image::Rgb(cells[((y / case).min(7) * 8 + (x / case).min(7)) as usize])
         });
         img.save(path).unwrap();
         let f = fs::File::options().write(true).open(path).unwrap();
@@ -2494,6 +2557,48 @@ mod tests {
             curation.iter().all(|d| d.reason != "parasite"),
             "les dates réparées ne laissent aucun parasite"
         );
+    }
+
+    /// 1.1-a2 : trois jours de photos imprimables, puis un quatrième fait
+    /// seulement de photos de 960 px, qu'aucune case n'imprime à 250 ppi. Le
+    /// chapitre ne produit aucune planche, le rapport compte ses photos et
+    /// nomme le chapitre, et la page de fin ne les compte pas.
+    #[test]
+    fn un_chapitre_vide_par_la_resolution_se_dit_au_bilan() {
+        let (photos, out) = dossier_test("chapitre-vide");
+        let sidecar = |nom: &str, i: u64| {
+            let ts = 1_600_000_000 + (i / 10) * 2 * 86_400 + (i % 10) * 3_600;
+            fs::write(
+                photos.join(format!("{nom}.json")),
+                format!(r#"{{"photoTakenTime":{{"timestamp":"{ts}"}}}}"#),
+            )
+            .unwrap();
+        };
+        for i in 0..30u32 {
+            let nom = format!("photo-{i:02}.jpg");
+            jpeg_imprimable(&photos.join(&nom), i);
+            sidecar(&nom, u64::from(i));
+        }
+        for i in 30..36u32 {
+            let nom = format!("petite-{i:02}.jpg");
+            jpeg_de(&photos.join(&nom), i, 960);
+            sidecar(&nom, u64::from(i));
+        }
+
+        let report = build_album(&photos, &out, BuildOptions::default()).unwrap();
+        let posees: Vec<String> = report
+            .album
+            .spreads
+            .iter()
+            .flat_map(|s| s.slots.iter().map(|sl| sl.src.clone()))
+            .collect();
+        assert!(posees.iter().all(|s| !s.starts_with("petite-")), "{posees:?}");
+        assert_eq!(report.trop_petites, 6);
+        assert_eq!(report.chapitres_vides.len(), 1, "{:?}", report.chapitres_vides);
+        assert!(!report.chapitres_vides[0].is_empty(), "le chapitre garde son titre");
+        // La page de fin : une photo écartée pour résolution ne compte pas.
+        assert_eq!(report.album.colophon.as_ref().unwrap().photos_retenues, posees.len());
+        assert_eq!(report.photos_kept, posees.len());
     }
 
     /// Le même dossier sans ses sidecars : aucune date fiable, donc aucune

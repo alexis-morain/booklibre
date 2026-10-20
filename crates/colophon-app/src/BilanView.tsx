@@ -89,6 +89,19 @@ export function BilanView({
               : t("bilan.gardees.chapitre.un", { pct, planches: spreads })}
           </p>
 
+          {(bilan.trop_petites ?? 0) > 0 && (
+            <p className="bilan-lead">
+              {bilan.trop_petites === 1
+                ? t("bilan.trop_petites.un")
+                : t("bilan.trop_petites", { n: bilan.trop_petites ?? 0 })}
+              {(bilan.chapitres_vides ?? [])
+                .filter((titre) => titre !== "")
+                .map((titre) => (
+                  <span key={titre}> {t("bilan.chapitre_vide", { titre })}</span>
+                ))}
+            </p>
+          )}
+
           {setAside > 0 && (
             <ul className="bilan-reasons">
               {reasons.map((r) => (

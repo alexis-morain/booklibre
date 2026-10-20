@@ -101,12 +101,15 @@ struct OpenedAlbum {
 
 /// What the composition just did, told in numbers: the front shows it once,
 /// when the build ends, before the book opens. The discard detail comes from
-/// curation.json, already served; these three counts exist nowhere else.
+/// curation.json, already served; these counts exist nowhere else (the photos
+/// left too small sit in it as `hors_budget`, among those of the budget).
 #[derive(Serialize)]
 struct BuildBilan {
     photos_scanned: usize,
     photos_kept: usize,
     chapters: usize,
+    trop_petites: usize,
+    chapitres_vides: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -1042,6 +1045,8 @@ async fn build_album_from_folder(
             photos_scanned: report.photos_scanned,
             photos_kept: report.photos_kept,
             chapters: report.chapters,
+            trop_petites: report.trop_petites,
+            chapitres_vides: report.chapitres_vides,
         },
         variantes: report.variantes,
     })

@@ -130,6 +130,11 @@ export type BuildBilan = {
   photos_scanned: number;
   photos_kept: number;
   chapters: number;
+  /** Photos the composer left in the reserve, no cell printing them at
+   *  250 ppi. Absent from an older engine: read as zero. */
+  trop_petites?: number;
+  /** Titles of the chapters those photos emptied, empty when untitled. */
+  chapitres_vides?: string[];
 };
 
 /** One proposal composed beside the album, as the creation screen shows it. */
@@ -252,7 +257,8 @@ async function devBuild(): Promise<BuiltAlbum> {
     .map((s) => s.slots[0].src);
   return {
     opened,
-    bilan: { photos_scanned: photos, photos_kept: 152, chapters: 9 },
+    // Photos too small for any cell, as corse-2013 leaves in carre-21 (1.1-a2).
+    bilan: { photos_scanned: photos, photos_kept: 152, chapters: 9, trop_petites: 2 },
     variantes: [
       {
         id: "autre-rythme",
