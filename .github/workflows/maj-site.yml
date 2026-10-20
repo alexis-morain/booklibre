@@ -44,7 +44,8 @@ jobs:
     steps:
       - name: Secret Cloudflare absent
         if: env.CF != 'true'
-        run: echo "::warning::Pas de CLOUDFLARE_API_TOKEN : booklibre.app/latest.json n'est pas publié, l'app passe par GitHub."
+        run: |
+          echo "::warning::Pas de CLOUDFLARE_API_TOKEN : booklibre.app/latest.json n'est pas publié, l'app passe par GitHub."
 
       - name: latest.json de la release
         if: env.CF == 'true'
