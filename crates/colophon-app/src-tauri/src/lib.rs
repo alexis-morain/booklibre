@@ -185,9 +185,17 @@ fn read_thumb(dir: &Path, thumbs: &ThumbIndex, src: &str) -> Result<Vec<u8>, Str
     std::fs::read(&file).map_err(|e| format!("vignette {} illisible : {e}", file.display()))
 }
 
-/// Open an album from either its folder or its `album.json` directly.
+/// Open an album from either its folder or its `album.json` directly. A new
+/// session starts here: its copy, `album.ouverture.json`, is posed.
 #[tauri::command]
 fn open_album(path: String, state: State<'_, AppState>) -> Result<OpenedAlbum, String> {
+    ouvrir(path, state, true)
+}
+
+/// `seance` pose la copie d'ouverture. Faux quand l'album se rouvre au fil
+/// de la même séance (recomposition, dossier revu) : la copie reste celle
+/// d'avant ces gestes-là.
+fn ouvrir(path: String, state: State<'_, AppState>, seance: bool) -> Result<OpenedAlbum, String> {
     let (dir, mut album, thumbs) = load_album(Path::new(&path))?;
     // Sous le bac à sable, l'accès aux photos s'ouvre avant toute lecture, et
     // reste ouvert tant que l'album l'est. Ailleurs, `ouvrir` ne fait rien.
@@ -201,6 +209,12 @@ fn open_album(path: String, state: State<'_, AppState>) -> Result<OpenedAlbum, S
         colophon_core::log::line("dossier de photos déplacé : l'album suit son marque-page");
         album.root = nouveau.to_string_lossy().to_string();
         colophon_core::write_album_json(&dir, &album).map_err(|e| format!("{e:#}"))?;
+    }
+    // Une copie manquée ne ferme pas l'album : « Revenir » le dira.
+    if seance {
+        if let Err(e) = colophon_core::build::poser_ouverture(&dir) {
+            colophon_core::log::line(&format!("copie d'ouverture : {e:#}"));
+        }
     }
     let root = Path::new(&album.root);
     let root_present = root.is_dir();
@@ -244,7 +258,7 @@ fn revoir_dossier(chemin: String, state: State<'_, AppState>) -> Result<OpenedAl
         album.root = chemin;
         colophon_core::write_album_json(&dir, &album).map_err(|e| format!("{e:#}"))?;
     }
-    open_album(dir.to_string_lossy().to_string(), state)
+    ouvrir(dir.to_string_lossy().to_string(), state, false)
 }
 
 /// The face-anchored focal point of a photo, recomputed on its cached
@@ -535,21 +549,48 @@ fn thumb(src: String, state: State<'_, AppState>) -> Result<tauri::ipc::Response
 }
 
 /// Persist the edited album over album.json, atomically: the album is the
-/// user's work, a crash mid-write must not cost it.
-#[tauri::command]
-fn save_album(album: Album, state: State<'_, AppState>) -> Result<(), String> {
-    let guard = state.open.lock().unwrap();
-    let opened = guard.as_ref().ok_or("aucun album ouvert")?;
-    colophon_core::write_album_json(&opened.dir, &album)
+/// user's work, a crash mid-write must not cost it. `elaguer` is the closing
+/// of the session (⌘S, fermer, ouvrir un autre, quitter); the automatic
+/// write never prunes.
+fn enregistrer(dir: &Path, album: &Album, elaguer: bool) -> Result<(), String> {
+    colophon_core::write_album_json(dir, album)
         .map(|_| ())
         .map_err(|e| format!("{e:#}"))?;
-    // The proposals nobody chose go here: past a hand edit they stop being an
-    // offer and become a stale copy of somebody's work.
-    colophon_core::build::oublier_variantes(&opened.dir);
-    // Et les faces de bloc que plus aucun bloc ne nomme : le dossier porte ce
-    // dont l'album enregistré a besoin, rien de ce qu'un bloc effacé a laissé.
-    colophon_core::build::elaguer_polices_objet(&opened.dir, &album);
+    if elaguer {
+        // The proposals nobody chose go here: past the session they stop
+        // being an offer and become a stale copy of somebody's work.
+        colophon_core::build::oublier_variantes(dir);
+        // Et les faces de bloc que plus aucun bloc ne nomme : le dossier porte
+        // ce dont l'album enregistré a besoin, rien de ce qu'un bloc effacé a
+        // laissé. Jamais pendant la séance : un ⌘Z ramènerait le bloc sans elle.
+        colophon_core::build::elaguer_polices_objet(dir, album);
+    }
     Ok(())
+}
+
+fn dossier_ouvert(state: &State<'_, AppState>) -> Result<PathBuf, String> {
+    let guard = state.open.lock().unwrap();
+    Ok(guard.as_ref().ok_or("aucun album ouvert")?.dir.clone())
+}
+
+/// ⌘S and the closing of the album: the write, then the pruning.
+#[tauri::command]
+fn save_album(album: Album, state: State<'_, AppState>) -> Result<(), String> {
+    enregistrer(&dossier_ouvert(&state)?, &album, true)
+}
+
+/// The automatic write (1.1-b): `album.json` alone, nothing pruned.
+#[tauri::command]
+fn ecrire_album(album: Album, state: State<'_, AppState>) -> Result<(), String> {
+    enregistrer(&dossier_ouvert(&state)?, &album, false)
+}
+
+/// L'album tel qu'il s'est ouvert, pour « Revenir à l'ouverture de la séance ».
+#[tauri::command]
+fn album_ouverture(state: State<'_, AppState>) -> Result<Album, String> {
+    let f = dossier_ouvert(&state)?.join(colophon_core::build::OUVERTURE);
+    let text = std::fs::read_to_string(&f).map_err(|e| format!("lecture de {} : {e}", f.display()))?;
+    serde_json::from_str(&text).map_err(|e| format!("{} illisible : {e}", f.display()))
 }
 
 /// One face this machine carries, as the picker shows it.
@@ -1151,7 +1192,7 @@ async fn recompose_album(
         format!("{e:#}")
     })?;
 
-    open_album(dir.to_string_lossy().to_string(), state)
+    ouvrir(dir.to_string_lossy().to_string(), state, false)
 }
 
 /// Abandon the composition in flight. The build polls the flag between
@@ -2578,6 +2619,8 @@ pub fn run() {
             open_album,
             thumb,
             save_album,
+            ecrire_album,
+            album_ouverture,
             render_pdf,
             export_pdf,
             preparer_dossier,
@@ -2662,6 +2705,34 @@ mod tests {
             .canonicalize()
             .ok()?;
         dir.join("album.json").is_file().then_some(dir)
+    }
+
+    /// L'écriture automatique n'écrit que l'album : les propositions et les
+    /// faces de bloc restent jusqu'à la fermeture ou au ⌘S, sinon la première
+    /// retouche emporterait les variantes et un ⌘Z ramènerait un bloc sans
+    /// sa police.
+    #[test]
+    fn l_ecriture_automatique_ne_supprime_ni_variante_ni_police() {
+        let dir = std::env::temp_dir().join(format!("colophon-ecrire-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let gardes = ["album.resserree.json", "curation.resserree.json", "objet-Orpheline.otf"];
+        for f in gardes {
+            std::fs::write(dir.join(f), b"{}").unwrap();
+        }
+        let album = Album::new("t", Path::new("/p"), colophon_core::Size { w: 210.0, h: 210.0 });
+
+        enregistrer(&dir, &album, false).unwrap();
+        assert!(dir.join("album.json").is_file());
+        for f in gardes {
+            assert!(dir.join(f).exists(), "{f} a été supprimé");
+        }
+
+        enregistrer(&dir, &album, true).unwrap();
+        for f in gardes {
+            assert!(!dir.join(f).exists(), "{f} reste après ⌘S");
+        }
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

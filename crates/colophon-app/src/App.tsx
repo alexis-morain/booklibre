@@ -63,8 +63,11 @@ import {
   renderPdf,
   revoirDossier,
   saveAlbum,
+  ecrireAlbum,
+  albumOuverture,
   datesFiables,
 } from "./bridge";
+import { creerEcrivain } from "./autosave";
 import { ouvertureDuFeuilletage } from "./envoi";
 import {
   Album,
@@ -257,6 +260,21 @@ export default function App() {
   const [opened, setOpened] = useState<OpenedAlbum | null>(null);
   const [hist, setHist] = useState<History | null>(null);
   const [savedAlbum, setSavedAlbum] = useState<Album | null>(null);
+  /** La raison du dernier échec d'écriture automatique, tant que rien n'a
+   *  réussi depuis : la ligne d'état la tient, en rouge, sans délai. */
+  const [echecEcriture, setEchecEcriture] = useState<string | null>(null);
+  /** L'écriture automatique (1.1-b) : une seconde après la dernière
+   *  modification, une écriture à la fois, jamais d'élagage. */
+  const [ecrivain] = useState(() =>
+    creerEcrivain<Album>(ecrireAlbum, {
+      delai: 1000,
+      ecrit: (a) => {
+        setSavedAlbum(a);
+        setEchecEcriture(null);
+      },
+      echec: (e) => setEchecEcriture(String(e)),
+    }),
+  );
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   /** L'objet libre choisi. Un second état à côté de `selected`, et non une
@@ -331,7 +349,7 @@ export default function App() {
   //
   // Le changement de format ne détient rien : le moteur rend un album et un
   // bilan, l'aperçu se lit, et l'appliquer passe par `apply` — donc par
-  // l'historique, donc par ⌘Z. Rien n'atteint le disque avant ⌘S.
+  // l'historique, donc par ⌘Z, et l'écriture automatique l'emporte ensuite.
   const [bascule, setBascule] = useState<"recomposer" | "format" | "police" | false>(false);
   // Les formats que Colophon fait imprimer, pour Recomposer : la liste de
   // l'écran de création, lue une fois.
@@ -414,6 +432,12 @@ export default function App() {
   const album = hist?.album ?? null;
   const total = album?.spreads.length ?? 0;
   const dirty = album !== null && album !== savedAlbum;
+
+  // Chaque modification, ⌘Z compris, part sur le disque une seconde après la
+  // dernière. L'album d'ouverture est `connu` : il n'est pas réécrit.
+  useEffect(() => {
+    if (album) ecrivain.planifier(album);
+  }, [album, ecrivain]);
 
   // Le dump courant suit la page de l'album, pas seulement celle de son
   // ouverture. Un ⌘Z sur une bascule ramène l'ancien format sous un dump
@@ -571,6 +595,47 @@ export default function App() {
     finPlanche.current = null;
   });
 
+  // Saving reads the freshest history through a ref: ⌘S from inside a
+  // caption field blurs the field first, and the commit that blur applies
+  // must be part of what lands on disk.
+  const histRef = useRef<History | null>(null);
+  histRef.current = hist;
+
+  /** Écrire tout de suite, sans élagage : avant Envoi, un rendu PDF, une
+   *  recomposition — tout ce qui lit le disque. Vrai quand le disque porte
+   *  l'album à l'écran ; un échec se dit déjà dans la ligne d'état. */
+  const ecrire = useCallback(async () => {
+    const h = histRef.current;
+    if (h) ecrivain.planifier(h.album);
+    return ecrivain.maintenant();
+  }, [ecrivain]);
+
+  /** ⌘S, et la fin de la séance (fermer, ouvrir un autre album, quitter) :
+   *  l'écriture puis les élagages (`save_album`), dans la file de
+   *  l'écriture automatique pour ne jamais la croiser. `dire` affiche
+   *  « Enregistré », ce que seul ⌘S fait. Rien d'ouvert : rien à perdre. */
+  const save = useCallback(
+    async (dire = true) => {
+      const h = histRef.current;
+      if (!h) return true;
+      ecrivain.oublier();
+      try {
+        await ecrivain.enFile(async () => {
+          await saveAlbum(h.album);
+          ecrivain.connu(h.album);
+        });
+        setSavedAlbum(h.album);
+        setEchecEcriture(null);
+        if (dire) setStatus(t("etat.enregistre"));
+        return true;
+      } catch (e) {
+        setError(fault(t("erreur.enregistrement"), e));
+        return false;
+      }
+    },
+    [ecrivain],
+  );
+
   const adopt = useCallback((result: OpenedAlbum) => {
     finPremiere.current = jusquAuRendu("planche.premiere");
     resetThumbs();
@@ -578,6 +643,10 @@ export default function App() {
     // ici, et aucune case ne porte d'alerte tant que le nouveau n'est pas là.
     void chargerReleve();
     setOpened(result);
+    // Rien de l'album d'avant n'attend plus : il a été écrit avant d'arriver ici.
+    ecrivain.oublier();
+    ecrivain.connu(result.album);
+    setEchecEcriture(null);
     setHist({ album: result.album, past: [], future: [] });
     setSavedAlbum(result.album);
     setIndex(0);
@@ -593,14 +662,14 @@ export default function App() {
     if (inTauri && result.dir) {
       setRecents(pushRecent({ dir: result.dir, title: result.album.title }));
     }
-  }, []);
+  }, [ecrivain]);
 
-  /** Open one of the recent albums, by its remembered path. Unsaved work
-   *  asks first: `adopt` vide la pile d'annulation et les éditions avec
-   *  elle, et les récents sont à deux endroits, le menu et l'accueil. */
+  /** Open one of the recent albums, by its remembered path. The album on
+   *  screen closes its session first: written and pruned, so `adopt` can
+   *  drop the undo stack without losing anything. */
   const openRecent = useCallback(
     async (dir: string) => {
-      if (dirty && !(await confirmDialog(t("ouvrir.confirme")))) return;
+      if (!(await save(false))) return;
       try {
         const result = await openAlbumAt(dir);
         adopt(result);
@@ -611,15 +680,15 @@ export default function App() {
         );
       }
     },
-    [adopt, dirty],
+    [adopt, save],
   );
 
   /** La version App Store ne lit plus le dossier de photos : la personne le
-   *  rechoisit et l'album se rouvre, comme depuis les récents, donc ce qui
-   *  n'est pas enregistré demande d'abord. */
+   *  rechoisit et l'album se rouvre, dans la même séance : écrit d'abord,
+   *  sans élagage. */
   const revoir = useCallback(async () => {
     if (!opened) return;
-    if (dirty && !(await confirmDialog(t("ouvrir.confirme")))) return;
+    if (!(await ecrire())) return;
     try {
       const result = await revoirDossier(opened.album.root);
       if (result === null) return;
@@ -628,12 +697,12 @@ export default function App() {
     } catch (e) {
       setError(fault(refusRevoir(String(e)) ?? t("erreur.revoir"), e));
     }
-  }, [adopt, dirty, opened]);
+  }, [adopt, ecrire, opened]);
 
   const openAlbum = useCallback(async () => {
-    if (dirty && !(await confirmDialog(t("ouvrir.confirme")))) return;
     const picked = await pickAlbumFolder();
     if (picked === null) return;
+    if (!(await save(false))) return;
     try {
       const result = await openAlbumAt(picked);
       adopt(result);
@@ -641,7 +710,7 @@ export default function App() {
     } catch (e) {
       setError(fault(t("erreur.ouverture"), e));
     }
-  }, [adopt, dirty]);
+  }, [adopt, save]);
 
   /** Push an edited album onto the history. No-op edits stay off the stack. */
   /** Choisir une case, et lâcher l'objet libre s'il y en avait un. C'est ici
@@ -694,11 +763,6 @@ export default function App() {
     });
   }, []);
 
-  // Saving reads the freshest history through a ref: ⌘S from inside a
-  // caption field blurs the field first, and the commit that blur applies
-  // must be part of what lands on disk.
-  const histRef = useRef<History | null>(null);
-  histRef.current = hist;
   // The report screen's own state, read from callbacks that must not be
   // rebuilt every time a proposal is swapped in.
   const fideleRef = useRef(false);
@@ -708,19 +772,6 @@ export default function App() {
   const bilanRef = useRef<BuildBilan | null>(null);
   const variantesRef = useRef<VarianteResume[]>([]);
   variantesRef.current = variantes;
-  const save = useCallback(async () => {
-    const h = histRef.current;
-    if (!h) return false;
-    try {
-      await saveAlbum(h.album);
-      setSavedAlbum(h.album);
-      setStatus(t("etat.enregistre"));
-      return true;
-    } catch (e) {
-      setError(fault(t("erreur.enregistrement"), e));
-      return false;
-    }
-  }, []);
 
   /**
    * Turn the faithful preview on or off. Entering it re-renders the PDF when
@@ -747,7 +798,7 @@ export default function App() {
       // album folder holds, which is the right thing to work the mode on and
       // the wrong thing to trust, so it says so.
       if (inTauri) {
-        if (!(await save())) return;
+        if (!(await ecrire())) return;
         await renderPdf();
       }
       // The cover is its own file and its own render. A failure there (a
@@ -772,7 +823,7 @@ export default function App() {
     } finally {
       setRendering(false);
     }
-  }, [save]);
+  }, [ecrire]);
 
   /**
    * Show another of the proposals composed from the same photos. The album on
@@ -867,7 +918,7 @@ export default function App() {
   );
 
   const regenPdf = useCallback(async () => {
-    if (rendering || !hist || !(await save())) return;
+    if (rendering || !hist || !(await ecrire())) return;
     setRendering(true);
     setStatus(t("export.rendu"));
     try {
@@ -901,7 +952,7 @@ export default function App() {
       setRendering(false);
       setProgresExport(null);
     }
-  }, [save, rendering, hist, profil]);
+  }, [ecrire, rendering, hist, profil]);
 
   /** Prepare the order folder for a two-file supplier: the interior, the
    *  cover, their manifest and the sheet, then the check read again on the
@@ -910,7 +961,7 @@ export default function App() {
    *  dialog: the engine writes into the app's data folder, and Envoi opens
    *  the order straight after. */
   const preparer = useCallback(async (commande = false) => {
-    if (rendering || !hist || !(await save())) return;
+    if (rendering || !hist || !(await ecrire())) return;
     setRendering(true);
     setStatus(t("export.rendu"));
     setProgresExport(null);
@@ -944,7 +995,7 @@ export default function App() {
     } finally {
       setRendering(false);
     }
-  }, [save, rendering, hist, profil]);
+  }, [ecrire, rendering, hist, profil]);
 
   /** Build an album from a photo folder, streaming the engine's progress. */
   const createAlbum = useCallback(async (
@@ -1000,11 +1051,11 @@ export default function App() {
    *  compte des planches gardées doit être celui qu'il lira. */
   const ouvrirRecomposer = useCallback(async () => {
     if (!hist || building) return;
-    if (dirty && !(await save())) return;
+    if (!(await ecrire())) return;
     setBascule("recomposer");
     if (basculeFormats.length === 0) listFormats().then(setBasculeFormats, () => {});
     if (imprimables === null) formatsImprimables().then(setImprimables, () => {});
-  }, [hist, building, dirty, save, basculeFormats.length, imprimables]);
+  }, [hist, building, ecrire, basculeFormats.length, imprimables]);
 
   /**
    * Recompose the album in place, with what the panel changed. Edited and
@@ -1015,7 +1066,7 @@ export default function App() {
     async (choix: ReturnType<typeof choixDeRecomposition>) => {
       if (!hist || building) return;
       setBascule(false);
-      if (dirty && !(await save())) return;
+      if (!(await ecrire())) return;
       setBusyTitle(hist.album.title);
       setBuilding([]);
       const off = await onBuildProgress((line) =>
@@ -1035,23 +1086,23 @@ export default function App() {
         setBusyTitle(null);
       }
     },
-    [hist, building, dirty, save, adopt],
+    [hist, building, ecrire, adopt],
   );
 
   /** Le changement de format sans recomposer, depuis le lien du panneau
-   *  Recomposer : il prend sa place. Enregistrer d'abord, comme la
+   *  Recomposer : il prend sa place. Écrire d'abord, comme la
    *  recomposition : le moteur bascule `album.json`, donc l'album tel qu'il
-   *  est sur le disque. Avec des retouches non enregistrées, l'aperçu
+   *  est sur le disque. Avec des retouches pas encore écrites, l'aperçu
    *  porterait sur une version périmée et l'appliquer les effacerait sans
    *  rien dire — précisément la perte silencieuse que la vague 3 existe pour
    *  empêcher. */
   const ouvrirBascule = useCallback(async () => {
-    if (dirty && !(await save())) return;
+    if (!(await ecrire())) return;
     setBasculeChoisi(null);
     setBasculeApercu(null);
     setBascule("format");
     if (basculeFormats.length === 0) listFormats().then(setBasculeFormats, () => {});
-  }, [basculeFormats.length, dirty, save]);
+  }, [basculeFormats.length, ecrire]);
 
   /** Ouvrir le panneau Police. */
   const ouvrirPolice = useCallback(() => {
@@ -1146,26 +1197,20 @@ export default function App() {
     setStatus(t("bascule.faite", { w: album.trim_mm.w, h: album.trim_mm.h }));
   }, [basculeApercu, apply]);
 
-  /** Quitter l'application. Le seul geste de fin de séance qui ne demandait
-   *  rien, alors que fermer et recomposer demandent tous les deux : le menu
-   *  Quitter prédéfini passait par `NSApplication.terminate`, qui ne laisse
-   *  aucun endroit où poser la question. Il est à nous depuis, ⌘Q compris,
-   *  et la pastille rouge passe par la même question. */
+  /** Quitter l'application, la fin de la séance : l'album s'écrit et
+   *  s'élague. Le menu Quitter prédéfini passait par
+   *  `NSApplication.terminate`, qui ne laisse aucun endroit où écrire ; il
+   *  est à nous depuis, ⌘Q compris, et la pastille rouge passe par le même
+   *  chemin. Un échec d'écriture est le seul cas qui demande encore. */
   const quitterApp = useCallback(async () => {
-    if (dirty && !(await confirmDialog(t("quitter.confirme")))) return;
+    if (!(await save(false)) && !(await confirmDialog(t("quitter.confirme")))) return;
     await quitApp();
-  }, [dirty]);
+  }, [save]);
 
-  /** Back to the creation screen. Unsaved work asks before dying. */
+  /** Back to the creation screen, once the session is written and pruned.
+   *  A failed write keeps the album open: the error says why. */
   const closeAlbum = useCallback(async () => {
-    if (
-      dirty &&
-      !(await confirmDialog(
-        t("fermer.confirme"),
-      ))
-    ) {
-      return;
-    }
+    if (!(await save(false))) return;
     setHist(null);
     setOpened(null);
     setSavedAlbum(null);
@@ -1175,7 +1220,28 @@ export default function App() {
     setView("livre");
     setStatus(null);
     setError(null);
-  }, [dirty]);
+  }, [save]);
+
+  /** « Revenir à l'ouverture de la séance » : la copie posée à l'ouverture,
+   *  appliquée comme une retouche, donc ⌘Z la défait. Sa page est chargée
+   *  avant, comme pour une bascule : un format qu'on ne sait pas dessiner ne
+   *  monte pas à l'écran. */
+  const revenir = useCallback(async () => {
+    if (!histRef.current) return;
+    if (!(await confirmDialog(t("revenir.confirme")))) return;
+    try {
+      const a = await albumOuverture();
+      await chargeGeometrieFormat(a.trim_mm.w, a.trim_mm.h, a.bleed_mm);
+      if (!adopterGeometrie(a.trim_mm, a.bleed_mm)) throw new Error(t("bascule.geometrie"));
+      choisirCase(null);
+      setObjet(null);
+      setIndex((i) => Math.min(i, a.spreads.length - 1));
+      apply(() => a);
+      setStatus(t("revenir.fait"));
+    } catch (e) {
+      setError(fault(t("erreur.revenir"), e));
+    }
+  }, [apply, choisirCase]);
 
   /** Bring a discarded photo back, next to the photo that beat it. */
   const rescue = useCallback(
@@ -1226,6 +1292,8 @@ export default function App() {
    *  view knows the cover. */
   const gotoView = useCallback(
     (v: View) => {
+      // Envoi lit le disque : l'album y part sans attendre la seconde.
+      if (v === "envoi") void ecrire();
       setView(v);
       setSelected(null);
       setTriSelected(null);
@@ -1234,7 +1302,7 @@ export default function App() {
       // Enter first among them: give the keyboard back to the view.
       (document.activeElement as HTMLElement | null)?.blur?.();
     },
-    [index],
+    [index, ecrire],
   );
 
   /** True when the keyboard focus sits in a text field: the field owns its
@@ -1329,6 +1397,7 @@ export default function App() {
     exporter: () => {
       if (album) gotoView("envoi");
     },
+    revenir: () => void revenir(),
     fermerAlbum: () => void closeAlbum(),
     quitter: () => void quitterApp(),
     annuler: () => {
@@ -1724,6 +1793,7 @@ export default function App() {
       ouvrir: () => fire("menu", "ouvrir"),
       ouvrirRecent: (dir) => void openRecentRef.current(dir),
       enregistrer: () => fire("menu", "enregistrer"),
+      revenir: () => fire("menu", "revenir"),
       exporter: () => fire("menu", "exporter"),
       fermerAlbum: () => fire("menu", "fermerAlbum"),
       quitter: () => fire("menu", "quitter"),
@@ -1804,14 +1874,12 @@ export default function App() {
   // entre le désabonnement et l'abonnement suivant, une poignée de
   // millisecondes où la pastille rouge détruit sans demander : c'est
   // exactement le défaut qu'on corrige, en plus rare et donc en pire.
-  const dirtyRef = useRef(dirty);
-  dirtyRef.current = dirty;
+  // `save` est stable (sa seule dépendance l'est), l'effet ne tourne qu'une fois.
   useEffect(() => {
     let partie = false;
     let desabonne: (() => void) | null = null;
     void surFermeture(async (garder) => {
-      if (dirtyRef.current && !(await confirmDialog(t("quitter.confirme"))))
-        garder();
+      if (!(await save(false)) && !(await confirmDialog(t("quitter.confirme")))) garder();
     }).then((f) => {
       if (partie) f();
       else desabonne = f;
@@ -1820,7 +1888,7 @@ export default function App() {
       partie = true;
       desabonne?.();
     };
-  }, []);
+  }, [save]);
 
   // Transient status line: every message expires the same way; errors have
   // their own banner and never travel through here.
@@ -2543,18 +2611,13 @@ export default function App() {
   };
 
   /** Un geste d'Envoi sur une photo trop petite. Le prévol lit le disque :
-   *  l'album s'enregistre aussitôt, comme avant Préparer, pour que le
+   *  l'album s'écrit aussitôt, sans attendre la seconde, pour que le
    *  contrôle relu voie la correction. Le geste reste une entrée
    *  d'historique, et ⌘Z le défait. */
   const appliquerDepuisEnvoi = (suivant: Album) => {
     apply(() => suivant);
-    void saveAlbum(suivant).then(
-      () => {
-        setSavedAlbum(suivant);
-        setStatus(t("etat.enregistre"));
-      },
-      (e) => setError(fault(t("erreur.enregistrement"), e)),
-    );
+    ecrivain.planifier(suivant);
+    void ecrivain.maintenant();
   };
 
   /** Une candidate choisie dans le popover : ajoutée, remplacée, ou posée
@@ -2600,14 +2663,16 @@ export default function App() {
     setStatus(t("planche.vide.inseree"));
     ouvrirChoix({ type: "ajouter" }, ch.point, ch.at + 1);
   };
+  // Un échec d'écriture prend la ligne d'état et la garde, en rouge, jusqu'à
+  // la prochaine écriture réussie.
+  const statut = echecEcriture ? t("auto.echec", { raison: echecEcriture }) : status;
   const entries = triEntries(album, curation, opened?.thumb_srcs ?? []);
   const triEntry = entries.find((e) => e.src === triSelected) ?? null;
 
   return (
-    <div className="app">
+    <div className={"app" + (echecEcriture ? " echec-ecriture" : "")}>
       <Bar
         album={album}
-        dirty={dirty}
         canUndo={(hist?.past.length ?? 0) > 0}
         canRedo={(hist?.future.length ?? 0) > 0}
         view={view}
@@ -2860,7 +2925,7 @@ export default function App() {
         <RevueView
           entries={entries}
           index={revue}
-          status={status}
+          status={statut}
           onIndex={(i) => {
             if (i >= entries.length) {
               setRevue(null);
@@ -2877,7 +2942,7 @@ export default function App() {
       {view === "tri" ? (
         <TriFoot
           entry={triEntry}
-          status={status}
+          status={statut}
           onRescue={rescue}
           onShowSpread={(src) => {
             const at = spreadOf(album, src);
@@ -2892,7 +2957,7 @@ export default function App() {
           album={album}
           index={Math.max(index, 0)}
           onSeek={setIndex}
-          status={status}
+          status={statut}
           onInsert={(kind) => {
             const at = Math.max(index, 0);
             apply((a) => insertSpread(a, at, kind));
@@ -2916,14 +2981,14 @@ export default function App() {
         />
       ) : view === "envoi" ? (
         <footer className="foot envoi-foot">
-          <span className="status" role="status">{status}</span>
+          <span className="status" role="status">{statut}</span>
         </footer>
       ) : (
         <BookFoot
           album={album}
           index={index}
           total={total}
-          status={status}
+          status={statut}
           overflow={overflow}
           rendering={rendering}
           onCancelExport={() => void cancelExport()}
@@ -3189,7 +3254,6 @@ function MajBandeau({
  */
 function Bar({
   album,
-  dirty,
   canUndo,
   canRedo,
   view,
@@ -3205,7 +3269,6 @@ function Bar({
   onClose,
 }: {
   album: Album;
-  dirty: boolean;
   canUndo: boolean;
   canRedo: boolean;
   view: View;
@@ -3285,9 +3348,8 @@ function Bar({
           </button>
         )}
         <button
-          className={"link" + (dirty ? " dirty" : "")}
+          className="link"
           onClick={onSave}
-          disabled={!dirty}
           title="⌘S"
         >
           {t("bar.enregistrer")}

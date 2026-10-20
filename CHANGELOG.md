@@ -11,6 +11,11 @@ sur la page des releases.
 
 ### Changed
 
+- The album saves itself, a second after each change: no more "unsaved
+  changes" questions when closing, opening another album or quitting. ⌘Z still
+  undoes, and File → Revert to the start of the session brings back the album
+  as it was when you opened it.
+
 - Colophon is now called Booklibre: the window, the menus, the installers, the
   command line (`booklibre`), the last page of the book ("Composed with
   Booklibre") and the PDF metadata. Your albums, preferences and imported

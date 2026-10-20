@@ -448,8 +448,8 @@ le sélecteur, le cycle clavier et la bascule la lisent.
 Titres de chapitre depuis le GPS (`core::places`, GeoNames CC-BY) ; seul
 `DateTimeOriginal` date un chapitre. **Deux rythmes** choisis au lancement, stockés dans
 `album.json`, relus à la recomposition (`layout::Densite`). **Une composition donne trois
-propositions** (`build::variantes_offertes`), en `album.<id>.json`, effacées au premier
-enregistrement. **Deux planches ordinaires encadrent le livre** (`album.colophon`,
+propositions** (`build::variantes_offertes`), en `album.<id>.json`, effacées à la fermeture
+de l'album ou au ⌘S, jamais par l'écriture automatique. **Deux planches ordinaires encadrent le livre** (`album.colophon`,
 décochables depuis Envoi) : colophon en queue, page de garde en tête, hors chapitres.
 
 ## La photothèque du Mac
@@ -1126,6 +1126,17 @@ clavier, Stockage, À propos, **fiche d'une photo ⌘I**, **Préférences ⌘,**
 fidèle ⇧⌘P** (pdf.js). Ni clé ni dépôt dans les Préférences : Commander passe par le
 relais (voir plus haut). L'interrupteur DOM/canvas a quitté les Préférences : il ne vit
 plus que dans la clé `colophon.rendu` du `localStorage` (`rendu.ts`), pour la mesure.
+
+**L'album s'écrit seul** (1.1-b, `autosave.ts`) : une seconde après la dernière
+modification, et tout de suite avant Envoi, un rendu PDF, une recomposition. Une écriture
+à la fois, la suivante part avec le dernier état. **Deux commandes** : `ecrire_album`
+n'écrit que `album.json` ; `save_album` (⌘S, fermer, ouvrir un autre, quitter) élague en
+plus les propositions et les faces de bloc orphelines — pendant la séance, un ⌘Z
+ramènerait un bloc sans sa police. À l'ouverture (`open_album`, pas une recomposition),
+`album.ouverture.json` copie l'album, hors d'`IDS_PROPOSITIONS` ; Fichier → « Revenir à
+l'ouverture de la séance » l'applique comme une retouche. Aucun dialogue « non
+enregistré » : un échec d'écriture tient la ligne d'état en terracotta, et seul Quitter
+redemande tant qu'il dure.
 
 **Le clavier garde sa place quand la page tourne** : la couche est démontée à chaque tour
 (`key={index}` rejoue l'animation), donc la mémoire du rang vit hors du composant ; au
