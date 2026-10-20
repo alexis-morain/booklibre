@@ -134,7 +134,7 @@ impl Releve {
             .with_context(|| format!("relevé illisible : {}", path.display()))?;
         anyhow::ensure!(
             releve.version == VERSION,
-            "relevé en version {}, cette version de Colophon lit la {VERSION} : \
+            "relevé en version {}, cette version de Booklibre lit la {VERSION} : \
              régénérez les fiches (scripts/fiches.sh)",
             releve.version
         );

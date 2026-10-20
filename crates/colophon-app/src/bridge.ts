@@ -458,7 +458,7 @@ export async function confirmDialog(message: string): Promise<boolean> {
   // question était en français et les deux boutons en anglais, sur les sept
   // dialogues de l'application. Mesuré à l'écran le 21/09.
   return ask(message, {
-    title: "Colophon",
+    title: "Booklibre",
     kind: "warning",
     okLabel: t("commun.oui"),
     cancelLabel: t("commun.non"),
@@ -960,7 +960,7 @@ export async function reportData(): Promise<ReportData> {
  *  fixée côté Rust : la fenêtre ne fait que demander. */
 export async function ouvrirConfidentialite(): Promise<void> {
   if (!inTauri) {
-    window.open("https://alexis-morain.github.io/colophon-site/confidentialite/", "_blank", "noopener");
+    window.open("https://booklibre.app/privacy/", "_blank", "noopener");
     return;
   }
   return invoke("ouvrir_confidentialite");
@@ -1078,10 +1078,10 @@ export async function colophonSpread(album: Album): Promise<Spread | null> {
         langue() === "en"
           ? "Colophon\n\n152 photographs kept out of 575, taken from 21 to 29 October 2013.\n" +
             "Porto-Vecchio and Bonifacio.\nCanon EOS 550D.\n\n" +
-            "Composed on 17 August 2026 with Colophon dev.\n210 × 210 mm, 150 g/m² paper."
+            "Composed on 17 August 2026 with Booklibre dev.\n210 × 210 mm, 150 g/m² paper."
           : "Colophon\n\n152 photographies retenues sur 575, prises du 21 au 29 octobre 2013.\n" +
             "Porto-Vecchio et Bonifacio.\nCanon EOS 550D.\n\n" +
-            "Composé le 17 août 2026 avec Colophon dev.\n210 × 210 mm, papier 150 g/m².",
+            "Composé le 17 août 2026 avec Booklibre dev.\n210 × 210 mm, papier 150 g/m².",
     };
   }
   return invoke<Spread | null>("colophon_spread", { album, langue: langue() });
@@ -1269,7 +1269,7 @@ export type Preparation = {
  *  `fiche.txt`, puis relit le prévol sur eux. Null quand la boîte est
  *  fermée. Le chemin reste côté moteur, comme pour `exportPdf`.
  *
- *  Au harnais, le serveur de dev appelle `colophon --preparer` dans le
+ *  Au harnais, le serveur de dev appelle `booklibre --preparer` dans le
  *  dossier jetable que `COLOPHON_PREPARER` nomme (le répertoire temporaire
  *  du système à défaut), jamais à côté de l'album. */
 export async function preparerDossier(

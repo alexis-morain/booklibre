@@ -144,7 +144,7 @@ describe("parFamille", () => {
 });
 
 const BINARY = fileURLToPath(
-  new URL("../../../target/release/colophon", import.meta.url),
+  new URL("../../../target/release/booklibre", import.meta.url),
 );
 
 describe.skipIf(!existsSync(BINARY))("le pack du moteur", () => {

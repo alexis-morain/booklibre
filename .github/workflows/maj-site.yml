@@ -1,0 +1,83 @@
+# Le manifeste de mise à jour sur booklibre.app, à la publication d'une release.
+#
+# Booklibre interroge deux adresses dans l'ordre (tauri.conf.json) :
+# `https://booklibre.app/latest.json`, puis le `latest.json` de la dernière
+# release GitHub. Le second, `release.yml` le pose ; celui-ci recopie le même
+# fichier sur le site.
+#
+# **Pourquoi à la publication et pas au tag** : `release.yml` sort une release
+# en brouillon, relue à la main. Un manifeste posé sur le site au tag
+# annoncerait une version dont les archives ne se téléchargent pas encore, et
+# chaque updater échouerait sur le site au lieu de passer à GitHub.
+#
+# **Désactivé tant que le secret `CLOUDFLARE_API_TOKEN` n'existe pas** : le job
+# le dit en avertissement et s'arrête vert. L'app retombe alors sur GitHub,
+# ce qui est le comportement de la 1.0.1.
+#
+# Le site vit dans `alexis-morain/colophon-site` et se sert par le Worker
+# d'assets `booklibre-site` : publier un fichier, c'est reconstruire le site
+# avec ce fichier dans `public/` et le redéployer. Le déploiement part donc de
+# la branche `main` du site, et pousse tout ce qu'elle porte.
+
+name: maj-site
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag de la release dont publier le latest.json (ex. v1.1.0)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  latest-json:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Un secret ne se lit pas dans un `if:` : la question se pose ici, une fois.
+    env:
+      CF: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+      TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+    steps:
+      - name: Secret Cloudflare absent
+        if: env.CF != 'true'
+        run: echo "::warning::Pas de CLOUDFLARE_API_TOKEN : booklibre.app/latest.json n'est pas publié, l'app passe par GitHub."
+
+      - name: latest.json de la release
+        if: env.CF == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          mkdir -p maj
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p latest.json -D maj
+          v="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' maj/latest.json)"
+          [ "v$v" = "$TAG" ] || { echo "latest.json annonce $v, la release est $TAG" >&2; exit 1; }
+
+      - uses: actions/checkout@v4
+        if: env.CF == 'true'
+        with:
+          repository: alexis-morain/colophon-site
+          path: site
+
+      - uses: actions/setup-node@v4
+        if: env.CF == 'true'
+        with:
+          node-version: "20"
+
+      - name: Construire et déployer le site
+        if: env.CF == 'true'
+        working-directory: site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -eu
+          cp ../maj/latest.json public/latest.json
+          npm ci
+          npm run build
+          npx --yes wrangler deploy
+          sleep 5
+          curl -fsS https://booklibre.app/latest.json | python3 -c 'import json,sys; print("booklibre.app/latest.json :", json.load(sys.stdin)["version"])'

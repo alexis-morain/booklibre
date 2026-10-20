@@ -64,7 +64,7 @@ from PIL import Image, ImageChops, ImageStat
 
 Image.MAX_IMAGE_PIXELS = None
 
-BIN = "target/release/colophon"
+BIN = "target/release/booklibre"
 # Le profil qui relie des planches doubles sans glisser de couverture dans
 # l'intérieur, et celui qui relie page par page. Nommés, pas devinés : le
 # défaut de la ligne de commande découpe désormais.

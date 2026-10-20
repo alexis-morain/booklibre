@@ -1,4 +1,4 @@
-//! The colophon page. The software is called Colophon and did not print one.
+//! The colophon page. The software was called Colophon and did not print one.
 //!
 //! A colophon says what a book is made of, and this one can say things only
 //! the machine knows: how many photographs were looked at before these were
@@ -177,8 +177,8 @@ pub fn texte(f: &Faits, trim: Size, grammage: f64, version: &str, langue: Langue
     l.push(String::new());
     let le = langue.date(f.compose_le, true);
     l.push(match langue {
-        Langue::Fr => format!("Composé le {le} avec Colophon {version}."),
-        Langue::En => format!("Composed on {le} with Colophon {version}."),
+        Langue::Fr => format!("Composé le {le} avec Booklibre {version}."),
+        Langue::En => format!("Composed on {le} with Booklibre {version}."),
     });
     let (w, h, g) = (arrondi(trim.w), arrondi(trim.h), arrondi(grammage));
     l.push(match langue {
@@ -254,7 +254,7 @@ mod tests {
         assert!(t.contains("prises du 21 au 29 octobre 2013."), "{t}");
         assert!(t.contains("Porto-Vecchio et Bonifacio."));
         assert!(t.contains("Canon EOS 550D."));
-        assert!(t.contains("Composé le 17 août 2026 avec Colophon 0.9.0."));
+        assert!(t.contains("Composé le 17 août 2026 avec Booklibre 0.9.0."));
         assert!(t.contains("210 × 210 mm, papier 150 g/m²"));
     }
 
@@ -406,7 +406,9 @@ mod tests {
             "{t}"
         );
         assert!(t.contains("Porto-Vecchio and Bonifacio."), "{t}");
-        assert!(t.contains("Composed on 17 August 2026 with Colophon 1.0.0."), "{t}");
+        assert!(t.contains("Composed on 17 August 2026 with Booklibre 1.0.0."), "{t}");
+        // « Colophon » n'y est plus que le titre de la page, son nom de métier.
+        assert_eq!(t.matches("Colophon").count(), 1, "{t}");
         assert!(t.contains("210 × 210 mm, 150 g/m\u{b2} paper."), "{t}");
         for mot in ["papier", "Composé", " et ", "photographies", "prises", "octobre"] {
             assert!(!t.contains(mot), "« {mot} » dans la page anglaise : {t}");

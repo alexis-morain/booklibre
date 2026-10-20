@@ -2364,7 +2364,7 @@ export default function App() {
     return (
       <div className="empty">
         <div className="empty-block">
-          <p className="kicker">Colophon</p>
+          <p className="kicker">Booklibre</p>
           <div className="setup">
             <h1 className="setup-heading">{t("vide.titre")}</h1>
             <p className="lede">{t("vide.lede")}</p>
@@ -3876,7 +3876,7 @@ function Empty({
   return (
     <div className="empty">
       <div className={"empty-block" + (dir || building ? " wide" : "")}>
-        <p className="kicker">Colophon</p>
+        <p className="kicker">Booklibre</p>
 
         {!dir && !building && !photosOuvert && (
           <>

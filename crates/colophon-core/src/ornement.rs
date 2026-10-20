@@ -754,7 +754,7 @@ pub fn licences_md() -> String {
         "`ornement::licences_md`, et un test du dépôt rougit s'il a vieilli.",
         "Ne pas l'écrire à la main.",
         "",
-        "Chaque ornement livré avec Colophon est dans le domaine public ou sous",
+        "Chaque ornement livré avec Booklibre est dans le domaine public ou sous",
         "CC0. Aucune autre licence n'entre : une CC BY-SA contaminerait le PDF",
         "de la personne qui l'utilise, une CC BY y collerait une attribution qui",
         "voyagerait avec son livre.",

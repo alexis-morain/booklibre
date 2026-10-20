@@ -923,8 +923,13 @@ mod tests {
     /// relevée sur `main` (481fd68) en UTC+2 et retrouvée à l'identique par
     /// le code de A4, puis ce sont ces mêmes octets, neutralisés, qui ont
     /// donné le chiffre ci-dessous, valable sous tous les fuseaux.
+    ///
+    /// Reprise au renommage (R-s1), où `/Producer` et `x:xmptk` disent
+    /// Booklibre : avec les deux revenus à « Colophon », le code de R-s1
+    /// rendait encore l'ancienne empreinte, `[193, 145, 59, …]` — le nom est
+    /// donc le seul octet qui ait bougé.
     const EMPREINTE_SANS_FOND: [u8; 16] =
-        [193, 145, 59, 195, 179, 36, 234, 16, 146, 231, 39, 226, 158, 62, 117, 113];
+        [145, 244, 10, 161, 159, 104, 200, 192, 242, 183, 82, 253, 173, 16, 196, 243];
 
     /// L'instant figé de [`feuille_figee`].
     fn instant() -> chrono::DateTime<chrono::Local> {

@@ -8,7 +8,7 @@ body:
         Most of what this form asks for, the software prints for you: the
         app's **Help → Report a problem** builds the whole diagnostic block,
         version and OS included, and shows it to you before anything is
-        sent. From the command line, `colophon --audit -o <album>` prints
+        sent. From the command line, `booklibre --audit -o <album>` prints
         the same numbers.
 
         No photograph, filename, path, GPS coordinate or caption of yours ever
@@ -52,7 +52,7 @@ body:
     id: diagnostic
     attributes:
       label: Diagnostic block
-      description: The output of `colophon --audit -o <album>`, plus your version and OS. It carries the album's counters, and nothing personal.
+      description: The output of `booklibre --audit -o <album>`, plus your version and OS. It carries the album's counters, and nothing personal.
       render: text
     validations:
       required: true

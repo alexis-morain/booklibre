@@ -16,7 +16,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-BIN=./target/release/colophon
+BIN=./target/release/booklibre
 [ -x "$BIN" ] || { echo "construisez d'abord : cargo build --release" >&2; exit 1; }
 
 ALBUM=crates/colophon-app/src/scene.album.json

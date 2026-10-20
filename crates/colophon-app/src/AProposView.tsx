@@ -27,6 +27,12 @@ const ACTIFS: [string, () => string, Cle][] = [
   ],
 ];
 
+/** Where the software lives and who answers. Written out, not linked: the
+ *  only addresses this window opens are fixed in Rust, and a mail address
+ *  copied by hand is all a contact needs. */
+export const SITE = "booklibre.app";
+export const CONTACT = "hello@booklibre.app";
+
 /** The ornament pack is credited only when it is there.
  *
  *  An engine older than this window sends no pack, and that state is
@@ -68,6 +74,9 @@ export function AProposView({
           <strong>{t("apropos.licence")}</strong>.
         </p>
         <p className="apropos-quoi">{t("apropos.quoi")}</p>
+        <p className="apropos-contact">
+          {t("apropos.site")} {SITE} · {t("apropos.contact")} {CONTACT}
+        </p>
 
         <h3>{t("apropos.actifs")}</h3>
         <ul className="apropos-actifs">

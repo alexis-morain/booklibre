@@ -189,7 +189,7 @@ describe("Envoi, pour quelqu'un qui fait un album", () => {
     expect(html.match(/aria-checked="true"/g)).toHaveLength(1);
     const texte = visible(html);
     expect(texte).toContain("Télécharger le PDF");
-    expect(texte).toContain("Faire imprimer par Colophon");
+    expect(texte).toContain("Faire imprimer par Booklibre");
     expect(texte).toContain("livré chez vous en France");
     expect(texte).toContain("Imprimé et relié par notre partenaire Cloudprinter.");
     expect(texte).toContain("à partir de 46,00 €");
@@ -249,9 +249,9 @@ describe("Envoi sans relais compilé", () => {
       it(`n'annonce aucune commande (${lang}, ${relais === null ? "relais pas encore lu" : "aucun relais"})`, () => {
         const html = rendu(lang, relais, null);
         expect(html).not.toContain('role="radiogroup"');
-        expect(html).not.toContain("Colophon s");
+        expect(html).not.toContain("Booklibre s");
         expect(html).not.toContain("Cloudprinter.");
-        expect(html).not.toMatch(/Faire imprimer|Have it printed|Have Colophon|Stripe|à partir de|from €/);
+        expect(html).not.toMatch(/Faire imprimer|Have it printed|Have Booklibre|Stripe|à partir de|from €/);
         expect(visible(html)).not.toMatch(lang === "fr" ? /command/i : /\border/i);
         expect(visible(html)).toContain(lang === "fr" ? "Télécharger le PDF" : "Download the PDF");
       });

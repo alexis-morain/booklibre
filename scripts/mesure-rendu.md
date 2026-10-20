@@ -41,7 +41,7 @@ même harnais, si.
    pourrait voler du temps machine** (autre build, autre onglet lourd).
 
    ```bash
-   ./target/release/colophon ~/Pictures/colophon-testsets/corse-2013 -o .albums/mesure-50 --format carre-21
+   ./target/release/booklibre ~/Pictures/colophon-testsets/corse-2013 -o .albums/mesure-50 --format carre-21
    ```
 
    L'album long se fabrique en répétant les planches du premier jusqu'à 200 :
@@ -159,7 +159,7 @@ tout son sens, lui : il n'a pas de jumeau à comparer sur place.
 Le port ne doit pas déplacer le moteur d'un centième. Le témoin le prouve :
 
 ```bash
-time ./target/release/colophon ~/Pictures/colophon-testsets/mauritanie-2019 -o /tmp/temoin --format carre-21
+time ./target/release/booklibre ~/Pictures/colophon-testsets/mauritanie-2019 -o /tmp/temoin --format carre-21
 ```
 
 Il se relève avant et après, et il doit être identique aux fluctuations de

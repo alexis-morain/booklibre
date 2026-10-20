@@ -66,7 +66,7 @@ describe("le panneau Recomposer", () => {
     const html = rendu(album({ w: 280, h: 210 }));
     expect(html.match(/class="format-card( active)?"/g)).toHaveLength(6);
     expect(pressees(html)).toEqual(["Paysage 28 × 21"]);
-    expect(html).toContain("non imprimable par Colophon");
+    expect(html).toContain("non imprimable par Booklibre");
   });
 
   it("coche « moins de photos » pour un album aéré, et pas pour un autre", () => {

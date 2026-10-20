@@ -25,7 +25,7 @@ const devPreparer: string =
  */
 function albumDevServer(dir: string): Plugin {
   const read = (...p: string[]) => readFileSync(join(dir, ...p));
-  const engineBinary = join(__dirname, "../../target/release/colophon");
+  const engineBinary = join(__dirname, "../../target/release/booklibre");
   return {
     name: "colophon-album-dev-server",
     apply: "serve",
@@ -117,7 +117,7 @@ function albumDevServer(dir: string): Plugin {
           res.end(String(e));
         }
       });
-      // « Préparer pour Cloudprinter » au harnais : `colophon --preparer`, le
+      // « Préparer pour Cloudprinter » au harnais : `booklibre --preparer`, le
       // même `export::preparer` que la fenêtre, dans COLOPHON_PREPARER. La
       // réponse a la forme de la commande Tauri : le nom du dossier, jamais
       // son chemin.
@@ -519,7 +519,7 @@ function albumDevServer(dir: string): Plugin {
  * ssrLoadModule so an edit to album.ts is picked up without a restart.
  */
 function geometryParity(): Plugin {
-  const binary = join(__dirname, "../../target/release/colophon");
+  const binary = join(__dirname, "../../target/release/booklibre");
 
   async function check(server: ViteDevServer) {
     const parity = await server.ssrLoadModule("/src/parity.ts");

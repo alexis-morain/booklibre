@@ -7,9 +7,9 @@
 # manque. Un bundle signé mais non notarisé est bloqué par Gatekeeper comme un
 # bundle nu, et le journal de build ne le dirait qu'en jaune.
 #
-#   signature-macos.sh verifier   <Colophon.app> [--distribution]
-#   signature-macos.sh notariser  <Colophon.dmg>
-#   signature-macos.sh gatekeeper <Colophon.app> <Colophon.dmg>
+#   signature-macos.sh verifier   <Booklibre.app> [--distribution]
+#   signature-macos.sh notariser  <Booklibre.dmg>
+#   signature-macos.sh gatekeeper <Booklibre.app> <Booklibre.dmg>
 #
 # `verifier` tourne aussi sur la machine de dev, avec un certificat Apple
 # Development : il prouve que le runtime durci et la clé de la photothèque

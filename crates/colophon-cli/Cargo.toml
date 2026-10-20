@@ -1,13 +1,13 @@
 [package]
 name = "colophon-cli"
-description = "Colophon command line: build an album from a folder of photos"
+description = "Booklibre command line: build an album from a folder of photos"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
 [[bin]]
-name = "colophon"
+name = "booklibre"
 path = "src/main.rs"
 
 [dependencies]

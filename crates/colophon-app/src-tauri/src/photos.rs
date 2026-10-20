@@ -161,6 +161,9 @@ pub fn dossier_propose(maison: &Path, nom_album: &str) -> PathBuf {
         .collect();
     let propre = propre.trim();
     let propre = if propre.is_empty() { "Album" } else { propre };
+    // `Colophon` survit au renommage en Booklibre (R-s1), exprès : c'est là
+    // que vivent les photos déjà importées, et `dossier_d_import_valide` (lib.rs)
+    // n'accepte que ce dossier-là. Le déplacer est une migration de données.
     maison.join("Pictures").join("Colophon").join(propre)
 }
 

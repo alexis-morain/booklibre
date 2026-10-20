@@ -642,7 +642,7 @@ pub fn check(
             case_idx: None,
             src: None,
             cause: format!(
-                "{} imprime en CMJN {} et Colophon n'exporte qu'en RVB",
+                "{} imprime en CMJN {} et Booklibre n'exporte qu'en RVB",
                 profil.nom,
                 profil.espace.output_intent()
             ),

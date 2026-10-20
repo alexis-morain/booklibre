@@ -48,7 +48,7 @@ for set in corse-2013 mauritanie-2019 random-2024; do
   # reprise then reads a hand correction nobody ever made.
   rm -rf "$out"
   if [ -d "$TESTSETS/$set" ]; then
-    ./target/release/colophon "$TESTSETS/$set" -o "$out" --format carre-21 \
+    ./target/release/booklibre "$TESTSETS/$set" -o "$out" --format carre-21 \
       --variantes >/dev/null 2>&1
     # The same album again, composed from the versioned fiches. One assertion
     # doing two jobs: it is this feature's own test, and it is the freshness
@@ -57,7 +57,7 @@ for set in corse-2013 mauritanie-2019 random-2024; do
     # « composé le » date is the same on both sides.
     temoin=".albums/check/$set-fiches"
     rm -rf "$temoin"
-    ./target/release/colophon --depuis-fiches "$FICHES/$set.json" -o "$temoin" \
+    ./target/release/booklibre --depuis-fiches "$FICHES/$set.json" -o "$temoin" \
       --format carre-21 --variantes >/dev/null 2>&1
     "$PY" scripts/identite-fiches.py "$out" "$temoin" "$set"
     # Le seul album de la boucle qui porte de vraies photographies, donc le
@@ -65,11 +65,11 @@ for set in corse-2013 mauritanie-2019 random-2024; do
     # gardé pour la sonde d'imposition, plus bas.
     if [ "$set" = "mauritanie-2019" ]; then AVEC_PHOTOS="$out"; fi
   else
-    ./target/release/colophon --depuis-fiches "$FICHES/$set.json" -o "$out" \
+    ./target/release/booklibre --depuis-fiches "$FICHES/$set.json" -o "$out" \
       --format carre-21 --variantes >/dev/null 2>&1
     echo "linter $set : composé depuis les fiches, les photos n'étant pas là"
   fi
-  if ! ./target/release/colophon --audit -o "$out" > "$out/audit.json"; then
+  if ! ./target/release/booklibre --audit -o "$out" > "$out/audit.json"; then
     echo "audit : compteurs au-dessus des seuils sur $set" >&2
     "$PY" -c "
 import json
@@ -100,7 +100,7 @@ for n in r.get('notes', []):
   if [ -n "$temoin" ]; then
     # || true : a counter may cross its threshold on the fiches side only,
     # and that story belongs to the comparison below, not to a silent set -e.
-    ./target/release/colophon --audit -o "$temoin" > "$temoin/audit.json" || true
+    ./target/release/booklibre --audit -o "$temoin" > "$temoin/audit.json" || true
     "$PY" -c "
 import json, sys
 a = json.load(open('$out/audit.json'))['compteurs']
@@ -118,7 +118,7 @@ if ecarts:
   # must read exactly zero. It fails here if the composer stopped laying
   # down its reference, or if the diff started seeing corrections in an
   # untouched book.
-  if ! ./target/release/colophon --reprise -o "$out" > "$out/reprise.json"; then
+  if ! ./target/release/booklibre --reprise -o "$out" > "$out/reprise.json"; then
     echo "reprise : l'album neuf de $set ne mesure pas zéro" >&2
     exit 1
   fi
@@ -133,7 +133,7 @@ if r['planches_touchees'] != 0:
   # variant green nowhere is a variant that must not be offered.
   for v in autre-rythme resserree; do
     cp "$out/album.$v.json" "$out/album.json"
-    if ! ./target/release/colophon --audit -o "$out" > "$out/audit-$v.json"; then
+    if ! ./target/release/booklibre --audit -o "$out" > "$out/audit-$v.json"; then
       echo "audit : la variante $v de $set passe un seuil" >&2
       "$PY" -c "
 import json

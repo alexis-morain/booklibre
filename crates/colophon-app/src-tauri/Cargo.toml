@@ -1,6 +1,6 @@
 [package]
 name = "colophon-app"
-description = "Colophon desktop editor"
+description = "Booklibre desktop editor"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

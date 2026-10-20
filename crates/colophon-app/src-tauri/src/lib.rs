@@ -1265,7 +1265,7 @@ async fn photos_importer(
     let maison = maison(&app)?;
     if !dossier_d_import_valide(&maison, Path::new(&dossier)) {
         return Err(format!(
-            "dossier d'import refusé : {dossier} n'est pas un dossier que Colophon propose"
+            "dossier d'import refusé : {dossier} n'est pas un dossier que Booklibre propose"
         ));
     }
     state.cancel_build.store(false, Ordering::Relaxed);
@@ -1710,7 +1710,7 @@ fn open_report_url(url: String) -> Result<(), String> {
 }
 
 /// La page de confidentialité du site, la seule adresse que ce bouton ouvre.
-const CONFIDENTIALITE: &str = "https://alexis-morain.github.io/colophon-site/confidentialite/";
+const CONFIDENTIALITE: &str = "https://booklibre.app/privacy/";
 
 /// « Confidentialité », dans À propos : la page qui dit ce que l'app fait
 /// de vos données, c'est-à-dire rien. Une adresse fixe, jamais une que la
@@ -1748,7 +1748,7 @@ fn navigateur(url: &str) -> Result<(), String> {
 /// A closed set rather than a prefix — the prefix let the whole suffix
 /// through, and the suffix is exactly what reaches a process spawn.
 fn url_de_rapport(url: &str) -> Result<(), String> {
-    const BASE: &str = "https://github.com/alexis-morain/colophon/issues/new";
+    const BASE: &str = "https://github.com/alexis-morain/booklibre/issues/new";
     let reste = url
         .strip_prefix(BASE)
         .ok_or_else(|| format!("URL hors du dépôt : {url}"))?;
@@ -2747,19 +2747,29 @@ mod tests {
         }
     }
 
+    /// La confidentialité vit sur le site de Booklibre, à son adresse
+    /// anglaise : l'ancienne page de `colophon-site` n'en est plus qu'un renvoi.
+    #[test]
+    fn la_confidentialite_est_sur_booklibre_app() {
+        assert_eq!(CONFIDENTIALITE, "https://booklibre.app/privacy/");
+    }
+
     /// The report channel opens exactly one page: the repo's issue form.
     /// Anything else, scheme included, is refused before any process spawns.
     #[test]
     fn report_url_guard_refuses_anything_but_the_issue_form() {
         assert!(open_report_url("https://example.com/x".into()).is_err());
         assert!(open_report_url(
-            "http://github.com/alexis-morain/colophon/issues/new?template=1-bug.yml".into()
+            "http://github.com/alexis-morain/booklibre/issues/new?template=1-bug.yml".into()
         )
         .is_err());
         assert!(open_report_url(
             "https://github.com/autre/depot/issues/new".into()
         )
         .is_err());
+        // L'ancien dépôt, renommé en booklibre (R-s1) : GitHub y redirige,
+        // mais la garde ne nomme qu'une adresse, et c'est la nouvelle.
+        assert!(url_de_rapport("https://github.com/alexis-morain/colophon/issues/new").is_err());
     }
 
     /// The guard is a closed set, not a prefix. What `signaler.ts` writes
@@ -2767,19 +2777,19 @@ mod tests {
     /// not — whatever the platform does with the URL afterwards.
     #[test]
     fn l_url_du_rapport_est_un_jeu_ferme() {
-        assert!(url_de_rapport("https://github.com/alexis-morain/colophon/issues/new").is_ok());
+        assert!(url_de_rapport("https://github.com/alexis-morain/booklibre/issues/new").is_ok());
         assert!(url_de_rapport(
-            "https://github.com/alexis-morain/colophon/issues/new?template=1-bug.yml&title=Rat%C3%A9e+%C2%B7+planche+3&body=x"
+            "https://github.com/alexis-morain/booklibre/issues/new?template=1-bug.yml&title=Rat%C3%A9e+%C2%B7+planche+3&body=x"
         )
         .is_ok());
         for mauvaise in [
-            "https://github.com/alexis-morain/colophon/issues/new?a=1&calc.exe|x",
-            "https://github.com/alexis-morain/colophon/issues/new?a=1 &b=2",
-            "https://github.com/alexis-morain/colophon/issues/new?a=\"1\"",
-            "https://github.com/alexis-morain/colophon/issues/new#frag",
-            "https://github.com/alexis-morain/colophon/issues/new/../../../autre",
-            "https://github.com/alexis-morain/colophon/issues/newer?x=1",
-            "https://github.com/alexis-morain/colophon/issues/new?a=1;b",
+            "https://github.com/alexis-morain/booklibre/issues/new?a=1&calc.exe|x",
+            "https://github.com/alexis-morain/booklibre/issues/new?a=1 &b=2",
+            "https://github.com/alexis-morain/booklibre/issues/new?a=\"1\"",
+            "https://github.com/alexis-morain/booklibre/issues/new#frag",
+            "https://github.com/alexis-morain/booklibre/issues/new/../../../autre",
+            "https://github.com/alexis-morain/booklibre/issues/newer?x=1",
+            "https://github.com/alexis-morain/booklibre/issues/new?a=1;b",
         ] {
             assert!(url_de_rapport(mauvaise).is_err(), "{mauvaise} a passé");
         }
@@ -3134,6 +3144,32 @@ mod tests {
         assert!(!commune.contains("updater"), "la capacité commune nomme l'updater");
         assert!(fichier("capabilities/maj.json").contains("\"updater:default\""));
         assert!(fichier("build.rs").contains("\"./capabilities/default.json\""));
+    }
+
+    /// Le renommage en Booklibre (R-s1) ne touche que le nom visible. Trois
+    /// choses en dépendent et ne bougent pas : l'identifiant (le dossier de
+    /// données, l'App Store), l'`UpgradeCode` du MSI — Tauri le dérive du
+    /// `productName` quand on ne l'épingle pas, et la 1.1 s'installerait alors
+    /// **à côté** de la 1.0.1 ; la valeur est celle lue par `msiinfo` dans le
+    /// MSI publié de `v1.0.1`, et vaut le UUID v5 de `Colophon.exe.app.x64` —
+    /// et l'ordre de l'updater, le site d'abord, GitHub ensuite.
+    #[test]
+    fn le_renommage_garde_l_identifiant_et_l_upgrade_code() {
+        let conf: serde_json::Value = serde_json::from_str(&fichier("tauri.conf.json")).unwrap();
+        assert_eq!(conf["productName"], "Booklibre");
+        assert_eq!(conf["app"]["windows"][0]["title"], "Booklibre");
+        assert_eq!(conf["identifier"], "fr.morain.colophon");
+        assert_eq!(
+            conf["bundle"]["windows"]["wix"]["upgradeCode"],
+            "cb2663c5-3aee-5fd5-af7a-926975a728b8"
+        );
+        assert_eq!(
+            conf["plugins"]["updater"]["endpoints"],
+            serde_json::json!([
+                "https://booklibre.app/latest.json",
+                "https://github.com/alexis-morain/booklibre/releases/latest/download/latest.json"
+            ])
+        );
     }
 
     /// Les clés d'un plist, dans l'ordre, sans bibliothèque : ces fichiers

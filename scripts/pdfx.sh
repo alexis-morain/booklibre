@@ -40,7 +40,7 @@ check() { # file, label
 echo "gabarits, six formats :"
 for f in $FORMATS; do
   rm -rf "$OUT/$f"
-  ./target/release/colophon --sheets "$OUT/$f" --format "$f" >/dev/null 2>&1
+  ./target/release/booklibre --sheets "$OUT/$f" --format "$f" >/dev/null 2>&1
   n=0
   bad=0
   for pdf in "$OUT/$f"/*.pdf; do
@@ -64,13 +64,13 @@ if [ "$FULL" = "full" ] && [ -d "$TESTSETS" ]; then
     for f in $FORMATS; do
       dir="$OUT/albums/$set-$f"
       rm -rf "$dir"
-      ./target/release/colophon "$TESTSETS/$set" -o "$dir" --format "$f" \
+      ./target/release/booklibre "$TESTSETS/$set" -o "$dir" --format "$f" \
         >/dev/null 2>&1
       check "$dir/album.pdf" "$set $f aperçu"
-      ./target/release/colophon --print -o "$dir" >/dev/null 2>&1
+      ./target/release/booklibre --print -o "$dir" >/dev/null 2>&1
       check "$dir/album-print.pdf" "$set $f impression"
       # The cover travels as its own file at the suppliers that ask for two.
-      ./target/release/colophon --cover --profil cloudprinter -o "$dir" \
+      ./target/release/booklibre --cover --profil cloudprinter -o "$dir" \
         >/dev/null 2>&1
       check "$dir/album-cover.pdf" "$set $f couverture"
     done

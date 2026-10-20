@@ -1,15 +1,15 @@
 # Une release, déclenchée par un tag `v*`.
 #
 # Produit les binaires macOS (arm64 et x64) et Windows, leurs empreintes
-# SHA-256, et les notes tirées du CHANGELOG. Les noms de fichiers suivent la
-# convention que le site lit par l'API publique de GitHub :
+# SHA-256, et les notes tirées du CHANGELOG. Les noms de fichiers :
 #
-#   Colophon-0.9.0-macos-arm64.dmg
-#   Colophon-0.9.0-macos-x64.dmg
-#   Colophon-0.9.0-windows-x64.msi
+#   Booklibre-1.1.0-macos-arm64.dmg
+#   Booklibre-1.1.0-macos-x64.dmg
+#   Booklibre-1.1.0-windows-x64.msi
 #
-# C'est un contrat, pas un détail de présentation : renommer un fichier casse
-# le bouton de téléchargement du site.
+# Jusqu'à la 1.0.1 ils commençaient par « Colophon- ». Le site ne lit plus ces
+# noms (il mène à `releases/latest`), mais `latest.json` les cite : le
+# manifeste et ses archives se nomment ensemble, plus bas.
 #
 # **Le DMG macOS est signé Developer ID et notarisé** quand les cinq secrets
 # Apple sont posés : APPLE_CERTIFICATE (le .p12 en base64),
@@ -201,7 +201,7 @@ jobs:
         run: |
           set -eu
           bundle="target/${{ matrix.cible }}/release/bundle"
-          app="$bundle/macos/Colophon.app"
+          app="$bundle/macos/Booklibre.app"
           dmg="$(find "$bundle/dmg" -name '*.dmg' -type f | head -1)"
           [ -n "$dmg" ] || { echo "aucun DMG produit" >&2; exit 1; }
           ./scripts/signature-macos.sh verifier "$app" --distribution
@@ -218,7 +218,7 @@ jobs:
         run: |
           set -eu
           v="${{ steps.version.outputs.v }}"
-          nom="Colophon-$v-${{ matrix.suffixe }}.${{ matrix.extension }}"
+          nom="Booklibre-$v-${{ matrix.suffixe }}.${{ matrix.extension }}"
           mkdir -p publication
           src="$(find "target/${{ matrix.cible }}/release/bundle" \
             -name "*.${{ matrix.extension }}" -type f | head -1)"
@@ -238,8 +238,8 @@ jobs:
               *.tar.gz) ext="tar.gz" ;;
               *) ext="msi" ;;
             esac
-            cp "$maj" "publication/Colophon-$v-${{ matrix.suffixe }}-maj.$ext"
-            cp "$maj.sig" "publication/Colophon-$v-${{ matrix.suffixe }}-maj.sig"
+            cp "$maj" "publication/Booklibre-$v-${{ matrix.suffixe }}-maj.$ext"
+            cp "$maj.sig" "publication/Booklibre-$v-${{ matrix.suffixe }}-maj.sig"
             echo "artefact de mise à jour signé : $(basename "$maj")"
           elif [ "$CLE_POSEE" = "true" ]; then
             # La clé était là et rien n'est sorti : c'est un nom qu'on ne
@@ -302,8 +302,10 @@ jobs:
           cat publication/*.sha256 >> notes.md
           echo '```' >> notes.md
 
-      # Le manifeste que l'app interroge au lancement. Son URL est écrite
-      # dans tauri.conf.json : `releases/latest/download/latest.json`. Sans
+      # Le manifeste que l'app interroge au lancement. tauri.conf.json en
+      # écrit deux adresses : `booklibre.app/latest.json`, que
+      # `maj-site.yml` pose à la publication de la release, puis
+      # `releases/latest/download/latest.json`, celui-ci. Sans
       # artefact signé il n'est pas écrit du tout, plutôt qu'écrit vide :
       # un manifeste sans signature ferait échouer chaque vérification, et
       # personne ne saurait pourquoi.
@@ -325,11 +327,11 @@ jobs:
           pub = Path("publication")
           platformes = {}
           for suffixe, cle in cibles.items():
-              sig = pub / f"Colophon-{v}-{suffixe}-maj.sig"
+              sig = pub / f"Booklibre-{v}-{suffixe}-maj.sig"
               if not sig.is_file():
                   continue
               archive = next(
-                  (p for p in pub.glob(f"Colophon-{v}-{suffixe}-maj.*")
+                  (p for p in pub.glob(f"Booklibre-{v}-{suffixe}-maj.*")
                    if p.suffix != ".sig"), None)
               if archive is None:
                   continue

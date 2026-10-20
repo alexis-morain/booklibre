@@ -25,7 +25,7 @@ const SCENE_FORMATS = [
 ];
 
 const BINARY = fileURLToPath(
-  new URL("../../../target/release/colophon", import.meta.url),
+  new URL("../../../target/release/booklibre", import.meta.url),
 );
 
 describe.skipIf(!existsSync(BINARY))("geometry parity with the engine", () => {

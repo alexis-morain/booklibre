@@ -724,7 +724,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
             }
         }
 
-        // The colophon page, on by default: the software is called Colophon
+        // The colophon page, on by default: the software was called Colophon
         // and did not print one. The facts travel in album.json, the page
         // itself is an ordinary spread at the end of the book, so it counts
         // in the pagination the suppliers sanction without a single special
@@ -1249,9 +1249,9 @@ impl std::fmt::Display for SchemaTropRecent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "cet album est écrit dans le schéma {} et cette version de Colophon ne \
+            "cet album est écrit dans le schéma {} et cette version de Booklibre ne \
              connaît que le {} : l'ouvrir lui ferait perdre ce qu'elle ne sait pas \
-             lire. Mettez Colophon à jour.",
+             lire. Mettez Booklibre à jour.",
             self.version, self.connu
         )
     }
@@ -2820,11 +2820,11 @@ mod tests {
         let en = BuildOptions { langue: Langue::En, ..options_datees() };
         let album = build_album(&photos, &out, en).unwrap().album;
         let t = colophon_de(&album);
-        assert!(t.contains("Composed on 14 November 2023 with Colophon"), "{t}");
+        assert!(t.contains("Composed on 14 November 2023 with Booklibre"), "{t}");
         assert!(t.contains("photographs kept out of"), "{t}");
 
         let album = build_album(&photos, &out, options_datees()).unwrap().album;
         let t = colophon_de(&album);
-        assert!(t.contains("Composé le 14 novembre 2023 avec Colophon"), "{t}");
+        assert!(t.contains("Composé le 14 novembre 2023 avec Booklibre"), "{t}");
     }
 }

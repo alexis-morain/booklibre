@@ -115,7 +115,7 @@ describe("buildReport", () => {
       "bug",
       false,
     );
-    expect(report).toContain("Colophon 0.1.0");
+    expect(report).toContain("Booklibre 0.1.0");
     expect(report).toContain("indisponible");
     expect(report).not.toContain("Planche");
   });
@@ -126,7 +126,7 @@ describe("issueUrl and fitReport", () => {
     const url = issueUrl("planche", "rapport", 4, null);
     expect(url).toContain("template=2-bad-spread.yml");
     expect(url).toContain("spread=5");
-    expect(url.startsWith("https://github.com/alexis-morain/colophon/issues/new")).toBe(
+    expect(url.startsWith("https://github.com/alexis-morain/booklibre/issues/new")).toBe(
       true,
     );
   });

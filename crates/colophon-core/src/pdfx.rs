@@ -57,7 +57,7 @@ pub const PDF_VERSION: &str = "1.6";
 /// `/Producer` and `xmp:CreatorTool`, identical on purpose: the same program
 /// laid the album out and wrote the file.
 pub fn producer() -> String {
-    format!("Colophon {}", env!("CARGO_PKG_VERSION"))
+    format!("Booklibre {}", env!("CARGO_PKG_VERSION"))
 }
 
 /// The pieces a catalog and a trailer need to carry the declaration.
@@ -227,7 +227,7 @@ pub fn xmp(title: &str, stamp: DateTime<Local>) -> String {
     let bom = '\u{feff}';
     format!(
         r#"<?xpacket begin="{bom}" id="W5M0MpCehiHzreSzNTczkc9d"?>
-<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Colophon">
+<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Booklibre">
  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
   <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">
    <dc:format>application/pdf</dc:format>
@@ -318,6 +318,18 @@ mod tests {
 
     fn stamp() -> DateTime<Local> {
         Local.with_ymd_and_hms(2026, 8, 14, 17, 5, 30).unwrap()
+    }
+
+    /// Le logiciel s'appelle Booklibre (R-s1) : `/Producer`, `/Creator`,
+    /// `xmp:CreatorTool` et `x:xmptk` le disent, et plus un seul « Colophon »
+    /// ne reste dans ce qu'un PDF déclare de son auteur.
+    #[test]
+    fn le_pdf_se_dit_ecrit_par_booklibre() {
+        assert_eq!(producer(), format!("Booklibre {}", env!("CARGO_PKG_VERSION")));
+        let packet = xmp("Corse", stamp());
+        assert!(packet.contains(r#"x:xmptk="Booklibre""#), "{packet}");
+        assert!(packet.contains(&format!("<xmp:CreatorTool>{}</xmp:CreatorTool>", producer())), "{packet}");
+        assert!(!packet.contains("Colophon"), "{packet}");
     }
 
     /// `SOURCE_DATE_EPOCH` is read as seconds since the Unix epoch, and a

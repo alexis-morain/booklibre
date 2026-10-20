@@ -25,13 +25,13 @@ for set in corse-2013 mauritanie-2019 random-2024; do
     out=".albums/banc/$set-$format"
     rm -rf "$out"
     echo "compose : $set en $format"
-    ./target/release/colophon "$TESTSETS/$set" -o "$out" --format "$format" \
+    ./target/release/booklibre "$TESTSETS/$set" -o "$out" --format "$format" \
       --variantes >/dev/null 2>&1
     DIRS+=("$out")
   done
 done
 
-./target/release/colophon --banc-gabarits "${DIRS[@]}" > .albums/banc/rapport.json
+./target/release/booklibre --banc-gabarits "${DIRS[@]}" > .albums/banc/rapport.json
 python3 - <<'EOF'
 import json
 r = json.load(open('.albums/banc/rapport.json'))

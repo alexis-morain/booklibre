@@ -2,7 +2,7 @@
 """Non-régression PDF → PNG par gabarit, sur les six formats.
 
 Le binaire rend une planche par gabarit avec un aplat de couleur par case
-(`colophon --sheets`), sips rasterise le PDF, et ce script vérifie que
+(`booklibre --sheets`), sips rasterise le PDF, et ce script vérifie que
 chaque case affiche sa couleur là où la géométrie la place. Le PDF fait
 foi : la parité TypeScript contrôle l'arithmétique, ce test contrôle le
 rendu réel (placement, clipping, ordre de lecture).
@@ -19,7 +19,7 @@ import tempfile
 
 from PIL import Image
 
-BIN = sys.argv[1] if len(sys.argv) > 1 else "target/release/colophon"
+BIN = sys.argv[1] if len(sys.argv) > 1 else "target/release/booklibre"
 FORMATS = [
     "carre-21",
     "carre-30",

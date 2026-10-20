@@ -1,4 +1,4 @@
-# Colophon
+# Booklibre
 
 The words this codebase uses for the things it manipulates. One meaning, one
 term, listed once. Code, comments and issue templates use these; a synonym in
@@ -7,10 +7,17 @@ a diff is a bug report waiting to happen.
 This is a glossary, not a specification. What the project is building lives in
 the README; what it decided and why lives in `docs/adr/`.
 
+**Booklibre**:
+The software. It was called Colophon until 1.0.1, and the code still is: the
+crates, the modules, the `COLOPHON_*` variables and the bundle identifier
+keep the old name on purpose. In anything a user reads, the software is
+Booklibre, and *colophon* is only ever the last page of the book.
+_Avoid_: Colophon, for the software.
+
 ## The book
 
 **Spread**:
-Two facing pages, the unit Colophon composes. Never a single page: no image
+Two facing pages, the unit Booklibre composes. Never a single page: no image
 crosses the fold, and everything from `album.json` to the editor to the linter
 reasons on spreads. Whether the exported PDF carries them whole or cut in two
 is the printer's business, and only the export's — see **Imposition**.
@@ -359,7 +366,7 @@ A file another program wrote next to a photograph and named after it, read
 where the photo's own metadata is silent: the `.xmp` of a cataloguing app
 (rating), the `.json` of a Google Takeout (capture date, GPS). Found by a
 closed list of spellings, never by listing the folder. A sidecar is always
-someone else's; what Colophon writes about a photo is a fiche.
+someone else's; what Booklibre writes about a photo is a fiche.
 _Avoid_: companion file, metadata file
 
 **Preview**:

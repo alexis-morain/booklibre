@@ -9,6 +9,20 @@ sur la page des releases.
 
 ## [Non publié]
 
+### Changed
+
+- Colophon is now called Booklibre: the window, the menus, the installers, the
+  command line (`booklibre`), the last page of the book ("Composed with
+  Booklibre") and the PDF metadata. Your albums, preferences and imported
+  photos stay where they were, and the app updates in place on macOS and
+  Windows. On a Mac updated from 1.0.1, the application keeps its file name,
+  `Colophon.app`, in the Applications folder. An album composed before keeps
+  its last page as it was written, with the old name, until you tick that page
+  again or recompose the album.
+- The website is now [booklibre.app](https://booklibre.app), and the contact
+  address hello@booklibre.app. The update check asks booklibre.app first, then
+  GitHub.
+
 ## [1.0.1] - 2026-10-18
 
 First public release. Colophon takes a folder of photos and turns it into a

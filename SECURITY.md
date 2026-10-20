@@ -1,12 +1,14 @@
 # Security policy
 
-Colophon runs offline: no server, no account, no telemetry, ever. The
+Booklibre runs offline: no server, no account, no telemetry, ever. The
 application, as published on the releases page, makes exactly one network
 call, and only while you leave it on.
-At launch it asks GitHub whether a newer version exists. What goes out is an
-HTTPS request to the releases feed; what GitHub sees of it is the IP address
-and user agent of that request, nothing of your photographs, nothing of your
-album, and no identifier Colophon invents. Nothing is downloaded or installed
+At launch it asks whether a newer version exists: first
+`https://booklibre.app/latest.json`, a static file served by Cloudflare, then
+the releases feed on GitHub if the site does not answer. What goes out is an
+HTTPS request for that one file; what Cloudflare or GitHub sees of it is the
+IP address and user agent of that request, nothing of your photographs,
+nothing of your album, and no identifier Booklibre invents. Nothing is downloaded or installed
 without a click. Preferences (Cmd-comma) turns the check off, and then
 nothing leaves the machine at all.
 
@@ -61,8 +63,9 @@ the app is a bug; one that executes code or reads files outside the album
 folder is a security problem, and so is anything that makes a photograph or a
 path leave the machine outside that one click on Order.
 
-Report security problems privately through
-[GitHub security advisories](https://github.com/alexis-morain/colophon/security/advisories/new),
+Report security problems privately, by e-mail to
+[security@booklibre.app](mailto:security@booklibre.app) or through
+[GitHub security advisories](https://github.com/alexis-morain/booklibre/security/advisories/new),
 not in a public issue. You will get an answer within 48 hours and a fix as
 fast as one person can write it, in the next release. There is no bug bounty:
 this is free software maintained by one person, and the reward on offer is a

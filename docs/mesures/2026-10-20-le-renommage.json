@@ -1,0 +1,38 @@
+{
+  "quoi": "R-s1 : le logiciel s'appelle Booklibre. Preuve inversée sur un album réel : seul le nom bouge dans le PDF.",
+  "date": "2026-10-20",
+  "jeu": "mauritanie-2019, carre-21, SOURCE_DATE_EPOCH=1760000000, --langue fr",
+  "methode": "Le même jeu composé par le binaire d'avant (origin/main, afdbb3c) et par celui de R-s1. Chaque page des deux album.pdf rendue par pdfium à 50 ppp et comparée au pixel ; texte des pages qui diffèrent extrait ; déclarations d'auteur cherchées en clair dans les octets.",
+  "album_json": "une ligne diffère, le texte de la page de fin : « avec Colophon 1.0.1. » devient « avec Booklibre 1.0.1. »",
+  "curation_json": "identique à l'octet",
+  "pdf": {
+    "pages": 59,
+    "pages_differentes": [59],
+    "page_59_avant": "Composé le 9 octobre 2025 avec Colophon 1.0.1.",
+    "page_59_apres": "Composé le 9 octobre 2025 avec Booklibre 1.0.1.",
+    "titre_de_la_page": "« Colophon » dans les deux, c'est le nom de la page",
+    "declarations_avant": ["Colophon 1.0.1", "xmptk=\"Colophon\""],
+    "declarations_apres": ["Booklibre 1.0.1", "xmptk=\"Booklibre\""],
+    "sonde_colophon_1_0_1": {"avant": true, "apres": false, "verdict": "la sonde mord"}
+  },
+  "banc_octets_d_un_album_sans_objet_libre": {
+    "avant": 214814,
+    "apres": 214821,
+    "apres_avec_l_ancien_nom_remis": 214814
+  },
+  "cover_empreinte_sans_fond": "reprise ; avec « Colophon » remis dans pdfx.rs, le code de R-s1 rend l'ancienne empreinte, les deux tests passent",
+  "verapdf_2b": {
+    "album.pdf mauritanie apres": "PASS",
+    "banc d'octets apres": "PASS",
+    "gabarits six formats (scripts/pdfx.sh)": "voir la PR"
+  },
+  "msi_1_0_1": {
+    "fichier": "Colophon-1.0.1-windows-x64.msi (release v1.0.1)",
+    "sha256": "4f6036b802ea8226c0ecdc3697f9d60b5fdcdd4f810e539d26318240bbe64ffc",
+    "lu_par": "msiinfo export <msi> Property (msitools 0.106)",
+    "UpgradeCode": "{CB2663C5-3AEE-5FD5-AF7A-926975A728B8}",
+    "ProductName": "Colophon",
+    "ProductVersion": "1.0.1",
+    "derivation": "UUID v5, espace DNS, de « Colophon.exe.app.x64 » : cb2663c5-3aee-5fd5-af7a-926975a728b8. Sous « Booklibre » sans épinglage, Tauri dériverait 4c0151b4-c76c-5a8e-972f-059f2f167c1b."
+  }
+}

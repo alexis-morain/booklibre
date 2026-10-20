@@ -35,6 +35,27 @@ describe("dictionnaires", () => {
       expect(texte.includes("—"), cle).toBe(false);
     }
   });
+
+  /** Le logiciel s'appelle Booklibre (R-s1). Le mot « colophon » reste le nom
+   *  typographique de la page de fin du livre, et seulement lui : une majuscule
+   *  ne survit qu'en tête d'une phrase anglaise qui parle de cette page. */
+  it("ne nomment plus le logiciel Colophon", () => {
+    const survivants: Partial<Record<keyof typeof FR, string>> = {
+      "etat.colophon.ajoute": "en : « Colophon page added », la page de fin",
+      "etat.colophon.retire": "en : « Colophon page removed », la page de fin",
+      "gabarit.colophon": "en : « Colophon page », le nom de la planche de fin",
+    };
+    for (const [langue, dico] of [["fr", FR], ["en", EN]] as const) {
+      for (const [cle, texte] of Object.entries(dico)) {
+        if (!/Colophon/.test(texte)) continue;
+        const garde = langue === "en" && cle in survivants;
+        expect(garde, `${langue} ${cle} : ${texte}`).toBe(true);
+      }
+    }
+    for (const cle of Object.keys(survivants) as (keyof typeof FR)[]) {
+      expect(EN[cle], cle).toMatch(/^Colophon page/);
+    }
+  });
 });
 
 describe("t", () => {

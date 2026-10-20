@@ -1331,7 +1331,7 @@ mod tests {
                 reference: reference.clone(),
                 adresse: Adresse {
                     prenom: "Banc".into(),
-                    nom: "Colophon".into(),
+                    nom: "Booklibre".into(),
                     rue: "1 rue de l'Essai".into(),
                     rue2: None,
                     code_postal: "75001".into(),

@@ -1,4 +1,4 @@
-/* Colophon desktop, piste A. The chrome is deliberately quiet: a white
+/* Booklibre desktop, piste A. The chrome is deliberately quiet: a white
    ground with cool neutrals, so the cream paper of the spreads is the only
    warm object on screen and the photographs carry the colour. One accent,
    terracotta. Everything is square-cornered, on purpose, like a trimmed
@@ -2346,10 +2346,18 @@ input[type="radio"] {
 }
 
 .apropos-quoi {
-  margin: 0 0 20px;
+  margin: 0 0 8px;
   font-size: var(--fs-13);
   color: var(--muted);
   max-width: 62ch;
+}
+
+/* Écrits, pas liés : on les copie à la main, d'où la sélection permise. */
+.apropos-contact {
+  margin: 0 0 20px;
+  font-size: var(--fs-13);
+  color: var(--muted);
+  user-select: text;
 }
 
 .apropos-panel h3 {

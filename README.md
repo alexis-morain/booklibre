@@ -1,10 +1,13 @@
-# Colophon
+# Booklibre
 
 **Turn a folder of photos into a print-ready album in under a minute.**
 Free, offline, open source. Your photos never leave your machine, the album is
 a file you own, and you print it wherever you like.
 
-What Darktable is to Lightroom, Colophon is to Blurb.
+What Darktable is to Lightroom, Booklibre is to Blurb.
+Booklibre was called Colophon until version 1.0.1.
+Website: [booklibre.app](https://booklibre.app). Contact:
+[hello@booklibre.app](mailto:hello@booklibre.app).
 
 > **Status:** 1.0, the first public release. The release chain builds
 > installers for macOS and Windows; the Windows build has not yet been tried
@@ -30,7 +33,7 @@ with.
   decoder, ImageIO. On Windows and Linux, HEIC and RAW files are counted and
   named on screen, not decoded: never silently dropped.
 - **Imports from Apple Photos** (macOS only): pick an album in your photo
-  library and Colophon copies its photographs into a visible folder, then
+  library and Booklibre copies its photographs into a visible folder, then
   composes that folder like any other. It never writes to the library. The
   import refuses the network: photographs that stayed in iCloud are counted
   and named, and downloaded only if you ask.
@@ -120,7 +123,7 @@ to it, and the app offers to reopen the old one first.
 
 ## The linter
 
-`colophon --audit` runs fourteen counters over a finished album.
+`booklibre --audit` runs fourteen counters over a finished album.
 
 Ten of them judge the composer, and each has a tolerance: cropped face,
 betrayed orientation, duplicate spread, under-resolution, orphan chapter,
@@ -178,7 +181,7 @@ printer, or older than the album's last change, blocks too. A file that is
 not there says nothing.
 
 ```bash
-colophon --prevol --profil cloudprinter -o my-album
+booklibre --prevol --profil cloudprinter -o my-album
 ```
 
 Four profiles ship with the command line: Cloudprinter, Prodigi, Lulu, and a
@@ -201,14 +204,15 @@ album, same book, two files.
 No account, no login, no sync, no telemetry, ever, not even anonymous, not
 even opt-in.
 
-One thing leaves your machine, and you can stop it: at launch, Colophon asks
-GitHub whether a newer version exists. That request carries your IP address
+One thing leaves your machine, and you can stop it: at launch, Booklibre asks
+its website, booklibre.app (served by Cloudflare), whether a newer version
+exists, and GitHub if the site does not answer. That request carries your IP address
 and the name of your system, and nothing else; no photograph, no album, no
 identifier. Nothing is downloaded or installed without a click, and
 Preferences turns the check off. For an application distributed outside any
 store, that question is how a fix reaches you, which is why it ships on.
 
-Everything else is offline. Colophon reads your photographs and never modifies
+Everything else is offline. Booklibre reads your photographs and never modifies
 them. The album lives in a single readable `album.json` you can repair with a
 text editor. Nothing else leaves your machine unless you deliberately send a
 file somewhere, or ask the Photos import to fetch what stayed in iCloud.
@@ -216,7 +220,7 @@ file somewhere, or ask the Photos import to fetch what stayed in iCloud.
 ## Install
 
 Download the latest release from the
-[Releases page](https://github.com/alexis-morain/colophon/releases): a `.dmg`
+[Releases page](https://github.com/alexis-morain/booklibre/releases): a `.dmg`
 for macOS, a `.msi` for Windows. Every file ships with its SHA-256 sum, and
 the app updates itself from the same place.
 
@@ -236,11 +240,11 @@ cargo build --release
 ```
 
 ```bash
-./target/release/colophon ~/Pictures/holidays -o album --format carre-21
+./target/release/booklibre ~/Pictures/holidays -o album --format carre-21
 ```
 
 ```bash
-./target/release/colophon --audit -o album && ./target/release/colophon --print -o album
+./target/release/booklibre --audit -o album && ./target/release/booklibre --print -o album
 ```
 
 The desktop editor:
@@ -273,12 +277,12 @@ Tauri shell.
 ## Questions people actually ask
 
 **Can I print it wherever I want?**
-Yes. The output is a standard PDF at 300 dpi. Colophon has no printing
+Yes. The output is a standard PDF at 300 dpi. Booklibre has no printing
 partner it needs you to use, and puts no watermark, no logo and no barcode on
 your book.
 
 **Do my photos go to a cloud?**
-No. There is no server. Colophon works with the network switched off, and it
+No. There is no server. Booklibre works with the network switched off, and it
 will still work the day this repository stops being maintained.
 
 **Do I keep my file?**
@@ -295,7 +299,7 @@ required and never decide anything on its own.
 
 **Why not just use Scribus or InDesign?**
 Because they are page layout tools and they start from an empty page. The work
-Colophon does is choosing which 150 photos out of 600 deserve to be there and
+Booklibre does is choosing which 150 photos out of 600 deserve to be there and
 placing them so the book reads. If you want to design each spread by hand,
 those tools are better than this one.
 
@@ -337,7 +341,7 @@ Three issue templates for a problem: a bug, a bad spread, a bad crop. The app
 builds the report for you: the Help menu has one entry per template, the
 panel shows you the exact block before anything is sent, and one button opens
 the pre-filled issue (or copies the report, if you are offline or without an
-account). From the command line, `colophon --audit -o <album>` prints the same
+account). From the command line, `booklibre --audit -o <album>` prints the same
 numbers.
 
 A fourth asks for your verdict on the first draft: would you show the album
