@@ -665,6 +665,9 @@ export type Candidat = {
   taken?: string;
   raison: Raison;
   focal: [number, number];
+  /** Ce qu'elle imprimerait dans la case qu'on remplace, quand on en remplace
+   *  une et que la taille de l'original est connue. */
+  ppi?: number;
 };
 
 /** La réserve classée pour une planche, et ce qui a manqué pour la classer
@@ -673,14 +676,20 @@ export type Reserve = { candidats: Candidat[]; note?: string };
 
 /** Les photos qu'aucune planche ne montre, classées pour la planche `at` :
  *  le même jour d'abord, puis par écart de date et par score, sans les
- *  quasi-doublons de ce qu'elle porte, douze au plus. L'album voyage pour
+ *  quasi-doublons de ce qu'elle porte, douze au plus ; avec `cellule`, celles
+ *  qui tiennent cette case à 250 ppi d'abord. L'album voyage pour
  *  qu'une photo retirée à l'instant soit déjà de la réserve. Le serveur de
  *  dev, lui, lit `album.json` : le harnais enregistre avant de demander.
  *  Sans serveur de dev, une liste vide. */
-export async function reserveClassee(album: Album, at: number): Promise<Reserve> {
-  if (inTauri) return invoke<Reserve>("reserve_classee", { album, planche: at });
+export async function reserveClassee(
+  album: Album,
+  at: number,
+  cellule?: number,
+): Promise<Reserve> {
+  if (inTauri) return invoke<Reserve>("reserve_classee", { album, planche: at, cellule });
   try {
-    const res = await fetch(`/__dev/reserve?planche=${at + 1}`);
+    const q = cellule === undefined ? "" : `&case=${cellule + 1}`;
+    const res = await fetch(`/__dev/reserve?planche=${at + 1}${q}`);
     if (!res.ok) return { candidats: [] };
     return await res.json();
   } catch {

@@ -3,9 +3,10 @@
 // `ChoixReserve.tsx` dessine la liste ; ce qui change l'album est ici, et
 // se teste sur une planche de fixture.
 
-import { Album, Slot } from "./album";
+import { Album, MIN_EFFECTIVE_PPI, Slot } from "./album";
 import { Candidat } from "./bridge";
 import { addBlocker, addPhoto, insertSpread, placePhoto } from "./edits";
+import type { Alerte } from "./photos";
 
 /** Le type sous lequel une photo voyage, du tiroir à une case. */
 export const TYPE_PHOTO = "application/x-colophon-photo";
@@ -26,6 +27,15 @@ export type ModeChoix = { type: "ajouter" } | { type: "remplacer"; cell: number 
  *  gardé pour elle (un visage, sinon le défaut du Composer). */
 export function caseDe(c: Candidat): Slot {
   return { src: c.src, focal: c.focal };
+}
+
+/** Ce qu'une candidate dit de la case qu'elle remplacerait : l'alerte d'une
+ *  case trop petite, au même seuil et au même arrondi (`badgesDe`), ou rien
+ *  quand elle tient ou que le moteur n'a pas pu la mesurer. */
+export function alerteDeCandidat(c: Candidat): Alerte | null {
+  return c.ppi !== undefined && c.ppi < MIN_EFFECTIVE_PPI
+    ? { code: "sous_resolution", ppi: Math.round(c.ppi) }
+    : null;
 }
 
 export type Resultat =

@@ -13,10 +13,15 @@ import { Candidat, Reserve } from "./bridge";
 import { langue, t } from "./i18n";
 import { placerMenu } from "./contextuel";
 import { LazyThumb } from "./TriView";
+import { detailDAlerte, phraseDAlerte } from "./photos";
+import { alerteDeCandidat } from "./reserve";
+import { SignesAlerte } from "./SignesAlerte";
 
 /** Le libellé d'une raison : un code du moteur devient une ligne dans la
  *  langue de l'écran. Pour « proche », la date elle-même dit l'écart. */
 export function libelleRaison(c: Candidat): string {
+  const alerte = alerteDeCandidat(c);
+  if (alerte) return phraseDAlerte(alerte);
   if (c.raison === "meme_jour") return t("reserve.raison.meme_jour");
   if (c.raison === "proche" && c.taken) {
     const d = new Date(c.taken);
@@ -54,6 +59,10 @@ export function ChoixReserve({
   const [pos, setPos] = useState({ left: point.x, top: point.y });
   const [rang, setRang] = useState(0);
   const candidats = reserve?.candidats ?? [];
+  // La bulle d'un signe serait coupée par le défilement du popover : sa
+  // phrase vit sur une ligne à lui, celle de la vignette visée.
+  const signes = candidats.some((c) => alerteDeCandidat(c) !== null);
+  const visee = candidats[rang] ? alerteDeCandidat(candidats[rang]) : null;
 
   useLayoutEffect(() => {
     const el = root.current;
@@ -148,28 +157,39 @@ export function ChoixReserve({
         <p className="choix-vide">{t("reserve.vide")}</p>
       ) : (
         <div className="choix-liste" role="listbox" aria-label={t("reserve.titre")}>
-          {candidats.map((c, i) => (
-            <button
-              key={c.src}
-              ref={(el) => {
-                options.current[i] = el;
-              }}
-              type="button"
-              role="option"
-              aria-selected={rang === i}
-              aria-label={`${libelleRaison(c)}, ${c.src}`}
-              className={"choix-option" + (i === 0 ? " premiere" : "") + (rang === i ? " vise" : "")}
-              tabIndex={rang === i ? 0 : -1}
-              onMouseEnter={() => setRang(i)}
-              onClick={() => onChoisir(c)}
-            >
-              <span className="choix-vignette">
-                <LazyThumb src={c.src} />
-              </span>
-              <span className="choix-raison">{libelleRaison(c)}</span>
-            </button>
-          ))}
+          {candidats.map((c, i) => {
+            const alerte = alerteDeCandidat(c);
+            return (
+              <button
+                key={c.src}
+                ref={(el) => {
+                  options.current[i] = el;
+                }}
+                type="button"
+                role="option"
+                aria-selected={rang === i}
+                aria-label={`${libelleRaison(c)}, ${c.src}`}
+                className={"choix-option" + (i === 0 ? " premiere" : "") + (rang === i ? " vise" : "")}
+                tabIndex={rang === i ? 0 : -1}
+                onMouseEnter={() => setRang(i)}
+                onClick={() => onChoisir(c)}
+              >
+                <span className="choix-vignette">
+                  <LazyThumb src={c.src} />
+                </span>
+                <span className="choix-raison">
+                  {alerte ? <SignesAlerte alertes={[alerte]} enLigne muet /> : libelleRaison(c)}
+                </span>
+              </button>
+            );
+          })}
         </div>
+      )}
+      {signes && (
+        <p className="choix-alerte" aria-hidden="true">
+          {visee ? phraseDAlerte(visee) : "\u00a0"}
+          {visee && <small>{detailDAlerte(visee)}</small>}
+        </p>
       )}
     </div>
   );

@@ -263,12 +263,14 @@ function albumDevServer(dir: string): Plugin {
       // enregistre avant de demander. Les vignettes se rouvrent, donc des
       // secondes sur un gros dossier.
       server.middlewares.use("/__dev/reserve", (req, res) => {
-        const planche =
-          new URL(req.url ?? "", "http://x").searchParams.get("planche") ?? "1";
+        const q = new URL(req.url ?? "", "http://x").searchParams;
+        const planche = q.get("planche") ?? "1";
+        const cellule = q.get("case");
+        const parCase = cellule ? ["--case", cellule] : [];
         try {
           res.setHeader("Content-Type", "application/json");
           res.end(
-            execFileSync(engineBinary, ["--reserve", planche, "-o", dir], {
+            execFileSync(engineBinary, ["--reserve", planche, ...parCase, "-o", dir], {
               encoding: "utf8",
             }),
           );

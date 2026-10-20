@@ -412,4 +412,149 @@ mod tests {
         assert_eq!(releve_album(&dir, &dir).unwrap(), ReleveAlbum::default());
         let _ = fs::remove_dir_all(&dir);
     }
+
+    /// Le banc du badge « trop petite » (1.1-a) : d'où vient-il, sur les
+    /// pleines pages ? Chaque jeu de référence est composé brut depuis ses
+    /// fiches dans les cinq formats imprimables, puis chaque case est mesurée
+    /// trois fois : par le moteur (la case de la scène, la taille que le
+    /// Composer a lue dans la fiche), par l'écran (`badgesDe` : la case de
+    /// `slots_for`, la taille de `releve_album`), et contre l'en-tête de
+    /// l'original sur le disque (ce que l'app lit d'un album composé depuis
+    /// ses photos, qui n'a pas de relevé). Pour chaque pleine page, la tête
+    /// de « Remplacer par… » avant et après 1.1-a.
+    ///
+    /// `COLOPHON_MESURE=docs/mesures/2026-10-19-badges-pleine-page.json
+    /// cargo test -p colophon-core --release banc_badges_pleine_page --
+    /// --ignored --nocapture`, depuis la racine du dépôt.
+    #[test]
+    #[ignore]
+    fn banc_badges_pleine_page() {
+        use crate::audit::MIN_EFFECTIVE_PPI;
+        use crate::model::Album;
+        use crate::print::effective_ppi;
+        use serde_json::json;
+
+        let fiches = Path::new(env!("CARGO_MANIFEST_DIR")).join("fiches");
+        let testsets = crate::maison::vrai_dossier_personnel()
+            .expect("dossier personnel")
+            .join("Pictures/colophon-testsets");
+        let tmp = std::env::temp_dir().join(format!("colophon-banc-badges-{}", std::process::id()));
+        let mut lignes = Vec::new();
+        let mut total = [0usize; 6];
+        for jeu in ["corse-2013", "mauritanie-2019", "random-2024"] {
+            for format in crate::commande::formats_imprimables() {
+                let out = tmp.join(format!("{jeu}-{format}"));
+                let releve = Releve::lire(&fiches.join(format!("{jeu}.json"))).unwrap();
+                crate::build::composer(
+                    releve,
+                    &out,
+                    crate::build::BuildOptions {
+                        trim: crate::format::parse(format).unwrap(),
+                        aujourdhui: chrono::NaiveDate::from_ymd_opt(2026, 10, 19),
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+                let album: Album =
+                    serde_json::from_str(&fs::read_to_string(out.join("album.json")).unwrap()).unwrap();
+                let fiche: HashMap<String, (u32, u32)> = Releve::dans_album(&out)
+                    .unwrap()
+                    .map(|r| r.photos.iter().map(|p| (r.src(&p.path), p.orig)).collect())
+                    .unwrap();
+                let ecran = releve_album(&out, Path::new(&album.root)).unwrap();
+                let originaux = testsets.join(jeu);
+                let entete = |src: &str| -> Option<(u32, u32)> {
+                    let chemin = originaux.join(src);
+                    chemin.is_file().then_some(())?;
+                    let m = crate::meta::read(&chemin);
+                    crate::heic::oriented_dimensions(&chemin, m.orientation).ok()
+                };
+                let g = crate::pdf::geometry(&album);
+                let page = album.trim_mm.w * album.trim_mm.h;
+                let (mut cases, mut sous_moteur, mut sous_ecran, mut sous_entete) = (0, 0, 0, 0);
+                let (mut pleines, mut pleines_sous, mut tete_avant, mut tete_apres) = (0, 0, 0, 0);
+                let mut ecarts = Vec::new();
+                let mut details = Vec::new();
+                for (si, spread) in album.spreads.iter().enumerate() {
+                    let scene = crate::scene::Scene::of(spread, &g);
+                    let gabarit = crate::pdf::slots_for(&spread.template, spread.slots.len(), &g);
+                    for o in &scene.objects {
+                        let crate::scene::Role::Photo { cell, src, zoom, .. } = &o.role else {
+                            continue;
+                        };
+                        cases += 1;
+                        let (fw, fh) = fiche[src];
+                        let moteur = effective_ppi(&o.rect, fw, fh, *zoom);
+                        let m = &ecran.photos[src];
+                        let ecran_ppi = effective_ppi(&gabarit[*cell], m.largeur, m.hauteur, *zoom);
+                        let disque = entete(src).map(|(w, h)| effective_ppi(&o.rect, w, h, *zoom));
+                        sous_moteur += usize::from(moteur < MIN_EFFECTIVE_PPI);
+                        sous_ecran += usize::from(ecran_ppi < MIN_EFFECTIVE_PPI);
+                        sous_entete += usize::from(disque.is_some_and(|p| p < MIN_EFFECTIVE_PPI));
+                        if (moteur - ecran_ppi).abs() > 1e-9
+                            || disque.is_some_and(|p| (p - moteur).abs() > 1e-9)
+                        {
+                            ecarts.push(json!({ "planche": si + 1, "case": cell, "src": src,
+                                "moteur": moteur, "ecran": ecran_ppi, "entete": disque }));
+                        }
+                        // Seule sur sa page : la moitié d'une page au moins.
+                        let pleine = o.rect.w * o.rect.h >= 0.5 * page;
+                        if moteur < MIN_EFFECTIVE_PPI {
+                            details.push(json!({ "planche": si + 1, "case": cell, "src": src,
+                                "gabarit": spread.template, "pleine_page": pleine, "ppi": moteur.round() }));
+                        }
+                        if !pleine {
+                            continue;
+                        }
+                        pleines += 1;
+                        pleines_sous += usize::from(moteur < MIN_EFFECTIVE_PPI);
+                        let ppi_de = |c: &crate::reserve::Candidate| {
+                            let (w, h) = fiche[&c.src];
+                            effective_ppi(&o.rect, w, h, 1.0)
+                        };
+                        let avant = crate::reserve::reserve_classee(&out, &album, si, None).unwrap();
+                        let apres = crate::reserve::reserve_classee(&out, &album, si, Some(*cell)).unwrap();
+                        let (a, b) = (avant.candidats.first().map(ppi_de), apres.candidats.first().map(ppi_de));
+                        tete_avant += usize::from(a.is_some_and(|p| p < MIN_EFFECTIVE_PPI));
+                        tete_apres += usize::from(b.is_some_and(|p| p < MIN_EFFECTIVE_PPI));
+                    }
+                }
+                for (t, n) in total.iter_mut().zip([cases, sous_moteur, pleines, pleines_sous, tete_avant, tete_apres]) {
+                    *t += n;
+                }
+                eprintln!(
+                    "{jeu} {format} : {cases} cases, {sous_moteur} sous {MIN_EFFECTIVE_PPI} (écran {sous_ecran}, \
+                     en-tête {sous_entete}), {} écarts ; {pleines} pleines pages dont {pleines_sous} sous ; \
+                     tête de Remplacer sous le seuil : {tete_avant} avant, {tete_apres} après",
+                    ecarts.len()
+                );
+                lignes.push(json!({
+                    "jeu": jeu, "format": format, "planches": album.spreads.len(), "cases": cases,
+                    "sous_resolution": { "moteur": sous_moteur, "ecran": sous_ecran, "entete_original": sous_entete },
+                    "ecarts_moteur_ecran": ecarts,
+                    "pleines_pages": pleines, "pleines_pages_sous_resolution": pleines_sous,
+                    "detail_sous_resolution": details,
+                    "remplacer_tete_sous_resolution": { "avant": tete_avant, "apres": tete_apres },
+                }));
+                let _ = fs::remove_dir_all(&out);
+            }
+        }
+        let [cases, sous, pleines, pleines_sous, avant, apres] = total;
+        let rapport = json!({
+            "date": "2026-10-19",
+            "banc": "qualite::tests::banc_badges_pleine_page",
+            "seuil_ppi": MIN_EFFECTIVE_PPI,
+            "pleine_page": "case d'au moins la moitié de la surface d'une page",
+            "totaux": { "cases": cases, "sous_resolution": sous, "pleines_pages": pleines,
+                "pleines_pages_sous_resolution": pleines_sous,
+                "remplacer_tete_sous_resolution": { "avant": avant, "apres": apres } },
+            "albums": lignes,
+        });
+        let texte = serde_json::to_string_pretty(&rapport).unwrap();
+        match std::env::var("COLOPHON_MESURE") {
+            Ok(chemin) => fs::write(chemin, texte + "\n").unwrap(),
+            Err(_) => println!("{texte}"),
+        }
+        let _ = fs::remove_dir_all(&tmp);
+    }
 }

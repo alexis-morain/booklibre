@@ -50,6 +50,11 @@ pub struct Candidate {
     /// lui a trouvé (un visage), sinon le défaut du Composer. Sans lui l'app
     /// devrait relire `curation.json` pour construire la case.
     pub focal: [f64; 2],
+    /// Ce qu'elle imprimerait dans la case qu'on remplace, en ppi, au cadrage
+    /// par défaut (`print::effective_ppi`, zoom 1). Absent sans case cible,
+    /// et quand la taille de l'original n'est pas connue : rien ne se devine.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ppi: Option<f64>,
 }
 
 /// Ce que la commande rend : la liste, et ce qu'il faut savoir d'elle.
@@ -71,6 +76,8 @@ pub struct Fait {
     /// La prise de vue quand elle est fiable (EXIF ou sidecar), jamais un
     /// mtime : une date de fichier classerait sur l'ordre de copie.
     pub taken: Option<NaiveDateTime>,
+    /// La taille de l'original, orientée (`Photo::orig`), quand on la sait.
+    pub orig: Option<(u32, u32)>,
 }
 
 /// Une photo que l'album ne montre pas, avec le focal qu'elle emportera.
@@ -128,10 +135,16 @@ fn mediane(mut dates: Vec<NaiveDate>) -> Option<NaiveDate> {
 /// par score décroissant ; les photos sans date ferment la marche, par score.
 /// Écartées : les quasi-doublons d'une photo déjà posée sur la planche, au
 /// seuil dHash de la curation, et les photos dont rien n'a été mesuré (une
-/// illisible n'a pas de dHash, donc pas de place). Douze au plus.
+/// illisible n'a pas de dHash, donc pas de place).
+///
+/// Avec une case cible (`cellule`, « Remplacer par… »), celles qui la
+/// tiennent à 250 ppi passent devant, dans ce même ordre, et les autres
+/// suivent : aucune n'est écartée, si rien ne tient la main choisit encore.
+/// Douze au plus, comptées après ce rangement.
 pub fn classer(
     album: &Album,
     planche: usize,
+    cellule: Option<usize>,
     reserve: &[EnReserve],
     faits: &HashMap<String, Fait>,
     date_de: &dyn Fn(&str) -> Option<NaiveDateTime>,
@@ -140,6 +153,14 @@ pub fn classer(
         return Vec::new();
     };
     let jour = jour_de_reference(album, planche, date_de);
+    // La case telle que l'émetteur la dessine : la scène, pas le gabarit.
+    let case = cellule.and_then(|c| {
+        crate::scene::Scene::of(spread, &crate::pdf::geometry(album))
+            .objects
+            .into_iter()
+            .find(|o| matches!(o.role, crate::scene::Role::Photo { cell, .. } if cell == c))
+            .map(|o| o.rect)
+    });
     let posees: Vec<u64> = spread
         .slots
         .iter()
@@ -170,6 +191,9 @@ pub fn classer(
                     taken: fait.taken,
                     raison,
                     focal: r.focal,
+                    ppi: case.as_ref().zip(fait.orig).and_then(|(rect, (w, h))| {
+                        (w > 0 && h > 0).then(|| crate::print::effective_ppi(rect, w, h, 1.0))
+                    }),
                 },
             ))
         })
@@ -185,6 +209,8 @@ pub fn classer(
                 .unwrap_or(std::cmp::Ordering::Equal)
         })
     });
+    // Stable aussi : qui tient et qui ne tient pas gardent chacun leur ordre.
+    rangees.sort_by_key(|(_, c)| c.ppi.is_some_and(|p| p < crate::audit::MIN_EFFECTIVE_PPI));
     rangees.truncate(AU_PLUS);
     rangees.into_iter().map(|(_, c)| c).collect()
 }
@@ -196,7 +222,12 @@ pub fn classer(
 /// L'album voyage en argument et non par le fichier : l'éditeur tient une
 /// version que le disque n'a pas encore (une photo retirée à l'instant est
 /// déjà de la réserve), comme `gabarits_compatibles` reçoit ses `srcs`.
-pub fn reserve_classee(dir: &Path, album: &Album, planche: usize) -> Result<Reserve> {
+pub fn reserve_classee(
+    dir: &Path,
+    album: &Album,
+    planche: usize,
+    cellule: Option<usize>,
+) -> Result<Reserve> {
     anyhow::ensure!(
         planche < album.spreads.len(),
         "planche {planche} hors de l'album ({} planches)",
@@ -259,7 +290,7 @@ pub fn reserve_classee(dir: &Path, album: &Album, planche: usize) -> Result<Rese
             Racine::Absente => None,
         }
     };
-    let candidats = classer(album, planche, &reserve, &faits, &date_de);
+    let candidats = classer(album, planche, cellule, &reserve, &faits, &date_de);
     let note = (!notes.is_empty()).then(|| notes.join(" ; "));
     Ok(Reserve { candidats, note })
 }
@@ -297,6 +328,7 @@ fn mesurer(dir: &Path, album: &Album, releve: Option<&crate::releve::Releve>, sr
                         dhash: p.analysis.dhash,
                         score: p.analysis.score(),
                         taken: p.meta.taken_reliable.then_some(p.meta.taken),
+                        orig: Some(p.orig),
                     },
                 ))
             })
@@ -325,10 +357,12 @@ fn mesurer(dir: &Path, album: &Album, releve: Option<&crate::releve::Releve>, sr
             let name = thumbs.get(src)?;
             let chemin = crate::thumb::chemin(dir, name)?;
             let (dhash, score) = analyse_de_vignette(&chemin)?;
-            let taken = root_ok.then(|| crate::meta::read(&root.join(src))).and_then(|m| {
-                m.taken_reliable.then_some(m.taken)
-            });
-            Some((src.clone(), Fait { dhash, score, taken }))
+            let original = root.join(src);
+            let meta = root_ok.then(|| crate::meta::read(&original));
+            let taken = meta.as_ref().and_then(|m| m.taken_reliable.then_some(m.taken));
+            // La seule règle de taille du projet, celle de l'alerte (`qualite.rs`).
+            let orig = meta.and_then(|m| crate::heic::oriented_dimensions(&original, m.orientation).ok());
+            Some((src.clone(), Fait { dhash, score, taken, orig }))
         })
         .collect();
     let manquantes = mesures.iter().filter(|m| m.is_none()).count();
@@ -437,7 +471,17 @@ mod tests {
     }
 
     fn fait(n: u64, score: f64, taken: Option<&str>) -> Fait {
-        Fait { dhash: dhash(n), score, taken: taken.map(date) }
+        Fait { dhash: dhash(n), score, taken: taken.map(date), orig: None }
+    }
+
+    /// Une photo dont on connaît la taille de l'original, orientée.
+    fn fait_de(n: u64, score: f64, taken: &str, orig: (u32, u32)) -> Fait {
+        Fait { orig: Some(orig), ..fait(n, score, Some(taken)) }
+    }
+
+    /// Une pleine page : la case qui demande le plus de pixels.
+    fn pleine_page(srcs: &[&str]) -> Spread {
+        Spread { template: "full1".into(), ..planche(srcs) }
     }
 
     fn reserve(srcs: &[&str]) -> Vec<EnReserve> {
@@ -463,7 +507,7 @@ mod tests {
         ]
         .into_iter()
         .collect();
-        let c = classer(&a, 0, &reserve(&["loin.jpg", "jour.jpg", "veille.jpg"]), &faits, &date_de(&faits));
+        let c = classer(&a, 0, None, &reserve(&["loin.jpg", "jour.jpg", "veille.jpg"]), &faits, &date_de(&faits));
         assert_eq!(srcs(&c), ["jour.jpg", "veille.jpg", "loin.jpg"]);
         assert_eq!(c[0].raison, Raison::MemeJour);
         assert_eq!(c[1].raison, Raison::Proche);
@@ -483,7 +527,7 @@ mod tests {
         let proche = Fait { dhash: dhash(0) ^ ((1u64 << 23) - 1), ..fait(0, 9.0, Some("2013-10-27 11:00:00")) };
         assert_eq!(analyze::hamming(proche.dhash, dhash(0)), 23);
         faits.insert("doublon.jpg".into(), proche);
-        let c = classer(&a, 0, &reserve(&["doublon.jpg", "autre.jpg"]), &faits, &date_de(&faits));
+        let c = classer(&a, 0, None, &reserve(&["doublon.jpg", "autre.jpg"]), &faits, &date_de(&faits));
         assert_eq!(srcs(&c), ["autre.jpg"]);
     }
 
@@ -498,7 +542,7 @@ mod tests {
         ]
         .into_iter()
         .collect();
-        let c = classer(&a, 0, &reserve(&["faible.jpg", "forte.jpg", "moyenne.jpg"]), &faits, &date_de(&faits));
+        let c = classer(&a, 0, None, &reserve(&["faible.jpg", "forte.jpg", "moyenne.jpg"]), &faits, &date_de(&faits));
         assert_eq!(srcs(&c), ["forte.jpg", "moyenne.jpg", "faible.jpg"]);
         assert!(c.iter().all(|c| c.raison == Raison::MemeJour));
     }
@@ -518,7 +562,7 @@ mod tests {
         .into_iter()
         .collect();
         assert_eq!(jour_de_reference(&a, 1, &date_de(&faits)), Some(date("2013-10-20 00:00:00").date()));
-        let c = classer(&a, 1, &reserve(&["r29.jpg", "r20.jpg"]), &faits, &date_de(&faits));
+        let c = classer(&a, 1, None, &reserve(&["r29.jpg", "r20.jpg"]), &faits, &date_de(&faits));
         assert_eq!(srcs(&c), ["r20.jpg", "r29.jpg"]);
         assert_eq!(c[0].raison, Raison::MemeJour);
     }
@@ -546,7 +590,7 @@ mod tests {
         ]
         .into_iter()
         .collect();
-        let c = classer(&a, 0, &reserve(&["x.jpg", "y.jpg"]), &faits, &date_de(&faits));
+        let c = classer(&a, 0, None, &reserve(&["x.jpg", "y.jpg"]), &faits, &date_de(&faits));
         assert_eq!(srcs(&c), ["y.jpg", "x.jpg"]);
         assert!(c.iter().all(|c| c.raison == Raison::Nette));
     }
@@ -561,7 +605,7 @@ mod tests {
         ]
         .into_iter()
         .collect();
-        let c = classer(&a, 0, &reserve(&["sans.jpg", "loin.jpg"]), &faits, &date_de(&faits));
+        let c = classer(&a, 0, None, &reserve(&["sans.jpg", "loin.jpg"]), &faits, &date_de(&faits));
         assert_eq!(srcs(&c), ["loin.jpg", "sans.jpg"]);
         assert_eq!(c[1].raison, Raison::Nette);
     }
@@ -575,15 +619,91 @@ mod tests {
         for i in 1..=20u64 {
             let nom = format!("r{i:02}.jpg");
             // Des dHash éloignés les uns des autres et de la photo posée.
-            faits.insert(nom.clone(), Fait { dhash: dhash(i % 9 + 1) ^ (i << 40), score: i as f64, taken: Some(date("2013-10-27 12:00:00")) });
+            faits.insert(nom.clone(), Fait { dhash: dhash(i % 9 + 1) ^ (i << 40), score: i as f64, taken: Some(date("2013-10-27 12:00:00")), orig: None });
             noms.push(nom);
         }
         noms.push("illisible.jpg".into());
         let en_reserve: Vec<EnReserve> = noms.iter().map(|s| EnReserve { src: s.clone(), focal: [0.5, 0.42] }).collect();
-        let c = classer(&a, 0, &en_reserve, &faits, &date_de(&faits));
+        let c = classer(&a, 0, None, &en_reserve, &faits, &date_de(&faits));
         assert_eq!(c.len(), AU_PLUS);
         assert_eq!(c[0].src, "r20.jpg");
         assert!(c.iter().all(|c| c.src != "illisible.jpg"));
+    }
+
+    #[test]
+    fn avec_une_case_celle_qui_tient_passe_devant_une_plus_proche_qui_ne_tient_pas() {
+        let a = album(vec![pleine_page(&["p.jpg"])]);
+        let faits: HashMap<String, Fait> = [
+            ("p.jpg".to_string(), fait_de(0, 5.0, "2013-10-27 10:00:00", (6000, 4000))),
+            ("petite.jpg".to_string(), fait_de(1, 9.0, "2013-10-27 12:00:00", (1200, 900))),
+            ("grande.jpg".to_string(), fait_de(2, 1.0, "2013-10-29 12:00:00", (6000, 4000))),
+        ]
+        .into_iter()
+        .collect();
+        let r = reserve(&["petite.jpg", "grande.jpg"]);
+        let c = classer(&a, 0, Some(0), &r, &faits, &date_de(&faits));
+        assert_eq!(srcs(&c), ["grande.jpg", "petite.jpg"]);
+        let (grande, petite) = (c[0].ppi.unwrap(), c[1].ppi.unwrap());
+        assert!(grande >= crate::audit::MIN_EFFECTIVE_PPI, "{grande}");
+        assert!(petite < crate::audit::MIN_EFFECTIVE_PPI, "{petite}");
+        // La raison de date ne change pas : c'est l'app qui montre le signe.
+        assert_eq!(c[1].raison, Raison::MemeJour);
+    }
+
+    #[test]
+    fn sans_case_l_ordre_et_le_contrat_sont_ceux_d_hier() {
+        let a = album(vec![pleine_page(&["p.jpg"])]);
+        let faits: HashMap<String, Fait> = [
+            ("p.jpg".to_string(), fait_de(0, 5.0, "2013-10-27 10:00:00", (6000, 4000))),
+            ("petite.jpg".to_string(), fait_de(1, 9.0, "2013-10-27 12:00:00", (1200, 900))),
+            ("grande.jpg".to_string(), fait_de(2, 1.0, "2013-10-29 12:00:00", (6000, 4000))),
+        ]
+        .into_iter()
+        .collect();
+        let c = classer(&a, 0, None, &reserve(&["petite.jpg", "grande.jpg"]), &faits, &date_de(&faits));
+        assert_eq!(srcs(&c), ["petite.jpg", "grande.jpg"]);
+        assert!(c.iter().all(|c| c.ppi.is_none()));
+        // Sans case, le JSON n'a pas un champ de plus.
+        assert!(!serde_json::to_string(&c).unwrap().contains("ppi"));
+    }
+
+    #[test]
+    fn le_plafond_tombe_apres_le_rangement() {
+        // Treize petites du jour devant une grande d'un autre jour : coupées
+        // avant le rangement, les douze premières auraient chassé la seule
+        // qui tient.
+        let a = album(vec![pleine_page(&["p.jpg"])]);
+        let mut faits: HashMap<String, Fait> =
+            [("p.jpg".to_string(), fait_de(0, 5.0, "2013-10-27 10:00:00", (6000, 4000)))].into_iter().collect();
+        let mut noms: Vec<String> = Vec::new();
+        for i in 1..=13u64 {
+            let nom = format!("petite{i:02}.jpg");
+            faits.insert(nom.clone(), Fait { dhash: dhash(i % 9 + 1) ^ (i << 40), score: i as f64, taken: Some(date("2013-10-27 12:00:00")), orig: Some((1200, 900)) });
+            noms.push(nom);
+        }
+        faits.insert("grande.jpg".into(), fait_de(5, 0.5, "2013-11-30 12:00:00", (6000, 4000)));
+        noms.push("grande.jpg".into());
+        let r: Vec<EnReserve> = noms.iter().map(|s| EnReserve { src: s.clone(), focal: [0.5, 0.42] }).collect();
+        let c = classer(&a, 0, Some(0), &r, &faits, &date_de(&faits));
+        assert_eq!(c.len(), AU_PLUS);
+        assert_eq!(c[0].src, "grande.jpg");
+        assert_eq!(c[1].src, "petite13.jpg", "les autres gardent l'ordre d'hier");
+    }
+
+    #[test]
+    fn une_taille_inconnue_ne_se_devine_pas() {
+        // Sans original mesuré, pas de ppi : la candidate garde sa place.
+        let a = album(vec![pleine_page(&["p.jpg"])]);
+        let faits: HashMap<String, Fait> = [
+            ("p.jpg".to_string(), fait(0, 5.0, Some("2013-10-27 10:00:00"))),
+            ("inconnue.jpg".to_string(), fait(1, 9.0, Some("2013-10-27 12:00:00"))),
+            ("grande.jpg".to_string(), fait_de(2, 1.0, "2013-10-27 12:00:00", (6000, 4000))),
+        ]
+        .into_iter()
+        .collect();
+        let c = classer(&a, 0, Some(0), &reserve(&["inconnue.jpg", "grande.jpg"]), &faits, &date_de(&faits));
+        assert_eq!(srcs(&c), ["inconnue.jpg", "grande.jpg"]);
+        assert_eq!(c[0].ppi, None);
     }
 
     #[test]
@@ -596,7 +716,7 @@ mod tests {
         .into_iter()
         .collect();
         let r = vec![EnReserve { src: "v.jpg".into(), focal: [0.3, 0.2] }];
-        let c = classer(&a, 0, &r, &faits, &date_de(&faits));
+        let c = classer(&a, 0, None, &r, &faits, &date_de(&faits));
         assert_eq!(c[0].focal, [0.3, 0.2]);
     }
 
@@ -609,10 +729,10 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let a = album(vec![planche(&["p.jpg"])]);
-        let r = reserve_classee(&dir, &a, 0).unwrap();
+        let r = reserve_classee(&dir, &a, 0, None).unwrap();
         assert!(r.candidats.is_empty());
         assert!(r.note.as_deref().unwrap_or("").contains("ni relevé ni vignettes"));
-        assert!(reserve_classee(&dir, &a, 7).is_err(), "une planche hors de l'album se refuse");
+        assert!(reserve_classee(&dir, &a, 7, None).is_err(), "une planche hors de l'album se refuse");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -650,7 +770,7 @@ mod tests {
         thumbs.insert("perdue.jpg".to_string(), "v-perdue.jpg".to_string());
         std::fs::write(dir.join("thumbs.json"), serde_json::to_string(&thumbs).unwrap()).unwrap();
         let a = album(vec![planche(&["a.jpg"])]);
-        let r = reserve_classee(&dir, &a, 0).unwrap();
+        let r = reserve_classee(&dir, &a, 0, None).unwrap();
         let note = r.note.clone().unwrap_or_default();
         assert!(note.contains("sans date"), "{note}");
         assert!(note.contains("1 photo(s) sans vignette lisible"), "{note}");
@@ -670,7 +790,7 @@ mod tests {
             image::Rgb([v, 255 - v, v / 2])
         });
         b.save(cache.join("v-a.jpg")).unwrap();
-        let r = reserve_classee(&dir, &a, 0).unwrap();
+        let r = reserve_classee(&dir, &a, 0, None).unwrap();
         assert_eq!(srcs(&r.candidats), ["c.jpg"]);
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -690,10 +810,10 @@ mod tests {
                 .unwrap();
         for planche in [0, album.spreads.len() / 2, album.spreads.len() - 1] {
             let t0 = std::time::Instant::now();
-            let r = reserve_classee(&dir, &album, planche).unwrap();
+            let r = reserve_classee(&dir, &album, planche, None).unwrap();
             let premier = t0.elapsed();
             let t1 = std::time::Instant::now();
-            let _ = reserve_classee(&dir, &album, planche).unwrap();
+            let _ = reserve_classee(&dir, &album, planche, None).unwrap();
             let second = t1.elapsed();
             eprintln!(
                 "planche {} : {} candidates en {:.2} s, puis {:.3} s ; note = {:?}",

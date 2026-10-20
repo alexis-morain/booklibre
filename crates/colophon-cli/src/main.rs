@@ -221,6 +221,11 @@ struct Cli {
     #[arg(long, value_name = "PLANCHE", hide = true)]
     reserve: Option<usize>,
 
+    /// With --reserve: the cell being replaced (counted from 1), so the
+    /// photos that hold it at the resolution floor come first.
+    #[arg(long, value_name = "CASE", hide = true, requires = "reserve")]
+    case: Option<usize>,
+
     /// Demande à Cloudprinter le devis d'un exemplaire de l'album ALBUM
     /// (le compte de pages du prévol, les codes du profil cloudprinter),
     /// livré dans --pays, et l'imprime en JSON. La clé vient de
@@ -406,7 +411,11 @@ fn main() -> Result<()> {
         let i = planche
             .checked_sub(1)
             .context("--reserve compte les planches à partir de 1")?;
-        let reserve = colophon_core::reserve::reserve_classee(&cli.out, &album, i)?;
+        let cellule = match cli.case {
+            Some(c) => Some(c.checked_sub(1).context("--case compte les cases à partir de 1")?),
+            None => None,
+        };
+        let reserve = colophon_core::reserve::reserve_classee(&cli.out, &album, i, cellule)?;
         println!("{}", serde_json::to_string(&reserve)?);
         return Ok(());
     }

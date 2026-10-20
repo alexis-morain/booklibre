@@ -5147,6 +5147,23 @@ button.envoi-defaut-ou:focus-visible {
   text-overflow: ellipsis;
 }
 
+/* Le texte de la bulle du signe, pour la vignette visée : une ligne réservée
+   dès qu'un signe est là, pour que le popover ne saute pas au survol. */
+.choix-alerte {
+  display: grid;
+  gap: 2px;
+  min-height: 4.5em;
+  max-width: 420px;
+  margin: 0;
+  color: var(--text);
+}
+
+.choix-alerte small {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+}
+
 /* La grille d'ornements ouverte depuis le menu : la même, posée au point du
    clic plutôt qu'au-dessus de son bouton. */
 .orn-panel.au-pointeur {
