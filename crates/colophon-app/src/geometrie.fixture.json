@@ -16,6 +16,7 @@
   },
   "bleed_mm": 3.0,
   "constantes": {
+    "back_text_pt_at_210": 10.5,
     "caption_safe": 0.5,
     "caption_size_mm": 3.1750019999999997,
     "colophon_leading_mm": 4.6,
@@ -2286,6 +2287,2756 @@
       195.5,
       188.0
     ]
+  ],
+  "quatrieme_samples": [
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        210.0
+      ],
+      "cadre": null,
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Pour Marie.",
+          93.45,
+          107.68552083333333,
+          23.1
+        ],
+        [
+          "",
+          105.0,
+          102.31447916666666,
+          0.0
+        ],
+        [
+          "Et pour la suite.",
+          87.15,
+          96.94343749999999,
+          35.7
+        ]
+      ],
+      "photo": null,
+      "taille_pt": 10.5,
+      "texte": "Pour Marie.\n\nEt pour la suite.",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        210.0
+      ],
+      "cadre": null,
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+          21.0,
+          102.31447916666666,
+          168.0
+        ]
+      ],
+      "photo": null,
+      "taille_pt": 10.5,
+      "texte": "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        210.0
+      ],
+      "cadre": null,
+      "coupees": 2,
+      "ecarts": [
+        3,
+        1
+      ],
+      "lignes": [
+        [
+          "ligne",
+          99.75,
+          209.7353125,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          204.36427083333334,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          198.99322916666668,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          193.62218750000002,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          188.25114583333337,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          182.8801041666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          177.50906250000006,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          172.1380208333334,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          166.76697916666674,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          161.3959375000001,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          156.02489583333343,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          150.65385416666678,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          145.28281250000012,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          139.91177083333346,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          134.5407291666668,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          129.16968750000015,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          123.79864583333348,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          118.42760416666681,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          113.05656250000014,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          107.68552083333347,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          102.3144791666668,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          96.94343750000013,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          91.57239583333346,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          86.20135416666679,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          80.83031250000012,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          75.45927083333345,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          70.08822916666678,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          64.71718750000011,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          59.346145833333445,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          53.97510416666678,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          48.60406250000012,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          43.233020833333455,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          37.86197916666679,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          32.49093750000013,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          27.119895833333462,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          21.748854166666796,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          16.37781250000013,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          11.006770833333462,
+          10.5
+        ]
+      ],
+      "photo": null,
+      "taille_pt": 10.5,
+      "texte": "ligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\n",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        128.32895833333336
+      ],
+      "cadre": [
+        76.3,
+        133.70000000000002,
+        57.400000000000006,
+        57.400000000000006
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Pour Marie.",
+          93.45,
+          66.85000000000001,
+          23.1
+        ],
+        [
+          "",
+          105.0,
+          61.478958333333345,
+          0.0
+        ],
+        [
+          "Et pour la suite.",
+          87.15,
+          56.10791666666668,
+          35.7
+        ]
+      ],
+      "photo": {
+        "position": "haut",
+        "taille": "petite"
+      },
+      "taille_pt": 10.5,
+      "texte": "Pour Marie.\n\nEt pour la suite.",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        128.32895833333336
+      ],
+      "cadre": [
+        76.3,
+        133.70000000000002,
+        57.400000000000006,
+        57.400000000000006
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+          21.0,
+          61.478958333333345,
+          168.0
+        ]
+      ],
+      "photo": {
+        "position": "haut",
+        "taille": "petite"
+      },
+      "taille_pt": 10.5,
+      "texte": "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        128.32895833333336
+      ],
+      "cadre": [
+        76.3,
+        133.70000000000002,
+        57.400000000000006,
+        57.400000000000006
+      ],
+      "coupees": 9,
+      "ecarts": [
+        18,
+        1
+      ],
+      "lignes": [
+        [
+          "ligne",
+          99.75,
+          168.89979166666666,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          163.52875,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          158.15770833333335,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          152.7866666666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          147.41562500000003,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          142.04458333333338,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          136.67354166666672,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          131.30250000000007,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          125.9314583333334,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          120.56041666666673,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          115.18937500000006,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          109.81833333333338,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          104.44729166666671,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          99.07625000000004,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          93.70520833333337,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          88.3341666666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          82.96312500000003,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          77.59208333333336,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          72.2210416666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          66.85000000000002,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          61.47895833333336,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          56.107916666666696,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          50.73687500000003,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          45.36583333333337,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          39.99479166666671,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          34.623750000000044,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          29.252708333333377,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          23.88166666666671,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          18.510625000000044,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          13.139583333333377,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          7.768541666666711,
+          10.5
+        ]
+      ],
+      "photo": {
+        "position": "haut",
+        "taille": "petite"
+      },
+      "taille_pt": 10.5,
+      "texte": "ligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\n",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        99.62895833333334
+      ],
+      "cadre": [
+        61.949999999999996,
+        105.00000000000001,
+        86.10000000000001,
+        86.10000000000001
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Pour Marie.",
+          93.45,
+          52.50000000000001,
+          23.1
+        ],
+        [
+          "",
+          105.0,
+          47.128958333333344,
+          0.0
+        ],
+        [
+          "Et pour la suite.",
+          87.15,
+          41.75791666666668,
+          35.7
+        ]
+      ],
+      "photo": {
+        "position": "haut",
+        "taille": "moyenne"
+      },
+      "taille_pt": 10.5,
+      "texte": "Pour Marie.\n\nEt pour la suite.",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        99.62895833333334
+      ],
+      "cadre": [
+        61.949999999999996,
+        105.00000000000001,
+        86.10000000000001,
+        86.10000000000001
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+          21.0,
+          47.128958333333344,
+          168.0
+        ]
+      ],
+      "photo": {
+        "position": "haut",
+        "taille": "moyenne"
+      },
+      "taille_pt": 10.5,
+      "texte": "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        99.62895833333334
+      ],
+      "cadre": [
+        61.949999999999996,
+        105.00000000000001,
+        86.10000000000001,
+        86.10000000000001
+      ],
+      "coupees": 12,
+      "ecarts": [
+        23,
+        0
+      ],
+      "lignes": [
+        [
+          "ligne",
+          99.75,
+          154.54979166666666,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          149.17875,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          143.80770833333335,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          138.4366666666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          133.06562500000004,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          127.69458333333337,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          122.3235416666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          116.95250000000003,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          111.58145833333336,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          106.21041666666669,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          100.83937500000002,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          95.46833333333335,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          90.09729166666668,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          84.72625000000001,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          79.35520833333334,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          73.98416666666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          68.613125,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          63.24208333333333,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          57.87104166666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          52.50000000000001,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          47.128958333333344,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          41.75791666666668,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          36.38687500000002,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          31.01583333333335,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          25.644791666666684,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          20.273750000000017,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          14.90270833333335,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          9.531666666666684,
+          10.5
+        ]
+      ],
+      "photo": {
+        "position": "haut",
+        "taille": "moyenne"
+      },
+      "taille_pt": 10.5,
+      "texte": "ligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\n",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        70.92895833333334
+      ],
+      "cadre": [
+        47.599999999999994,
+        76.30000000000001,
+        114.80000000000001,
+        114.80000000000001
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Pour Marie.",
+          93.45,
+          38.150000000000006,
+          23.1
+        ],
+        [
+          "",
+          105.0,
+          32.77895833333334,
+          0.0
+        ],
+        [
+          "Et pour la suite.",
+          87.15,
+          27.407916666666676,
+          35.7
+        ]
+      ],
+      "photo": {
+        "position": "haut",
+        "taille": "grande"
+      },
+      "taille_pt": 10.5,
+      "texte": "Pour Marie.\n\nEt pour la suite.",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        70.92895833333334
+      ],
+      "cadre": [
+        47.599999999999994,
+        76.30000000000001,
+        114.80000000000001,
+        114.80000000000001
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+          21.0,
+          32.77895833333334,
+          168.0
+        ]
+      ],
+      "photo": {
+        "position": "haut",
+        "taille": "grande"
+      },
+      "taille_pt": 10.5,
+      "texte": "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        70.92895833333334
+      ],
+      "cadre": [
+        47.599999999999994,
+        76.30000000000001,
+        114.80000000000001,
+        114.80000000000001
+      ],
+      "coupees": 15,
+      "ecarts": [
+        29,
+        0
+      ],
+      "lignes": [
+        [
+          "ligne",
+          99.75,
+          140.19979166666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          134.82875,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          129.45770833333336,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          124.08666666666669,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          118.71562500000002,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          113.34458333333335,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          107.97354166666668,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          102.6025,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          97.23145833333334,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          91.86041666666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          86.489375,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          81.11833333333333,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          75.74729166666665,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          70.37624999999998,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          65.00520833333331,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          59.63416666666665,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          54.26312499999999,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          48.892083333333325,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          43.52104166666666,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          38.15,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          32.778958333333335,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          27.40791666666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          22.036875000000002,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          16.665833333333335,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          11.294791666666669,
+          10.5
+        ]
+      ],
+      "photo": {
+        "position": "haut",
+        "taille": "grande"
+      },
+      "taille_pt": 10.5,
+      "texte": "ligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\n",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        70.92895833333333
+      ],
+      "cadre": [
+        76.3,
+        76.3,
+        57.400000000000006,
+        57.400000000000006
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Pour Marie.",
+          93.45,
+          38.15,
+          23.1
+        ],
+        [
+          "",
+          105.0,
+          32.778958333333335,
+          0.0
+        ],
+        [
+          "Et pour la suite.",
+          87.15,
+          27.40791666666667,
+          35.7
+        ]
+      ],
+      "photo": {
+        "position": "centre",
+        "taille": "petite"
+      },
+      "taille_pt": 10.5,
+      "texte": "Pour Marie.\n\nEt pour la suite.",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        70.92895833333333
+      ],
+      "cadre": [
+        76.3,
+        76.3,
+        57.400000000000006,
+        57.400000000000006
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+          21.0,
+          32.778958333333335,
+          168.0
+        ]
+      ],
+      "photo": {
+        "position": "centre",
+        "taille": "petite"
+      },
+      "taille_pt": 10.5,
+      "texte": "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        70.92895833333333
+      ],
+      "cadre": [
+        76.3,
+        76.3,
+        57.400000000000006,
+        57.400000000000006
+      ],
+      "coupees": 15,
+      "ecarts": [
+        29,
+        0
+      ],
+      "lignes": [
+        [
+          "ligne",
+          99.75,
+          140.19979166666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          134.82875,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          129.45770833333336,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          124.08666666666669,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          118.71562500000002,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          113.34458333333335,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          107.97354166666668,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          102.6025,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          97.23145833333334,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          91.86041666666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          86.489375,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          81.11833333333333,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          75.74729166666665,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          70.37624999999998,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          65.00520833333331,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          59.63416666666665,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          54.26312499999999,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          48.892083333333325,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          43.52104166666666,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          38.15,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          32.778958333333335,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          27.40791666666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          22.036875000000002,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          16.665833333333335,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          11.294791666666669,
+          10.5
+        ]
+      ],
+      "photo": {
+        "position": "centre",
+        "taille": "petite"
+      },
+      "taille_pt": 10.5,
+      "texte": "ligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\n",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        56.57895833333333
+      ],
+      "cadre": [
+        61.949999999999996,
+        61.949999999999996,
+        86.10000000000001,
+        86.10000000000001
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Pour Marie.",
+          93.45,
+          30.974999999999998,
+          23.1
+        ],
+        [
+          "",
+          105.0,
+          25.60395833333333,
+          0.0
+        ],
+        [
+          "Et pour la suite.",
+          87.15,
+          20.232916666666664,
+          35.7
+        ]
+      ],
+      "photo": {
+        "position": "centre",
+        "taille": "moyenne"
+      },
+      "taille_pt": 10.5,
+      "texte": "Pour Marie.\n\nEt pour la suite.",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        56.57895833333333
+      ],
+      "cadre": [
+        61.949999999999996,
+        61.949999999999996,
+        86.10000000000001,
+        86.10000000000001
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+          21.0,
+          25.60395833333333,
+          168.0
+        ]
+      ],
+      "photo": {
+        "position": "centre",
+        "taille": "moyenne"
+      },
+      "taille_pt": 10.5,
+      "texte": "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        56.57895833333333
+      ],
+      "cadre": [
+        61.949999999999996,
+        61.949999999999996,
+        86.10000000000001,
+        86.10000000000001
+      ],
+      "coupees": 16,
+      "ecarts": [
+        31,
+        0
+      ],
+      "lignes": [
+        [
+          "ligne",
+          99.75,
+          133.02479166666666,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          127.65374999999999,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          122.28270833333332,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          116.91166666666665,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          111.54062499999998,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          106.1695833333333,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          100.79854166666664,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          95.42749999999997,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          90.0564583333333,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          84.68541666666663,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          79.31437499999996,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          73.94333333333329,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          68.57229166666662,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          63.20124999999995,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          57.83020833333329,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          52.459166666666626,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          47.08812499999996,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          41.7170833333333,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          36.346041666666636,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          30.97499999999997,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          25.603958333333303,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          20.232916666666636,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          14.86187499999997,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          9.490833333333303,
+          10.5
+        ]
+      ],
+      "photo": {
+        "position": "centre",
+        "taille": "moyenne"
+      },
+      "taille_pt": 10.5,
+      "texte": "ligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\n",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        42.22895833333333
+      ],
+      "cadre": [
+        47.599999999999994,
+        47.599999999999994,
+        114.80000000000001,
+        114.80000000000001
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Pour Marie.",
+          93.45,
+          23.799999999999997,
+          23.1
+        ],
+        [
+          "",
+          105.0,
+          18.42895833333333,
+          0.0
+        ],
+        [
+          "Et pour la suite.",
+          87.15,
+          13.057916666666664,
+          35.7
+        ]
+      ],
+      "photo": {
+        "position": "centre",
+        "taille": "grande"
+      },
+      "taille_pt": 10.5,
+      "texte": "Pour Marie.\n\nEt pour la suite.",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        42.22895833333333
+      ],
+      "cadre": [
+        47.599999999999994,
+        47.599999999999994,
+        114.80000000000001,
+        114.80000000000001
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+          21.0,
+          18.42895833333333,
+          168.0
+        ]
+      ],
+      "photo": {
+        "position": "centre",
+        "taille": "grande"
+      },
+      "taille_pt": 10.5,
+      "texte": "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        0.0,
+        210.0,
+        42.22895833333333
+      ],
+      "cadre": [
+        47.599999999999994,
+        47.599999999999994,
+        114.80000000000001,
+        114.80000000000001
+      ],
+      "coupees": 17,
+      "ecarts": [
+        34,
+        1
+      ],
+      "lignes": [
+        [
+          "ligne",
+          99.75,
+          125.84979166666663,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          120.47874999999996,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          115.10770833333329,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          109.73666666666662,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          104.36562499999995,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          98.99458333333328,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          93.62354166666661,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          88.25249999999994,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          82.88145833333327,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          77.5104166666666,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          72.13937499999993,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          66.76833333333326,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          61.3972916666666,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          56.02624999999993,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          50.65520833333327,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          45.28416666666661,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          39.913124999999944,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          34.54208333333328,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          29.171041666666614,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          23.799999999999947,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          18.42895833333328,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          13.057916666666614,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          7.686874999999948,
+          10.5
+        ]
+      ],
+      "photo": {
+        "position": "centre",
+        "taille": "grande"
+      },
+      "taille_pt": 10.5,
+      "texte": "ligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\n",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        81.67104166666668,
+        210.0,
+        128.32895833333333
+      ],
+      "cadre": [
+        76.3,
+        18.9,
+        57.400000000000006,
+        57.400000000000006
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Pour Marie.",
+          93.45,
+          148.5210416666667,
+          23.1
+        ],
+        [
+          "",
+          105.0,
+          143.15000000000003,
+          0.0
+        ],
+        [
+          "Et pour la suite.",
+          87.15,
+          137.77895833333338,
+          35.7
+        ]
+      ],
+      "photo": {
+        "position": "bas",
+        "taille": "petite"
+      },
+      "taille_pt": 10.5,
+      "texte": "Pour Marie.\n\nEt pour la suite.",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        81.67104166666668,
+        210.0,
+        128.32895833333333
+      ],
+      "cadre": [
+        76.3,
+        18.9,
+        57.400000000000006,
+        57.400000000000006
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+          21.0,
+          143.15000000000003,
+          168.0
+        ]
+      ],
+      "photo": {
+        "position": "bas",
+        "taille": "petite"
+      },
+      "taille_pt": 10.5,
+      "texte": "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        81.67104166666668,
+        210.0,
+        128.32895833333333
+      ],
+      "cadre": [
+        76.3,
+        18.9,
+        57.400000000000006,
+        57.400000000000006
+      ],
+      "coupees": 8,
+      "ecarts": [
+        17,
+        1
+      ],
+      "lignes": [
+        [
+          "ligne",
+          99.75,
+          250.57083333333333,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          245.19979166666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          239.82875,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          234.45770833333336,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          229.0866666666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          223.71562500000005,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          218.3445833333334,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          212.97354166666673,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          207.60250000000008,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          202.23145833333342,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          196.86041666666677,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          191.4893750000001,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          186.11833333333345,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          180.7472916666668,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          175.37625000000014,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          170.00520833333348,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          164.63416666666683,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          159.26312500000017,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          153.89208333333352,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          148.52104166666686,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          143.1500000000002,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          137.77895833333355,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          132.4079166666669,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          127.03687500000022,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          121.66583333333355,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          116.29479166666688,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          110.92375000000021,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          105.55270833333354,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          100.18166666666687,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          94.8106250000002,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          89.43958333333353,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          84.06854166666686,
+          10.5
+        ]
+      ],
+      "photo": {
+        "position": "bas",
+        "taille": "petite"
+      },
+      "taille_pt": 10.5,
+      "texte": "ligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\n",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        110.37104166666667,
+        210.0,
+        99.62895833333333
+      ],
+      "cadre": [
+        61.949999999999996,
+        18.9,
+        86.10000000000001,
+        86.10000000000001
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Pour Marie.",
+          93.45,
+          162.87104166666668,
+          23.1
+        ],
+        [
+          "",
+          105.0,
+          157.50000000000003,
+          0.0
+        ],
+        [
+          "Et pour la suite.",
+          87.15,
+          152.12895833333337,
+          35.7
+        ]
+      ],
+      "photo": {
+        "position": "bas",
+        "taille": "moyenne"
+      },
+      "taille_pt": 10.5,
+      "texte": "Pour Marie.\n\nEt pour la suite.",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        110.37104166666667,
+        210.0,
+        99.62895833333333
+      ],
+      "cadre": [
+        61.949999999999996,
+        18.9,
+        86.10000000000001,
+        86.10000000000001
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+          21.0,
+          157.5,
+          168.0
+        ]
+      ],
+      "photo": {
+        "position": "bas",
+        "taille": "moyenne"
+      },
+      "taille_pt": 10.5,
+      "texte": "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        110.37104166666667,
+        210.0,
+        99.62895833333333
+      ],
+      "cadre": [
+        61.949999999999996,
+        18.9,
+        86.10000000000001,
+        86.10000000000001
+      ],
+      "coupees": 11,
+      "ecarts": [
+        22,
+        2
+      ],
+      "lignes": [
+        [
+          "ligne",
+          99.75,
+          264.92083333333335,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          259.5497916666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          254.17875000000004,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          248.80770833333338,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          243.43666666666672,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          238.06562500000007,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          232.6945833333334,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          227.32354166666676,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          221.9525000000001,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          216.58145833333344,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          211.2104166666668,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          205.83937500000013,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          200.46833333333348,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          195.09729166666682,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          189.72625000000016,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          184.3552083333335,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          178.98416666666685,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          173.6131250000002,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          168.24208333333354,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          162.87104166666688,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          157.50000000000023,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          152.12895833333357,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          146.75791666666692,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          141.38687500000026,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          136.0158333333336,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          130.64479166666695,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          125.27375000000028,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          119.9027083333336,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          114.53166666666694,
+          10.5
+        ]
+      ],
+      "photo": {
+        "position": "bas",
+        "taille": "moyenne"
+      },
+      "taille_pt": 10.5,
+      "texte": "ligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\n",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        139.07104166666667,
+        210.0,
+        70.92895833333333
+      ],
+      "cadre": [
+        47.599999999999994,
+        18.9,
+        114.80000000000001,
+        114.80000000000001
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Pour Marie.",
+          93.45,
+          177.22104166666668,
+          23.1
+        ],
+        [
+          "",
+          105.0,
+          171.85000000000002,
+          0.0
+        ],
+        [
+          "Et pour la suite.",
+          87.15,
+          166.47895833333337,
+          35.7
+        ]
+      ],
+      "photo": {
+        "position": "bas",
+        "taille": "grande"
+      },
+      "taille_pt": 10.5,
+      "texte": "Pour Marie.\n\nEt pour la suite.",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        139.07104166666667,
+        210.0,
+        70.92895833333333
+      ],
+      "cadre": [
+        47.599999999999994,
+        18.9,
+        114.80000000000001,
+        114.80000000000001
+      ],
+      "coupees": 0,
+      "ecarts": [
+        0,
+        0
+      ],
+      "lignes": [
+        [
+          "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+          21.0,
+          171.85000000000002,
+          168.0
+        ]
+      ],
+      "photo": {
+        "position": "bas",
+        "taille": "grande"
+      },
+      "taille_pt": 10.5,
+      "texte": "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+      "trop_large": false
+    },
+    {
+      "bande": [
+        0.0,
+        139.07104166666667,
+        210.0,
+        70.92895833333333
+      ],
+      "cadre": [
+        47.599999999999994,
+        18.9,
+        114.80000000000001,
+        114.80000000000001
+      ],
+      "coupees": 13,
+      "ecarts": [
+        27,
+        1
+      ],
+      "lignes": [
+        [
+          "ligne",
+          99.75,
+          279.27083333333337,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          273.8997916666667,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          268.52875000000006,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          263.1577083333334,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          257.78666666666675,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          252.4156250000001,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          247.04458333333343,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          241.67354166666678,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          236.30250000000012,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          230.93145833333347,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          225.5604166666668,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          220.18937500000015,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          214.8183333333335,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          209.44729166666684,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          204.0762500000002,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          198.70520833333353,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          193.33416666666687,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          187.96312500000022,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          182.59208333333356,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          177.2210416666669,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          171.85000000000025,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          166.4789583333336,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          161.10791666666694,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          155.73687500000028,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          150.36583333333363,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          144.99479166666697,
+          10.5
+        ],
+        [
+          "ligne",
+          99.75,
+          139.6237500000003,
+          10.5
+        ]
+      ],
+      "photo": {
+        "position": "bas",
+        "taille": "grande"
+      },
+      "taille_pt": 10.5,
+      "texte": "ligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\nligne\n",
+      "trop_large": false
+    }
   ],
   "templates": {
     "colophon": {

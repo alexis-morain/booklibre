@@ -168,6 +168,9 @@ export const DESTINATIONS: Record<string, Destination> = {
   objet_coupe: "planche",
   objet_pli: "planche",
   pagination: "format",
+  quatrieme_deborde: "couverture",
+  quatrieme_resolution: "couverture",
+  quatrieme_zone_sure: "couverture",
   resolution: "planche",
   zone_sure: "planche",
 };

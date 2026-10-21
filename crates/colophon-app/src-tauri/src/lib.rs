@@ -819,7 +819,9 @@ fn police_absents(album: Album, state: State<'_, AppState>) -> Result<Vec<String
     let face = colophon_core::font::face_album(&dir, album.police.as_ref().map(|p| p.fichier.as_str()));
     let mut textes: Vec<(&str, Option<&colophon_core::model::Police>)> = vec![(album.title.as_str(), None)];
     if let Some(c) = &album.cover {
-        textes.extend([c.title.as_str(), c.subtitle.as_str(), c.back_text.as_str()].map(|t| (t, None)));
+        textes.extend([c.title.as_str(), c.subtitle.as_str()].map(|t| (t, None)));
+        // La quatrième dans sa face, quand elle en a une (1.2-d).
+        textes.push((c.back_text.as_str(), c.back_police.as_ref()));
     }
     for s in &album.spreads {
         textes.extend(s.caption.as_deref().map(|t| (t, None)));

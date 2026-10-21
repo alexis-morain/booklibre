@@ -887,6 +887,7 @@ mod tests {
             photo: Some(Slot::new("a.jpg".into(), [0.5, 0.5])),
             back_text: String::new(),
             fond: None,
+            ..Default::default()
         });
         fs::write(dir.join("album.json"), serde_json::to_string_pretty(&a).unwrap()).unwrap();
         dir

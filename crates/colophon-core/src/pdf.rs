@@ -160,6 +160,14 @@ impl Ecrivain {
         self.faces[0].face.largeur_mm(s, size_pt)
     }
 
+    /// La même mesure dans la face `k` du document, comptée depuis 1 comme
+    /// `/Fk` ; un numéro qu'aucune face ne porte vaut celle du livre, comme
+    /// au dessin. La quatrième, qui peut avoir sa face, se coupe ici.
+    pub(crate) fn largeur_mm_dans(&self, k: usize, s: &str, size_pt: f64) -> f64 {
+        let k = if (1..=self.faces.len()).contains(&k) { k } else { 1 };
+        self.faces[k - 1].face.largeur_mm(s, size_pt)
+    }
+
     /// Les glyphes d'un texte dans la face `k` (comptée depuis 1, comme
     /// `/Fk`), notés à mesure qu'ils se dessinent : le fichier décrit ce qu'il
     /// montre et rien d'autre. Un numéro qu'aucune face ne porte vaut celle
@@ -516,6 +524,7 @@ pub fn dump_geometry(album: &Album) -> serde_json::Value {
         "garde_apres_titre_mm": crate::garde::APRES_TITRE_MM,
         "titre_max": crate::garde::TITRE_MAX,
         "spine_text_min_mm": crate::cover::SPINE_TEXT_MIN_MM,
+        "back_text_pt_at_210": crate::cover::BACK_TEXT_PT_AT_210,
         "grammage_reference": crate::printer::GRAMMAGE_REFERENCE,
         "grammage_defaut": crate::printer::GRAMMAGE_DEFAUT,
         "min_effective_ppi": crate::audit::MIN_EFFECTIVE_PPI,
@@ -581,6 +590,54 @@ pub fn dump_geometry(album: &Album) -> serde_json::Value {
         })
     })
     .collect();
+
+    // La quatrième (1.2-d) sous la même mesure synthétique : le cadre aux neuf
+    // poses, la bande, les lignes, ce qui ne tient pas. L'éditeur la dessine
+    // depuis son port, et c'est ici que les deux se comparent.
+    let quatrieme_samples: Vec<serde_json::Value> = {
+        use crate::model::{PhotoQuatrieme, PositionQuatrieme as P, TailleQuatrieme as T};
+        let panneau = Rect { x: 0.0, y: 0.0, w: album.trim_mm.w, h: album.trim_mm.h };
+        let mut poses: Vec<Option<PhotoQuatrieme>> = vec![None];
+        for position in [P::Haut, P::Centre, P::Bas] {
+            for taille in [T::Petite, T::Moyenne, T::Grande] {
+                poses.push(Some(PhotoQuatrieme {
+                    photo: crate::model::Slot::new("x.jpg".into(), [0.5, 0.5]),
+                    position,
+                    taille,
+                }));
+            }
+        }
+        let textes = [
+            "Pour Marie.\n\nEt pour la suite.",
+            "Trois semaines de septembre sur la côte est, entre les calanques et les villages",
+            &"ligne\n".repeat(40),
+        ];
+        poses
+            .iter()
+            .flat_map(|pose| textes.iter().map(move |t| (pose.clone(), *t)))
+            .map(|(pose, texte)| {
+                let c = crate::model::Cover {
+                    back_text: texte.to_string(),
+                    back_photo: pose.clone(),
+                    ..Default::default()
+                };
+                let taille = crate::cover::taille_quatrieme(&c, album.trim_mm.w);
+                let q = crate::cover::quatrieme(&panneau, 7.0, &c, taille, &garde_mesure);
+                let r = |r: &Rect| serde_json::json!([r.x, r.y, r.w, r.h]);
+                serde_json::json!({
+                    "texte": texte,
+                    "photo": pose.map(|p| serde_json::json!({"position": p.position, "taille": p.taille})),
+                    "taille_pt": taille,
+                    "cadre": q.cadre.as_ref().map(r),
+                    "bande": r(&q.bande),
+                    "lignes": q.lignes.iter().map(|l| serde_json::json!([l.texte, l.x, l.y, l.largeur])).collect::<Vec<_>>(),
+                    "coupees": q.coupees,
+                    "trop_large": q.trop_large,
+                    "ecarts": q.ecarts(&panneau, 7.0),
+                })
+            })
+            .collect()
+    };
 
     // Count -> [template, capacity], for every count a spread can reach.
     let fallbacks: serde_json::Map<String, serde_json::Value> = (1..=9usize)
@@ -667,6 +724,7 @@ pub fn dump_geometry(album: &Album) -> serde_json::Value {
         "constantes": constantes,
         "garde_samples": garde_samples,
         "libre_samples": libre_samples,
+        "quatrieme_samples": quatrieme_samples,
         // La boîte de contenu de chaque page. L'éditeur y pose un bloc libre
         // neuf, donc il doit la lire là où elle est calculée plutôt que
         // recomposer une marge de son côté.

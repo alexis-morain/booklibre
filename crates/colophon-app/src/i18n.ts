@@ -578,6 +578,12 @@ export const FR = {
     "Le livre a deux pages de trop pour cet imprimeur : décochez la page de colophon plus bas.",
   "envoi.simple.pagination.decocher_garde":
     "Le livre a deux pages de trop pour cet imprimeur : décochez la page de garde plus bas.",
+  "envoi.simple.quatrieme_deborde":
+    "Le texte de la quatrième ne tient pas dans la page : raccourcissez-le, ou réduisez-le ou sa photo.",
+  "envoi.simple.quatrieme_resolution":
+    "La photo de la quatrième est trop petite pour son cadre : choisissez-en une autre, ou un cadre plus petit.",
+  "envoi.simple.quatrieme_zone_sure":
+    "Le texte de la quatrième frôle la coupe : il risque d’être rogné.",
   "envoi.simple.resolution":
     "Cette photo est trop petite pour sa case : mettez-la dans une case plus petite, remplacez-la ou retirez-la.",
   "envoi.simple.zone_sure":
@@ -1065,6 +1071,29 @@ export const FR = {
   "couverture.imprimeur": "L’imprimeur",
   "couverture.note.feuille": " · feuille {w} × {h} mm",
   "couverture.picker.titre": "Photo de couverture, parmi l’album",
+  "couverture.picker.quatrieme": "Photo de la quatrième, parmi l’album",
+  "couverture.q.titre": "Quatrième",
+  "couverture.q.aria": "Texte de la quatrième de couverture : {texte}",
+  "couverture.q.photo.ajouter": "Ajouter une photo",
+  "couverture.q.photo.changer": "Changer la photo",
+  "couverture.q.photo.retirer": "Retirer la photo",
+  "couverture.q.position": "Position",
+  "couverture.q.position.haut": "En haut",
+  "couverture.q.position.centre": "Au centre",
+  "couverture.q.position.bas": "En bas",
+  "couverture.q.taille": "Taille de la photo",
+  "couverture.q.taille.petite": "Petite",
+  "couverture.q.taille.moyenne": "Moyenne",
+  "couverture.q.taille.grande": "Grande",
+  "couverture.q.police": "Police du texte",
+  "couverture.q.police.livre": "Police du livre",
+  "couverture.q.police.livre.note": "Celle que le livre a choisie dans Police",
+  "couverture.q.police.manque":
+    "Le fichier de cette police a quitté le dossier de l’album : la quatrième s’imprimera dans la police du livre.",
+  "couverture.q.texte.taille": "Taille du texte",
+  "couverture.q.texte.taille.format": "{pt} pt (celle du format)",
+  "couverture.q.texte.taille.pt": "{pt} pt",
+  "couverture.q.recadrer": "Glisser pour cadrer, molette pour zoomer",
 
   // -- les familles de gabarits (sélecteur, ligne de contexte)
   "gabarit.titre": "Gabarit de la planche",
@@ -1725,6 +1754,11 @@ export const EN: Record<Cle, string> = {
   "envoi.simple.resolution":
     "This photo is too small for its cell: put it in a smaller cell, replace it or remove it.",
   "envoi.simple.zone_sure": "A caption sits close to the trim: it may be cut off.",
+  "envoi.simple.quatrieme_deborde":
+    "The back-cover text does not fit on the page: shorten it, or make it or its photo smaller.",
+  "envoi.simple.quatrieme_resolution":
+    "The back-cover photo is too small for its frame: choose another one, or a smaller frame.",
+  "envoi.simple.quatrieme_zone_sure": "The back-cover text sits close to the trim: it may be cut off.",
   "envoi.defaut.planche": "Spread {n}",
   "envoi.resolution.tete":
     "These photos are too small for their cell. Booklibre never prints below 250 ppi.",
@@ -2194,6 +2228,29 @@ export const EN: Record<Cle, string> = {
   "couverture.imprimeur": "The printer",
   "couverture.note.feuille": " · sheet {w} × {h} mm",
   "couverture.picker.titre": "Cover photo, from the album",
+  "couverture.picker.quatrieme": "Back-cover photo, from the album",
+  "couverture.q.titre": "Back cover",
+  "couverture.q.aria": "Back-cover text: {texte}",
+  "couverture.q.photo.ajouter": "Add a photo",
+  "couverture.q.photo.changer": "Change the photo",
+  "couverture.q.photo.retirer": "Remove the photo",
+  "couverture.q.position": "Position",
+  "couverture.q.position.haut": "Top",
+  "couverture.q.position.centre": "Middle",
+  "couverture.q.position.bas": "Bottom",
+  "couverture.q.taille": "Photo size",
+  "couverture.q.taille.petite": "Small",
+  "couverture.q.taille.moyenne": "Medium",
+  "couverture.q.taille.grande": "Large",
+  "couverture.q.police": "Text typeface",
+  "couverture.q.police.livre": "Book typeface",
+  "couverture.q.police.livre.note": "The one the book chose in Typeface",
+  "couverture.q.police.manque":
+    "This typeface’s file has left the album folder: the back cover will print in the book’s typeface.",
+  "couverture.q.texte.taille": "Text size",
+  "couverture.q.texte.taille.format": "{pt} pt (the format’s)",
+  "couverture.q.texte.taille.pt": "{pt} pt",
+  "couverture.q.recadrer": "Drag to frame, scroll to zoom",
 
   "gabarit.titre": "Template of the spread",
   "gabarit.cycle": "Template: {nom}",

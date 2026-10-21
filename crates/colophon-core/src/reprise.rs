@@ -536,7 +536,16 @@ fn cover_diff(origine: Option<&Cover>, actuel: Option<&Cover>) -> Vec<&'static s
             if photo_moved {
                 out.push("photo");
             }
-            if a.back_text != b.back_text {
+            let photo_q = |c: &crate::model::Cover| {
+                c.back_photo.as_ref().map(|p| {
+                    (p.photo.src.clone(), p.photo.focal, p.photo.zoom, p.position, p.taille)
+                })
+            };
+            if a.back_text != b.back_text
+                || photo_q(a) != photo_q(b)
+                || a.back_police != b.back_police
+                || a.back_taille_pt != b.back_taille_pt
+            {
                 out.push("quatrième");
             }
             if a.fond != b.fond {
@@ -729,6 +738,7 @@ mod tests {
             photo: Some(Slot::new("couv.jpg".into(), [0.5, 0.5])),
             back_text: String::new(),
             fond: None,
+            ..Default::default()
         });
         actuel.reglages.insert(
             "couv.jpg".into(),
@@ -993,6 +1003,7 @@ mod tests {
             photo: None,
             back_text: String::new(),
             fond: None,
+            ..Default::default()
         });
         let mut b = album(vec![spread("solo", &["a.jpg"])]);
         b.cover = Some(Cover {
@@ -1001,6 +1012,7 @@ mod tests {
             photo: None,
             back_text: String::new(),
             fond: None,
+            ..Default::default()
         });
         let r = compare("t", &a, &b);
         assert_eq!(r.planches_touchees, 0);

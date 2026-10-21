@@ -92,6 +92,25 @@ export type Cover = {
   /** Le fond de la couverture et du dos, `#rrggbb` ; absent, le blanc
    *  papier. Miroir de `model.rs::Cover::fond`. */
   fond?: string;
+  /** La photo encadrée de la quatrième (1.2-d), miroir de
+   *  `model.rs::Cover::back_photo`. */
+  back_photo?: PhotoQuatrieme;
+  /** La face du texte de la quatrième, un fichier `objet-*` ; absente, la
+   *  face du livre. */
+  back_police?: Police;
+  /** La taille du texte de la quatrième, en points ; absente, celle du
+   *  format (`quatrieme.ts::tailleQuatrieme`). */
+  back_taille_pt?: number;
+};
+
+export type PositionQuatrieme = "haut" | "centre" | "bas";
+export type TailleQuatrieme = "petite" | "moyenne" | "grande";
+
+/** Miroir de `model.rs::PhotoQuatrieme` : absents, `haut` et `moyenne`. */
+export type PhotoQuatrieme = {
+  photo: Slot;
+  position?: PositionQuatrieme;
+  taille?: TailleQuatrieme;
 };
 
 /** One photograph's adjustments, mirror of `model.rs::Reglage`. The

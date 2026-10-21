@@ -56,6 +56,19 @@ export type Dump = {
     dx: number[];
     trop_large: boolean;
   }[];
+  /** La quatrième sous la mesure synthétique (1.2-d) : cadre, bande et
+   *  lignes en `[x, y, w, h]` et `[texte, x, y, largeur]`, repère moteur. */
+  quatrieme_samples?: {
+    texte: string;
+    photo: { position: "haut" | "centre" | "bas"; taille: "petite" | "moyenne" | "grande" } | null;
+    taille_pt: number;
+    cadre: [number, number, number, number] | null;
+    bande: [number, number, number, number];
+    lignes: [string, number, number, number][];
+    coupees: number;
+    trop_large: boolean;
+    ecarts: [number, number];
+  }[];
   crop_windows?: {
     rect: [number, number];
     image: [number, number];

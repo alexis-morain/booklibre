@@ -724,6 +724,27 @@ dans Envoi il s'enregistre aussi (`appliquerDepuisEnvoi`), le dossier préparé 
 périmé par l'empreinte. Au harnais, `POST /__dev/couverture?profil=` rend l'aperçu de
 couverture par `--cover --apercu` (caché), que `renderCoverPreview` appelle hors Tauri.
 
+### La quatrième (1.2-d)
+
+**Trois champs additifs sur `Cover`, sans montée de schéma, comme `fond`** :
+`back_photo` (`PhotoQuatrieme { photo: Slot, position, taille }`, `haut`/`centre`/`bas`
+× `petite`/`moyenne`/`grande`), `back_police` (une face `objet-*`, posée par
+`poser_police_objet`, comptée par `elaguer_polices_objet`, `police_absents` et
+`caractere_absent`), `back_taille_pt` (absente : `BACK_TEXT_PT_AT_210 × w/210`, bornée à
+[6, 48]). **Une seule mise en page, `cover::quatrieme`** : le cadre carré dans la boîte
+intérieure (`TITLE_INSET`), la bande que le texte prend (sous la photo, au-dessus si elle
+est en bas, une interligne à l'écart), les lignes par `scene::replier` dans la face de la
+quatrième (`Ecrivain::largeur_mm_dans`), et `coupees` : **plus aucune ligne jetée en
+silence**, le prévol les compte. Sans les trois champs, la feuille est celle d'avant à
+l'octet (`EMPREINTE_SANS_FOND`). `quatrieme.ts` en est le port, sous parité par
+`quatrieme_samples` ; `QuatriemeView.tsx` dessine les lignes du port dans un SVG au repère
+du panneau, **à la taille d'impression** (règle des blocs libres), et le champ s'ouvre au
+clic, à la même taille par `cqw`. Le prévol gagne `quatrieme_deborde` (bloque : une ligne
+sort du panneau, monte sur la photo ou ne s'imprime pas), `quatrieme_zone_sure` (avertit)
+et `quatrieme_resolution` (bloque), mesurés par `check_mesure` dans la face que
+`prevol()` lit sur le disque ; `check()` mesure dans la face du projet. **L'encre se lit** :
+`scripts/couverture-encre.py --avec-mutant`, dans le bloc macOS de `check.sh`.
+
 **Le moteur et la CLI gardent CloudCore et S3.** `core::commande` parle à CloudCore
 (`devis`, `commander`, `etat`, `annuler`) derrière le trait `Http`, `Ureq` en vrai
 (rustls, 60 s), un faux en test ; `core::depot` pose les deux PDF sur un seau S3 par PUT

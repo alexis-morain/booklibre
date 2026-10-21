@@ -92,6 +92,12 @@ pub const PHRASES: &[(&str, &[&str])] = &[
     ("couverture_vide.titre", &[]),
     ("couverture_vide.dossier", &[]),
     ("couverture_vide.choisir", &[]),
+    ("quatrieme_deborde", &["n"]),
+    ("quatrieme_deborde.raccourcir", &[]),
+    ("quatrieme_zone_sure", &["imprimeur", "sure_mm"]),
+    ("quatrieme_zone_sure.reduire", &[]),
+    ("quatrieme_resolution", &["src", "ppi", "imprimeur", "min_ppi"]),
+    ("quatrieme_resolution.choisir", &[]),
     ("dos_nu", &["dos_mm", "min_mm"]),
     ("dos_nu.ajouter", &[]),
     ("dos", &["dos_mm", "imprimeur"]),
@@ -127,6 +133,9 @@ pub const REGLES: &[&str] = &[
     "objet_coupe",
     "objet_pli",
     "pagination",
+    "quatrieme_deborde",
+    "quatrieme_resolution",
+    "quatrieme_zone_sure",
     "resolution",
     "zone_sure",
 ];
@@ -358,7 +367,9 @@ pub fn prevol(dir: &Path, profil: &'static PrinterProfile) -> Result<PrevolRepor
 /// terminal, ce dossier est celui qu'on envoie.
 pub fn prevol_album(dir: &Path, profil: &'static PrinterProfile) -> Result<PrevolReport> {
     let (album, dims) = lire_album(dir)?;
-    Ok(check(&album, profil, &dims, &FichiersPoses::default()))
+    let face = face_de_la_quatrieme(dir, &album);
+    let mesure = |s: &str, pt: f64| face.largeur_mm(s, pt);
+    Ok(check_mesure(&album, profil, &dims, &FichiersPoses::default(), &mesure))
 }
 
 /// `album.json` et les tailles de ses originaux.
@@ -387,7 +398,25 @@ pub fn prevol_dossier(
     profil: &'static PrinterProfile,
 ) -> Result<PrevolReport> {
     let (album, dims) = lire_album(dir)?;
-    Ok(check(&album, profil, &dims, &FichiersPoses::lire(fichiers)))
+    let face = face_de_la_quatrieme(dir, &album);
+    let mesure = |s: &str, pt: f64| face.largeur_mm(s, pt);
+    Ok(check_mesure(&album, profil, &dims, &FichiersPoses::lire(fichiers), &mesure))
+}
+
+/// La face où la quatrième s'imprime : la sienne si elle en a une et que le
+/// dossier la porte, celle du livre sinon — le repli de l'émetteur, mot pour
+/// mot.
+fn face_de_la_quatrieme(
+    dir: &Path,
+    album: &Album,
+) -> std::borrow::Cow<'static, crate::font::Embarquee> {
+    if let Some(p) = album.cover.as_ref().and_then(|c| c.back_police.as_ref()) {
+        let propre = crate::font::face_objet(dir, p);
+        if propre.defaut.is_none() {
+            return propre.face;
+        }
+    }
+    crate::font::face_album(dir, album.police.as_ref().map(|p| p.fichier.as_str())).face
 }
 
 /// The page the machine writes that the album could do without, named as the
@@ -425,6 +454,10 @@ fn original_dimensions(album: &Album) -> HashMap<String, (u32, u32)> {
     if let Some(slot) = album.cover.as_ref().and_then(|c| c.photo.as_ref()) {
         srcs.push(slot.src.as_str());
     }
+    // Et la photo de quatrième (1.2-d), pour la même raison.
+    if let Some(p) = album.cover.as_ref().and_then(|c| c.back_photo.as_ref()) {
+        srcs.push(p.photo.src.as_str());
+    }
     srcs.sort_unstable();
     srcs.dedup();
     srcs.par_iter()
@@ -444,6 +477,19 @@ pub fn check(
     profil: &'static PrinterProfile,
     dims: &HashMap<String, (u32, u32)>,
     poses: &FichiersPoses,
+) -> PrevolReport {
+    check_mesure(album, profil, dims, poses, &crate::font::text_width_mm)
+}
+
+/// [`check`], la quatrième mesurée par `mesure` : dans la face où elle
+/// s'imprime, que [`face_de_la_quatrieme`] lit sur le disque. La mesure entre
+/// en valeur comme `dims`, et `check` reste une fonction de valeurs.
+pub fn check_mesure(
+    album: &Album,
+    profil: &'static PrinterProfile,
+    dims: &HashMap<String, (u32, u32)>,
+    poses: &FichiersPoses,
+    mesure: &dyn Fn(&str, f64) -> f64,
 ) -> PrevolReport {
     let mut defauts: Vec<Defaut> = Vec::new();
     let mut notes: Vec<String> = Vec::new();
@@ -972,6 +1018,98 @@ pub fn check(
         }
     }
 
+    // La quatrième (1.2-d) : sa photo, son texte, dans la page que ce
+    // fournisseur reçoit. Le cadre se pose dans la boîte intérieure, donc la
+    // photo ne passe jamais le pli ; le texte, lui, peut ne pas tenir — un
+    // mot plus large que la page, un texte trop long sous la photo — et ces
+    // lignes-là ne s'impriment pas, ou la coupe les mange. Le pli bute, la
+    // marge avertit.
+    if let Some(c) = &album.cover {
+        let panneau = match profil.fichiers {
+            Fichiers::Deux => cg.back.clone(),
+            Fichiers::Un => cover::page_geometry(album, profil, cover::Face::Quatrieme).back,
+        };
+        let taille = cover::taille_quatrieme(c, album.trim_mm.w);
+        let q = cover::quatrieme(&panneau, profil.safe_mm, c, taille, mesure);
+        let (dehors, zone) = q.ecarts(&panneau, profil.safe_mm);
+        if dehors > 0 {
+            defauts.push(Defaut {
+                regle: "quatrieme_deborde",
+                bloquant: true,
+                planche: None,
+                case_idx: None,
+                src: None,
+                cause: format!(
+                    "{dehors} ligne(s) de la quatrième ne tiennent pas dans la page : elles \
+                     sortent du panneau, montent sur la photo ou ne s'impriment pas"
+                ),
+                remede: "raccourcissez le texte de la quatrième, ou réduisez sa taille ou celle \
+                         de sa photo"
+                    .into(),
+                phrase: phrase(
+                    "quatrieme_deborde",
+                    "quatrieme_deborde.raccourcir",
+                    vec![("n", dehors.to_string())],
+                ),
+            });
+        }
+        if zone > 0 {
+            defauts.push(Defaut {
+                regle: "quatrieme_zone_sure",
+                bloquant: false,
+                planche: None,
+                case_idx: None,
+                src: None,
+                cause: format!(
+                    "le texte ou la photo de la quatrième entre dans la marge de sécurité de \
+                     {:.1} mm que demande {}",
+                    profil.safe_mm, profil.nom
+                ),
+                remede: "réduisez la taille du texte de la quatrième, ou coupez le mot trop long"
+                    .into(),
+                phrase: phrase(
+                    "quatrieme_zone_sure",
+                    "quatrieme_zone_sure.reduire",
+                    vec![
+                        ("imprimeur", profil.nom.into()),
+                        ("sure_mm", format!("{:.1}", profil.safe_mm)),
+                    ],
+                ),
+            });
+        }
+        if let (Some(p), Some(cadre)) = (&c.back_photo, &q.cadre) {
+            if let Some(&(ow, oh)) = dims.get(p.photo.src.as_str()) {
+                let ppi = print::PRINT_DPI / (print::print_scale(cadre, ow, oh) * p.photo.zoom.max(1.0));
+                if ppi < profil.min_ppi {
+                    defauts.push(Defaut {
+                        regle: "quatrieme_resolution",
+                        bloquant: true,
+                        planche: None,
+                        case_idx: None,
+                        src: Some(p.photo.src.clone()),
+                        cause: format!(
+                            "{} imprimerait à {ppi:.0} ppi sur la quatrième, {} exige {:.0}",
+                            p.photo.src, profil.nom, profil.min_ppi
+                        ),
+                        remede: "choisissez une photo plus définie pour la quatrième, ou un \
+                                 cadre plus petit"
+                            .into(),
+                        phrase: phrase(
+                            "quatrieme_resolution",
+                            "quatrieme_resolution.choisir",
+                            vec![
+                                ("src", p.photo.src.clone()),
+                                ("ppi", format!("{ppi:.0}")),
+                                ("imprimeur", profil.nom.into()),
+                                ("min_ppi", format!("{:.0}", profil.min_ppi)),
+                            ],
+                        ),
+                    });
+                }
+            }
+        }
+    }
+
     // 8. The spine. Not a defect: a number that travels, and must travel with
     // its provenance attached.
     let dos_mm = profil.dos_mm(pages, GRAMMAGE_DEFAUT);
@@ -1404,6 +1542,7 @@ mod tests {
             photo: Some(Slot::new("couverture.jpg".into(), [0.5, 0.5])),
             back_text: String::new(),
             fond: None,
+            ..Default::default()
         });
         for i in 0..n {
             a.spreads.push(Spread {
@@ -1765,6 +1904,61 @@ mod tests {
         assert!(d.cause.contains("22 pages"), "{}", d.cause);
     }
 
+    /// La quatrième (1.2-d) : un texte trop long sous une grande photo ne
+    /// s'imprime pas en entier et bloque ; un mot qui entre dans la marge
+    /// avertit ; une photo trop petite pour son cadre bloque. La même
+    /// quatrième, courte, ne dit rien.
+    #[test]
+    fn la_quatrieme_se_juge_sur_sa_page() {
+        use crate::model::{PhotoQuatrieme, PositionQuatrieme, Slot, TailleQuatrieme};
+        let mut dims: HashMap<String, (u32, u32)> =
+            (0..24).map(|i| (format!("{i}.jpg"), (5000u32, 5000u32))).collect();
+        dims.insert("couverture.jpg".into(), (6000, 6000));
+        dims.insert("dos.jpg".into(), (3000, 3000));
+        let cp = PrinterProfile::par_id("cloudprinter").unwrap();
+        let regles_avec = |a: &Album, dims: &HashMap<String, (u32, u32)>| -> Vec<(&'static str, bool)> {
+            check(a, cp, dims, &FichiersPoses::default())
+                .defauts
+                .into_iter()
+                .filter(|d| d.regle.starts_with("quatrieme_"))
+                .map(|d| (d.regle, d.bloquant))
+                .collect()
+        };
+        let regles = |a: &Album| regles_avec(a, &dims);
+        let mut a = album_de(24, 3.0);
+        let c = a.cover.as_mut().unwrap();
+        c.back_text = "Pour Marie.".into();
+        c.back_photo = Some(PhotoQuatrieme {
+            photo: Slot::new("dos.jpg".into(), [0.5, 0.5]),
+            position: PositionQuatrieme::Haut,
+            taille: TailleQuatrieme::Grande,
+        });
+        assert!(regles(&a).is_empty(), "{:?}", regles(&a));
+
+        let mut long = a.clone();
+        long.cover.as_mut().unwrap().back_text = vec!["une ligne"; 40].join("\n");
+        assert_eq!(regles(&long), vec![("quatrieme_deborde", true)]);
+
+        let mut mot = a.clone();
+        let c = mot.cover.as_mut().unwrap();
+        c.back_photo = None;
+        // Dans la bande sûre : plus large que la page moins ses deux marges,
+        // plus étroit que la page.
+        c.back_text = "M".repeat(75);
+        let largeur = crate::font::text_width_mm(&c.back_text, cover::taille_quatrieme(c, 210.0));
+        assert!(largeur > 210.0 - 2.0 * cp.safe_mm && largeur < 210.0, "{largeur}");
+        assert_eq!(regles(&mot), vec![("quatrieme_zone_sure", false)]);
+
+        let mut flou = a.clone();
+        let mut petites = dims.clone();
+        petites.insert("dos.jpg".into(), (800, 800));
+        assert_eq!(regles_avec(&flou, &petites), vec![("quatrieme_resolution", true)]);
+        // Un cadre plus petit demande moins de pixels.
+        flou.cover.as_mut().unwrap().back_photo.as_mut().unwrap().taille = TailleQuatrieme::Petite;
+        petites.insert("dos.jpg".into(), (1200, 1200));
+        assert!(regles_avec(&flou, &petites).is_empty(), "{:?}", regles_avec(&flou, &petites));
+    }
+
     /// An odd page count cannot be bound, and the message says so in words.
     #[test]
     fn pagination_is_named_in_words() {
@@ -2087,6 +2281,7 @@ mod tests {
             photo: Some(Slot::new("couv.jpg".into(), [0.5, 0.5])),
             back_text: String::new(),
             fond: None,
+            ..Default::default()
         });
         let mut dims: HashMap<String, (u32, u32)> = (0..24)
             .map(|i| (format!("{i}.jpg"), (5000u32, 5000u32)))

@@ -168,6 +168,10 @@ if command -v sips >/dev/null && "$PY" -c "import PIL" 2>/dev/null; then
   # coupe et le prévol ne mesurent jamais que le rectangle ; pour un ornement
   # c'est un invariant, pas une approximation, et il se vérifie au raster.
   "$PY" scripts/ornement-encre.py
+  # L'encre de la feuille de couverture, pas seulement ses cotes : la
+  # première encrée, la photo de quatrième dans son cadre, son texte sous
+  # elle, le mors nu. Le mutant tourne sur le même raster (1.2-d).
+  "$PY" scripts/couverture-encre.py target/release/booklibre --avec-mutant
 else
   echo "pdf-png : sauté (sips ou Pillow absent)"
 fi

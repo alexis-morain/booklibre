@@ -218,6 +218,13 @@ whichever ink reads there.
 _Avoid_: background, couleur de couverture, teinte (a teinte is one of the five
 colours proposed from the cover photograph, not the chosen fond)
 
+**Quatrième**:
+The back cover: its text (`back_text`), set in its own face and size when it
+was given them, and at most one **framed photo** — a square set inside the
+page, never at the bleed, at one of three positions and three sizes, cropped
+like a cell. The text takes the band the frame leaves. In the code, `back_*`.
+_Avoid_: dos (the dos is the spine), back page, verso
+
 **Media box**:
 The whole printed surface of a spread: two trimmed pages plus bleed all round.
 The rectangle the PDF declares, and the frame every geometry is expressed in.
