@@ -140,12 +140,14 @@ import { MenuContextuel } from "./MenuContextuel";
 import { Cible, EntreeId, entreesPour, placerMenu } from "./contextuel";
 import { ChoixReserve } from "./ChoixReserve";
 import {
+  appliquerRemplissage,
+  messageRemplissage,
   ModeChoix,
   pleineAvant,
   poser as poserCandidate,
   poserApres,
 } from "./reserve";
-import { Reserve, reserveClassee, revelerPhoto } from "./bridge";
+import { Remplissage, remplirCasesVides, Reserve, reserveClassee, revelerPhoto } from "./bridge";
 import { FichePhoto } from "./FichePhoto";
 import { choixOfferts, faceFor, cleDeForme, formeDe } from "./gabarit";
 import { RevueView, TriView } from "./TriView";
@@ -1390,6 +1392,30 @@ export default function App() {
     }
   };
 
+  /** « Remplir les cases vides » (1.2-a) : le moteur choisit sur l'album tel
+   *  qu'il est au moment de la demande, l'app pose sur celui d'au retour, en
+   *  un seul pas d'annulation ; une pose devenue fausse entre-temps se saute
+   *  et compte comme restée vide. */
+  const remplirTout = async () => {
+    const courant = histRef.current?.album;
+    if (!courant) return;
+    setStatus(t("remplir.cherche"));
+    let r: Remplissage;
+    try {
+      r = await remplirCasesVides(courant);
+    } catch (e) {
+      setStatus(null);
+      setError(fault(t("erreur.remplir"), e));
+      return;
+    }
+    const avant = histRef.current?.album;
+    if (!avant) return;
+    const { posees } = appliquerRemplissage(avant, r.poses);
+    apply((a) => appliquerRemplissage(a, r.poses).album);
+    const restees = r.restees.length + r.poses.length - posees;
+    setStatus(messageRemplissage(posees, restees) + (r.note ? ` (${r.note})` : ""));
+  };
+
   /** Supprimer une planche : ⌫, le pied de la table, sa corbeille, son menu
    *  et le menu Fichier passent tous ici. Sous le minimum du produit, le
    *  message le dit, rien ne bloque (1.1-e). */
@@ -1541,6 +1567,7 @@ export default function App() {
     // moteur en un appel, l'édition est un seul pas d'annulation.
     dater: () => void daterTout(true),
     dedater: () => void daterTout(false),
+    remplir: () => void remplirTout(),
     // Recomposer… et Police… : les deux panneaux de ce dont le livre est
     // fait, comme les boutons de la barre.
     recomposer: () => {
@@ -1783,8 +1810,9 @@ export default function App() {
   }, []);
 
   // The browser harness has no native menu: a window event stands in for
-  // the three Aide → Signaler items and the two dating items, the way the gabarit picker is asked
-  // for. Same table, same guards.
+  // the three Aide → Signaler items, the two dating items and « Remplir les
+  // cases vides », the way the gabarit picker is asked for. Same table, same
+  // guards.
   useEffect(() => {
     const onSignal = (e: Event) => {
       const kind = (e as CustomEvent<string>).detail;
@@ -1801,7 +1829,10 @@ export default function App() {
     window.addEventListener("colophon:signaler", onSignal);
     window.addEventListener("colophon:stockage", onStockage);
     window.addEventListener("colophon:dater", onDater);
+    const onRemplir = () => fire("menu", "remplir");
+    window.addEventListener("colophon:remplir", onRemplir);
     return () => {
+      window.removeEventListener("colophon:remplir", onRemplir);
       window.removeEventListener("colophon:signaler", onSignal);
       window.removeEventListener("colophon:stockage", onStockage);
       window.removeEventListener("colophon:dater", onDater);
@@ -1846,6 +1877,7 @@ export default function App() {
       insererTexte: () => fire("menu", "inserer-texte"),
       dater: () => fire("menu", "dater"),
       dedater: () => fire("menu", "dedater"),
+      remplir: () => fire("menu", "remplir"),
       supprimerPlanche: () => fire("menu", "supprimer-planche"),
       recomposer: () => fire("menu", "recomposer"),
       police: () => fire("menu", "police"),
@@ -3046,6 +3078,7 @@ export default function App() {
             setIndex(at + 1);
           }}
           onRemove={() => supprimerPlanche(Math.max(index, 0))}
+          onRemplir={() => void remplirTout()}
         />
       ) : view === "envoi" ? (
         <footer className="foot envoi-foot">
@@ -3742,6 +3775,7 @@ function PlanchesFoot({
   onInsert,
   onDuplicate,
   onRemove,
+  onRemplir,
   onSeek,
 }: {
   album: Album;
@@ -3751,6 +3785,7 @@ function PlanchesFoot({
   onInsert: (kind: "vide" | "texte") => void;
   onDuplicate: () => void;
   onRemove: () => void;
+  onRemplir: () => void;
 }) {
   const spread = album.spreads[index];
   return (
@@ -3765,6 +3800,9 @@ function PlanchesFoot({
         </button>
         <button className="link" onClick={() => onInsert("texte")} title={t("planches.apres")}>
           {t("planches.inserer.texte")}
+        </button>
+        <button className="link" onClick={onRemplir}>
+          {t("menu.remplir")}
         </button>
         <span className="actions-sep" aria-hidden="true" />
         <button className="link" onClick={onDuplicate} title="⌘D">

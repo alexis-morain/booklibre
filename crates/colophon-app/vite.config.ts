@@ -279,6 +279,19 @@ function albumDevServer(dir: string): Plugin {
           res.end(String(e));
         }
       });
+      // « Remplir les cases vides », lu sur l'album.json du disque comme la
+      // réserve : le harnais enregistre avant de demander.
+      server.middlewares.use("/__dev/remplir", (_req, res) => {
+        try {
+          res.setHeader("Content-Type", "application/json");
+          res.end(
+            execFileSync(engineBinary, ["--remplir", "-o", dir], { encoding: "utf8" }),
+          );
+        } catch (e) {
+          res.statusCode = 500;
+          res.end(String(e));
+        }
+      });
       // La fiche d'une photo, par son src : le moteur lit le fichier et le
       // relevé s'il y en a un. Un src qui n'est pas un nom est refusé là,
       // pas ici.

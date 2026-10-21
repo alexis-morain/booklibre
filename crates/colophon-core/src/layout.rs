@@ -517,7 +517,12 @@ fn aspect_class(p: &Photo) -> u8 {
 /// resort when even the solo cells fail their checks: something must hold
 /// the photo, and the linter will say what it cost.
 fn solo_family(p: &Photo) -> &'static str {
-    let a = p.analysis.aspect();
+    solo_pour_aspect(p.analysis.aspect())
+}
+
+/// `solo_family` pour un aspect seul : la réserve en a besoin pour une
+/// planche vide qu'elle remplit, sans `Photo` en main.
+pub(crate) fn solo_pour_aspect(a: f64) -> &'static str {
     let cells = [
         ("solo_etroit", pdf::CELL_ETROIT),
         ("solo", pdf::CELL_PORTRAIT),

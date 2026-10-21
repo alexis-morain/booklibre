@@ -460,6 +460,25 @@ async fn reserve_classee(
     .map_err(|e| format!("{e:#}"))
 }
 
+/// « Remplir les cases vides » : pour chaque case vide de l'album, la photo
+/// de la réserve qui la tient (`reserve::remplir`). Le moteur décide, l'app
+/// applique les poses en un pas d'annulation. Même fil et même album vivant
+/// que `reserve_classee`.
+#[tauri::command]
+async fn remplir_cases_vides(
+    album: Album,
+    state: State<'_, AppState>,
+) -> Result<colophon_core::reserve::Remplissage, String> {
+    let dir = {
+        let guard = state.open.lock().unwrap();
+        guard.as_ref().ok_or("aucun album ouvert")?.dir.clone()
+    };
+    tauri::async_runtime::spawn_blocking(move || colophon_core::reserve::remplir(&dir, &album))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| format!("{e:#}"))
+}
+
 /// The caption proposed for a spread whose caption field is empty: the
 /// spread's town when it diverges from its chapter, its day when the
 /// chapter covers several. Computed in core from the originals' EXIF
@@ -2657,6 +2676,7 @@ pub fn run() {
             proposition_legende,
             gabarits_compatibles,
             reserve_classee,
+            remplir_cases_vides,
             geometrie,
             ornements,
             geometrie_format,

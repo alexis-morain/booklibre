@@ -43,6 +43,7 @@ export type MenuActions = {
   insererTexte(): void;
   dater(): void;
   dedater(): void;
+  remplir(): void;
   supprimerPlanche(): void;
   recomposer(): void;
   police(): void;
@@ -236,6 +237,9 @@ export async function installMenu(
       // est le bouton « Dater » du popover de légende.
       await item("dater", t("menu.dater"), { enabled: albumOpen }),
       await item("dedater", t("menu.dedater"), { enabled: albumOpen }),
+      // Tout l'album aussi : chaque case vide reçoit la photo de la réserve
+      // qui la tient (1.2-a).
+      await item("remplir", t("menu.remplir"), { enabled: albumOpen }),
       await sep(),
       await item("supprimerPlanche", t("menu.supprimer.planche"), { enabled: albumOpen }),
     ],

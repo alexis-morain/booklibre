@@ -430,6 +430,18 @@ passent devant dans l'ordre d'hier, les autres suivent avec le signe de la case 
 place de leur date (`reserve.ts::alerteDeCandidat`), et le plafond de douze tombe après
 ce rangement. Sans case (« Ajouter une photo… »), la liste est celle d'hier à l'octet.
 
+**« Remplir les cases vides » ne pose que ce qui tient** (1.2-a, `reserve::remplir`,
+`cases_vides`, `remplir_avec` ; commande `remplir_cases_vides`, CLI cachée `--remplir`,
+menu Planche et pied de la table). Une case vide est une case de gabarit sans photo (un
+`album.json` réparé à la main) ou une **planche vide** (`vide`, sans texte ni objet) ;
+la page blanche d'un `solo` est un dessin, pas un trou, et une planche figée ne se touche
+pas. Chaque case prend la première photo de `reserve::ranger` (l'ordre de `classer` sans
+plafond) qui tient 250 ppi **et** 1,4 d'aspect, sans quasi-doublon dans tout l'album, hors
+`rejetee` et `originale_editee` (`NON_RECONDUITES`) ; une taille inconnue ne se pose pas.
+Une planche vide prend le `solo` de la forme de sa photo (`layout::solo_pour_aspect`),
+que la pose porte. Le moteur décide, `reserve.ts::appliquerRemplissage` pose en un
+`apply` et revalide chaque pose (`edits.ts::poserDansCase`). Rien n'est créé.
+
 **La bascule (`core::bascule`) n'est pas une recomposition.** `core::recomposition` rebâtit
 tout ce qui n'est pas épinglé ; la bascule ne rebâtit rien — mêmes planches, même ordre,
 mêmes photos, mêmes recadrages —, elle ne change que `trim_mm` et le `template` d'une
@@ -1492,7 +1504,7 @@ de scène porte un angle et une origine, **jamais une matrice**.
 Autres drapeaux : `--print`, `--cover`, `--prevol --profil <id>`, `--densite`,
 `--variantes`, `--reprise`, `--bascule <FORMAT> [--essai]`, `--dump-scene`,
 `--dump-geometry`, `--dump-ornements`, `--profils`, `--preparer <DOSSIER>`. Cachés :
-`--fiche`, `--releve-album`, `--dates`, `--reserve`, `--cover --apercu`, `--recomposer [--vers <FORMAT>]
+`--fiche`, `--releve-album`, `--dates`, `--reserve`, `--remplir`, `--cover --apercu`, `--recomposer [--vers <FORMAT>]
 [--rythme <ID>]`, `--devis <album> --pays FR` (le
 code de commande, clé lue dans `CLOUDPRINTER_SANDBOX_API_KEY`, jamais en argument).
 Scripts :
