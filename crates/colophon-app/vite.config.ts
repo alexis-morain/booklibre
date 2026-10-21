@@ -617,6 +617,31 @@ function relaisDev() {
       if (paysEnPanne) throw new Error("relais : injoignable (502)");
       return [{ code: "FR", nom: "France", require_state: false }];
     },
+    // Le Worker des tarifs (1.1-f) : une table fixe, sur la règle du
+    // sandbox du 20/10 à peu près, sans réseau. `{"absent": true}` le retire
+    // aussi, comme un build sans relais.
+    "tarifs-offerts": () => !relaisAbsent,
+    tarifs: () => {
+      if (relaisAbsent) return null;
+      const ligne = (de: number, base: number) => {
+        const prix: number[] = [];
+        for (let p = de; p <= 200; p += 2) prix.push(Math.ceil((base + p * 17) / 50) * 50);
+        return { FR: { de, pas: 2, ttc_centimes: prix } };
+      };
+      return {
+        mode: "sandbox",
+        genere_le: new Date().toISOString(),
+        devise: "EUR",
+        pays: ["FR"],
+        formats: {
+          "carre-21": ligne(24, 3600),
+          "carre-30": ligne(22, 4200),
+          "portrait-a4": ligne(22, 3300),
+          "paysage-a4": ligne(24, 3300),
+          "portrait-20x25": ligne(24, 3600),
+        },
+      };
+    },
     panne: (b) => {
       if ("pays" in b) paysEnPanne = b.pays === true;
       if ("absent" in b) relaisAbsent = b.absent === true;

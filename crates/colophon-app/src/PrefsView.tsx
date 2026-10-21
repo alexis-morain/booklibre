@@ -1,5 +1,6 @@
 // Preferences (⌘,): the application language, whether Colophon looks for a
-// new version at launch, and a note about appearance. Every one of them is a React render, never a restart; the native
+// new version at launch, how the book will be printed (and so whether the
+// price table is read), and a note about appearance. Every one of them is a React render, never a restart; the native
 // menu is rebuilt by App the moment the language moves.
 //
 // The update switch sits second, right under the language, because it is the
@@ -14,6 +15,9 @@
 import { Dialogue } from "./Dialogue";
 import { Lang, setLangue, t, useLangue } from "./i18n";
 import { Veille, majPossible, setVeille, useVeille } from "./maj";
+import { ChoixImpression } from "./ChoixImpression";
+import { useOffre } from "./impression";
+import { saveurMas } from "./saveur";
 
 const LANGES: [Lang, string][] = [
   ["fr", "Français"],
@@ -23,6 +27,7 @@ const LANGES: [Lang, string][] = [
 export function PrefsView({ onClose }: { onClose: () => void }) {
   const lang = useLangue();
   const regarde = useVeille();
+  const offre = useOffre();
   const VEILLES: [Veille, string][] = [
     ["au-lancement", t("prefs.maj.au.lancement")],
     ["jamais", t("prefs.maj.jamais")],
@@ -64,6 +69,16 @@ export function PrefsView({ onClose }: { onClose: () => void }) {
               ))}
             </div>
             <p className="signaler-note">{t("prefs.maj.note")}</p>
+          </>
+        )}
+
+        {/* La question de l'accueil, rangée ici : « Moi-même » coupe l'appel
+            aux tarifs. Ni question ni appel dans la version App Store. */}
+        {offre === true && !saveurMas() && (
+          <>
+            <h3>{t("prefs.impression")}</h3>
+            <ChoixImpression />
+            <p className="signaler-note">{t("prefs.impression.note")}</p>
           </>
         )}
 

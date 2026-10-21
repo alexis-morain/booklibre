@@ -209,7 +209,26 @@ export const FR = {
   "prefs.maj.au.lancement": "Vérifier au lancement",
   "prefs.maj.jamais": "Ne rien vérifier",
   "prefs.maj.note":
-    "C’est la seule chose qui sorte de votre machine. Au démarrage, Booklibre demande à son site, booklibre.app (servi par Cloudflare), s’il existe une version plus récente, puis à GitHub si le site ne répond pas. Ce qui part est une requête pour ce seul fichier ; ce que Cloudflare ou GitHub en voit est votre adresse IP et le nom de votre système, rien de vos photographies, rien de votre album, aucun identifiant que Booklibre fabriquerait. Rien ne s’installe sans un clic de votre part. Coupée, l’application ne joint plus rien du tout, et les versions se téléchargent à la main depuis la page des versions.",
+    "Au démarrage, Booklibre demande à son site, booklibre.app (servi par Cloudflare), s’il existe une version plus récente, puis à GitHub si le site ne répond pas. Ce qui part est une requête pour ce seul fichier ; ce que Cloudflare ou GitHub en voit est votre adresse IP et le nom de votre système, rien de vos photographies, rien de votre album, aucun identifiant que Booklibre fabriquerait. Rien ne s’installe sans un clic de votre part. Coupée, l’application ne joint plus ni son site ni GitHub, et les versions se téléchargent à la main depuis la page des versions.",
+
+  "prefs.impression": "Impression",
+  "prefs.impression.note":
+    "« Par Booklibre » : à chaque ouverture, Booklibre demande à tarifs.booklibre.app (servi par Cloudflare) la table de ses prix, pour vous dire pendant que vous composez combien coûtera le livre. Ce qui part est une requête pour ce seul fichier ; ce que Cloudflare en voit est votre adresse IP et le nom du logiciel qui la fait, rien de vos photographies, rien de votre album, aucun identifiant, et le pays choisi ne part pas. « Moi-même » : rien ne part, aucun prix ne s’affiche.",
+
+  // -- « Comment l’imprimer ? » et le prix pendant la construction (1.1-f)
+  "impression.question": "Comment comptez-vous l’imprimer ?",
+  "impression.moi": "Moi-même",
+  "impression.moi.note": "Vous téléchargez le PDF et le confiez à l’imprimeur de votre choix.",
+  "impression.booklibre": "Par Booklibre",
+  "impression.booklibre.note": "Booklibre le fait imprimer et vous le livre. Le prix s’affiche pendant que vous composez.",
+  "impression.pays": "Livraison en",
+  "impression.pays.autre": "Un autre pays",
+  "impression.pays.pas.livre": "Booklibre ne livre pas encore chez vous. Continuez : le PDF reste à vous, et le prix s’affichera le jour où votre pays ouvrira.",
+  "impression.lecture": "Lecture des tarifs…",
+  "impression.indisponible": "Les tarifs ne répondent pas pour l’instant. Le prix s’affichera à la prochaine ouverture.",
+  "impression.plus.tard": "Les Préférences gardent ce choix, et le changent.",
+  "prix.a.partir": "À partir de {prix} livré",
+  "prix.a.partir.titre": "{pages} pages. Le prix exact est celui de la commande, au moment de payer.",
 
   // -- création, composition, formats
   "setup.nouvel": "Nouvel album",
@@ -761,7 +780,7 @@ export const FR = {
   "commande.region": "État ou région",
   "commande.voir": "Voir les prix",
   "commande.devis.encours": "Calcul des prix…",
-  "commande.grille": "Prix TTC, impression et livraison comprises",
+  "commande.grille": "Impression et livraison comprises",
   "commande.delai": "fabrication {n} jours ouvrés",
   "commande.niveau.cp_postal": "Courrier",
   "commande.niveau.cp_ground": "Standard",
@@ -822,9 +841,9 @@ export const FR = {
   "commande.relais.inconnu": "Le relais rend l’état « {etat} », que cette version ne connaît pas.",
   "commande.devis.expire": "Le prix a expiré : recommencez la commande pour en obtenir un nouveau.",
   "commande.confirmer.sandbox":
-    "Commander pour {prix} TTC, livraison comprise, en sandbox : la page de paiement est un test, rien ne sera débité ni imprimé.",
+    "Commander pour {prix}, livraison comprise, en sandbox : la page de paiement est un test, rien ne sera débité ni imprimé.",
   "commande.confirmer.reel":
-    "Commander pour {prix} TTC, livraison comprise : vous paierez par carte sur la page de Stripe, qui s’ouvre dans votre navigateur.",
+    "Commander pour {prix}, livraison comprise : vous paierez par carte sur la page de Stripe, qui s’ouvre dans votre navigateur.",
   "commande.erreur": "La commande a échoué : {erreur}",
   "commande.annuler.tard": "La production a commencé, l’annulation n’est plus possible.",
   "commande.etat.aucun": "État pas encore relu.",
@@ -1443,7 +1462,25 @@ export const EN: Record<Cle, string> = {
   "prefs.maj.au.lancement": "Check at launch",
   "prefs.maj.jamais": "Never check",
   "prefs.maj.note":
-    "This is the only thing that leaves your machine. At startup, Booklibre asks its website, booklibre.app (served by Cloudflare), whether a newer version exists, then GitHub if the site does not answer. What goes out is a request for that one file; what Cloudflare or GitHub sees of it is your IP address and the name of your system, nothing of your photographs, nothing of your album, no identifier Booklibre would have made up. Nothing installs without a click from you. Turned off, the application reaches nothing at all, and versions are downloaded by hand from the releases page.",
+    "At startup, Booklibre asks its website, booklibre.app (served by Cloudflare), whether a newer version exists, then GitHub if the site does not answer. What goes out is a request for that one file; what Cloudflare or GitHub sees of it is your IP address and the name of your system, nothing of your photographs, nothing of your album, no identifier Booklibre would have made up. Nothing installs without a click from you. Turned off, the application reaches neither its website nor GitHub, and versions are downloaded by hand from the releases page.",
+
+  "prefs.impression": "Printing",
+  "prefs.impression.note":
+    "“Through Booklibre”: each time it opens, Booklibre asks tarifs.booklibre.app (served by Cloudflare) for its price table, so it can tell you while you compose what the book will cost. What goes out is a request for that one file; what Cloudflare sees of it is your IP address and the name of the software making it, nothing of your photographs, nothing of your album, no identifier, and the country you chose does not go out. “Myself”: nothing goes out, no price shows.",
+
+  "impression.question": "How will you print it?",
+  "impression.moi": "Myself",
+  "impression.moi.note": "You download the PDF and take it to the printer of your choice.",
+  "impression.booklibre": "Through Booklibre",
+  "impression.booklibre.note": "Booklibre has it printed and delivered to you. The price shows while you compose.",
+  "impression.pays": "Delivered to",
+  "impression.pays.autre": "Another country",
+  "impression.pays.pas.livre": "Booklibre does not deliver to you yet. Carry on: the PDF is yours, and the price will show the day your country opens.",
+  "impression.lecture": "Reading the prices…",
+  "impression.indisponible": "The prices are not answering right now. They will show at the next launch.",
+  "impression.plus.tard": "Preferences keep this choice, and change it.",
+  "prix.a.partir": "From {prix} delivered",
+  "prix.a.partir.titre": "{pages} pages. The exact price is the one of the order, when you pay.",
 
   "setup.nouvel": "New album",
   "setup.changer.dossier": "Change folder",
@@ -1957,7 +1994,7 @@ export const EN: Record<Cle, string> = {
   "commande.region": "State or region",
   "commande.voir": "See the prices",
   "commande.devis.encours": "Working out the prices…",
-  "commande.grille": "Prices incl. VAT, printing and delivery included",
+  "commande.grille": "Printing and delivery included",
   "commande.delai": "made in {n} working days",
   "commande.niveau.cp_postal": "Post",
   "commande.niveau.cp_ground": "Standard",
@@ -2018,9 +2055,9 @@ export const EN: Record<Cle, string> = {
   "commande.relais.inconnu": "The relay returns the state “{etat}”, which this version does not know.",
   "commande.devis.expire": "The price has expired: start the order again to get a new one.",
   "commande.confirmer.sandbox":
-    "Order for {prix} incl. VAT and delivery, in sandbox: the payment page is a test, nothing will be charged or printed.",
+    "Order for {prix}, delivery included, in sandbox: the payment page is a test, nothing will be charged or printed.",
   "commande.confirmer.reel":
-    "Order for {prix} incl. VAT and delivery: you will pay by card on Stripe’s page, which opens in your browser.",
+    "Order for {prix}, delivery included: you will pay by card on Stripe’s page, which opens in your browser.",
   "commande.erreur": "The order failed: {erreur}",
   "commande.annuler.tard": "Production has started, the order can no longer be cancelled.",
   "commande.etat.aucun": "State not read yet.",

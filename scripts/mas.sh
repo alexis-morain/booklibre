@@ -158,6 +158,11 @@ prouver() {
   if grep -aqF "latest.json" "$binaire"; then echouer "le binaire porte encore le flux des versions"; fi
   if grep -aqF "${cle:0:40}" "$binaire"; then echouer "le binaire porte encore la clé de l'updater"; fi
   if grep -rqF "plugin:updater" "$APP_DIR/dist"; then echouer "le bundle web porte encore le plugin updater"; fi
+  # Les tarifs (1.1-f, C59) : ni l'adresse du Worker ni sa ressource. La
+  # version App Store n'appelle aucun serveur.
+  if grep -aqF "colophon-tarifs" "$binaire" || grep -aqF "/v1/tarifs" "$binaire"; then
+    echouer "le binaire porte encore l'adresse des tarifs"
+  fi
   codesign --verify --strict "$BUNDLE" || echouer "signature invalide"
   codesign -d --entitlements - --xml "$BUNDLE" 2>/dev/null | python3 -c '
 import plistlib, sys

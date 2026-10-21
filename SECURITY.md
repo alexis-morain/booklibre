@@ -1,21 +1,34 @@
 # Security policy
 
 Booklibre runs offline: no server, no account, no telemetry, ever. The
-application, as published on the releases page, makes exactly one network
-call, and only while you leave it on.
+application, as published on the releases page, makes at most two network
+calls, each only while you leave it on.
 At launch it asks whether a newer version exists: first
 `https://booklibre.app/latest.json`, a static file served by Cloudflare, then
 the releases feed on GitHub if the site does not answer. What goes out is an
 HTTPS request for that one file; what Cloudflare or GitHub sees of it is the
 IP address and user agent of that request, nothing of your photographs,
 nothing of your album, and no identifier Booklibre invents. Nothing is downloaded or installed
-without a click. Preferences (Cmd-comma) turns the check off, and then
-nothing leaves the machine at all.
+without a click. Preferences (Cmd-comma) turns the check off.
+
+The second call exists only once you have answered "Through Booklibre" to
+"How will you print it?", on the welcome screen or in Preferences; until you
+answer, and if you answer "Myself", it never goes. Then, once each time the
+app opens, the Rust process asks the price server (`tarifs.booklibre.app`,
+a Cloudflare Worker) for its price table: one HTTPS GET for one file, with
+no identifier, no header of its own, and not even the country you picked,
+which stays on your machine. Cloudflare sees the IP address and user agent of
+that request; the Worker logs neither. Which price server a build talks to
+is fixed when it is compiled (`COLOPHON_TARIFS_REEL`, a host alone; a debug
+build and a release built with `COLOPHON_RELAIS_SANDBOX=1` use the test
+one); a build without one never asks the question. The Mac App Store version
+has neither the question nor the call. With both switched off, nothing
+leaves the machine at all.
 
 Two things you can check rather than take on trust. The interface cannot
 reach the network whatever it tries: its content security policy allows
-`connect-src 'self' ipc:` and nothing else, so that one call is made by the
-updater in the Rust process and nowhere else. And reporting a bug opens a
+`connect-src 'self' ipc:` and nothing else, so these calls are made by the
+Rust process and nowhere else. And reporting a bug opens a
 prefilled GitHub page in your browser, on your click; the application uploads
 nothing, which is why the same screen offers to copy the report instead.
 

@@ -351,10 +351,10 @@ describe("la confirmation", () => {
   it("dit le prix et le mode en toutes lettres", () => {
     setLangue("fr");
     expect(phraseConfirmation("46,00 €", "sandbox")).toBe(
-      "Commander pour 46,00 € TTC, livraison comprise, en sandbox : la page de paiement est un test, rien ne sera débité ni imprimé.",
+      "Commander pour 46,00 €, livraison comprise, en sandbox : la page de paiement est un test, rien ne sera débité ni imprimé.",
     );
     expect(phraseConfirmation("46,00 €", "reel")).toBe(
-      "Commander pour 46,00 € TTC, livraison comprise : vous paierez par carte sur la page de Stripe, qui s’ouvre dans votre navigateur.",
+      "Commander pour 46,00 €, livraison comprise : vous paierez par carte sur la page de Stripe, qui s’ouvre dans votre navigateur.",
     );
   });
 

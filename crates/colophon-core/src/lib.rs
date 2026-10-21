@@ -48,6 +48,7 @@ pub mod reserve;
 pub mod scan;
 pub mod scene;
 pub mod survol;
+pub mod tarifs;
 pub mod thumb;
 
 pub use build::{
