@@ -319,10 +319,12 @@ fn preparer(dir: &Path, album: &Album, posees: &[String]) -> Result<Option<Prepa
     Ok(Some(Prepare { reserve, mesure, curation }))
 }
 
-/// Les raisons de curation que le remplissage ne reconduit pas : le refus
-/// explicite de la personne, et l'originale d'une photo dont la version
-/// éditée est déjà dans le livre. La main, elle, peut encore les choisir.
-pub const NON_RECONDUITES: [&str; 2] = ["rejetee", "originale_editee"];
+/// Les raisons de curation que le remplissage reconduit, et elles seules :
+/// celles où la photo est sortie faute de place, pas pour ce qu'elle est.
+/// Un doublon, un jumeau, un refus, un parasite, une originale éditée, une
+/// photo retirée à la main (qui n'a pas d'entrée) restent à la main : la
+/// curation les a jugés avec plus que ce que la réserve sait mesurer.
+pub const RECONDUITES: [&str; 2] = ["hors_budget", "meme_moment"];
 
 /// Une case que le remplissage vise : la planche, et le rang de la case
 /// dans son gabarit.
@@ -381,10 +383,10 @@ pub fn cases_vides(album: &Album) -> Vec<Case> {
 }
 
 /// Le remplissage, pur et en mémoire. Chaque case reçoit la première photo,
-/// dans l'ordre de `classer` (jour, puis score), qui la tient vraiment :
-/// 250 ppi au cadrage par défaut, l'aspect à 1,4 au plus de celui de la
-/// case, et aucune quasi-doublon dans tout l'album — les garanties du
-/// Composer, qu'une photo posée par la machine doit tenir comme les siennes.
+/// dans l'ordre de `classer` (jour, puis score, sans les quasi-doublons de
+/// la planche), qui la tient vraiment : 250 ppi au cadrage par défaut et
+/// l'aspect à 1,4 au plus de celui de la case — les garanties du Composer,
+/// qu'une photo posée par la machine doit tenir comme les siennes.
 /// Prendre la première qui tient dans cet ordre, c'est prendre la tête du
 /// rangement de 1.1-a, qui fait passer devant ce qui tient. Une taille
 /// inconnue ne se pose pas. Une planche vide devient le `solo` le plus
@@ -410,20 +412,11 @@ pub fn remplir_avec(
             continue;
         }
         let vide = w.spreads[p].template == "vide";
-        let dans_l_album: Vec<u64> = w
-            .spreads
-            .iter()
-            .flat_map(|s| s.slots.iter())
-            .filter_map(|s| faits.get(&s.src).map(|f| f.dhash))
-            .collect();
         // Pour chaque candidate : le gabarit que la planche prendrait, et
         // ce que la photo imprime dans sa case.
         let tenue = |cand: &Candidate| -> Option<(String, f64)> {
             let fait = faits.get(&cand.src)?;
             let (iw, ih) = fait.orig.filter(|&(a, b)| a > 0 && b > 0)?;
-            if dans_l_album.iter().any(|&d| analyze::hamming(d, fait.dhash) <= DUP_HAMMING) {
-                return None;
-            }
             let aspect = iw as f64 / ih as f64;
             let gabarit = if vide {
                 crate::layout::solo_pour_aspect(aspect).to_string()
@@ -463,15 +456,15 @@ pub fn remplir_avec(
     (poses, restees)
 }
 
-/// La réserve sans ce que la curation a sorti pour une raison que la
-/// machine ne reconduit pas (`NON_RECONDUITES`).
-pub fn sans_refus(reserve: Vec<EnReserve>, curation: &[Discard]) -> Vec<EnReserve> {
-    let refusees: HashSet<&str> = curation
+/// La part de la réserve que la machine peut poser : ce que la curation a
+/// sorti pour une raison de `RECONDUITES`.
+pub fn reconduites(reserve: Vec<EnReserve>, curation: &[Discard]) -> Vec<EnReserve> {
+    let permises: HashSet<&str> = curation
         .iter()
-        .filter(|d| NON_RECONDUITES.contains(&d.reason.as_str()))
+        .filter(|d| RECONDUITES.contains(&d.reason.as_str()))
         .map(|d| d.src.as_str())
         .collect();
-    reserve.into_iter().filter(|r| !refusees.contains(r.src.as_str())).collect()
+    reserve.into_iter().filter(|r| permises.contains(r.src.as_str())).collect()
 }
 
 /// « Remplir les cases vides » sur un dossier d'album : la réserve mesurée
@@ -487,7 +480,7 @@ pub fn remplir(dir: &Path, album: &Album) -> Result<Remplissage> {
     let Some(Prepare { reserve, mesure, curation }) = preparer(dir, album, &posees)? else {
         return Ok(Remplissage { poses: Vec::new(), restees: cases, note: Some(SANS_MESURE.into()) });
     };
-    let reserve = sans_refus(reserve, &curation);
+    let reserve = reconduites(reserve, &curation);
     let date_de = |src: &str| mesure.date(src);
     let (poses, restees) = remplir_avec(album, &reserve, &mesure.faits, &date_de);
     let note = (!mesure.notes.is_empty()).then(|| mesure.notes.join(" ; "));
@@ -1052,11 +1045,15 @@ mod tests {
     }
 
     #[test]
-    fn une_quasi_doublon_d_une_autre_planche_n_est_pas_posee() {
-        let a = album(vec![pleine_page(&["p.jpg"]), vide()]);
+    fn une_quasi_doublon_de_la_planche_n_est_pas_posee() {
+        // Un quad réparé à la main : la case libre ne reçoit pas le quasi-
+        // doublon d'une photo qu'il porte déjà.
+        let a = album(vec![Spread { template: "quad".into(), ..planche(&["p.jpg", "q.jpg", "r.jpg"]) }]);
         let mut faits = grandes(&[
             ("p.jpg", 0, 5.0, "2013-10-27 10:00:00"),
-            ("autre.jpg", 1, 1.0, "2013-10-27 12:00:00"),
+            ("q.jpg", 1, 5.0, "2013-10-27 10:00:00"),
+            ("r.jpg", 2, 5.0, "2013-10-27 10:00:00"),
+            ("autre.jpg", 3, 1.0, "2013-10-27 12:00:00"),
         ]);
         let proche = Fait { dhash: dhash(0) ^ 0b111, ..fait_de(0, 9.0, "2013-10-27 11:00:00", (6000, 4000)) };
         faits.insert("doublon.jpg".into(), proche);
@@ -1100,13 +1097,25 @@ mod tests {
     }
 
     #[test]
-    fn la_machine_ne_reconduit_ni_un_refus_ni_une_originale_editee() {
-        let curation: Vec<Discard> = [("non.jpg", "rejetee"), ("orig.jpg", "originale_editee"), ("dbl.jpg", "doublon")]
-            .iter()
-            .map(|&(src, reason)| Discard { src: src.into(), reason: reason.into(), kept: None, focal: [0.5, 0.42] })
-            .collect();
-        let r = sans_refus(reserve(&["non.jpg", "orig.jpg", "dbl.jpg", "libre.jpg"]), &curation);
-        assert_eq!(r.iter().map(|r| r.src.as_str()).collect::<Vec<_>>(), ["dbl.jpg", "libre.jpg"]);
+    fn la_machine_ne_reconduit_que_ce_qui_est_sorti_faute_de_place() {
+        let curation: Vec<Discard> = [
+            ("budget.jpg", "hors_budget"),
+            ("moment.jpg", "meme_moment"),
+            ("non.jpg", "rejetee"),
+            ("orig.jpg", "originale_editee"),
+            ("dbl.jpg", "doublon"),
+            ("jum.jpg", "jumeau"),
+            ("para.jpg", "parasite"),
+        ]
+        .iter()
+        .map(|&(src, reason)| Discard { src: src.into(), reason: reason.into(), kept: None, focal: [0.5, 0.42] })
+        .collect();
+        // `main.jpg` n'a pas d'entrée : retirée à la main, elle reste à la main.
+        let r = reconduites(
+            reserve(&["budget.jpg", "moment.jpg", "non.jpg", "orig.jpg", "dbl.jpg", "jum.jpg", "para.jpg", "main.jpg"]),
+            &curation,
+        );
+        assert_eq!(r.iter().map(|r| r.src.as_str()).collect::<Vec<_>>(), ["budget.jpg", "moment.jpg"]);
     }
 
     #[test]

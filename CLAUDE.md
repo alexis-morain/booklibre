@@ -436,8 +436,9 @@ menu Planche et pied de la table). Une case vide est une case de gabarit sans ph
 `album.json` réparé à la main) ou une **planche vide** (`vide`, sans texte ni objet) ;
 la page blanche d'un `solo` est un dessin, pas un trou, et une planche figée ne se touche
 pas. Chaque case prend la première photo de `reserve::ranger` (l'ordre de `classer` sans
-plafond) qui tient 250 ppi **et** 1,4 d'aspect, sans quasi-doublon dans tout l'album, hors
-`rejetee` et `originale_editee` (`NON_RECONDUITES`) ; une taille inconnue ne se pose pas.
+plafond) qui tient 250 ppi **et** 1,4 d'aspect, parmi ce que la curation a sorti faute de
+place seulement (`hors_budget`, `meme_moment` : `RECONDUITES`) — doublons, refus, parasites
+et retraits à la main restent à la main ; une taille inconnue ne se pose pas.
 Une planche vide prend le `solo` de la forme de sa photo (`layout::solo_pour_aspect`),
 que la pose porte. Le moteur décide, `reserve.ts::appliquerRemplissage` pose en un
 `apply` et revalide chaque pose (`edits.ts::poserDansCase`). Rien n'est créé.
