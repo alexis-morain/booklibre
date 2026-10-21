@@ -13,6 +13,10 @@
 // trois-quarts par le chemin court (`volume.ts::repos`), en douceur. Sous
 // `prefers-reduced-motion`, ni glisser ni transition : trois vues fixes,
 // l'avant, le trois-quarts et le dos, au clic.
+//
+// La visionneuse (1.2-c) le montre fermé, avant de l'ouvrir : elle lui donne
+// son avant tiré du PDF de couverture (`avant`), et le met de face
+// (`deFace`) le temps que le plat se pose à la place de la page de droite.
 
 import { useEffect, useRef, useState } from "react";
 import { Album, SPINE_TEXT_MIN_MM } from "./album";
@@ -42,6 +46,8 @@ export function Livre3D({
   dosMm,
   pages,
   hauteurPx,
+  avant,
+  deFace,
 }: {
   album: Album;
   /** Le format de la page fini, en millimètres. */
@@ -51,6 +57,12 @@ export function Livre3D({
   /** Les pages de l'intérieur, null tant que la fiche n'est pas rendue. */
   pages: number | null;
   hauteurPx: number;
+  /** Ce que porte l'avant ; la vignette de couverture quand rien n'est
+   *  donné. */
+  avant?: React.ReactNode;
+  /** Vrai : le livre se met de face, angle et inclinaison à zéro. Faux : il
+   *  revient au trois-quarts. Absent : il est seul maître de sa pose. */
+  deFace?: boolean;
 }) {
   const { largeur: w, hauteur: h, epaisseur: e } = cotesLivre(
     { wMm: formatMm[0], hMm: formatMm[1], dosMm },
@@ -62,8 +74,8 @@ export function Livre3D({
   const aplat = fond ?? "var(--livre-papier)";
   const titre = afficher(cover.title || album.title);
 
-  const [angle, setAngle] = useState(ANGLE_REPOS);
-  const [incl, setIncl] = useState(INCLINAISON_REPOS);
+  const [angle, setAngle] = useState(deFace ? 0 : ANGLE_REPOS);
+  const [incl, setIncl] = useState(deFace ? 0 : INCLINAISON_REPOS);
   const [enMain, setEnMain] = useState(false);
   const [reduit, setReduit] = useState(false);
   const geste = useRef<{ x: number; y: number; a: number; i: number } | null>(null);
@@ -77,6 +89,17 @@ export function Livre3D({
     mq.addEventListener("change", suivre);
     return () => mq.removeEventListener("change", suivre);
   }, []);
+
+  useEffect(() => {
+    if (deFace === undefined) return;
+    if (deFace) {
+      setAngle(0);
+      setIncl(0);
+    } else {
+      setAngle((a) => repos(a));
+      setIncl(INCLINAISON_REPOS);
+    }
+  }, [deFace]);
 
   // Le balayage horizontal à deux doigts d'un trackpad, sans voler le
   // défilement vertical : l'écouteur est posé à la main, non passif.
@@ -126,7 +149,12 @@ export function Livre3D({
   return (
     <div
       ref={racine}
-      className={"livre3d" + (enMain ? " en-main" : "") + (reduit ? " reduit" : "")}
+      className={
+        "livre3d" +
+        (enMain ? " en-main" : "") +
+        (reduit ? " reduit" : "") +
+        (deFace ? " de-face" : "")
+      }
       role="img"
       aria-label={etiquette}
       title={t(reduit ? "livre3d.titre.reduit" : "livre3d.titre")}
@@ -152,6 +180,9 @@ export function Livre3D({
       onKeyDown={(ev) => {
         if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
           ev.preventDefault();
+          // Le livre a pris la flèche : elle ne tourne pas aussi la page
+          // derrière lui (la visionneuse ouvre le livre aux flèches).
+          ev.stopPropagation();
           setAngle((a) => apresFleche(a, ev.key === "ArrowLeft" ? "gauche" : "droite"));
         } else if (reduit && (ev.key === "Enter" || ev.key === " ")) {
           ev.preventDefault();
@@ -170,7 +201,7 @@ export function Livre3D({
         {face(
           "avant",
           { width: w, height: h, transform: `translateZ(${e / 2}px)` },
-          <MiniCouverture album={album} />,
+          avant ?? <MiniCouverture album={album} />,
         )}
         {face(
           "arriere",

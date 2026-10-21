@@ -10,6 +10,11 @@ import { describe, expect, it } from "vitest";
 import {
   CLIC,
   COIN,
+  COURBURE,
+  COUVERTURE,
+  bandes,
+  courbe,
+  voileDe,
   DUREE_MIN,
   DUREE_TOUR,
   SEUIL_PROGRES,
@@ -53,7 +58,7 @@ describe("what one sheet carries", () => {
     for (const sens of [1, -1] as const) {
       const f = feuilleDe(4, sens, 10)!;
       const planches = new Set(
-        [f.recto, f.verso, f.fixeGauche, f.fixeDroite].map((x) => x.planche),
+        [f.recto, f.verso, f.fixeGauche!, f.fixeDroite].map((x) => x.planche),
       );
       expect([...planches].sort()).toEqual(sens === 1 ? [4, 5] : [3, 4]);
     }
@@ -61,26 +66,134 @@ describe("what one sheet carries", () => {
 
   it("shows one whole page per face, so nothing that moves is cut", () => {
     const f = feuilleDe(0, 1, 10)!;
-    for (const face of [f.recto, f.verso, f.fixeGauche, f.fixeDroite]) {
+    for (const face of [f.recto, f.verso, f.fixeGauche!, f.fixeDroite]) {
       expect(face.cote === "gauche" || face.cote === "droite").toBe(true);
     }
   });
 });
 
+// 1.2-c : le livre fermé s'ouvre. Le plat tourne autour du dos comme une
+// feuille — son recto est l'avant de la couverture, son verso le contre-plat,
+// qui est la page de gauche de la première planche.
+describe("the cover opens like a sheet", () => {
+  it("turns the front board about the spine onto the first spread", () => {
+    const f = feuilleDe(COUVERTURE, 1, 10)!;
+    expect(f.depuis).toBe(COUVERTURE);
+    expect(f.vers).toBe(0);
+    expect(f.recto).toEqual({ planche: COUVERTURE, cote: "droite" });
+    expect(f.verso).toEqual({ planche: 0, cote: "gauche" });
+    expect(f.fixeDroite).toEqual({ planche: 0, cote: "droite" });
+  });
+
+  it("leaves the table bare on the left: a closed book has no left page", () => {
+    expect(feuilleDe(COUVERTURE, 1, 10)!.fixeGauche).toBeNull();
+    expect(feuilleDe(0, -1, 10)!.fixeGauche).toBeNull();
+  });
+
+  it("closes by the same sheet, read the other way", () => {
+    const f = feuilleDe(0, -1, 10)!;
+    expect(f.vers).toBe(COUVERTURE);
+    expect(f.recto).toEqual({ planche: 0, cote: "gauche" });
+    expect(f.verso).toEqual({ planche: COUVERTURE, cote: "droite" });
+    expect(f.fixeDroite).toEqual({ planche: 0, cote: "droite" });
+  });
+
+  it("opens even a book of one spread", () => {
+    expect(feuilleDe(COUVERTURE, 1, 1)).not.toBeNull();
+    expect(feuilleDe(0, -1, 1)).not.toBeNull();
+  });
+});
+
 describe("the turns that do not exist", () => {
-  it("has none before the first spread or after the last", () => {
-    expect(feuilleDe(0, -1, 10)).toBeNull();
+  it("has none before the cover or after the last spread", () => {
+    expect(feuilleDe(COUVERTURE, -1, 10)).toBeNull();
     expect(feuilleDe(9, 1, 10)).toBeNull();
   });
 
-  it("has none on the cover, which is a flat sheet in another file", () => {
-    expect(feuilleDe(-1, 1, 10)).toBeNull();
-    expect(feuilleDe(0, -1, 10)).toBeNull();
+  it("has none in a book with no spread", () => {
+    expect(feuilleDe(COUVERTURE, 1, 0)).toBeNull();
   });
 
-  it("has none in an album of one spread", () => {
+  it("has none past the end of a book of one spread", () => {
     expect(feuilleDe(0, 1, 1)).toBeNull();
-    expect(feuilleDe(0, -1, 1)).toBeNull();
+  });
+});
+
+// 1.2-c : la page courbe. Douze lamelles, chacune un angle ; le bord libre
+// mène le pli, tout est à plat aux deux bouts du tour.
+describe("the curl", () => {
+  const n = 12;
+
+  it("is flat at rest on both sides of the fold", () => {
+    for (const sens of [1, -1] as const) {
+      for (const a of courbe(0, sens, n)) expect(Math.abs(a)).toBeCloseTo(0, 9);
+      for (const a of courbe(1, sens, n)) expect(Math.abs(a)).toBeCloseTo(180, 9);
+    }
+  });
+
+  it("has one angle per strip", () => {
+    expect(courbe(0.3, 1, n)).toHaveLength(n);
+    expect(courbe(0.3, 1, 1)).toHaveLength(1);
+  });
+
+  it("lets the free edge lead the fold, in the direction of the turn", () => {
+    for (const sens of [1, -1] as const) {
+      const a = courbe(0.5, sens, n);
+      const tourne = a.map((x) => -sens * x);
+      expect(tourne[n - 1]).toBeGreaterThan(tourne[0] + COURBURE * 0.9);
+      // Monotone : le papier se courbe, il ne se plie pas en accordéon.
+      for (let k = 1; k < n; k++) expect(tourne[k]).toBeGreaterThanOrEqual(tourne[k - 1]);
+    }
+  });
+
+  it("never goes under the page it lands on, nor behind the one it leaves", () => {
+    for (const sens of [1, -1] as const) {
+      for (let p = 0; p <= 1.0001; p += 0.05) {
+        for (const x of courbe(p, sens, n)) {
+          expect(-sens * x).toBeGreaterThanOrEqual(0);
+          expect(-sens * x).toBeLessThanOrEqual(180);
+        }
+      }
+    }
+  });
+
+  it("averages to the flat sheet's angle while nothing is clamped", () => {
+    const a = courbe(0.5, 1, n);
+    const moyenne = a.reduce((s, x) => s + x, 0) / n;
+    expect(moyenne).toBeCloseTo(angle(0.5, 1), 9);
+  });
+
+  it("shades a strip by how far it stands from the paper", () => {
+    expect(voileDe(0)).toBeCloseTo(0, 9);
+    expect(voileDe(-180)).toBeCloseTo(0, 9);
+    expect(voileDe(-90)).toBeGreaterThan(voileDe(-30));
+    expect(voileDe(90)).toBeCloseTo(voileDe(-90), 9);
+  });
+});
+
+describe("the strips a sheet is cut into", () => {
+  it("covers the page with no gap and no overlap, from the fold out", () => {
+    for (const sens of [1, -1] as const) {
+      const b = bandes(4, sens);
+      const rectos = b.map((x) => x.recto).sort((u, v) => u[0] - v[0]);
+      expect(rectos[0][0]).toBe(0);
+      expect(rectos[3][1]).toBe(1);
+      for (let k = 1; k < 4; k++) expect(rectos[k][0]).toBeCloseTo(rectos[k - 1][1], 12);
+    }
+  });
+
+  it("starts at the fold: the right page's left edge, the left page's right edge", () => {
+    expect(bandes(4, 1)[0].recto).toEqual([0, 0.25]);
+    expect(bandes(4, -1)[0].recto).toEqual([0.75, 1]);
+  });
+
+  it("carries on its back the mirror strip of the page it uncovers", () => {
+    for (const sens of [1, -1] as const) {
+      for (const { recto, verso } of bandes(4, sens)) {
+        expect(verso[0]).toBeCloseTo(1 - recto[1], 12);
+        expect(verso[1]).toBeCloseTo(1 - recto[0], 12);
+      }
+    }
   });
 });
 

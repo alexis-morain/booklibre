@@ -111,4 +111,34 @@ describe("Livre3D", () => {
     );
     expect(html.match(/aria-label="([^"]+)"/)?.[1]).toContain("fond blanc papier");
   });
+
+  // 1.2-c : la visionneuse le montre fermé, avec l'avant du PDF, et le met de
+  // face avant d'ouvrir son plat.
+  it("porte l'avant qu'on lui donne à la place de la vignette", () => {
+    const html = renderToStaticMarkup(
+      <Livre3D
+        album={album()}
+        formatMm={[210, 210]}
+        dosMm={12.48}
+        pages={96}
+        hauteurPx={260}
+        avant={<canvas className="avant-du-pdf" />}
+      />,
+    );
+    expect(html).toContain("avant-du-pdf");
+    expect(html).not.toContain("mini-cover");
+  });
+
+  it("de face, sans angle ni inclinaison ; sinon au trois-quarts", () => {
+    const deFace = renderToStaticMarkup(
+      <Livre3D album={album()} formatMm={[210, 210]} dosMm={12.48} pages={96} hauteurPx={260} deFace />,
+    );
+    expect(deFace).toContain("rotateX(0deg) rotateY(0deg)");
+    expect(deFace).toContain("de-face");
+    const repos = renderToStaticMarkup(
+      <Livre3D album={album()} formatMm={[210, 210]} dosMm={12.48} pages={96} hauteurPx={260} />,
+    );
+    expect(repos).toContain(`rotateY(${ANGLE_REPOS}deg)`);
+    expect(repos).not.toContain("de-face");
+  });
 });

@@ -19,8 +19,13 @@ export type Sens = 1 | -1;
 /** Une des deux pages d'une planche. */
 export type Cote = "gauche" | "droite";
 
-/** Une demi-planche à afficher : de quelle planche, et de quel côté du pli. */
+/** Une demi-planche à afficher : de quelle planche, et de quel côté du pli.
+ *  La planche `COUVERTURE` n'a qu'une face, son avant, rangée à droite : c'est
+ *  là qu'un livre fermé pose son plat. */
 export type Face = { planche: number; cote: Cote };
+
+/** L'indice de la couverture, le même que celui d'App. */
+export const COUVERTURE = -1;
 
 /**
  * Ce qu'un tour met à l'écran. Quatre faces, deux planches : la feuille en
@@ -34,8 +39,9 @@ export type Feuille = {
   recto: Face;
   /** Ce qu'elle découvre en passant la verticale. */
   verso: Face;
-  /** La moitié gauche qui ne bouge pas, sous la feuille ou à côté. */
-  fixeGauche: Face;
+  /** La moitié gauche qui ne bouge pas, sous la feuille ou à côté. `null`
+   *  quand le livre est fermé d'un côté : il n'y a que la table. */
+  fixeGauche: Face | null;
   /** La moitié droite qui ne bouge pas. */
   fixeDroite: Face;
 };
@@ -43,9 +49,11 @@ export type Feuille = {
 /**
  * La feuille qu'un tour ferait tourner, ou `null` si ce tour n'existe pas.
  *
- * La couverture (indice négatif) n'en est jamais : c'est une feuille à plat,
- * dans un autre fichier, avec un dos au milieu. L'y faire entrer serait mentir
- * sur sa géométrie, et le changement de mode y reste instantané.
+ * La couverture en est une depuis 1.2-c : le livre fermé s'ouvre, et son plat
+ * tourne autour du dos comme une feuille. Son recto est l'avant de la
+ * couverture, son verso le contre-plat — la page de gauche de la première
+ * planche, que rien n'imprime parce qu'elle est collée dans le carton. À
+ * gauche il n'y a alors que la table.
  */
 export function feuilleDe(
   depuis: number,
@@ -54,14 +62,16 @@ export function feuilleDe(
 ): Feuille | null {
   const vers = depuis + sens;
   if (!dansLeLivre(depuis, total) || !dansLeLivre(vers, total)) return null;
+  const ferme = depuis === COUVERTURE || vers === COUVERTURE;
+  const avant: Face = { planche: COUVERTURE, cote: "droite" };
   return sens === 1
     ? {
         sens,
         depuis,
         vers,
-        recto: { planche: depuis, cote: "droite" },
+        recto: ferme ? avant : { planche: depuis, cote: "droite" },
         verso: { planche: vers, cote: "gauche" },
-        fixeGauche: { planche: depuis, cote: "gauche" },
+        fixeGauche: ferme ? null : { planche: depuis, cote: "gauche" },
         fixeDroite: { planche: vers, cote: "droite" },
       }
     : {
@@ -69,13 +79,18 @@ export function feuilleDe(
         depuis,
         vers,
         recto: { planche: depuis, cote: "gauche" },
-        verso: { planche: vers, cote: "droite" },
-        fixeGauche: { planche: vers, cote: "gauche" },
+        verso: ferme ? avant : { planche: vers, cote: "droite" },
+        fixeGauche: ferme ? null : { planche: vers, cote: "gauche" },
         fixeDroite: { planche: depuis, cote: "droite" },
       };
 }
 
+/** Une planche de l'intérieur, ou la couverture d'un livre qui en a une. */
 function dansLeLivre(planche: number, total: number): boolean {
+  return Number.isInteger(planche) && planche >= COUVERTURE && planche < total && total > 0;
+}
+
+function dansLInterieur(planche: number, total: number): boolean {
   return Number.isInteger(planche) && planche >= 0 && planche < total;
 }
 
@@ -85,7 +100,7 @@ function dansLeLivre(planche: number, total: number): boolean {
  * pire que pas d'animation du tout : on préfère alors le changement sec.
  */
 export function planchesAPrecharger(index: number, total: number): number[] {
-  return [index - 1, index, index + 1].filter((n) => dansLeLivre(n, total));
+  return [index - 1, index, index + 1].filter((n) => dansLInterieur(n, total));
 }
 
 /**
@@ -150,6 +165,60 @@ export function versoVisible(progres: number): boolean {
  */
 export function relief(progres: number): number {
   return Math.sin(Math.PI * borne(progres, 0, 1));
+}
+
+/** Le nombre de lamelles d'une feuille. Assez pour que l'œil lise une
+ *  courbe et non une ligne brisée sur une demi-planche, assez peu pour que
+ *  vingt-quatre `drawImage` à la pose d'un tour ne se sentent pas. */
+export const LAMELLES = 12;
+
+/** De combien de degrés le bord libre mène le pli à mi-tour, quand le
+ *  papier est le plus courbé. */
+export const COURBURE = 50;
+
+/**
+ * La page courbe (1.2-c, la lamelle levée) : l'angle de chacune des `n`
+ * lamelles, du pli vers le bord libre, dans la convention d'`angle`.
+ *
+ * La feuille moyenne est celle d'`angle` ; le pli traîne de la moitié de la
+ * courbure et le bord libre la mène d'autant, la courbure suivant `relief` —
+ * nulle à plat des deux côtés, entière à la verticale. Chaque angle est borné
+ * à la course d'un tour : une lamelle ne passe jamais sous la page d'arrivée
+ * ni derrière celle qu'elle quitte, et la suite reste monotone, donc le
+ * papier se courbe sans jamais se plier.
+ */
+export function courbe(progres: number, sens: Sens, n: number): number[] {
+  const theta = angle(progres, sens);
+  const avance = COURBURE * relief(progres);
+  return Array.from({ length: n }, (_, k) => {
+    const t = n > 1 ? k / (n - 1) : 0.5;
+    const tourne = -sens * theta + avance * (t - 0.5);
+    return -sens * borne(tourne, 0, 180);
+  });
+}
+
+/** Le voile d'une lamelle : nul à plat, le plus sombre debout. Le même
+ *  plafond que l'ancien voile de la feuille entière. */
+export function voileDe(angleDeg: number): number {
+  return 0.34 * Math.abs(Math.sin((angleDeg * Math.PI) / 180));
+}
+
+/**
+ * Ce que porte chaque lamelle, du pli vers le bord libre, en fractions de la
+ * page (0 au bord gauche de la page). Vers l'avant la feuille est la page de
+ * droite, dont le pli est le bord gauche ; vers l'arrière c'est la page de
+ * gauche, pliée à droite. Le verso est la bande miroir de la page découverte :
+ * vue de dos, la feuille se lit à l'envers.
+ */
+export function bandes(
+  n: number,
+  sens: Sens,
+): { recto: [number, number]; verso: [number, number] }[] {
+  return Array.from({ length: n }, (_, k) => {
+    const pres: [number, number] = [k / n, (k + 1) / n];
+    const loin: [number, number] = [1 - (k + 1) / n, 1 - k / n];
+    return sens === 1 ? { recto: pres, verso: loin } : { recto: loin, verso: pres };
+  });
 }
 
 /** Au-delà de cette part du tour, un relâchement finit le mouvement. */

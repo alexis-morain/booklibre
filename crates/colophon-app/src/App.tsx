@@ -390,6 +390,9 @@ export default function App() {
   // The faithful preview: the book view reads the PDF instead of drawing it.
   // `pdfCle` counts re-renders, so pdf.js drops a document it has parsed.
   const [fidele, setFidele] = useState(false);
+  // Le rendu de la couverture a abouti à la dernière entrée dans la
+  // visionneuse : le livre fermé peut porter l'avant du PDF, et s'ouvrir.
+  const [couvertureRendue, setCouvertureRendue] = useState(false);
   // La préparation qui tourne, page par page : la barre de « Votre livre ».
   const [progresExport, setProgresExport] = useState<{ done: number; total: number } | null>(null);
   // À propos : version, licence, et les trois actifs sous licence tierce.
@@ -833,6 +836,7 @@ export default function App() {
       );
       forgetPdfs();
       setPdfCle((k) => k + 1);
+      setCouvertureRendue(couverture);
       if (surCouverture) setIndex(ouvertureDuFeuilletage(couverture) === "couverture" ? COVER : 0);
       setFidele(true);
       setStatus(
@@ -2348,6 +2352,9 @@ export default function App() {
       // without the second, the arrows kept nudging a block by a millimetre
       // while one believed to be turning pages.
       if (e.key === "Escape") {
+        // La loupe de la visionneuse d'abord : Échap la referme, et rien
+        // d'autre.
+        if (feuilletage.current?.fermerLoupe()) return;
         setSelected(null);
         setObjet(null);
         return;
@@ -2552,12 +2559,18 @@ export default function App() {
    *  ce qui change la page ne doit exister qu'une fois. */
   const allerPlanche = (sens: number) => {
     const to = index + sens;
-    if (to < 0 || to >= total) return false;
+    // La couverture est une page du livre comme une autre : la visionneuse
+    // y referme le livre (1.2-c), et le clavier de l'éditeur y allait déjà.
+    if (to < COVER || to >= total) return false;
     setIndex(to);
     // Le clavier vient de traverser une page sans que rien ne le dise : la
     // ligne de statut est la seule voix de l'application, et elle est vivante
     // depuis peu.
-    setStatus(t("planche.position", { n: to + 1, total }));
+    setStatus(
+      to === COVER
+        ? t("planche.position.couverture")
+        : t("planche.position", { n: to + 1, total }),
+    );
     return true;
   };
   /**
@@ -2909,12 +2922,14 @@ export default function App() {
           <div className="turn" key={fidele ? "fidele" : index}>
             {fidele ? (
               <ApercuFidele
-                onCover={onCover}
-                page={index + 1}
+                index={index}
                 total={total}
                 cle={pdfCle}
                 album={album}
+                printer={printers?.find((p) => p.id === profil) ?? null}
+                couvertureRendue={couvertureRendue}
                 onPlanche={allerPlanche}
+                onStatut={setStatus}
                 ref={feuilletage}
                 onErreur={(m) =>
                   setError(fault(t("erreur.fidele"), m))
