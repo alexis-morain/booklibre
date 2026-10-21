@@ -850,19 +850,26 @@ pub fn check_mesure(
     // `max(0,5 × marge, plancher)` would move every caption of every album,
     // which is its own wave.
     for (si, spread) in album.spreads.iter().enumerate() {
-        let porte_legende = spread.caption.is_some()
-            || spread.slots.iter().any(|s| s.caption.is_some());
-        if !porte_legende {
+        // Every caption is measured at its own baseline, read off the scene:
+        // the chapter line at its anchor, each photo caption — typed, or the
+        // date and place the machine sets under it (1.2-b) — under its own
+        // cell. Until 1.2-b a spread that carried photo captions only was
+        // measured at the chapter anchor it did not print. What is measured
+        // stays the baseline, not the ink around it, and one warning per
+        // spread names the closest.
+        let marge = scene::Scene::of(spread, &g)
+            .objects
+            .iter()
+            .filter_map(|o| match &o.role {
+                scene::Role::PhotoCaption { at, .. } | scene::Role::ChapterCaption { at, .. } => {
+                    Some(distance_au_rognage(at.x, at.y, &g, album.bleed_mm))
+                }
+                _ => None,
+            })
+            .fold(f64::INFINITY, f64::min);
+        if !marge.is_finite() {
             continue;
         }
-        // The anchor comes from the scene rather than from a second
-        // derivation of the same rectangles. What is measured stays the
-        // baseline, not the ink around it: measuring the box instead would
-        // move the verdict, and moving a verdict belongs in a session that
-        // can weigh it, not in one that promises invisibility.
-        let rects = pdf::slots_for(&spread.template, spread.slots.len(), &g);
-        let p = pdf::caption_anchor(&spread.template, &rects, &g);
-        let marge = distance_au_rognage(p.x, p.y, &g, album.bleed_mm);
         if marge + 1e-9 < profil.safe_mm {
             defauts.push(Defaut {
                 regle: "zone_sure",
@@ -2411,6 +2418,44 @@ mod tests {
         // la marge fait 14. Rien à dire, et rien qui ait été tu.
         let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &FichiersPoses::default());
         assert!(!r.defauts.iter().any(|d| d.regle == "zone_sure"), "{:?}", r.defauts);
+    }
+
+    /// Une légende de photo se mesure à sa propre ligne de base, plus à
+    /// l'ancre du chapitre que la planche ne porte pas (1.2-b) : la mention
+    /// d'une case, sous la case.
+    #[test]
+    fn la_zone_sure_mesure_la_legende_de_la_photo_a_sa_place() {
+        let mut a = album_de(24, 3.0);
+        for s in &mut a.spreads[1..] {
+            s.slots[0].mention = Some("Calvi, 27 octobre 2013".into());
+        }
+        let dims: HashMap<String, (u32, u32)> = (0..24)
+            .map(|i| (format!("{i}.jpg"), (5000u32, 5000u32)))
+            .collect();
+        let g = pdf::geometry(&a);
+        let sc = scene::Scene::of(&a.spreads[1], &g);
+        let at = sc
+            .objects
+            .iter()
+            .find_map(|o| match &o.role {
+                scene::Role::PhotoCaption { at, .. } => Some(*at),
+                _ => None,
+            })
+            .expect("la mention s'imprime sous la case");
+        let d = distance_au_rognage(at.x, at.y, &g, a.bleed_mm);
+        assert!((d - 7.0).abs() > 0.5, "la case n'est pas l'ancre du chapitre : {d}");
+
+        let lulu = PrinterProfile::par_id("lulu").unwrap();
+        let r = check(&a, lulu, &dims, &FichiersPoses::default());
+        let zs: Vec<&Defaut> = r.defauts.iter().filter(|d| d.regle == "zone_sure").collect();
+        assert_eq!(zs.len(), usize::from(d < lulu.safe_mm) * 23, "{:?}", r.defauts);
+        if let Some(z) = zs.first() {
+            assert!(z.cause.contains(&format!("{d:.1} mm")), "{}", z.cause);
+        }
+        let prodigi = PrinterProfile::par_id("prodigi").unwrap();
+        let r = check(&a, prodigi, &dims, &FichiersPoses::default());
+        let n = r.defauts.iter().filter(|d| d.regle == "zone_sure").count();
+        assert_eq!(n, usize::from(d < prodigi.safe_mm) * 23, "{:?}", r.defauts);
     }
 
     /// La couverture se mesure sur la feuille que ce fournisseur reçoit, et

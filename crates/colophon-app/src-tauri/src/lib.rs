@@ -309,6 +309,23 @@ fn caption_suggestion(
     Ok(colophon_core::legende::date_de(Path::new(&album.root), &src, langue))
 }
 
+/// Ce que le réglage « sous les photos » écrit sous chaque photo, par src
+/// (1.2-b) : celles de l'album vivant et celles que la fenêtre nomme en plus
+/// (la réserve), qui peuvent y entrer. Une photo sans entrée n'a rien sous
+/// elle. Une lecture d'en-tête par photo, hors du fil principal.
+#[tauri::command]
+async fn mentions_photos(
+    album: Album,
+    legendes: colophon_core::model::Legendes,
+    srcs: Vec<String>,
+) -> Result<BTreeMap<String, String>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        colophon_core::legende::mentions(&album, &legendes, &srcs)
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
 /// The trusted date of every placed photo, by source, worded like the
 /// suggestion above (`legende::date_de`): what « Dater toutes les
 /// légendes » writes. Takes the live album, so a photo placed since the
@@ -1048,6 +1065,7 @@ async fn build_album_from_folder(
     densite: String,
     title: Option<String>,
     langue: String,
+    legendes: Option<colophon_core::model::Legendes>,
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<BuiltAlbum, String> {
@@ -1086,6 +1104,8 @@ async fn build_album_from_folder(
                 variantes: colophon_core::build::variantes_offertes(densite, spreads.clamp(8, 200)),
                 // Les mots du livre dans la langue de l'interface qui compose.
                 langue,
+                // La case « Dates et lieux sous les photos » de la création.
+                legendes,
                 ..Default::default()
             },
         )
@@ -2711,6 +2731,7 @@ pub fn run() {
             cancel_export,
             caption_suggestion,
             dates_fiables,
+            mentions_photos,
             photo_fiche,
             reveler_photo,
             releve_album,

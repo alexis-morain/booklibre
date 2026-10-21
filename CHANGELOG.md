@@ -28,6 +28,13 @@ sur la page des releases.
 
 - Prices no longer say "incl. VAT": the price shown is the price paid.
 
+- Dates and places under the photos: Spread → Dates and places under the
+  photos sets what is written under each photo (nothing, the date, the place,
+  or both, in three date forms), and the New album screen offers it as a box,
+  unticked. Only what the photo knows is written: a reliable capture date, a
+  town within 30 km. A full-page photo has no room underneath, and gets
+  nothing.
+
 - The album saves itself, a second after each change: no more "unsaved
   changes" questions when closing, opening another album or quitting. ⌘Z still
   undoes, and File → Revert to the start of the session brings back the album

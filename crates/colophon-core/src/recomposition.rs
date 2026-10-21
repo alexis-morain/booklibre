@@ -144,6 +144,10 @@ pub fn recomposer(dir: &Path, opts: Recomposition) -> Result<BuildReport> {
         // colophon : dans la langue de qui la lance. Les planches épinglées
         // gardent leurs mots, elles passent telles quelles.
         langue: opts.langue,
+        // Le réglage « sous les photos », sur la même règle que `reglages` :
+        // les planches neuves portent leurs dates et leurs lieux, dans la
+        // langue que le réglage a retenue.
+        legendes: album.legendes,
     };
     build_album(&root, dir, build)
 }

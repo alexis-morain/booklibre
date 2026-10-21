@@ -14,6 +14,11 @@ export type Slot = {
   zoom?: number;
   /** Caption printed under the photo. */
   caption?: string;
+  /** Les mots que la machine écrit sous la photo, sa date ou son lieu, selon
+   *  `Album.legendes` (1.2-b). Jamais saisis : dérivés de la photo par le
+   *  moteur, posés par `edits.ts::poserMentions` et `avecMentions`. Miroir
+   *  de `model.rs::Slot::mention`. */
+  mention?: string;
 };
 export type Spread = {
   template: string;
@@ -153,6 +158,17 @@ export type Album = {
   /** The pace the album was composed at (`layout::Densite`). Absent means
    *  the default, `equilibree`: the engine does not write it then. */
   densite?: "aeree" | "equilibree" | "dense";
+  /** Ce que la machine écrit sous chaque photo (1.2-b). Absent = rien.
+   *  Miroir de `model.rs::Legendes`. */
+  legendes?: Legendes;
+};
+
+/** Le réglage « sous les photos ». */
+export type Legendes = {
+  contenu: "date" | "lieu" | "date_lieu";
+  date: "jour" | "court" | "mois";
+  /** La langue des mots, celle de l'interface au moment du choix. */
+  langue: "fr" | "en";
 };
 
 /** The chosen face, as `album.json` records it: the file beside it, and who

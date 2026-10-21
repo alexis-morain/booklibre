@@ -66,6 +66,7 @@ import {
   ecrireAlbum,
   albumOuverture,
   datesFiables,
+  mentionsPhotos,
 } from "./bridge";
 import { creerEcrivain } from "./autosave";
 import { ouvertureDuFeuilletage } from "./envoi";
@@ -73,6 +74,7 @@ import {
   Album,
   boiteDePage,
   Discard,
+  Legendes,
   OpenedAlbum,
   Rect,
   Reglage,
@@ -180,6 +182,8 @@ import { readRecents, pushRecent, forgetRecent, albumId } from "./recents";
 import { StockageView } from "./StockageView";
 import { AProposView } from "./AProposView";
 import { PrefsView } from "./PrefsView";
+import { LegendesView } from "./LegendesView";
+import { avecMentions, bilanMentions, cleDe, poserMentions, TableMentions } from "./mentions";
 import { ApercuFidele } from "./pdfview";
 import { forgetPdfs } from "./raster";
 import { Tourneur } from "./Feuilletage";
@@ -399,6 +403,12 @@ export default function App() {
   const [apropos, setApropos] = useState(false);
   // Préférences (⌘,) : la langue, et une note sur l'apparence.
   const [prefs, setPrefs] = useState(false);
+  // Planche → « Dates et lieux sous les photos… » (1.2-b), et la lecture des
+  // photos qui précède un choix. La table du moteur vit dans une ref : toute
+  // édition la repose (`apply`), donc une photo qui entre prend ses mots.
+  const [legendesOuvert, setLegendesOuvert] = useState(false);
+  const [lectureMentions, setLectureMentions] = useState(false);
+  const tableMentions = useRef<TableMentions | null>(null);
   // Une mise à jour disponible, quand il y en a une. Jamais téléchargée
   // toute seule : le bandeau attend un clic, et se referme sans en attendre.
   const [maj, setMaj] = useState<Awaited<ReturnType<typeof checkUpdate>>>(null);
@@ -754,8 +764,11 @@ export default function App() {
   const apply = useCallback((edit: (album: Album) => Album) => {
     setHist((h) => {
       if (!h) return h;
-      const next = edit(h.album);
-      if (next === h.album) return h;
+      const edite = edit(h.album);
+      if (edite === h.album) return h;
+      // Chaque case porte les mots de sa photo, jamais ceux d'une autre :
+      // une photo remplacée, ajoutée ou sauvée prend aussitôt les siens.
+      const next = avecMentions(edite, tableMentions.current);
       return {
         album: next,
         past: [...h.past.slice(-(HISTORY_CAP - 1)), h.album],
@@ -1030,6 +1043,7 @@ export default function App() {
     spreads: number,
     densite: string,
     title: string | null,
+    legendes: boolean = false,
   ) => {
     // A folder already composed once has an album somewhere, maybe edited
     // for hours. The engine never writes over it any more (a second album
@@ -1049,7 +1063,12 @@ export default function App() {
       setBuilding((b) => (b ? [...b, line] : [line])),
     );
     try {
-      const result = await buildAlbum(dir, format, spreads, densite, title);
+      // La case « Dates et lieux sous les photos » : la date et le lieu, la
+      // forme longue, dans la langue de l'interface qui compose.
+      const reglage: Legendes | null = legendes
+        ? { contenu: "date_lieu", date: "jour", langue: langue() }
+        : null;
+      const result = await buildAlbum(dir, format, spreads, densite, title, reglage);
       adopt(result.opened);
       setCuration(await fetchCuration().catch(() => []));
       setBilan(result.bilan);
@@ -1368,6 +1387,70 @@ export default function App() {
     })();
   };
 
+  /** Les photos dont la table des mentions doit savoir les mots : celles de
+   *  l'album et celles de la réserve, qui peuvent y entrer. */
+  const srcsConnues = (a: Album): string[] => [
+    ...new Set([
+      ...a.spreads.flatMap((s) => s.slots.map((sl) => sl.src)),
+      ...(opened?.thumb_srcs ?? []),
+    ]),
+  ];
+
+  // La table du réglage de l'album ouvert, lue une fois par réglage : sans
+  // elle, `apply` ne repose rien, et une photo qui entre n'a rien sous elle
+  // en attendant (jamais les mots d'une autre).
+  const cleMentions = album?.legendes ? cleDe(album.legendes) : null;
+  useEffect(() => {
+    const courant = histRef.current?.album;
+    const l = courant?.legendes;
+    if (!courant || !l || !inTauri) return;
+    if (tableMentions.current?.cle === cleDe(l)) return;
+    let vivant = true;
+    mentionsPhotos(courant, l, srcsConnues(courant)).then(
+      (textes) => {
+        if (vivant) tableMentions.current = { cle: cleDe(l), textes };
+      },
+      () => {},
+    );
+    return () => {
+      vivant = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cleMentions, opened?.dir]);
+
+  /** Choisir ce qui s'écrit sous les photos, ou rien (1.2-b). Un pas
+   *  d'annulation par choix ; la ligne d'état compte ce qui s'est posé. */
+  const choisirLegendes = async (
+    contenu: Legendes["contenu"] | null,
+    date: Legendes["date"],
+  ) => {
+    const courant = histRef.current?.album;
+    if (!courant) return;
+    if (contenu === null) {
+      apply((a) => poserMentions(a, null, null));
+      setStatus(t("legendes.retirees"));
+      return;
+    }
+    const l: Legendes = { contenu, date, langue: langue() };
+    let table: TableMentions;
+    setLectureMentions(true);
+    try {
+      table = { cle: cleDe(l), textes: await mentionsPhotos(courant, l, srcsConnues(courant)) };
+    } catch (e) {
+      setError(fault(t("erreur.dates"), e));
+      return;
+    } finally {
+      setLectureMentions(false);
+    }
+    tableMentions.current = table;
+    const avant = histRef.current?.album;
+    if (!avant) return;
+    const apres = poserMentions(avant, l, table);
+    apply((a) => poserMentions(a, l, table));
+    const b = bilanMentions(apres, spreadGeometry(apres));
+    setStatus(t("legendes.bilan", { n: b.posees, m: b.sansRien, p: b.sansPlace }));
+  };
+
   /** Planche → « Dater toutes les légendes » (ou les retirer) : les dates
    *  fiables de tout l'album en un appel, puis une seule édition. Le compte
    *  se lit sur l'album du moment, celui que l'édition reçoit. */
@@ -1580,6 +1663,15 @@ export default function App() {
     dater: () => void daterTout(true),
     dedater: () => void daterTout(false),
     remplir: () => void remplirTout(),
+    legendes: () => {
+      if (!album) return;
+      setShortcuts(false);
+      setStockage(false);
+      setApropos(false);
+      setSignaler(null);
+      setPrefs(false);
+      setLegendesOuvert((o) => !o);
+    },
     // Recomposer… et Police… : les deux panneaux de ce dont le livre est
     // fait, comme les boutons de la barre.
     recomposer: () => {
@@ -1890,6 +1982,7 @@ export default function App() {
       dater: () => fire("menu", "dater"),
       dedater: () => fire("menu", "dedater"),
       remplir: () => fire("menu", "remplir"),
+      legendes: () => fire("menu", "legendes"),
       supprimerPlanche: () => fire("menu", "supprimer-planche"),
       recomposer: () => fire("menu", "recomposer"),
       police: () => fire("menu", "police"),
@@ -2077,6 +2170,14 @@ export default function App() {
         if (e.key === "Escape") {
           e.preventDefault();
           setBascule(false);
+        }
+        return;
+      }
+      // Le réglage des dates et lieux tient le clavier comme les autres.
+      if (legendesOuvert) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          setLegendesOuvert(false);
         }
         return;
       }
@@ -2423,6 +2524,7 @@ export default function App() {
     stockage,
     apropos,
     prefs,
+    legendesOuvert,
     proposition,
   ]);
 
@@ -3232,6 +3334,14 @@ export default function App() {
           onClose={() => setSignaler(null)}
         />
       )}
+      {legendesOuvert && album && (
+        <LegendesView
+          reglage={album.legendes ?? null}
+          enCours={lectureMentions}
+          onChoisir={(c, d) => void choisirLegendes(c, d)}
+          onClose={() => setLegendesOuvert(false)}
+        />
+      )}
       {stockage && (
         <StockageView
           ouvertId={opened?.dir ? albumId(opened.dir) : null}
@@ -3935,6 +4045,7 @@ function Empty({
     spreads: number,
     densite: string,
     title: string | null,
+    legendes: boolean,
   ) => void;
   building: string[] | null;
   busyTitle: string | null;
@@ -3949,6 +4060,9 @@ function Empty({
   const [parPlanche, setParPlanche] = useState<number | null>(null);
   const [dir, setDir] = useState<string | null>(null);
   const [title, setTitle] = useState("");
+  // Décochée par défaut (1.2-b) : rien n'est écrit sous les photos sans
+  // qu'on l'ait demandé.
+  const [legendes, setLegendes] = useState(false);
   const [format, setFormat] = useState("carre-21");
   const [spreads, setSpreads] = useState(48);
 
@@ -4217,7 +4331,7 @@ function Empty({
                 className="setup"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  onCreate(dir, format, spreads, RYTHME_DE_CREATION, title.trim() || null);
+                  onCreate(dir, format, spreads, RYTHME_DE_CREATION, title.trim() || null, legendes);
                 }}
               >
                 <h1 className="setup-heading">{t("setup.nouvel")}</h1>
@@ -4270,6 +4384,18 @@ function Empty({
                     ))}
                   </div>
                 </div>
+
+                <label className="setup-case">
+                  <input
+                    type="checkbox"
+                    checked={legendes}
+                    onChange={(e) => setLegendes(e.target.checked)}
+                  />
+                  <span>
+                    <span className="setup-case-nom">{t("setup.legendes")}</span>
+                    <span className="setup-case-note">{t("setup.legendes.note")}</span>
+                  </span>
+                </label>
 
                 <p className="setup-actions">
                   <button className="cta" type="submit">

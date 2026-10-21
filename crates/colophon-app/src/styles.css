@@ -2005,7 +2005,8 @@ input[type="radio"] {
   }
 }
 
-.recomposer-aeree {
+.recomposer-aeree,
+.setup-case {
   display: flex;
   gap: 10px;
   align-items: start;
@@ -2013,18 +2014,21 @@ input[type="radio"] {
   cursor: pointer;
 }
 
-.recomposer-aeree input {
+.recomposer-aeree input,
+.setup-case input {
   margin: 3px 0 0;
   accent-color: var(--accent);
 }
 
-.recomposer-aeree-nom {
+.recomposer-aeree-nom,
+.setup-case-nom {
   display: block;
   font-size: var(--fs-13);
   color: var(--text);
 }
 
-.recomposer-aeree-note {
+.recomposer-aeree-note,
+.setup-case-note {
   display: block;
   font-size: var(--fs-12);
   color: var(--muted);

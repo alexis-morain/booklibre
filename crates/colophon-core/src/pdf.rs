@@ -1651,7 +1651,7 @@ mod tests {
         album.spreads.push(Spread {
             template: "duo".into(),
             slots: vec![
-                Slot { src: "a.jpg".into(), focal: [0.5, 0.5], zoom: 1.0, caption: Some("la plage".into()) },
+                Slot { src: "a.jpg".into(), focal: [0.5, 0.5], zoom: 1.0, caption: Some("la plage".into()), mention: None },
                 Slot::new("b.jpg".into(), [0.5, 0.5]),
             ],
             caption: Some("Corse, 2013".into()),
@@ -2104,7 +2104,7 @@ mod tests {
         album.spreads.push(Spread {
             template: "duo".into(),
             slots: vec![
-                Slot { src: "a.jpg".into(), focal: [0.5, 0.5], zoom: 1.0, caption: Some("la plage".into()) },
+                Slot { src: "a.jpg".into(), focal: [0.5, 0.5], zoom: 1.0, caption: Some("la plage".into()), mention: None },
                 Slot::new("b.jpg".into(), [0.5, 0.5]),
             ],
             caption: Some("Corse, 2013".into()),
@@ -2398,7 +2398,7 @@ mod tests {
         album.spreads.push(Spread {
             template: "duo".into(),
             slots: vec![
-                Slot { src: "a.jpg".into(), focal: [0.5, 0.5], zoom: 1.0, caption: Some("la plage".into()) },
+                Slot { src: "a.jpg".into(), focal: [0.5, 0.5], zoom: 1.0, caption: Some("la plage".into()), mention: None },
                 Slot::new("b.jpg".into(), [0.5, 0.5]),
             ],
             caption: Some("Corse, 2013".into()),

@@ -44,6 +44,7 @@ export type MenuActions = {
   dater(): void;
   dedater(): void;
   remplir(): void;
+  legendes(): void;
   supprimerPlanche(): void;
   recomposer(): void;
   police(): void;
@@ -240,6 +241,9 @@ export async function installMenu(
       // Tout l'album aussi : chaque case vide reçoit la photo de la réserve
       // qui la tient (1.2-a).
       await item("remplir", t("menu.remplir"), { enabled: albumOpen }),
+      // Le réglage d'album (1.2-b) : ce que la machine écrit sous chaque
+      // photo, sa date ou son lieu.
+      await item("legendes", t("menu.legendes"), { enabled: albumOpen }),
       await sep(),
       await item("supprimerPlanche", t("menu.supprimer.planche"), { enabled: albumOpen }),
     ],

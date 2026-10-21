@@ -662,3 +662,35 @@ describe("a block set in its own face", () => {
     expect(couleurs).toEqual(["#b04a1f", "#333029", "#000000", "#999999"]);
   });
 });
+
+// Le miroir de `scene.rs::la_mention_suit_la_legende_sans_se_repeter` et de
+// `pas_de_place_pas_de_mention` (1.2-b) : mêmes cas, mêmes chaînes.
+describe("la mention sous une photo", () => {
+  const legendes = (s: Spread) =>
+    sceneOf(s, g, mesure).objects.flatMap((o) =>
+      o.role.role === "photo_caption" ? [[o.role.cell, o.role.text]] : [],
+    );
+
+  it("suit la légende tapée, sans se répéter", () => {
+    const s = planche("duo", 2);
+    s.slots[0].mention = "Calvi, 27 octobre 2013";
+    s.slots[1].mention = "27 octobre 2013";
+    s.slots[1].caption = "la plage";
+    expect(legendes(s)).toEqual([
+      [0, "Calvi, 27 octobre 2013"],
+      [1, "la plage · 27 octobre 2013"],
+    ]);
+    s.slots[1].caption = "la plage · 27 octobre 2013";
+    expect(legendes(s)[1][1]).toBe("la plage · 27 octobre 2013");
+    s.slots[1].caption = "27 octobre 2013";
+    expect(legendes(s)[1][1]).toBe("27 octobre 2013");
+  });
+
+  it("ne s'imprime pas sous une photo à fond perdu, la légende tapée reste", () => {
+    const s = planche("full1", 1);
+    s.slots[0].mention = "Calvi";
+    expect(legendes(s)).toEqual([]);
+    s.slots[0].caption = "la plage";
+    expect(legendes(s)).toEqual([[0, "la plage"]]);
+  });
+});
