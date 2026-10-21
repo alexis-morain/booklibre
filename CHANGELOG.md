@@ -9,6 +9,15 @@ sur la page des releases.
 
 ## [Non publié]
 
+### Added
+
+- While you build an album, the foot of the book and of the spreads shows what
+  it would cost printed and delivered by Booklibre ("From €46 delivered"),
+  following the number of pages. Only if you answer "Through Booklibre" to "How
+  will you print it?" (welcome screen, then Preferences): the app then reads a
+  price table once per launch, with nothing of your album. "Myself" turns it
+  off. The Mac App Store version neither asks nor calls.
+
 ### Changed
 
 - A photo under 250 ppi no longer blocks the export. Send names the pages it
@@ -16,6 +25,8 @@ sur la page des releases.
   exports; ordering through Booklibre asks you to tick a box that names them.
   What the printer refuses (size, page count, the cut, the fold, the files)
   still blocks.
+
+- Prices no longer say "incl. VAT": the price shown is the price paid.
 
 - The album saves itself, a second after each change: no more "unsaved
   changes" questions when closing, opening another album or quitting. ⌘Z still

@@ -165,6 +165,10 @@ jobs:
           S_APPLE_ID: ${{ secrets.APPLE_ID }}
           S_APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           S_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Le Worker des tarifs (1.1-f), une variable du dépôt et pas un
+          # secret : une adresse publique. Absente, la release n'a ni la
+          # question « Comment l'imprimer ? » ni aucun prix.
+          S_TARIFS: ${{ vars.COLOPHON_TARIFS_REEL }}
         # Tauri lit les variables Apple par leur seule présence : une
         # variable vide vaudrait un certificat vide et ferait échouer
         # l'import. Elles ne sont donc exportées que posées. Avec elles,
@@ -183,6 +187,9 @@ jobs:
             export APPLE_PASSWORD="$S_APPLE_PASSWORD"
             export APPLE_TEAM_ID="$S_APPLE_TEAM_ID"
           fi
+          # Exportée seulement posée : vide, `core::tarifs` la refuserait et
+          # le build s'arrêterait.
+          if [ -n "$S_TARIFS" ]; then export COLOPHON_TARIFS_REEL="$S_TARIFS"; fi
           npm run tauri build -- \
             --target ${{ matrix.cible }} \
             --config src-tauri/tauri.release.conf.json

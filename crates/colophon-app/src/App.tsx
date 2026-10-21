@@ -183,6 +183,8 @@ import { forgetPdfs } from "./raster";
 import { Tourneur } from "./Feuilletage";
 import { chargerReleve } from "./photos";
 import { LegendeQualite } from "./LegendeQualite";
+import { PrixLivre, QuestionAccueil } from "./ChoixImpression";
+import { chargerTarifs } from "./impression";
 import { cachedThumb, loadThumb, resetThumbs } from "./thumbs";
 import "./styles.css";
 
@@ -408,6 +410,12 @@ export default function App() {
 
   useEffect(() => {
     listPrinters().then(setPrinters, () => setPrinters([]));
+  }, []);
+
+  // Les tarifs, une fois par ouverture, et seulement si quelqu'un a répondu
+  // « Par Booklibre » (`impression.ts`) : sinon rien ne part.
+  useEffect(() => {
+    void chargerTarifs();
   }, []);
 
   // Le pack d'ornements, une fois. Il est compilé dans le moteur, donc il ne
@@ -3728,6 +3736,7 @@ function BookFoot({
             </span>
           )}
         </div>
+        <PrixLivre album={album} />
         <LegendeQualite album={album} index={index} onSeek={onSeek} />
       </div>
     </footer>
@@ -3778,6 +3787,7 @@ function PlanchesFoot({
         <p className="foot-line" role="status">
           {status ?? t("planches.hint")}
         </p>
+        <PrixLivre album={album} />
         <LegendeQualite album={album} index={index} onSeek={onSeek} />
       </div>
     </footer>
@@ -4032,6 +4042,7 @@ function Empty({
                 </button>
               </p>
             )}
+            <QuestionAccueil />
             {recents.length > 0 && (
               <div className="recents">
                 <h2 className="recents-title">{t("accueil.recents")}</h2>

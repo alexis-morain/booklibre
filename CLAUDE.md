@@ -704,6 +704,30 @@ Rien sur le suivi du colis (le niveau `cp_postal` n'en promet pas) ni sur un dé
 grille ne rend pas. **Et aucun lien vers Signaler** (A4) : il ouvre une issue GitHub
 publique, quelqu'un y citerait sa commande ; un contact commande attend le réel.
 
+### Le prix pendant la construction (1.1-f)
+
+**« À partir de 46 € livré » dans le pied du livre et des planches** (`ChoixImpression.tsx::PrixLivre`),
+pour `2 × planches` pages relevées au minimum du produit, lu dans une table que publie un Worker
+à part, `colophon-tarifs` (dépôt du relais, `wrangler.tarifs.toml`), rempli par cron quotidien :
+un devis par nombre pair de pages, parce que Cloudprinter change de site en chemin (mesure du
+20/10). **L'app lit une case et ne recalcule rien** (`impression.ts::prixPour`). Rien sans table,
+sans pays livré, pour un format sans produit, au-delà de 200 pages ou d'un instantané de plus de
+sept jours (`core::tarifs`, et le Worker le refuse aussi) : jamais un chiffre en dur.
+
+**L'appel ne part qu'après « Par Booklibre »** (revue 1.1-c-f, C59) : la question « Comment
+l'imprimer ? » (`QuestionAccueil`, sur l'accueil, puis les Préférences) est rangée dans
+`colophon.impression` sur le modèle de `maj.ts`, et `impression.ts::appelPermis` décide. Une
+lecture par ouverture, en mémoire. « Moi-même » oublie la table. Le pays vient de la table
+(noms par `Intl.DisplayNames`), « Un autre pays » dit « pas encore livré » et continue ; il ne
+part jamais. **Jamais dans la version App Store** : `tarifs_offerts` et `tarifs_lire` y sont
+coupés par `cfg`, le front ne pose pas la question, `mas.sh` refuse un binaire qui porte
+`colophon-tarifs` ou `/v1/tarifs`. **L'adresse est compilée comme celle du relais**
+(`tarifs::url_pour`) : le sandbox en debug ou avec `COLOPHON_RELAIS_SANDBOX=1`, sinon
+`COLOPHON_TARIFS_REEL` (hôte seul, `reel_valide`), posé par `release.yml` depuis la variable du
+dépôt du même nom, seulement si elle l'est. Sans adresse, ni question ni prix. Un GET nu par
+`relais::Transport`, sans bearer ni en-tête propre. Au harnais, `/__dev/relais/tarifs` rend une
+table fixe.
+
 ### Le livre en volume et son fond (A4)
 
 **`cover.fond`, un `#rrggbb` additif comme `album.police`, sans montée de schéma** : une

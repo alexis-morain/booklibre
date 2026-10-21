@@ -1431,6 +1431,16 @@ input[type="radio"] {
   min-width: 0;
 }
 
+/* Le prix pendant la construction (1.1-f) : un fait discret à côté des
+   alertes, jamais un bouton. */
+.foot-prix {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--fs-12);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 .foot-qualite {
   display: flex;
   align-items: center;
@@ -1620,6 +1630,20 @@ input[type="radio"] {
 
 .recents {
   margin-top: 30px;
+}
+
+/* « Comment l’imprimer ? » sur l’accueil (1.1-f), au-dessus des récents. */
+.accueil-impression {
+  margin-top: 30px;
+}
+
+.impression-pays {
+  margin-top: 10px;
+  font-size: var(--fs-13);
+}
+
+.impression-pays select {
+  font: inherit;
 }
 
 .recents-title {

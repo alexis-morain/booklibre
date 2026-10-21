@@ -1426,6 +1426,27 @@ function relaisAppel<T>(commande: string, action: string, args: Record<string, u
  *  relais : Commander ne s'affiche alors pas. */
 export const relaisPays = () => relaisAppel<Pays[] | null>("relais_pays", "pays");
 
+/** Une ligne de la table des tarifs : le prix TTC en centimes de `de` pages
+ *  à 200, de `pas` en `pas` ; null quand aucune livraison ne tient. */
+export type LigneTarifs = { de: number; pas: number; ttc_centimes: (number | null)[] };
+
+/** La table publiée par le Worker des tarifs (`core::tarifs`). */
+export type Tarifs = {
+  mode: "sandbox" | "reel";
+  genere_le: string;
+  devise: string;
+  pays: string[];
+  formats: Record<string, Record<string, LigneTarifs>>;
+};
+
+/** Ce build a-t-il un Worker de tarifs ? Sans réseau. Faux dans la version
+ *  App Store. */
+export const tarifsOfferts = () => relaisAppel<boolean>("tarifs_offerts", "tarifs-offerts");
+
+/** La table des tarifs, ou null sans Worker compilé. Ne s'appelle qu'après
+ *  « Par Booklibre » (`impression.ts`). */
+export const lireTarifs = () => relaisAppel<Tarifs | null>("tarifs_lire", "tarifs");
+
 /** Ouvre une intention pour le dossier préparé et rend sa grille.
  *  `acquitte` : la case qui nomme les pages sous le plancher est cochée ;
  *  les pages elles-mêmes, le moteur les lit dans le dossier préparé. */

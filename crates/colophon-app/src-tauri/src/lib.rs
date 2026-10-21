@@ -1854,6 +1854,47 @@ async fn relais_pays() -> Result<Option<Vec<colophon_core::relais::Pays>>, Strin
     .map_err(|e| e.to_string())?
 }
 
+// ---- Les tarifs, pendant la construction (1.1-f) ---------------------------
+//
+// Un GET nu vers le Worker des tarifs, parti d'ici comme les appels au relais.
+// La fenêtre ne l'appelle qu'après « Par Booklibre » (`impression.ts`) ; la
+// version App Store n'a ni la question ni l'appel, et le binaire n'en porte
+// pas l'adresse (`mas.sh` le vérifie).
+
+/// Ce build sait-il lire des tarifs ? Sans réseau : c'est ce qui décide si la
+/// question « Comment l'imprimer ? » se pose.
+#[tauri::command]
+fn tarifs_offerts() -> bool {
+    #[cfg(feature = "mas")]
+    return false;
+    #[cfg(not(feature = "mas"))]
+    colophon_core::tarifs::TARIFS_URL.is_some()
+}
+
+/// La table des tarifs, ou `None` sans Worker compilé. Une panne, un refus ou
+/// un instantané périmé sont des erreurs : la fenêtre n'affiche alors aucun
+/// prix.
+#[tauri::command]
+async fn tarifs_lire() -> Result<Option<colophon_core::tarifs::Tarifs>, String> {
+    #[cfg(feature = "mas")]
+    return Ok(None);
+    #[cfg(not(feature = "mas"))]
+    {
+        let Some(base) = colophon_core::tarifs::TARIFS_URL else {
+            return Ok(None);
+        };
+        tauri::async_runtime::spawn_blocking(move || {
+            let maintenant = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |d| d.as_secs() as i64);
+            let reseau = colophon_core::relais::Reseau::default();
+            colophon_core::tarifs::lire(base, &reseau, maintenant).map(Some).map_err(|e| e.to_string())
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+}
+
 /// Ce que la fenêtre reçoit d'une intention créée : la grille des prix, pas
 /// le secret, pas les URL de dépôt.
 #[derive(Serialize)]
@@ -2670,6 +2711,8 @@ pub fn run() {
             ouvrir_confidentialite,
             revoir_dossier,
             relais_pays,
+            tarifs_offerts,
+            tarifs_lire,
             relais_creer,
             relais_envoyer,
             ouvrir_paiement,
