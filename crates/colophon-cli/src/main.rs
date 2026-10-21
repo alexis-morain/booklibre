@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 #[command(after_help = FORMAT_HELP.as_str())]
 struct Cli {
     /// Folder of photos to build the album from
-    #[arg(required_unless_present_any = ["formats", "profils", "profils_json", "dump_geometry", "dump_ornements", "dump_lut", "dump_scene", "print", "cover", "audit", "reprise", "prevol", "preparer", "sheets", "bascule", "proposition", "gabarits", "reserve", "devis", "fiche", "releve_album", "survol", "dates", "banc_gabarits", "depuis_fiches", "recomposer"])]
+    #[arg(required_unless_present_any = ["formats", "profils", "profils_json", "dump_geometry", "dump_ornements", "dump_lut", "dump_scene", "print", "cover", "audit", "reprise", "prevol", "preparer", "sheets", "bascule", "proposition", "gabarits", "reserve", "remplir", "devis", "fiche", "releve_album", "survol", "dates", "banc_gabarits", "depuis_fiches", "recomposer"])]
     photos: Option<PathBuf>,
 
     /// Output directory (album.json, album.pdf, thumbnail cache)
@@ -226,6 +226,12 @@ struct Cli {
     #[arg(long, value_name = "CASE", hide = true, requires = "reserve")]
     case: Option<usize>,
 
+    /// Print what « Remplir les cases vides » would place in the album in
+    /// --out (`reserve::remplir`), as JSON. Feeds the dev album server; the
+    /// Tauri command takes the live album instead of the file.
+    #[arg(long, hide = true)]
+    remplir: bool,
+
     /// Demande à Cloudprinter le devis d'un exemplaire de l'album ALBUM
     /// (le compte de pages du prévol, les codes du profil cloudprinter),
     /// livré dans --pays, et l'imprime en JSON. La clé vient de
@@ -417,6 +423,15 @@ fn main() -> Result<()> {
         };
         let reserve = colophon_core::reserve::reserve_classee(&cli.out, &album, i, cellule)?;
         println!("{}", serde_json::to_string(&reserve)?);
+        return Ok(());
+    }
+
+    if cli.remplir {
+        let album: Album = serde_json::from_str(&std::fs::read_to_string(
+            cli.out.join("album.json"),
+        )?)?;
+        let r = colophon_core::reserve::remplir(&cli.out, &album)?;
+        println!("{}", serde_json::to_string(&r)?);
         return Ok(());
     }
 

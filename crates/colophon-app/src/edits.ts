@@ -836,6 +836,38 @@ export function placePhoto(
   return withSpread(album, at, touched({ ...spread, slots }));
 }
 
+/**
+ * Poser une photo dans une case vide (« Remplir les cases vides », 1.2-a).
+ * Deux sortes de case vide et pas une de plus, celles du moteur
+ * (`reserve::cases_vides`) : la case `cellule` d'un gabarit qui n'a que
+ * `cellule` photos, remplie au bout sans toucher au gabarit ; et la planche
+ * vide, qui prend le `gabarit` que le moteur a choisi pour la forme de la
+ * photo. Une planche figée, une page de texte, une planche vide qui porte un
+ * objet ou une case déjà prise rendent l'album tel quel : la pose a été
+ * calculée sur un album qui a bougé depuis.
+ */
+export function poserDansCase(
+  album: Album,
+  at: number,
+  cellule: number,
+  photo: Slot,
+  gabarit?: string,
+): Album {
+  const spread = album.spreads[at];
+  if (!spread || spread.locked || (spread.text ?? "") !== "") return album;
+  if (gabarit !== undefined) {
+    const vide =
+      spread.template === "vide" && spread.slots.length === 0 && !spread.objets?.length;
+    if (!vide || cellule !== 0 || templateCapacity(gabarit) < 1) return album;
+    return withSpread(album, at, touched({ ...spread, template: gabarit, slots: [photo] }));
+  }
+  if (spread.template === "vide") return album;
+  if (cellule !== spread.slots.length || cellule >= templateCapacity(spread.template)) {
+    return album;
+  }
+  return withSpread(album, at, touched({ ...spread, slots: [...spread.slots, photo] }));
+}
+
 /** Move a whole spread to another position. */
 export function moveSpread(album: Album, from: number, to: number): Album {
   if (

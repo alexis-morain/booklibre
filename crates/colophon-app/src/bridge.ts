@@ -703,6 +703,40 @@ export async function reserveClassee(
   }
 }
 
+/** Une photo que « Remplir les cases vides » pose (`reserve::Pose`) :
+ *  la planche, le rang de la case, ce qu'elle imprime, et le gabarit que
+ *  prend une planche vide. */
+export type Pose = {
+  planche: number;
+  cellule: number;
+  src: string;
+  focal: [number, number];
+  ppi: number;
+  gabarit?: string;
+};
+
+/** Ce que le moteur rend : les poses, les cases qu'aucune photo n'a tenues,
+ *  et ce qui a manqué pour mesurer (`note`). */
+export type Remplissage = {
+  poses: Pose[];
+  restees: { planche: number; cellule: number }[];
+  note?: string;
+};
+
+/** « Remplir les cases vides » (`reserve::remplir`) sur l'album tel que
+ *  l'éditeur le tient. Le serveur de dev lit `album.json` : le harnais
+ *  enregistre avant de demander. Sans serveur de dev, rien à poser. */
+export async function remplirCasesVides(album: Album): Promise<Remplissage> {
+  if (inTauri) return invoke<Remplissage>("remplir_cases_vides", { album });
+  try {
+    const res = await fetch("/__dev/remplir");
+    if (!res.ok) return { poses: [], restees: [] };
+    return await res.json();
+  } catch {
+    return { poses: [], restees: [] };
+  }
+}
+
 /** La fiche d'une photo, telle que le moteur la lit (`fiche::FichePhoto`) :
  *  le fichier, la prise de vue, le lieu, les mesures du relevé s'il y en a.
  *  Jamais un chemin : `nom` est le nom du fichier. */

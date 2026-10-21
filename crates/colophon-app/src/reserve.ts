@@ -4,8 +4,9 @@
 // se teste sur une planche de fixture.
 
 import { Album, MIN_EFFECTIVE_PPI, Slot } from "./album";
-import { Candidat } from "./bridge";
-import { addBlocker, addPhoto, insertSpread, placePhoto } from "./edits";
+import { Candidat, Pose } from "./bridge";
+import { addBlocker, addPhoto, insertSpread, placePhoto, poserDansCase } from "./edits";
+import { t } from "./i18n";
 import type { Alerte } from "./photos";
 
 /** Le type sous lequel une photo voyage, du tiroir à une case. */
@@ -80,4 +81,41 @@ export function pleineAvant(album: Album, at: number): "target_full" | "target_t
 export function poserApres(album: Album, at: number, c: Candidat): { album: Album; at: number } {
   const inseree = insertSpread(album, at, "vide");
   return { album: addPhoto(inseree, at + 1, caseDe(c)), at: at + 1 };
+}
+
+/**
+ * Appliquer les poses de « Remplir les cases vides » (1.2-a) : le moteur a
+ * décidé sur l'album d'au moment de la demande, on pose sur celui de
+ * maintenant, et chaque pose se revalide (`poserDansCase`) — une case prise
+ * entre-temps ou une photo déjà dans l'album la font sauter. Un seul album
+ * rendu, donc un seul pas d'annulation pour qui l'applique.
+ */
+export function appliquerRemplissage(
+  album: Album,
+  poses: readonly Pose[],
+): { album: Album; posees: number } {
+  const presentes = new Set(album.spreads.flatMap((s) => s.slots.map((sl) => sl.src)));
+  let courant = album;
+  let posees = 0;
+  for (const p of poses) {
+    if (presentes.has(p.src)) continue;
+    const suivant = poserDansCase(courant, p.planche, p.cellule, { src: p.src, focal: p.focal }, p.gabarit);
+    if (suivant === courant) continue;
+    courant = suivant;
+    presentes.add(p.src);
+    posees += 1;
+  }
+  return { album: courant, posees };
+}
+
+/** Le message d'état après un remplissage : ce qui a été rempli, ce qui
+ *  est resté vide faute d'une photo qui tienne la case, ou qu'il n'y avait
+ *  rien à remplir. */
+export function messageRemplissage(posees: number, restees: number): string {
+  if (restees > 0) {
+    return posees > 0
+      ? t("remplir.faites.restees", { n: posees, m: restees })
+      : t("remplir.rien.restees", { m: restees });
+  }
+  return posees > 0 ? t("remplir.faites", { n: posees }) : t("remplir.aucune");
 }
