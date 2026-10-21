@@ -899,6 +899,17 @@ export type PrevolReport = {
   reserves?: string[];
   notes?: string[];
   defauts: Defaut[];
+  /** Les pages sous le plancher que l'auteur acquitte pour commander
+   *  (1.1-c). Absent quand il n'y en a pas. */
+  acquittement?: PageSousSeuil[];
+};
+
+/** Une page du livre sous le plancher : la page (planche k : gauche 2k − 2,
+ *  droite 2k − 1 ; la couverture : 1) et son ppi le plus bas. */
+export type PageSousSeuil = {
+  fichier: "interieur" | "couverture";
+  page: number;
+  ppi: number;
 };
 
 /** The printer profiles the engine knows. Outside the shell they come from
@@ -1415,9 +1426,11 @@ function relaisAppel<T>(commande: string, action: string, args: Record<string, u
  *  relais : Commander ne s'affiche alors pas. */
 export const relaisPays = () => relaisAppel<Pays[] | null>("relais_pays", "pays");
 
-/** Ouvre une intention pour le dossier préparé et rend sa grille. */
-export const relaisCreer = (pays: string, etatRegion: string | null) =>
-  relaisAppel<Offre>("relais_creer", "creer", { pays, etatRegion });
+/** Ouvre une intention pour le dossier préparé et rend sa grille.
+ *  `acquitte` : la case qui nomme les pages sous le plancher est cochée ;
+ *  les pages elles-mêmes, le moteur les lit dans le dossier préparé. */
+export const relaisCreer = (pays: string, etatRegion: string | null, acquitte: boolean) =>
+  relaisAppel<Offre>("relais_creer", "creer", { pays, etatRegion, acquitte });
 
 /** Envoie les deux PDF, le gros d'abord ; la progression arrive en octets. */
 export async function relaisEnvoyer(id: string, onProgres?: (p: Progres) => void): Promise<IntentionVue> {

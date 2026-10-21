@@ -140,6 +140,50 @@ pub const REGLES: &[&str] = &[
     "zone_sure",
 ];
 
+/// Les règles que l'imprimeur ne refuse pas et que l'auteur tranche (1.1-c) :
+/// une photo sous le plancher imprime, moins nette. Elles avertissent au lieu
+/// de bloquer, et leurs pages entrent dans [`PrevolReport::acquittement`].
+/// `codes::codes_json` donne la liste à l'app, qui les range à part.
+pub const A_VOUS_DE_VOIR: &[&str] = &["couverture_resolution", "resolution"];
+
+/// Lequel des deux fichiers de la livraison porte une page.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum QuelFichier {
+    Interieur,
+    Couverture,
+}
+
+/// Une page sous le plancher, telle que l'auteur l'acquitte : la page du
+/// livre (planche k : gauche 2k − 2, droite 2k − 1 ; la couverture : 1) et le
+/// ppi le plus bas qu'on y trouve. Des entiers, jamais un nom de photo : c'est
+/// ce qui voyage au relais avec une commande.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct PageSousSeuil {
+    pub fichier: QuelFichier,
+    pub page: u32,
+    pub ppi: u32,
+}
+
+/// Une entrée par page, le ppi le plus bas, arrondi vers le bas et tenu dans
+/// `[1, plancher − 1]`, triées. La page 0 — la moitié gauche de la première
+/// planche, que personne n'imprime — n'a rien à acquitter.
+fn pages_sous_seuil(mesures: Vec<(QuelFichier, u32, f64)>, min_ppi: f64) -> Vec<PageSousSeuil> {
+    let plafond = (min_ppi.ceil() as u32).saturating_sub(1).max(1);
+    let mut par_page: BTreeMap<(QuelFichier, u32), u32> = BTreeMap::new();
+    for (fichier, page, ppi) in mesures {
+        if page == 0 {
+            continue;
+        }
+        let ppi = (ppi.floor().max(0.0) as u32).clamp(1, plafond);
+        par_page
+            .entry((fichier, page))
+            .and_modify(|p| *p = (*p).min(ppi))
+            .or_insert(ppi);
+    }
+    par_page.into_iter().map(|((fichier, page), ppi)| PageSousSeuil { fichier, page, ppi }).collect()
+}
+
 /// Les deux notes du rapport. Des textes fixes : l'app les écrit en anglais
 /// en les reconnaissant mot pour mot, et `codes::codes_json` les lui donne
 /// pour qu'un mot changé ici rougisse là-bas.
@@ -231,6 +275,10 @@ pub struct PrevolReport {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub notes: Vec<String>,
     pub defauts: Vec<Defaut>,
+    /// Les pages sous le plancher, celles que l'auteur acquitte pour
+    /// commander (1.1-c). Absent quand il n'y en a pas.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub acquittement: Vec<PageSousSeuil>,
 }
 
 /// Ce qu'un PDF posé à côté d'`album.json` a rendu quand on l'a ouvert.
@@ -731,9 +779,13 @@ pub fn check_mesure(
 
     // 5. Resolution, cell by cell. The one defect nobody sees on screen and
     // everybody sees on paper.
+    //
+    // Since 1.1-c this warns: the printer prints it, less sharp, and the
+    // author decides. The pages go into the acquittal list.
     if dims.is_empty() && album.spreads.iter().any(|s| !s.slots.is_empty()) {
         notes.push(NOTE_PHOTOS_INTROUVABLES.into());
     }
+    let mut sous_seuil: Vec<(QuelFichier, u32, f64)> = Vec::new();
     for (si, spread) in album.spreads.iter().enumerate() {
         let scene = scene::Scene::of(spread, &g);
         for (ci, object) in scene.objects.iter().enumerate() {
@@ -749,9 +801,11 @@ pub fn check_mesure(
             let scale = print::print_scale(rect, ow, oh) * zoom.max(1.0);
             let ppi = print::PRINT_DPI / scale;
             if ppi < profil.min_ppi {
+                let page = 2 * si + usize::from(imposition::cote_de(object, &g) == imposition::Cote::Droite);
+                sous_seuil.push((QuelFichier::Interieur, u32::try_from(page).unwrap_or(u32::MAX), ppi));
                 defauts.push(Defaut {
                     regle: "resolution",
-                    bloquant: true,
+                    bloquant: false,
                     planche: Some(si + 1),
                     case_idx: Some(ci),
                     src: Some(slot.src.clone()),
@@ -916,9 +970,10 @@ pub fn check_mesure(
             let scale = print::print_scale(&rect, ow, oh) * slot.zoom.max(1.0);
             let ppi = print::PRINT_DPI / scale;
             if ppi < profil.min_ppi {
+                sous_seuil.push((QuelFichier::Couverture, 1, ppi));
                 defauts.push(Defaut {
                     regle: "couverture_resolution",
-                    bloquant: true,
+                    bloquant: false,
                     planche: None,
                     case_idx: None,
                     src: Some(slot.src.clone()),
@@ -1244,6 +1299,7 @@ pub fn check_mesure(
     if cfg!(debug_assertions) {
         for d in &defauts {
             assert!(REGLES.contains(&d.regle), "règle absente de REGLES : {}", d.regle);
+            assert!(!(d.bloquant && A_VOUS_DE_VOIR.contains(&d.regle)), "{} ne bloque pas", d.regle);
         }
     }
     let bloquants = defauts.iter().filter(|d| d.bloquant).count();
@@ -1283,6 +1339,7 @@ pub fn check_mesure(
         reserves: profil.reserves.iter().map(|s| (*s).to_string()).collect(),
         notes,
         defauts,
+        acquittement: pages_sous_seuil(sous_seuil, profil.min_ppi),
     }
 }
 
@@ -2128,7 +2185,98 @@ mod tests {
         // Vrai pour la CLI comme pour l'app : retirer marche toujours, même
         // quand aucune case n'est assez petite pour cet original.
         assert_eq!(d.remede, "mettez-la dans une case plus petite, remplacez-la, ou retirez-la");
-        assert!(!r.ok);
+        // 1.1-c : à vous de voir, pas un refus de l'imprimeur.
+        assert!(!d.bloquant);
+        assert!(r.ok, "{:?}", r.defauts);
+    }
+
+    /// La résolution ne bloque plus (1.1-c) : l'album passe, et le rapport
+    /// nomme les pages du livre en cause, une entrée par page, le ppi le plus
+    /// bas, arrondi vers le bas. La planche k porte les pages 2k − 2 (gauche)
+    /// et 2k − 1 (droite) ; la moitié gauche de la planche 1 n'a pas de page.
+    #[test]
+    fn la_resolution_est_a_vous_de_voir_et_nomme_ses_pages() {
+        let mut a = album_de(12, 3.0);
+        // Planche 4 : photo à droite (solo), page 7. Planche 6 : à gauche,
+        // page 10. Planche 1 : à gauche, aucune page.
+        a.spreads[5].template = "solo_verso".into();
+        a.spreads[0].template = "solo_verso".into();
+        // Planche 8 : un duo, une photo par page, 14 et 15.
+        a.spreads[7].template = "duo".into();
+        a.spreads[7].slots.push(Slot::new("7b.jpg".into(), [0.5, 0.5]));
+        let mut dims = dims_de(12);
+        for src in ["3.jpg", "5.jpg", "0.jpg", "7.jpg", "7b.jpg"] {
+            dims.insert(src.into(), (600, 600));
+        }
+        let cp = PrinterProfile::par_id("cloudprinter").unwrap();
+        let r = check(&a, cp, &dims, &FichiersPoses::default());
+        // La seule chose refusée est la photo de la moitié gauche de la
+        // planche 1, et pour l'imposition, pas pour sa résolution.
+        let refus: Vec<&str> = r.defauts.iter().filter(|d| d.bloquant).map(|d| d.regle).collect();
+        assert_eq!(refus, vec!["imposition"]);
+        let res: Vec<&Defaut> = r.defauts.iter().filter(|d| d.regle == "resolution").collect();
+        assert_eq!(res.len(), 5, "la planche 1 se dit aussi : {res:?}");
+        assert!(res.iter().all(|d| !d.bloquant));
+        let pages: Vec<(QuelFichier, u32)> = r.acquittement.iter().map(|p| (p.fichier, p.page)).collect();
+        let i = QuelFichier::Interieur;
+        assert_eq!(pages, vec![(i, 7), (i, 10), (i, 14), (i, 15)]);
+        for p in &r.acquittement {
+            assert!(p.ppi >= 1 && p.ppi < 250, "{p:?}");
+        }
+        // Le ppi est celui du moteur, arrondi vers le bas.
+        let d = res.iter().find(|d| d.src.as_deref() == Some("3.jpg")).unwrap();
+        let entier: u32 = d.phrase.valeurs["ppi"].parse().unwrap();
+        let p7 = r.acquittement.iter().find(|p| p.page == 7).unwrap();
+        assert!(p7.ppi == entier || p7.ppi + 1 == entier, "{} / {}", p7.ppi, entier);
+    }
+
+    /// Deux photos sur une même page : une seule entrée, la plus basse ; un
+    /// ppi arrondi vers le bas et tenu sous le seuil ; la page 0 écartée.
+    #[test]
+    fn une_page_ne_s_acquitte_qu_une_fois() {
+        let i = QuelFichier::Interieur;
+        let c = QuelFichier::Couverture;
+        let v = pages_sous_seuil(
+            vec![(c, 1, 120.4), (i, 9, 201.9), (i, 3, 180.0), (i, 9, 187.2), (i, 0, 90.0), (i, 4, 249.99), (i, 5, 0.3)],
+            250.0,
+        );
+        let t: Vec<(QuelFichier, u32, u32)> = v.iter().map(|p| (p.fichier, p.page, p.ppi)).collect();
+        assert_eq!(t, vec![(i, 3, 180), (i, 4, 249), (i, 5, 1), (i, 9, 187), (c, 1, 120)]);
+    }
+
+    /// La couverture sous le seuil est à vous de voir aussi, en page 1 de son
+    /// fichier.
+    #[test]
+    fn la_couverture_sous_le_seuil_s_acquitte_en_page_un() {
+        let a = album_de(24, 3.0);
+        let mut dims = dims_de(24);
+        dims.insert("couverture.jpg".into(), (1200, 1200));
+        let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &FichiersPoses::default());
+        let d = r.defauts.iter().find(|d| d.regle == "couverture_resolution").unwrap();
+        assert!(!d.bloquant);
+        assert!(r.ok, "{:?}", r.defauts);
+        assert_eq!(r.acquittement.len(), 1);
+        assert_eq!((r.acquittement[0].fichier, r.acquittement[0].page), (QuelFichier::Couverture, 1));
+        // Sérialisé : absent quand vide, présent sinon, sans aucun nom de fichier.
+        let json = serde_json::to_string(&r.acquittement).unwrap();
+        assert!(!json.contains("couverture.jpg"), "{json}");
+        let propre = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims_de(24), &FichiersPoses::default());
+        assert!(!serde_json::to_string(&propre).unwrap().contains("acquittement"));
+    }
+
+    /// Ce que l'imprimeur refuse grise toujours, résolution ou pas.
+    #[test]
+    fn a_vous_de_voir_ne_couvre_que_la_resolution() {
+        assert_eq!(A_VOUS_DE_VOIR, &["couverture_resolution", "resolution"]);
+        for r in A_VOUS_DE_VOIR {
+            assert!(REGLES.contains(r));
+        }
+        let mut a = album_de(12, 3.0);
+        a.trim_mm = Size { w: 280.0, h: 210.0 };
+        let mut dims = dims_de(12);
+        dims.insert("3.jpg".into(), (600, 600));
+        let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &FichiersPoses::default());
+        assert!(!r.ok, "le format sans produit reste refusé");
     }
 
     /// Missing photos never turn into a pass: the report says the check did
@@ -2187,7 +2335,7 @@ mod tests {
         let profil = PrinterProfile::par_id("cloudprinter").unwrap();
 
         let avant = check(&a, profil, &dims, &FichiersPoses::default());
-        assert!(!avant.ok, "le cas doit avoir quelque chose à dire");
+        assert!(!avant.defauts.is_empty(), "le cas doit avoir quelque chose à dire");
 
         // Vers le paysage A4, que Cloudprinter imprime : un 28 × 21 n'a pas de
         // produit chez lui, et `format_sans_produit` y ajouterait un défaut
@@ -2305,7 +2453,7 @@ mod tests {
         assert!(d.contains("239 × 258"), "{d}");
         assert!(check(&a, cp, &dims, &FichiersPoses::default()).defauts.iter().any(|d| d.regle
             == "couverture_resolution"
-            && d.bloquant));
+            && !d.bloquant));
 
         // Et la surface exacte est celle du fournisseur, pas une moyenne :
         // 2200 px passent chez Prodigi et pas chez Cloudprinter, avec la même

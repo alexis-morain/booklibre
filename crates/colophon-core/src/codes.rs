@@ -22,6 +22,7 @@ pub fn codes_json() -> String {
     // fixture changerait selon ce qu'on compile à côté.
     #[derive(serde::Serialize)]
     struct Codes {
+        a_vous_de_voir: &'static [&'static str],
         densites: Vec<&'static str>,
         formats: Vec<&'static str>,
         notes: [&'static str; 2],
@@ -31,6 +32,7 @@ pub fn codes_json() -> String {
         reserves: BTreeMap<&'static str, &'static [&'static str]>,
     }
     let codes = Codes {
+        a_vous_de_voir: prevol::A_VOUS_DE_VOIR,
         densites: layout::Densite::toutes().iter().map(|d| d.id()).collect(),
         formats: format::FORMATS.iter().map(|f| f.0).collect(),
         notes: [prevol::NOTE_PDF_X4, prevol::NOTE_PHOTOS_INTROUVABLES],

@@ -71,6 +71,9 @@ struct Prepare {
     /// `PrinterProfile::commande` ; aucun chez un profil sans codes de
     /// commande. Le relais n'imprime que `relais::PAPIER`.
     papier: Option<&'static str>,
+    /// Les pages sous le plancher relues sur ces fichiers (1.1-c) : ce que la
+    /// case acquitte, et ce qui part au relais si elle est cochée.
+    acquittement: Vec<colophon_core::prevol::PageSousSeuil>,
 }
 
 /// Une intention créée, en attente de ses deux fichiers.
@@ -1636,6 +1639,7 @@ async fn preparer_dans(
         ok: p.rapport.ok,
         vendu: fiche.produit.is_some(),
         papier: profil.commande.map(|c| c.papier),
+        acquittement: p.rapport.acquittement.clone(),
     });
     *state.envoi.lock().unwrap() = None;
     Ok(Preparation { dossier: nom, fichiers: p.fichiers, rapport: p.rapport, commande })
@@ -1863,14 +1867,20 @@ struct Offre {
 /// Ouvre une intention pour le dossier préparé : les MD5 et tailles de ses
 /// deux fichiers, le pays, puis la grille des prix du relais. L'identifiant
 /// et le secret vont dans `commande.json` avant tout autre geste.
+///
+/// `acquitte` est la case qui nomme les pages sous le plancher (1.1-c) : la
+/// fenêtre n'envoie que ce booléen. Les pages viennent du rapport relu sur le
+/// dossier préparé, l'heure d'ici ; sans case, des pages sous le plancher
+/// refusent la commande avant le réseau.
 #[tauri::command]
 async fn relais_creer(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
     pays: String,
     etat_region: Option<String>,
+    acquitte: bool,
 ) -> Result<Offre, String> {
-    use colophon_core::relais::{Demande, Relais, Reseau};
+    use colophon_core::relais::{acquittement_pour, coche_le_maintenant, Demande, Relais, Reseau, SEUIL_PPI};
     let base = relais_url()?;
     let p = state.prepare.lock().unwrap().clone().ok_or("aucun dossier préparé")?;
     if !p.ok {
@@ -1879,11 +1889,14 @@ async fn relais_creer(
     if !p.vendu {
         return Err("ce format ne se commande pas : l'imprimeur n'a aucun produit à ses cotes".into());
     }
+    let acquittement =
+        acquittement_pour(&p.acquittement, SEUIL_PPI, acquitte, &coche_le_maintenant()).map_err(|e| e.to_string())?;
     let dir = donnees(&app)?;
     let dossier = p.dossier.clone();
     let (demande, intention) = tauri::async_runtime::spawn_blocking(move || {
-        let d = Demande::du_dossier(&p.dossier, p.papier, &p.format, p.pages, &pays, etat_region)
+        let mut d = Demande::du_dossier(&p.dossier, p.papier, &p.format, p.pages, &pays, etat_region)
             .map_err(|e| e.to_string())?;
+        d.acquittement = acquittement;
         let reseau = Reseau::default();
         let i = Relais { base, transport: &reseau }.creer(&d).map_err(|e| e.to_string())?;
         Ok::<_, String>((d, i))

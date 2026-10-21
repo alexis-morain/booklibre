@@ -3,6 +3,7 @@
 // personne n'ouvre l'application dans l'autre langue, c'est-à-dire jamais
 // pendant le développement.
 
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { EN, FR, setLangue, t } from "./i18n";
 
@@ -72,5 +73,22 @@ describe("t", () => {
     expect(t("bar.enregistrer")).toBe("Save");
     setLangue("fr");
     expect(t("bar.enregistrer")).toBe("Enregistrer");
+  });
+});
+
+/** Le libellé de la case de l'acquittement (1.1-c) : le relais garde
+ *  `version: 1`, et ce numéro désigne le texte archivé mot pour mot dans
+ *  `docs/acquittement-v1.md`. Une retouche de l'un sans l'autre rougit ici :
+ *  changer un mot, c'est une version 2. */
+describe("l'acquittement, version 1", () => {
+  it("dit mot pour mot le texte archivé, en français et en anglais", () => {
+    const archive = readFileSync(new URL("../../../docs/acquittement-v1.md", import.meta.url), "utf8");
+    const cites = [...archive.matchAll(/^> (.+)$/gm)].map((m) => m[1]);
+    expect(cites).toEqual([
+      FR["envoi.acquittement.un"],
+      FR["envoi.acquittement"],
+      EN["envoi.acquittement.un"],
+      EN["envoi.acquittement"],
+    ]);
   });
 });

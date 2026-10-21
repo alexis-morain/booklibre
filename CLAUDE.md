@@ -413,7 +413,8 @@ avant comparaison, une étoilée vaut ×1,18 par étoile. `album.json.bak` à ch
 **Le Composer garantit** : jamais un portrait dans une case paysage (écart ≤ 1,4), les
 visages à 4 % des bords au moins, jamais deux quasi-doublons sur une planche, une
 ouverture au quartile haut, jamais quatre gabarits d'affilée. Plancher 250 ppi visé,
-**pas garanti** : l'audit en tolère trois, le prévol aucun. **Une photo sous le plancher
+**pas garanti** : l'audit en tolère trois, le prévol les nomme et laisse l'auteur trancher
+(1.1-c, « Exporter malgré la résolution »). **Une photo sous le plancher
 même seule sur sa page n'est pas posée** (1.1-a) : aucune case du catalogue du Composer
 ne la tiendrait, partager une planche la mettait dans une case pas plus petite (mesuré),
 elle reste dans la réserve avec son signe, et le bilan le dit (1.1-a2 :
@@ -574,6 +575,23 @@ profil à `commande` quand `commande::produit_pour` ne connaît pas le format.
 `envoi.ts::actionsDefaut`) : Voir, Remplacer, Retirer de la planche. La barre ne bouge
 pas. Retirer et Remplacer **enregistrent l'album**, parce que le prévol lit le disque ;
 une ligne dont la case ne porte plus la photo du rapport se tait.
+
+**Exporter malgré la résolution** (1.1-c). `resolution` et `couverture_resolution` sont
+**à vous de voir** (`prevol::A_VOUS_DE_VOIR`, donnée à l'app par `moteur.codes.json`) :
+`bloquant: false`, donc `ok` veut dire « l'imprimeur ne refuse rien », et `--prevol` comme
+`--preparer` sortent en 0. Le rapport porte **`acquittement`** : une entrée par page du
+livre (planche k : gauche 2k − 2, droite 2k − 1 ; couverture : 1), le ppi le plus bas
+arrondi vers le bas, la page 0 écartée (`imposition` la refuse déjà). Envoi range les
+défauts en trois groupes (`envoi.ts::groupesDefauts`) et ne grise que sur un refus
+(`boutonEnvoi`). Porte PDF : un `Dialogue` qui nomme les pages, puis l'export. Porte
+Booklibre : une case au libellé **versionné** (`envoi.acquittement*`, archivé mot pour mot
+dans `docs/acquittement-v1.md`, `i18n.test.ts` les compare : changer un mot, c'est une
+version 2), qui se décoche quand la liste change. **La fenêtre n'envoie qu'un booléen**
+(`relais_creer(…, acquitte)`) : `Prepare` garde la liste relue sur le dossier préparé,
+`relais::acquittement_pour` la met en `[[page, ppi]]` avec `version`, `seuil_ppi`
+(`relais::SEUIL_PPI`, le `min_ppi` de Cloudprinter) et `coche_le` (UTC à la seconde, à
+l'appel), refuse sans case ou au-delà de 200 pages avant le réseau. Jamais un nom de
+photo : le relais le garde 180 jours, sans effet sur prix ni états.
 
 ### Commander, par le relais (S-s3)
 
@@ -1317,10 +1335,11 @@ de chaque jeu. `--reprise` : part des planches corrigées à la main contre
 `album.origin.json` ; sous 10 % bon, jusqu'à 30 % à surveiller, au-delà rédhibitoire.
 `--prevol --profil <id>` : bloquants et avertissements contre un `PrinterProfile`, et la
 fiche que l'imprimeur demande au téléphone. **Bloque ce que la coupe traverse ou que la
-reliure sépare** (`format_sans_produit`, `resolution`, `couverture_resolution`, `couverture_vide`,
+reliure sépare** (`format_sans_produit`, `couverture_vide`,
 `imposition`, `objet_coupe`, `objet_pli`, `fond_perdu`, `espace`, `pagination`,
 `fichier_interieur`, `fichier_couverture`, `fichier_profil`, `fichier_perime`) ; **avertit de ce qu'un fournisseur
-préfère** (`zone_sure`, `dos_nu`, un coefficient de dos provisoire). Un seuil réglé pour
+préfère** (`zone_sure`, `dos_nu`, un coefficient de dos provisoire) ; **laisse à l'auteur**
+la résolution (`resolution`, `couverture_resolution`, 1.1-c). Un seuil réglé pour
 faire taire une règle est le défaut que cette frontière existe pour empêcher.
 
 ## Pièges connus
@@ -1456,7 +1475,8 @@ bute et le prévol refuse — et c'est ce qui rend la découpe en pages simples 
 marge de sécurité est molle, on avertit et le linter compte.
 Un `album.json` d'un schéma inconnu se refuse, jamais ne s'ouvre en perdant des champs.
 Heuristiques d'abord, IA jamais
-décisionnaire. Jamais de résolution sous 250 ppi. Jamais `imazen/heic` (AGPL). Un objet
+décisionnaire. Jamais de résolution sous 250 ppi **sans que l'auteur l'ait vue et acceptée**
+(levé le 19/10, 1.1-c : l'export la nomme, la commande demande la case). Jamais `imazen/heic` (AGPL). Un objet
 de scène porte un angle et une origine, **jamais une matrice**.
 
 ## Commandes

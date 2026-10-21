@@ -8,9 +8,10 @@
 // d'aucun imprimeur.
 
 import type { Album } from "./album";
-import type { Defaut, Preparation, Printer } from "./bridge";
+import type { Defaut, PageSousSeuil, Preparation, Printer } from "./bridge";
 import type { Relais } from "./commande";
 import { Cle, FR, langue, t } from "./i18n";
+import codes from "./moteur.codes.json";
 
 /** L'imprimeur que l'écran nomme et prépare. */
 export const PROFIL_ENVOI = "cloudprinter";
@@ -228,4 +229,73 @@ export function phraseSimple(d: Defaut): string | null {
  *  coûter l'aperçu de l'intérieur. */
 export function ouvertureDuFeuilletage(couvertureRendue: boolean): "couverture" | "premiere" {
   return couvertureRendue ? "couverture" : "premiere";
+}
+
+// ---- à vous de voir (1.1-c) -------------------------------------------------
+
+const A_VOUS_DE_VOIR = new Set<string>(codes.a_vous_de_voir);
+
+/** Un défaut que l'imprimeur ne refuse pas et que l'auteur tranche : une
+ *  photo sous le plancher (`prevol::A_VOUS_DE_VOIR`). */
+export function aVousDeVoir(d: Defaut): boolean {
+  return A_VOUS_DE_VOIR.has(d.regle);
+}
+
+/** Les défauts d'un rapport, dans l'ordre de l'écran : ce que l'imprimeur
+ *  refuse, ce qui est à vous de voir, puis les avertissements. */
+export function groupesDefauts(defauts: Defaut[]): { refuses: Defaut[]; aVoir: Defaut[]; avertissements: Defaut[] } {
+  return {
+    refuses: defauts.filter((d) => d.bloquant),
+    aVoir: defauts.filter((d) => !d.bloquant && aVousDeVoir(d)),
+    avertissements: defauts.filter((d) => !d.bloquant && !aVousDeVoir(d)),
+  };
+}
+
+/** « a, b et c » dans la langue de l'écran. */
+function enumerer(mots: string[]): string {
+  if (mots.length <= 1) return mots.join("");
+  return `${mots.slice(0, -1).join(", ")} ${t("envoi.pages.et")} ${mots[mots.length - 1]}`;
+}
+
+/** Les pages sous le plancher, en clair : « la couverture et les pages 5 et
+ *  13 ». La couverture d'abord, comme dans le livre. */
+export function pagesEnClair(pages: PageSousSeuil[]): string {
+  const interieur = pages.filter((p) => p.fichier === "interieur").map((p) => String(p.page));
+  const parts: string[] = [];
+  if (pages.some((p) => p.fichier === "couverture")) parts.push(t("envoi.pages.couverture"));
+  if (interieur.length === 1) parts.push(t("envoi.pages.une", { n: interieur[0] }));
+  else if (interieur.length > 1) parts.push(t("envoi.pages.plusieurs", { liste: enumerer(interieur) }));
+  return enumerer(parts);
+}
+
+/** Le libellé de la case, version 1 (`docs/acquittement-v1.md`) : il
+ *  nomme les pages. Changer un mot, c'est changer de version. */
+export function libelleAcquittement(pages: PageSousSeuil[]): string {
+  return t(pages.length === 1 ? "envoi.acquittement.un" : "envoi.acquittement", { pages: pagesEnClair(pages) });
+}
+
+/** Une clé par liste de pages : la case se décoche quand elle change. */
+export function cleAcquittement(pages: PageSousSeuil[]): string {
+  return pages.map((p) => `${p.fichier}:${p.page}:${p.ppi}`).join(",");
+}
+
+/** Le verdict vert, avec le compte des photos à vous de voir. */
+export function verdictPret(aVoir: number): string {
+  if (aVoir === 0) return t("envoi.pret");
+  return aVoir === 1 ? t("envoi.pret.a_voir.un") : t("envoi.pret.a_voir", { n: aVoir });
+}
+
+/** Le bouton d'Envoi. Un refus de l'imprimeur le grise. Sinon, par la porte
+ *  PDF, des pages sous le plancher demandent une confirmation qui les nomme ;
+ *  par la porte Booklibre, la case qui les nomme doit être cochée. */
+export function boutonEnvoi(e: {
+  ok: boolean;
+  pages: PageSousSeuil[];
+  commande: boolean;
+  acquitte: boolean;
+}): { actif: boolean; confirmer: boolean } {
+  if (!e.ok) return { actif: false, confirmer: false };
+  if (e.pages.length === 0) return { actif: true, confirmer: false };
+  if (e.commande) return { actif: e.acquitte, confirmer: false };
+  return { actif: true, confirmer: true };
 }

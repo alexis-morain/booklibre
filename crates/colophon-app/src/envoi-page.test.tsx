@@ -218,6 +218,65 @@ describe("Envoi, pour quelqu'un qui fait un album", () => {
   });
 });
 
+// 1.1-c : une photo sous 250 ppi ne grise plus rien.
+describe("à vous de voir", () => {
+  const sous: Defaut = {
+    regle: "resolution",
+    bloquant: false,
+    planche: 3,
+    case: 0,
+    src: "3.jpg",
+    cause: "3.jpg imprimerait à 180 ppi dans cette case, Cloudprinter exige 250",
+    remede: "mettez-la dans une case plus petite, remplacez-la, ou retirez-la",
+  };
+  const AVEC: PrevolReport = {
+    ...REPORT,
+    avertissements: 2,
+    defauts: [sous, zoneSure],
+    acquittement: [{ fichier: "interieur", page: 5, ppi: 180 }],
+  };
+  const bouton = (html: string) => html.match(/<button class="envoi-exporter"[^>]*>/)?.[0] ?? "";
+
+  it("dit le livre prêt, compte la photo à vous de voir, et la range sous sa tête", () => {
+    const texte = visible(rendu("fr", FRANCE, "pdf", "cloudprinter", { report: AVEC }));
+    expect(texte).toContain("Votre livre est prêt. Une photo est à vous de voir.");
+    expect(texte).toContain("À vous de voir");
+  });
+
+  it("par la porte PDF, laisse le bouton actif, et la confirmation nomme les pages", () => {
+    expect(bouton(rendu("fr", FRANCE, "pdf", "cloudprinter", { report: AVEC }))).not.toContain("disabled");
+    const html = rendu("fr", FRANCE, "pdf", "cloudprinter", { report: AVEC, confirmation: true });
+    expect(html).toContain('role="dialog"');
+    const texte = visible(html);
+    expect(texte).toContain("Ces pages risquent d’imprimer floues : la page 5.");
+    expect(texte).toContain("Exporter quand même");
+    expect(texte).toContain("Revenir");
+  });
+
+  it("par la porte Booklibre, demande la case qui nomme les pages avant « Faire imprimer »", () => {
+    const html = rendu("fr", FRANCE, "colophon", "cloudprinter", { report: AVEC });
+    expect(html).toMatch(/<input type="checkbox"[^>]*class="envoi-acquittement-case"/);
+    expect(visible(html)).toContain(
+      "Je sais que la page 5 risque d’imprimer floue (sous 250 ppi), et j’accepte que sa netteté s’écarte de celle d’un livre photo.",
+    );
+    expect(bouton(html)).toContain("disabled");
+    const coche = rendu("fr", FRANCE, "colophon", "cloudprinter", { report: AVEC, acquitte: true });
+    expect(bouton(coche)).not.toContain("disabled");
+    // Sans page sous le plancher, pas de case.
+    expect(rendu("fr", FRANCE, "colophon")).not.toContain("envoi-acquittement");
+    expect(rendu("fr", FRANCE, "pdf", "cloudprinter", { report: AVEC })).not.toContain("envoi-acquittement-case");
+  });
+
+  it("grise toujours sur ce que l'imprimeur refuse", () => {
+    const refus: Defaut = { regle: "format_sans_produit", bloquant: true, cause: "x", remede: "y" };
+    const html = rendu("fr", FRANCE, "pdf", "cloudprinter", {
+      report: { ...AVEC, ok: false, bloquants: 1, defauts: [refus, sous] },
+      acquitte: true,
+    });
+    expect(bouton(html)).toContain("disabled");
+  });
+});
+
 describe("Comment ça se passe", () => {
   // Signaler ouvre une issue GitHub publique : quelqu'un y citerait sa
   // commande. L'encadré n'y mène donc nulle part (A4, décision 10).

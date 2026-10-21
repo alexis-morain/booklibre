@@ -4704,6 +4704,18 @@ button.envoi-defaut-ou:focus-visible {
   margin-top: 22px;
 }
 
+/* La case qui nomme les pages sous 250 ppi, au-dessus de « Faire imprimer »
+   (1.1-c) : elle se lit en entier avant de se cocher. */
+.envoi-acquittement {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  max-width: 58ch;
+  margin: 0 0 12px;
+  font-size: var(--fs-15);
+  color: var(--text);
+}
+
 /* ---- les deux portes (A2) ---- */
 
 .envoi-portes {

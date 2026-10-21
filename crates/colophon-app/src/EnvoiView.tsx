@@ -22,6 +22,7 @@
 // et se rend sans navigateur (`envoi-page.test.tsx`).
 
 import { useEffect, useState } from "react";
+import { Dialogue } from "./Dialogue";
 import { phraseAbsents } from "./PoliceView";
 import { CommandeView, Rassurance, useRelais } from "./CommandeView";
 import { phraseDefaut, texteMoteur } from "./moteur";
@@ -44,6 +45,12 @@ import {
   ActionDefaut,
   Destination,
   actionsDefaut,
+  boutonEnvoi,
+  cleAcquittement,
+  groupesDefauts,
+  libelleAcquittement,
+  pagesEnClair,
+  verdictPret,
   destinationDe,
   formatEnCm,
   imprimeurAffiche,
@@ -152,6 +159,13 @@ export function EnvoiView(props: EnvoiViewProps) {
     };
   }, [profil, album, dirty]);
 
+  // La case de l'acquittement (1.1-c) : elle se décoche dès que la liste des
+  // pages qu'elle nomme change, une coche ne vaut que pour ce qu'elle a lu.
+  const cleAcq = cleAcquittement(report?.acquittement ?? []);
+  const [acquitte, setAcquitte] = useState<{ cle: string; coche: boolean }>({ cle: "", coche: false });
+  const coche = acquitte.cle === cleAcq && acquitte.coche;
+  const [confirmation, setConfirmation] = useState(false);
+
   const { relais, sonde, sonder } = useRelais();
   const cle = clePrix(report?.fiche.produit, report?.fiche.pages_interieur ?? 0);
   const [prixVu, setPrixVu] = useState<{ cle: string | null; centimes: number | null }>({ cle: null, centimes: null });
@@ -175,6 +189,10 @@ export function EnvoiView(props: EnvoiViewProps) {
       prixMin={prixMin}
       onGrille={onGrille}
       prepareeAvant={prepareeAvant}
+      acquitte={coche}
+      onAcquitte={(c) => setAcquitte({ cle: cleAcq, coche: c })}
+      confirmation={confirmation}
+      onConfirmation={setConfirmation}
     />
   );
 }
@@ -194,6 +212,12 @@ export type EnvoiPageProps = EnvoiViewProps & {
   prixMin: number | null;
   onGrille: (grille: Niveau[]) => void;
   prepareeAvant: Preparation | null;
+  /** La case qui nomme les pages sous le plancher, par la porte Booklibre. */
+  acquitte?: boolean;
+  onAcquitte?: (coche: boolean) => void;
+  /** La confirmation de la porte PDF, ouverte. */
+  confirmation?: boolean;
+  onConfirmation?: (ouverte: boolean) => void;
 };
 
 export function EnvoiPage(props: EnvoiPageProps) {
@@ -235,6 +259,10 @@ export function EnvoiPage(props: EnvoiPageProps) {
     prixMin,
     onGrille,
     prepareeAvant,
+    acquitte = false,
+    onAcquitte = () => {},
+    confirmation = false,
+    onConfirmation = () => {},
   } = props;
   const langue = useLangue();
   const chosen = imprimeurAffiche(printers, profil);
@@ -251,8 +279,18 @@ export function EnvoiPage(props: EnvoiPageProps) {
   };
   // « Préparer à nouveau » refait la préparation de la même façon.
   const preparerEncore = () => onPrepare(preparation?.commande === true);
-  const bloquants = report?.defauts.filter((d) => d.bloquant) ?? [];
-  const avertissements = report?.defauts.filter((d) => !d.bloquant) ?? [];
+  const { refuses: bloquants, aVoir, avertissements } = groupesDefauts(report?.defauts ?? []);
+  // Les pages sous le plancher (1.1-c) : à vous de voir. Par la porte PDF, le
+  // bouton demande une confirmation qui les nomme ; par la porte Booklibre,
+  // la case qui les nomme doit être cochée, et elle part avec la commande.
+  const pagesSous = report?.acquittement ?? [];
+  const bouton = boutonEnvoi({
+    ok: report?.ok === true,
+    pages: pagesSous,
+    commande: action?.commande === true,
+    acquitte,
+  });
+  const lancer = () => (action?.prepare ? onPrepare(action.commande) : onExport());
   // Un défaut dont le geste est une case de « Pages de début et de fin »
   // ouvre ce repli : on ne cache pas ce qu'une ligne demande de décocher.
   const pagesOuvertes = (report?.defauts ?? []).some((d) => destinationDe(d) === "ici");
@@ -311,7 +349,7 @@ export function EnvoiPage(props: EnvoiPageProps) {
           ) : report.ok ? (
             <h2 className="envoi-ok envoi-pret">
               <SigneCoche />
-              {t("envoi.pret")}
+              {verdictPret(aVoir.length)}
             </h2>
           ) : (
             <>
@@ -323,12 +361,11 @@ export function EnvoiPage(props: EnvoiPageProps) {
           )}
         </section>
 
-        {(bloquants.length > 0 || avertissements.length > 0) && (
+        {(bloquants.length > 0 || aVoir.length > 0 || avertissements.length > 0) && (
           <section className="envoi-defauts">
-            {bloquants.some((d) => d.regle === "resolution") && (
-              <p className="envoi-resolution-tete">{t("envoi.resolution.tete")}</p>
-            )}
             {bloquants.map((d, i) => ligne(d, `b${i}`))}
+            {aVoir.length > 0 && <p className="envoi-resolution-tete">{t("envoi.resolution.tete")}</p>}
+            {aVoir.map((d, i) => ligne(d, `v${i}`))}
             {avertissements.map((d, i) => ligne(d, `a${i}`))}
           </section>
         )}
@@ -367,15 +404,55 @@ export function EnvoiPage(props: EnvoiPageProps) {
                 {t("commande.reessayer")}
               </button>
             </div>
-          ) : parcoursOuvert ? null : (
-            <button
-              className="envoi-exporter"
-              onClick={action?.prepare ? () => onPrepare(action.commande) : onExport}
-              disabled={exporting || !report?.ok || !action}
-              title={report?.ok ? action?.titre : t("envoi.exporter.bloque")}
-            >
-              {exporting ? t("envoi.exporter.rendu") : (action?.texte ?? t("envoi.telecharger"))}
-            </button>
+          ) : (
+            <>
+              {action?.commande === true && pagesSous.length > 0 && (
+                <label className="envoi-acquittement">
+                  <input
+                    type="checkbox"
+                    className="envoi-acquittement-case"
+                    checked={acquitte}
+                    onChange={(e) => onAcquitte(e.target.checked)}
+                  />
+                  {libelleAcquittement(pagesSous)}
+                </label>
+              )}
+              {!parcoursOuvert && (
+                <button
+                  className="envoi-exporter"
+                  onClick={bouton.confirmer ? () => onConfirmation(true) : lancer}
+                  disabled={exporting || !bouton.actif || !action}
+                  title={
+                    !report?.ok
+                      ? t("envoi.exporter.bloque")
+                      : bouton.actif
+                        ? action?.titre
+                        : t("envoi.acquittement.requis")
+                  }
+                >
+                  {exporting ? t("envoi.exporter.rendu") : (action?.texte ?? t("envoi.telecharger"))}
+                </button>
+              )}
+            </>
+          )}
+          {confirmation && (
+            <Dialogue titre={t("envoi.confirmer.titre")} onClose={() => onConfirmation(false)} panelClassName="commande-confirmation">
+              <p className="commande-confirmation-phrase">{t("envoi.confirmer.texte", { pages: pagesEnClair(pagesSous) })}</p>
+              <div className="commande-confirmation-gestes">
+                <button
+                  className="envoi-exporter"
+                  onClick={() => {
+                    onConfirmation(false);
+                    lancer();
+                  }}
+                >
+                  {t("envoi.confirmer.oui")}
+                </button>
+                <button className="link" onClick={() => onConfirmation(false)}>
+                  {t("envoi.confirmer.non")}
+                </button>
+              </div>
+            </Dialogue>
           )}
           {preparation && action?.prepare && (!preparation.commande || !preparation.rapport.ok) && (
             <div className="envoi-prepare">
@@ -410,6 +487,7 @@ export function EnvoiPage(props: EnvoiPageProps) {
             preparant={exporting && action?.commande === true}
             progres={progresExport}
             onGrille={onGrille}
+            acquitte={acquitte}
           />
           {ouverte === "pdf" && !libre && (
             <p className="envoi-autre">
@@ -725,7 +803,7 @@ function ResolutionLigne({
   const cell = d.case!;
   const ppi = ppiDe(d);
   return (
-    <div className="envoi-defaut bloquant envoi-resolution" title={phraseDefaut(d, "cause")}>
+    <div className={"envoi-defaut envoi-resolution" + (d.bloquant ? " bloquant" : "")} title={phraseDefaut(d, "cause")}>
       <span className="envoi-resolution-vignette">
         <LazyThumb src={d.src!} />
       </span>

@@ -127,6 +127,7 @@ export function CommandeView({
   preparant,
   progres,
   onGrille,
+  acquitte = false,
 }: {
   preparationNeuve: Preparation | null;
   relais: Relais | null;
@@ -142,6 +143,9 @@ export function CommandeView({
   progres: { done: number; total: number } | null;
   /** Une grille est venue : Envoi en tire son « à partir de ». */
   onGrille: (grille: Niveau[]) => void;
+  /** La case qui nomme les pages sous le plancher est cochée (1.1-c) : le
+   *  moteur joint alors leur acquittement à l'intention. */
+  acquitte?: boolean;
 }) {
   const langue = useLangue();
   const [intentions, setIntentions] = useState<IntentionVue[]>([]);
@@ -219,7 +223,7 @@ export function CommandeView({
     void tenter(
       t("commande.devis.encours"),
       async () => {
-        const offre = await relaisCreer(parcours.choisi, parcours.region);
+        const offre = await relaisCreer(parcours.choisi, parcours.region, acquitte);
         onGrille(offre.grille);
         envoyer({ type: "offre", offre });
       },

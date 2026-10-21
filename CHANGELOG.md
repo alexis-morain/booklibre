@@ -11,6 +11,12 @@ sur la page des releases.
 
 ### Changed
 
+- A photo under 250 ppi no longer blocks the export. Send names the pages it
+  is on and lets you decide: "Download the PDF" asks once, naming them, then
+  exports; ordering through Booklibre asks you to tick a box that names them.
+  What the printer refuses (size, page count, the cut, the fold, the files)
+  still blocks.
+
 - The album saves itself, a second after each change: no more "unsaved
   changes" questions when closing, opening another album or quitting. ⌘Z still
   undoes, and File → Revert to the start of the session brings back the album

@@ -18,6 +18,7 @@
 //! et on le compare.
 
 use crate::export::{md5_du_fichier, LIVRAISON_COUVERTURE, LIVRAISON_INTERIEUR};
+pub use crate::prevol::{PageSousSeuil, QuelFichier};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -349,6 +350,11 @@ pub enum Erreur {
     /// L'URL de dépôt rendue n'est pas une URL R2 en https, sans port ni
     /// identifiants. Rien n'est envoyé.
     UrlDeDepot { fichier: &'static str },
+    /// Des pages sont sous le plancher et la case qui les nomme n'est pas
+    /// cochée.
+    AcquittementManquant,
+    /// Plus de pages sous le plancher que le relais n'en acquitte.
+    AcquittementTropLong(usize),
 }
 
 impl Erreur {
@@ -376,6 +382,13 @@ impl fmt::Display for Erreur {
             Erreur::Fichier(e) => write!(f, "dossier préparé illisible : {e}"),
             Erreur::Papier => write!(f, "ce dossier est préparé pour un autre papier que celui du relais ({PAPIER})"),
             Erreur::UrlDeDepot { fichier } => write!(f, "le relais rend pour {fichier} une adresse de dépôt refusée"),
+            Erreur::AcquittementManquant => {
+                write!(f, "des pages sont sous {SEUIL_PPI} ppi : cochez la case qui les nomme pour commander")
+            }
+            Erreur::AcquittementTropLong(n) => write!(
+                f,
+                "{n} pages sont sous {SEUIL_PPI} ppi, au-delà des {ACQUITTEMENT_MAX} qu'une commande peut acquitter"
+            ),
         }
     }
 }
@@ -506,6 +519,70 @@ pub struct Demande {
     pub etat_region: Option<String>,
     pub interieur: Fichier,
     pub couverture: Fichier,
+    /// Les pages sous le plancher que l'auteur a acquittées en cochant la
+    /// case (1.1-c). Absent quand il n'y en a pas.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub acquittement: Option<Acquittement>,
+}
+
+/// La version du libellé de la case, archivé mot pour mot dans
+/// `docs/acquittement-v1.md`. Changer un mot du libellé, c'est changer de
+/// version.
+pub const ACQUITTEMENT_VERSION: u32 = 1;
+
+/// Le plancher que le relais acquitte, le sien : le `min_ppi` de Cloudprinter.
+pub const SEUIL_PPI: u32 = 250;
+
+/// Le relais refuse un acquittement de plus de pages.
+pub const ACQUITTEMENT_MAX: usize = 200;
+
+/// Ce que l'auteur a reconnu en cochant : des pages du livre et leur ppi, le
+/// seuil, l'heure. Construit ici depuis le rapport de prévol relu sur le
+/// dossier préparé, jamais depuis la fenêtre, qui n'envoie qu'un booléen :
+/// aucun nom de photo, aucun chemin, aucune légende ne peut y entrer.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Acquittement {
+    pub version: u32,
+    pub seuil_ppi: u32,
+    /// UTC à la seconde, `AAAA-MM-JJTHH:MM:SSZ` : l'heure où la déclaration
+    /// cochée part au relais.
+    pub coche_le: String,
+    /// `[page, ppi]`, triées.
+    pub interieur: Vec<[u32; 2]>,
+    pub couverture: Vec<[u32; 2]>,
+}
+
+/// L'acquittement des `pages`, quand il y en a. Sans pages, rien, case cochée
+/// ou non. Avec, la case est exigée, et au-delà de [`ACQUITTEMENT_MAX`] la
+/// commande se refuse ici plutôt qu'au relais.
+pub fn acquittement_pour(
+    pages: &[PageSousSeuil],
+    seuil_ppi: u32,
+    acquitte: bool,
+    coche_le: &str,
+) -> Result<Option<Acquittement>, Erreur> {
+    if pages.is_empty() {
+        return Ok(None);
+    }
+    if !acquitte {
+        return Err(Erreur::AcquittementManquant);
+    }
+    if pages.len() > ACQUITTEMENT_MAX {
+        return Err(Erreur::AcquittementTropLong(pages.len()));
+    }
+    let de = |q: QuelFichier| pages.iter().filter(|p| p.fichier == q).map(|p| [p.page, p.ppi]).collect();
+    Ok(Some(Acquittement {
+        version: ACQUITTEMENT_VERSION,
+        seuil_ppi,
+        coche_le: coche_le.to_string(),
+        interieur: de(QuelFichier::Interieur),
+        couverture: de(QuelFichier::Couverture),
+    }))
+}
+
+/// L'heure présente, dans la forme que le relais accepte pour `coche_le`.
+pub fn coche_le_maintenant() -> String {
+    chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
 impl Demande {
@@ -536,6 +613,7 @@ impl Demande {
             etat_region,
             interieur: fichier(LIVRAISON_INTERIEUR)?,
             couverture: fichier(LIVRAISON_COUVERTURE)?,
+            acquittement: None,
         })
     }
 }
@@ -859,7 +937,52 @@ mod tests {
             etat_region: None,
             interieur: Fichier { md5: "275947b4f9a7958287828b9f6470d3ec".into(), octets: 94_980_105 },
             couverture: Fichier { md5: "4eb4a8769a7ecc552c53ea6bb051a1a8".into(), octets: 4_870_674 },
+            acquittement: None,
         }
+    }
+
+    fn page(fichier: QuelFichier, page: u32, ppi: u32) -> PageSousSeuil {
+        PageSousSeuil { fichier, page, ppi }
+    }
+
+    /// L'acquittement (1.1-c) : des entiers et une date, rien d'autre ; rien
+    /// sans case cochée quand il y a des pages ; rien du tout quand il n'y en
+    /// a pas ; refusé au-delà de 200 pages, avant le réseau.
+    #[test]
+    fn l_acquittement_se_construit_des_pages_et_de_la_case() {
+        // Le seuil du relais est le plancher du profil qu'il commande.
+        let cp = crate::printer::PrinterProfile::par_id("cloudprinter").unwrap();
+        assert_eq!(cp.min_ppi, f64::from(SEUIL_PPI));
+        let i = QuelFichier::Interieur;
+        let c = QuelFichier::Couverture;
+        let pages = vec![page(i, 5, 180), page(i, 13, 201), page(c, 1, 190)];
+        let a = acquittement_pour(&pages, 250, true, "2026-10-20T14:03:12Z").unwrap().unwrap();
+        assert_eq!(
+            serde_json::to_string(&a).unwrap(),
+            r#"{"version":1,"seuil_ppi":250,"coche_le":"2026-10-20T14:03:12Z","interieur":[[5,180],[13,201]],"couverture":[[1,190]]}"#
+        );
+        assert_eq!(acquittement_pour(&pages, 250, false, "x"), Err(Erreur::AcquittementManquant));
+        assert_eq!(acquittement_pour(&[], 250, false, "x"), Ok(None));
+        assert_eq!(acquittement_pour(&[], 250, true, "x"), Ok(None));
+        let trop: Vec<PageSousSeuil> = (1..=201).map(|p| page(i, p, 100)).collect();
+        assert_eq!(acquittement_pour(&trop, 250, true, "x"), Err(Erreur::AcquittementTropLong(201)));
+        assert!(acquittement_pour(&trop[..200], 250, true, "x").unwrap().is_some());
+
+        // Dans la demande : absent sans acquittement, compact avec.
+        let mut d = demande();
+        assert!(!serde_json::to_string(&d).unwrap().contains("acquittement"));
+        d.acquittement = Some(a);
+        let json = serde_json::to_string(&d).unwrap();
+        assert!(json.contains(r#""acquittement":{"version":1"#), "{json}");
+    }
+
+    /// L'heure de la case, en UTC à la seconde, la forme exacte que le relais
+    /// accepte.
+    #[test]
+    fn l_heure_de_l_acquittement_a_la_forme_du_relais() {
+        let t = coche_le_maintenant();
+        assert_eq!(t.len(), 20, "{t}");
+        assert!(t.ends_with('Z') && t.as_bytes()[10] == b'T', "{t}");
     }
 
     #[test]

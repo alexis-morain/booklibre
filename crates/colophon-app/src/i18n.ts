@@ -543,7 +543,7 @@ export const FR = {
   "envoi.simple.conformite":
     "Cet imprimeur exige une norme de fichier que Booklibre ne déclare pas encore : demandez-lui s’il accepte un PDF simple.",
   "envoi.simple.couverture_resolution":
-    "Cette photo est trop petite pour la couverture : choisissez-en une autre.",
+    "Cette photo est trop petite pour la couverture : elle risque d’imprimer floue. Choisissez-en une autre, ou gardez-la.",
   "envoi.simple.couverture_vide":
     "La couverture n’a pas de photo et sortirait blanche : choisissez-en une.",
   "envoi.simple.dos":
@@ -585,12 +585,30 @@ export const FR = {
   "envoi.simple.quatrieme_zone_sure":
     "Le texte de la quatrième frôle la coupe : il risque d’être rogné.",
   "envoi.simple.resolution":
-    "Cette photo est trop petite pour sa case : mettez-la dans une case plus petite, remplacez-la ou retirez-la.",
+    "Cette photo est trop petite pour sa case : elle risque d’imprimer floue. Mettez-la dans une case plus petite, remplacez-la, retirez-la, ou gardez-la.",
   "envoi.simple.zone_sure":
     "Une légende est près de la coupe : elle risque d’être rognée.",
   "envoi.defaut.planche": "Planche {n}",
   "envoi.resolution.tete":
-    "Ces photos sont trop petites pour leur case. Booklibre n’imprime jamais sous 250 ppi.",
+    "Ces photos sont sous 250 ppi : elles risquent d’imprimer floues. À vous de voir : les remplacer, les retirer, ou imprimer quand même.",
+  // -- à vous de voir (1.1-c). Le libellé de la case est archivé mot pour mot
+  // dans `docs/acquittement-v1.md` : en changer un mot, c'est une version 2.
+  "envoi.pages.et": "et",
+  "envoi.pages.couverture": "la couverture",
+  "envoi.pages.une": "la page {n}",
+  "envoi.pages.plusieurs": "les pages {liste}",
+  "envoi.acquittement.un":
+    "Je sais que {pages} risque d’imprimer floue (sous 250 ppi), et j’accepte que sa netteté s’écarte de celle d’un livre photo.",
+  "envoi.acquittement":
+    "Je sais que {pages} risquent d’imprimer floues (sous 250 ppi), et j’accepte que leur netteté s’écarte de celle d’un livre photo.",
+  "envoi.acquittement.requis": "Cochez d’abord la case qui nomme les pages sous 250 ppi",
+  "envoi.confirmer.titre": "Exporter avec des photos sous 250 ppi ?",
+  "envoi.confirmer.texte":
+    "Ces pages risquent d’imprimer floues : {pages}. Vous pouvez encore remplacer ou retirer leurs photos.",
+  "envoi.confirmer.oui": "Exporter quand même",
+  "envoi.confirmer.non": "Revenir",
+  "envoi.pret.a_voir.un": "Votre livre est prêt. Une photo est à vous de voir.",
+  "envoi.pret.a_voir": "Votre livre est prêt. {n} photos sont à vous de voir.",
   "envoi.resolution.ou": "Planche {n}, {ppi} ppi",
   "envoi.resolution.voir": "Voir",
   "envoi.resolution.remplacer": "Remplacer",
@@ -1720,7 +1738,8 @@ export const EN: Record<Cle, string> = {
   "envoi.details": "Details",
   "envoi.simple.conformite":
     "This printer requires a file standard Booklibre does not declare yet: ask them whether they accept a plain PDF.",
-  "envoi.simple.couverture_resolution": "This photo is too small for the cover: choose another one.",
+  "envoi.simple.couverture_resolution":
+    "This photo is too small for the cover: it may print blurry. Choose another one, or keep it.",
   "envoi.simple.couverture_vide": "The cover has no photo and would print blank: choose one.",
   "envoi.simple.dos":
     "The spine width is an estimate the printer has not confirmed: check it on the first book you receive.",
@@ -1752,7 +1771,7 @@ export const EN: Record<Cle, string> = {
   "envoi.simple.pagination.decocher_garde":
     "The book has two pages too many for this printer: untick the half-title below.",
   "envoi.simple.resolution":
-    "This photo is too small for its cell: put it in a smaller cell, replace it or remove it.",
+    "This photo is too small for its cell: it may print blurry. Put it in a smaller cell, replace it, remove it, or keep it.",
   "envoi.simple.zone_sure": "A caption sits close to the trim: it may be cut off.",
   "envoi.simple.quatrieme_deborde":
     "The back-cover text does not fit on the page: shorten it, or make it or its photo smaller.",
@@ -1761,7 +1780,23 @@ export const EN: Record<Cle, string> = {
   "envoi.simple.quatrieme_zone_sure": "The back-cover text sits close to the trim: it may be cut off.",
   "envoi.defaut.planche": "Spread {n}",
   "envoi.resolution.tete":
-    "These photos are too small for their cell. Booklibre never prints below 250 ppi.",
+    "These photos are under 250 ppi: they may print blurry. Your call: replace them, remove them, or print anyway.",
+  "envoi.pages.et": "and",
+  "envoi.pages.couverture": "the cover",
+  "envoi.pages.une": "page {n}",
+  "envoi.pages.plusieurs": "pages {liste}",
+  "envoi.acquittement.un":
+    "I know {pages} may print blurry (under 250 ppi), and I accept that its sharpness falls short of a photo book’s.",
+  "envoi.acquittement":
+    "I know {pages} may print blurry (under 250 ppi), and I accept that their sharpness falls short of a photo book’s.",
+  "envoi.acquittement.requis": "First tick the box that names the pages under 250 ppi",
+  "envoi.confirmer.titre": "Export with photos under 250 ppi?",
+  "envoi.confirmer.texte":
+    "These pages may print blurry: {pages}. You can still replace or remove their photos.",
+  "envoi.confirmer.oui": "Export anyway",
+  "envoi.confirmer.non": "Go back",
+  "envoi.pret.a_voir.un": "Your book is ready. One photo is your call.",
+  "envoi.pret.a_voir": "Your book is ready. {n} photos are your call.",
   "envoi.resolution.ou": "Spread {n}, {ppi} ppi",
   "envoi.resolution.voir": "Show",
   "envoi.resolution.remplacer": "Replace",

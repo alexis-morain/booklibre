@@ -24,7 +24,15 @@ import {
   phrasePreparation,
   phraseSimple,
   ppiDe,
+  aVousDeVoir,
+  groupesDefauts,
+  pagesEnClair,
+  libelleAcquittement,
+  cleAcquittement,
+  verdictPret,
+  boutonEnvoi,
 } from "./envoi";
+import type { PageSousSeuil } from "./bridge";
 
 afterEach(() => setLangue("en"));
 
@@ -329,13 +337,15 @@ describe("la phrase simple", () => {
       src: "IMG_1148.heic",
       cause: "IMG_1148.heic imprimerait à 221 ppi sur la couverture de 329 × 348 mm, Cloudprinter exige 250",
     });
-    expect(phraseSimple(d)).toBe("Cette photo est trop petite pour la couverture : choisissez-en une autre.");
+    expect(phraseSimple(d)).toBe(
+      "Cette photo est trop petite pour la couverture : elle risque d’imprimer floue. Choisissez-en une autre, ou gardez-la.",
+    );
     for (const r of codes.regles) {
       const p = phraseSimple(defaut(r))!;
       expect(p, r).not.toMatch(/\d|ppi|mm\b|\.pdf|--/);
     }
     setLangue("en");
-    expect(phraseSimple(d)).toBe("This photo is too small for the cover: choose another one.");
+    expect(phraseSimple(d)).toBe("This photo is too small for the cover: it may print blurry. Choose another one, or keep it.");
   });
 
   it("une page décochable se dit pour ce qu'elle est", () => {
@@ -355,5 +365,82 @@ describe("Feuilleter", () => {
   it("ouvre sur la couverture quand son aperçu existe, sur la première planche sinon", () => {
     expect(ouvertureDuFeuilletage(true)).toBe("couverture");
     expect(ouvertureDuFeuilletage(false)).toBe("premiere");
+  });
+});
+
+// 1.1-c : la résolution ne refuse plus, elle est à vous de voir.
+describe("à vous de voir", () => {
+  const d = (regle: string, bloquant: boolean): Defaut =>
+    ({ regle, bloquant, cause: "", remede: "" }) as Defaut;
+
+  it("ne couvre que la résolution, celle des pages et celle de la couverture", () => {
+    expect([...codes.a_vous_de_voir].sort()).toEqual(["couverture_resolution", "resolution"]);
+    expect(aVousDeVoir(d("resolution", false))).toBe(true);
+    expect(aVousDeVoir(d("couverture_resolution", false))).toBe(true);
+    expect(aVousDeVoir(d("zone_sure", false))).toBe(false);
+    expect(aVousDeVoir(d("pagination", true))).toBe(false);
+  });
+
+  it("range les défauts en trois groupes : refusés, à vous de voir, avertissements", () => {
+    const g = groupesDefauts([
+      d("zone_sure", false),
+      d("resolution", false),
+      d("pagination", true),
+      d("couverture_resolution", false),
+    ]);
+    expect(g.refuses.map((x) => x.regle)).toEqual(["pagination"]);
+    expect(g.aVoir.map((x) => x.regle)).toEqual(["resolution", "couverture_resolution"]);
+    expect(g.avertissements.map((x) => x.regle)).toEqual(["zone_sure"]);
+  });
+
+  const p = (fichier: "interieur" | "couverture", page: number): PageSousSeuil => ({ fichier, page, ppi: 180 });
+
+  it("nomme les pages en clair, en français et en anglais", () => {
+    setLangue("fr");
+    expect(pagesEnClair([p("interieur", 5)])).toBe("la page 5");
+    expect(pagesEnClair([p("interieur", 5), p("interieur", 13)])).toBe("les pages 5 et 13");
+    expect(pagesEnClair([p("interieur", 5), p("interieur", 13), p("interieur", 21)])).toBe("les pages 5, 13 et 21");
+    expect(pagesEnClair([p("couverture", 1)])).toBe("la couverture");
+    expect(pagesEnClair([p("interieur", 5), p("couverture", 1)])).toBe("la couverture et la page 5");
+    setLangue("en");
+    expect(pagesEnClair([p("interieur", 5)])).toBe("page 5");
+    expect(pagesEnClair([p("interieur", 5), p("interieur", 13), p("interieur", 21)])).toBe("pages 5, 13 and 21");
+    expect(pagesEnClair([p("interieur", 5), p("couverture", 1)])).toBe("the cover and page 5");
+  });
+
+  it("écrit la case au singulier et au pluriel", () => {
+    setLangue("fr");
+    expect(libelleAcquittement([p("interieur", 5)])).toBe(
+      "Je sais que la page 5 risque d’imprimer floue (sous 250 ppi), et j’accepte que sa netteté s’écarte de celle d’un livre photo.",
+    );
+    expect(libelleAcquittement([p("interieur", 5), p("couverture", 1)])).toBe(
+      "Je sais que la couverture et la page 5 risquent d’imprimer floues (sous 250 ppi), et j’accepte que leur netteté s’écarte de celle d’un livre photo.",
+    );
+    setLangue("en");
+    expect(libelleAcquittement([p("interieur", 5), p("interieur", 7)])).toBe(
+      "I know pages 5 and 7 may print blurry (under 250 ppi), and I accept that their sharpness falls short of a photo book’s.",
+    );
+  });
+
+  it("change de clé quand la liste change, pour que la case se décoche", () => {
+    expect(cleAcquittement([])).toBe("");
+    expect(cleAcquittement([p("interieur", 5)])).not.toBe(cleAcquittement([p("interieur", 7)]));
+    expect(cleAcquittement([p("interieur", 5)])).toBe(cleAcquittement([p("interieur", 5)]));
+  });
+
+  it("dit prêt, avec le compte des photos à vous de voir", () => {
+    setLangue("fr");
+    expect(verdictPret(0)).toBe("Votre livre est prêt.");
+    expect(verdictPret(1)).toBe("Votre livre est prêt. Une photo est à vous de voir.");
+    expect(verdictPret(3)).toBe("Votre livre est prêt. 3 photos sont à vous de voir.");
+  });
+
+  it("ne grise le bouton que sur un refus, ou sur la case non cochée par la porte Booklibre", () => {
+    const pages = [p("interieur", 5)];
+    expect(boutonEnvoi({ ok: true, pages: [], commande: false, acquitte: false })).toEqual({ actif: true, confirmer: false });
+    expect(boutonEnvoi({ ok: true, pages, commande: false, acquitte: false })).toEqual({ actif: true, confirmer: true });
+    expect(boutonEnvoi({ ok: true, pages, commande: true, acquitte: false })).toEqual({ actif: false, confirmer: false });
+    expect(boutonEnvoi({ ok: true, pages, commande: true, acquitte: true })).toEqual({ actif: true, confirmer: false });
+    expect(boutonEnvoi({ ok: false, pages, commande: false, acquitte: true }).actif).toBe(false);
   });
 });
