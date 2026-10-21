@@ -276,7 +276,8 @@ fn faces_des_objets(
     album: &Album,
 ) -> std::collections::BTreeMap<String, std::borrow::Cow<'static, crate::font::Embarquee>> {
     let mut out = std::collections::BTreeMap::new();
-    for p in album.spreads.iter().flat_map(|s| &s.objets).filter_map(|o| o.police_texte()) {
+    let quatrieme = album.cover.iter().filter_map(|c| c.back_police.as_ref());
+    for p in album.spreads.iter().flat_map(|s| &s.objets).filter_map(|o| o.police_texte()).chain(quatrieme) {
         if out.contains_key(&p.fichier) {
             continue;
         }
@@ -767,7 +768,25 @@ pub(crate) fn compteurs_avec_face<'f>(
     if let Some(cover) = &album.cover {
         signale(0, "titre de couverture", &cover.title, None);
         signale(0, "sous-titre de couverture", &cover.subtitle, None);
-        signale(0, "quatrième de couverture", &cover.back_text, None);
+        // La quatrième peut avoir sa face (1.2-d), demandée à la même porte
+        // que celle d'un bloc : par un bloc qui la porterait.
+        let porteur = cover.back_police.clone().map(|police| crate::model::Objet {
+            x: 0.0,
+            y: 0.0,
+            w: 0.0,
+            h: 0.0,
+            angle: 0.0,
+            contenu: crate::model::Contenu::Texte {
+                texte: String::new(),
+                taille_pt: 0.0,
+                interligne_mm: None,
+                alignement: crate::model::Alignement::Gauche,
+            },
+            couleur: None,
+            police: Some(police),
+        });
+        let propre = porteur.as_ref().and_then(face_objet);
+        signale(0, "quatrième de couverture", &cover.back_text, propre);
     } else {
         signale(0, "titre de couverture", &album.title, None);
     }

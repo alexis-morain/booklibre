@@ -561,7 +561,9 @@ export default function App() {
   }, [dossier]);
   const fichiersObjet = (album?.spreads ?? [])
     .flatMap((s) => s.objets ?? [])
-    .flatMap((o) => (o.type === "texte" && o.police ? [o.police.fichier] : []));
+    .flatMap((o) => (o.type === "texte" && o.police ? [o.police.fichier] : []))
+    // La quatrième peut porter la sienne (1.2-d), de la même grammaire.
+    .concat(album?.cover?.back_police ? [album.cover.back_police.fichier] : []);
   const fichiersCle = [...new Set(fichiersObjet)].sort().join("|");
   useEffect(() => {
     if (!opened || fichiersCle === "") return;
@@ -2887,6 +2889,12 @@ export default function App() {
                 onReglage={(src, r) => apply((a) => setReglage(a, src, r))}
                 choixALOuverture={choixCouverture}
                 onChoixOuvert={() => setChoixCouverture(false)}
+                polices={polices}
+                onPolices={() => {
+                  if (inTauri && polices.length === 0) {
+                    polices_installees().then(setPolices, () => {});
+                  }
+                }}
               />
             ) : (
               spread && (

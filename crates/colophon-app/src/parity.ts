@@ -27,6 +27,7 @@ import {
 } from "./album";
 import { Dump, setGeometrie } from "./geometrie";
 import { decalage, replier, Scene, SceneObject, sceneOf } from "./scene";
+import { ecartsQuatrieme, quatrieme, tailleQuatrieme } from "./quatrieme";
 
 /** Page formats the parity run sweeps: every preset shape plus a free size. */
 export const PARITY_FORMATS = [
@@ -146,6 +147,46 @@ export function geometryProblems(dump: Dump, label: string): string[] {
       problems.push(
         `${tag}: rust trop_large=${sample.trop_large}, ts ${got.tropLarge}`,
       );
+    }
+  }
+
+  // La quatrième (1.2-d) : le cadre aux neuf poses, la bande, où chaque
+  // ligne se coupe et se pose, ce qui ne tient pas. La mesure prend des
+  // points des deux côtés, celle du moteur mot pour mot.
+  const mesurePt = (s: string, pt: number) => [...s].length * pt * 0.2;
+  const panneau = { x: 0, y: 0, w: dump.trim_mm.w, h: dump.trim_mm.h };
+  for (const sample of dump.quatrieme_samples ?? []) {
+    const cover = {
+      title: "",
+      back_text: sample.texte,
+      ...(sample.photo ? { back_photo: { photo: { src: "x.jpg", focal: [0.5, 0.5] as [number, number] }, ...sample.photo } } : {}),
+    };
+    const tag = `${label} quatrième ${sample.photo ? `${sample.photo.position}/${sample.photo.taille}` : "sans photo"} « ${sample.texte.slice(0, 12)} »`;
+    const taille = tailleQuatrieme(cover, dump.trim_mm.w);
+    if (!near(taille, sample.taille_pt)) problems.push(`${tag} taille: rust ${sample.taille_pt}, ts ${taille}`);
+    const q = quatrieme(panneau, 7, cover, taille, mesurePt);
+    const r = (x: { x: number; y: number; w: number; h: number }) => [x.x, x.y, x.w, x.h];
+    const comparer = (quoi: string, rust: number[] | null, ts: number[] | null) => {
+      if ((rust === null) !== (ts === null) || (rust && ts && rust.some((v, i) => !near(v, ts[i])))) {
+        problems.push(`${tag} ${quoi}: rust ${JSON.stringify(rust)}, ts ${JSON.stringify(ts)}`);
+      }
+    };
+    comparer("cadre", sample.cadre, q.cadre && r(q.cadre));
+    comparer("bande", sample.bande, r(q.bande));
+    if (q.lignes.length !== sample.lignes.length) {
+      problems.push(`${tag}: rust ${sample.lignes.length} lignes, ts ${q.lignes.length}`);
+    } else {
+      sample.lignes.forEach(([texte, ...v], i) => {
+        const l = q.lignes[i];
+        if (texte !== l.texte) problems.push(`${tag} ligne ${i}: rust « ${texte} », ts « ${l.texte} »`);
+        comparer(`ligne ${i}`, v, [l.x, l.y, l.largeur]);
+      });
+    }
+    if (q.coupees !== sample.coupees) problems.push(`${tag} coupées: rust ${sample.coupees}, ts ${q.coupees}`);
+    if (q.tropLarge !== sample.trop_large) problems.push(`${tag} trop large: rust ${sample.trop_large}, ts ${q.tropLarge}`);
+    const e = ecartsQuatrieme(q, panneau, 7);
+    if (e[0] !== sample.ecarts[0] || e[1] !== sample.ecarts[1]) {
+      problems.push(`${tag} écarts: rust ${JSON.stringify(sample.ecarts)}, ts ${JSON.stringify(e)}`);
     }
   }
 

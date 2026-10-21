@@ -30,7 +30,7 @@ use std::path::{Path, PathBuf};
 /// Title size on a 210 mm wide cover, scaled with the format from there.
 const TITLE_PT_AT_210: f64 = 26.0;
 const SUBTITLE_PT_AT_210: f64 = 12.0;
-const BACK_TEXT_PT_AT_210: f64 = 10.5;
+pub const BACK_TEXT_PT_AT_210: f64 = 10.5;
 const SPINE_PT_AT_210: f64 = 11.0;
 
 /// The title block sits this far in from the trim, as a share of the panel.
@@ -174,6 +174,7 @@ fn render_cover_pdf_at(
         photo: None,
         back_text: String::new(),
         fond: None,
+        ..Default::default()
     });
 
     let mut writer = PdfWriter::with_stamp(&album, dir, stamp);
@@ -210,6 +211,7 @@ fn render_cover_pdf_at(
         writer.draw_image(&mut content, &mut xobjects, 0, &asset, &rect);
     }
 
+    draw_back_photo(&mut writer, &mut content, &mut xobjects, &album, &g, &cover)?;
     draw_text(&mut content, &mut writer.ecrivain, &g, &album, &cover, encre_sur(fond));
 
     writer.add_page(
@@ -333,6 +335,7 @@ pub(crate) fn add_cover_page(
         photo: None,
         back_text: String::new(),
         fond: None,
+        ..Default::default()
     });
 
     let mut content = String::new();
@@ -371,6 +374,7 @@ pub(crate) fn add_cover_page(
             draw_front(&mut content, &mut writer.ecrivain, &g, album, &cover, encre);
         }
         Face::Quatrieme => {
+            draw_back_photo(writer, &mut content, &mut xobjects, album, &g, &cover)?;
             draw_back(&mut content, &mut writer.ecrivain, &g, album, &cover, encre)
         }
     }
@@ -497,9 +501,177 @@ fn draw_spine(
     }
 }
 
-/// Back: the quatrième, wrapped to the panel and centred in it, the way the
-/// cover editor shows it. A dedication is a short block on a wide white page;
-/// ranged left in a corner it reads like a caption.
+/// The bounds a type size read from `album.json` is held to: the file is
+/// repaired by hand, and a 0 pt or a 400 pt quatrième is a typo, not a book.
+pub const BACK_TAILLE_MIN_PT: f64 = 6.0;
+pub const BACK_TAILLE_MAX_PT: f64 = 48.0;
+
+/// Where a line's ink sits around its baseline, as a share of the type size.
+/// A proxy, the same on both sides and for every face: what it decides is
+/// whether a line climbs onto the photo or into the safe band, and the
+/// margins it is compared with are centimetres, not hairlines.
+pub const ENCRE_HAUT: f64 = 0.75;
+pub const ENCRE_BAS: f64 = 0.25;
+
+/// The size the quatrième prints at: the one the cover was given, held to
+/// its bounds, or the format's own when it was given none — which is the
+/// size every quatrième printed at before the field existed.
+pub fn taille_quatrieme(cover: &Cover, trim_w: f64) -> f64 {
+    match cover.back_taille_pt.filter(|t| t.is_finite()) {
+        Some(t) => t.clamp(BACK_TAILLE_MIN_PT, BACK_TAILLE_MAX_PT),
+        None => BACK_TEXT_PT_AT_210 * (trim_w / 210.0),
+    }
+}
+
+/// The square frame of the back photograph, in the panel's frame.
+///
+/// The side is a share of the shorter side of the inner box — the panel less
+/// [`TITLE_INSET`] on every edge, the inset the front's title keeps — so the
+/// frame sits in the page whatever its format, never at the bleed. Centred
+/// across; against the top or the bottom of the inner box, or centred.
+pub fn cadre_quatrieme(panneau: &Rect, p: &crate::model::PhotoQuatrieme) -> Rect {
+    use crate::model::PositionQuatrieme as P;
+    let (iw, ih) = (panneau.w * (1.0 - 2.0 * TITLE_INSET), panneau.h * (1.0 - 2.0 * TITLE_INSET));
+    let cote = p.taille.part() * iw.min(ih);
+    let bas = panneau.y + panneau.h * TITLE_INSET;
+    let y = match p.position {
+        P::Haut => bas + ih - cote,
+        P::Centre => panneau.y + (panneau.h - cote) / 2.0,
+        P::Bas => bas,
+    };
+    Rect { x: panneau.x + (panneau.w - cote) / 2.0, y, w: cote, h: cote }
+}
+
+/// One line of the quatrième: its text, its baseline, its measured width.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LigneQuatrieme {
+    pub texte: String,
+    pub x: f64,
+    pub y: f64,
+    pub largeur: f64,
+}
+
+/// The back cover laid out: the photo frame, the band the text is centred
+/// in, the lines that print, and what did not fit.
+#[derive(Debug, Clone)]
+pub struct Quatrieme {
+    pub cadre: Option<Rect>,
+    pub bande: Rect,
+    pub lignes: Vec<LigneQuatrieme>,
+    pub taille_pt: f64,
+    /// Lines with words in them that do not print: they would have fallen
+    /// under the floor. Never dropped in silence any more — the preflight
+    /// counts them ([`crate::prevol`], `quatrieme_deborde`).
+    pub coupees: usize,
+    /// A single word wider than the measure, left whole.
+    pub trop_large: bool,
+}
+
+impl Quatrieme {
+    /// How many printed lines leave the panel (the knife or the fold takes
+    /// them) or climb out of their band (onto the photo), and how many of the
+    /// others, or the frame, enter the safe band of the profile.
+    pub fn ecarts(&self, panneau: &Rect, safe: f64) -> (usize, usize) {
+        let mm = self.taille_pt * PT_TO_MM;
+        let haut_bande = self.bande.y + self.bande.h;
+        let (mut dehors, mut zone) = (0, 0);
+        for l in &self.lignes {
+            if l.texte.is_empty() {
+                continue;
+            }
+            let (x0, x1) = (l.x, l.x + l.largeur);
+            let (y0, y1) = (l.y - mm * ENCRE_BAS, l.y + mm * ENCRE_HAUT);
+            if x0 < panneau.x || x1 > panneau.x + panneau.w || y1 > haut_bande {
+                dehors += 1;
+            } else if x0 < panneau.x + safe
+                || x1 > panneau.x + panneau.w - safe
+                || y0 < panneau.y + safe
+                || y1 > panneau.y + panneau.h - safe
+            {
+                zone += 1;
+            }
+        }
+        if let Some(c) = &self.cadre {
+            if c.x < panneau.x + safe
+                || c.x + c.w > panneau.x + panneau.w - safe
+                || c.y < panneau.y + safe
+                || c.y + c.h > panneau.y + panneau.h - safe
+            {
+                zone += 1;
+            }
+        }
+        (dehors + self.coupees, zone)
+    }
+}
+
+/// The quatrième, laid out on its panel. **The one layout**: the PDF draws
+/// it, the preflight measures it, the dump carries it, and the editor's port
+/// (`album.ts::quatrieme`) is checked against it.
+///
+/// Without a photo this is, expression for expression, what the back has
+/// always printed: the text wrapped to the inner width, centred on the
+/// panel, the block centred in its height, and nothing under the safe band.
+/// A photo takes the top, the middle or the bottom; the text then takes the
+/// band under it (or above it, when the photo sits at the bottom), one
+/// leading clear of the frame.
+pub fn quatrieme(
+    panneau: &Rect,
+    safe: f64,
+    cover: &Cover,
+    taille_pt: f64,
+    mesure: &dyn Fn(&str, f64) -> f64,
+) -> Quatrieme {
+    use crate::model::PositionQuatrieme as P;
+    let size = taille_pt;
+    let leading = size * PT_TO_MM * BACK_LEADING;
+    let cadre = cover.back_photo.as_ref().map(|p| cadre_quatrieme(panneau, p));
+    let bande = match (&cadre, cover.back_photo.as_ref().map(|p| p.position)) {
+        (Some(c), Some(P::Bas)) => {
+            let y = c.y + c.h + leading;
+            Rect { x: panneau.x, y, w: panneau.w, h: panneau.y + panneau.h - y }
+        }
+        (Some(c), _) => {
+            Rect { x: panneau.x, y: panneau.y, w: panneau.w, h: c.y - leading - panneau.y }
+        }
+        (None, _) => panneau.clone(),
+    };
+    let mut q = Quatrieme {
+        cadre,
+        bande: bande.clone(),
+        lignes: Vec::new(),
+        taille_pt: size,
+        coupees: 0,
+        trop_large: false,
+    };
+    if cover.back_text.is_empty() {
+        return q;
+    }
+    let box_w = panneau.w - 2.0 * (panneau.w * TITLE_INSET);
+    let (lines, trop_large) = crate::scene::replier(&cover.back_text, box_w, size, mesure);
+    q.trop_large = trop_large;
+    // Under the band no line prints: on the bare panel that is the safe band
+    // of the profile, under a photo it is the band's own foot.
+    let plancher = (panneau.y + safe).max(bande.y);
+
+    let block = lines.len() as f64 * leading;
+    let mut y = bande.y + (bande.h + block) / 2.0 - leading;
+    for (i, line) in lines.iter().enumerate() {
+        if i > 0 && y < plancher {
+            q.coupees = lines[i..].iter().filter(|l| !l.is_empty()).count();
+            break;
+        }
+        // Centred on the panel, measured on the real advance widths.
+        let largeur = mesure(line, size);
+        let x = panneau.x + (panneau.w - largeur) / 2.0;
+        q.lignes.push(LigneQuatrieme { texte: line.clone(), x, y, largeur });
+        y -= leading;
+    }
+    q
+}
+
+/// Back: the quatrième, as [`quatrieme`] lays it out, in its own face when
+/// it was given one. The photograph is drawn by the caller, which holds the
+/// writer; this only sets the type.
 fn draw_back(
     content: &mut String,
     ecrivain: &mut pdf::Ecrivain,
@@ -508,26 +680,50 @@ fn draw_back(
     cover: &Cover,
     encre: [f64; 3],
 ) {
-    let scale = album.trim_mm.w / 210.0;
-    if !cover.back_text.is_empty() {
-        let size = BACK_TEXT_PT_AT_210 * scale;
-        let box_w = g.back.w - 2.0 * (g.back.w * TITLE_INSET);
-        let leading = size * PT_TO_MM * BACK_LEADING;
-        let lines = wrap(ecrivain, &cover.back_text, box_w, size);
-
-        let block = lines.len() as f64 * leading;
-        let mut y = g.back.y + (g.back.h + block) / 2.0 - leading;
-        for line in &lines {
-            // Centred on the panel, measured on the real advance widths.
-            let x = g.back.x + (g.back.w - ecrivain.largeur_mm(line, size)) / 2.0;
-
-            pdf::text_op(content, ecrivain, 1, x, y, size, encre, line);
-            y -= leading;
-            if y < g.back.y + g.safe {
-                break; // the editor is where an overlong quatrième is signalled
-            }
-        }
+    if cover.back_text.is_empty() {
+        return;
     }
+    let face = ecrivain.ressource(cover.back_police.as_ref());
+    let size = taille_quatrieme(cover, album.trim_mm.w);
+    let q = {
+        let e = &*ecrivain;
+        quatrieme(&g.back, g.safe, cover, size, &|s, pt| e.largeur_mm_dans(face, s, pt))
+    };
+    for l in &q.lignes {
+        pdf::text_op(content, ecrivain, face, l.x, l.y, size, encre, &l.texte);
+    }
+}
+
+/// The back photograph, framed in the panel, cropped like any case. Index 1:
+/// the front's image is `Im0` on the same page of a flat sheet.
+fn draw_back_photo(
+    writer: &mut PdfWriter,
+    content: &mut String,
+    xobjects: &mut lopdf::Dictionary,
+    album: &Album,
+    g: &CoverGeometry,
+    cover: &Cover,
+) -> Result<()> {
+    let Some(p) = &cover.back_photo else { return Ok(()) };
+    let root = std::path::PathBuf::from(&album.root);
+    anyhow::ensure!(
+        root.is_dir(),
+        "dossier de photos introuvable : {} (déplacé ou disque absent ?)",
+        root.display()
+    );
+    let src = root.join(&p.photo.src);
+    let rect = cadre_quatrieme(&g.back, p);
+    let asset = print::print_asset(
+        &src,
+        meta::read(&src).orientation,
+        &rect,
+        p.photo.focal,
+        p.photo.zoom,
+        album.reglages.get(&p.photo.src),
+    )
+    .with_context(|| format!("photo de quatrième : {}", p.photo.src))?;
+    writer.draw_image(content, xobjects, 1, &asset, &rect);
+    Ok(())
 }
 
 const PT_TO_MM: f64 = 25.4 / 72.0;
@@ -577,42 +773,6 @@ fn rotated(
         x * mm_to_pt,
         y * mm_to_pt
     ));
-}
-
-/// Greedy wrap on the real advance widths of the face this document is set
-/// in — the album's own when it chose one. Words longer than the measure are
-/// left whole and overflow visibly rather than being cut in a place no
-/// reader would cut them.
-fn wrap(
-    ecrivain: &pdf::Ecrivain,
-    text: &str,
-    width_mm: f64,
-    size_pt: f64,
-) -> Vec<String> {
-
-    let mut out = Vec::new();
-    for para in text.lines() {
-        if para.trim().is_empty() {
-            out.push(String::new());
-            continue;
-        }
-        let mut line = String::new();
-        for word in para.split_whitespace() {
-            let candidate =
-                if line.is_empty() { word.to_string() } else { format!("{line} {word}") };
-            if ecrivain.largeur_mm(&candidate, size_pt) <= width_mm || line.is_empty() {
-
-                line = candidate;
-            } else {
-                out.push(std::mem::take(&mut line));
-                line = word.to_string();
-            }
-        }
-        if !line.is_empty() {
-            out.push(line);
-        }
-    }
-    out
 }
 
 #[cfg(test)]
@@ -799,6 +959,7 @@ mod tests {
             photo: None,
             back_text: String::new(),
             fond: None,
+            ..Default::default()
         });
         assert_eq!(titre_du_livre(&a), "Un été");
         // A cover left blank falls back to the album, it never prints nothing.
@@ -819,6 +980,7 @@ mod tests {
             photo: None,
             back_text: String::new(),
             fond: None,
+            ..Default::default()
         };
         draw_text(&mut content, &mut pdf::Ecrivain::incorporee(), &g, &album_de(12), &cover, pdf::TEXT_INK);
         // The title is on the front and nowhere else: one occurrence. Under
@@ -828,6 +990,174 @@ mod tests {
         let pose: String =
             face.glyphes("Corse").iter().map(|(gid, _)| format!("{gid:04X}")).collect();
         assert_eq!(content.matches(&format!("<{pose}>")).count(), 1, "{content}");
+    }
+
+    /// The quatrième's wrap, through the one [`crate::scene::replier`].
+    fn wrap(e: &pdf::Ecrivain, text: &str, width: f64, size: f64) -> Vec<String> {
+        crate::scene::replier(text, width, size, &|s, pt| e.largeur_mm(s, pt)).0
+    }
+
+    fn photo_q(
+        position: crate::model::PositionQuatrieme,
+        taille: crate::model::TailleQuatrieme,
+    ) -> crate::model::PhotoQuatrieme {
+        crate::model::PhotoQuatrieme {
+            photo: crate::model::Slot::new("a.jpg".into(), [0.5, 0.5]),
+            position,
+            taille,
+        }
+    }
+
+    const PANNEAU: Rect = Rect { x: 27.0, y: 24.0, w: 210.0, h: 210.0 };
+    /// Six points to the character: wide enough to wrap, simple enough to count.
+    fn mesure_simple(s: &str, pt: f64) -> f64 {
+        s.chars().count() as f64 * pt * 0.2
+    }
+
+    /// The nine frames sit inside the inner box, square, centred across, and
+    /// each size is its share of the box.
+    #[test]
+    fn les_neuf_cadres_tiennent_dans_la_boite_interieure() {
+        use crate::model::{PositionQuatrieme as P, TailleQuatrieme as T};
+        let p = &PANNEAU;
+        let marge = p.w * TITLE_INSET;
+        for pos in [P::Haut, P::Centre, P::Bas] {
+            for t in [T::Petite, T::Moyenne, T::Grande] {
+                let c = cadre_quatrieme(p, &photo_q(pos, t));
+                assert!((c.w - c.h).abs() < 1e-9, "carré");
+                assert!((c.w - t.part() * p.w * (1.0 - 2.0 * TITLE_INSET)).abs() < 1e-9);
+                assert!((c.x + c.w / 2.0 - (p.x + p.w / 2.0)).abs() < 1e-9, "centré");
+                assert!(c.y >= p.y + marge - 1e-9 && c.y + c.h <= p.y + p.h - marge + 1e-9);
+                match pos {
+                    P::Haut => assert!((c.y + c.h - (p.y + p.h - marge)).abs() < 1e-9),
+                    P::Bas => assert!((c.y - (p.y + marge)).abs() < 1e-9),
+                    P::Centre => assert!((c.y + c.h / 2.0 - (p.y + p.h / 2.0)).abs() < 1e-9),
+                }
+            }
+        }
+        // Un format en largeur : le côté suit la hauteur, la plus courte.
+        let large = Rect { x: 0.0, y: 0.0, w: 280.0, h: 210.0 };
+        let c = cadre_quatrieme(&large, &photo_q(P::Centre, T::Grande));
+        assert!((c.w - 2.0 / 3.0 * 210.0 * (1.0 - 2.0 * TITLE_INSET)).abs() < 1e-9);
+    }
+
+    /// Le texte prend la bande libre : sous la photo quand elle est en haut ou
+    /// au centre, au-dessus quand elle est en bas, une interligne à l'écart.
+    #[test]
+    fn le_texte_prend_la_bande_que_la_photo_laisse() {
+        use crate::model::{PositionQuatrieme as P, TailleQuatrieme as T};
+        let mut c = Cover { back_text: "Pour Marie.\nEt la suite.".into(), ..Default::default() };
+        for pos in [P::Haut, P::Centre, P::Bas] {
+            c.back_photo = Some(photo_q(pos, T::Moyenne));
+            let q = quatrieme(&PANNEAU, 7.0, &c, 10.5, &mesure_simple);
+            let cadre = q.cadre.clone().unwrap();
+            assert_eq!(q.lignes.len(), 2, "{pos:?}");
+            assert_eq!(q.coupees, 0);
+            let mm = 10.5 * PT_TO_MM;
+            for l in &q.lignes {
+                if pos == P::Bas {
+                    assert!(l.y - mm * ENCRE_BAS > cadre.y + cadre.h, "{pos:?} : au-dessus");
+                } else {
+                    assert!(l.y + mm * ENCRE_HAUT < cadre.y, "{pos:?} : dessous");
+                }
+            }
+            assert_eq!(q.ecarts(&PANNEAU, 7.0), (0, 0), "{pos:?}");
+        }
+    }
+
+    /// Ce qui ne tient pas se compte au lieu de disparaître : un texte trop
+    /// long sous une grande photo laisse des lignes non imprimées, et un mot
+    /// plus large que la page sort du panneau.
+    #[test]
+    fn ce_qui_ne_tient_pas_se_compte() {
+        use crate::model::{PositionQuatrieme as P, TailleQuatrieme as T};
+        let long = vec!["ligne"; 60].join("\n");
+        let c = Cover {
+            back_text: long,
+            back_photo: Some(photo_q(P::Haut, T::Grande)),
+            ..Default::default()
+        };
+        let q = quatrieme(&PANNEAU, 7.0, &c, 10.5, &mesure_simple);
+        assert!(q.coupees > 0, "{}", q.lignes.len());
+        assert_eq!(q.lignes.len() + q.coupees, 60);
+        assert!(q.ecarts(&PANNEAU, 7.0).0 > 0);
+
+        let mot = Cover { back_text: "x".repeat(110), ..Default::default() };
+        let q = quatrieme(&PANNEAU, 7.0, &mot, 10.5, &mesure_simple);
+        assert!(q.trop_large);
+        assert_eq!(q.ecarts(&PANNEAU, 7.0), (1, 0), "plus large que la page");
+        // Plus large que la boîte, pas que la page : la marge avertit.
+        let mot = Cover { back_text: "x".repeat(94), ..Default::default() };
+        let q = quatrieme(&PANNEAU, 7.0, &mot, 10.5, &mesure_simple);
+        assert_eq!(q.ecarts(&PANNEAU, 7.0), (0, 1), "dans la bande sûre");
+    }
+
+    /// La feuille porte la photo de quatrième dans son cadre, et le texte
+    /// dans sa face propre, à sa taille ; le feuillet volant aussi.
+    #[test]
+    fn la_quatrieme_porte_sa_photo_et_sa_face() {
+        use crate::model::{PositionQuatrieme as P, TailleQuatrieme as T};
+        let dir = std::env::temp_dir().join(format!("colophon-quatrieme-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let img = image::RgbImage::from_pixel(1600, 1600, image::Rgb([70, 110, 160]));
+        image::DynamicImage::ImageRgb8(img)
+            .save_with_format(dir.join("a.jpg"), image::ImageFormat::Jpeg)
+            .unwrap();
+        fs::write(dir.join("objet-Essai.ttf"), font::FONT_DATA).unwrap();
+        let mut album = album_de(24);
+        album.root = dir.to_string_lossy().to_string();
+        album.cover = Some(Cover {
+            title: "Corse".into(),
+            photo: Some(crate::model::Slot::new("a.jpg".into(), [0.5, 0.5])),
+            back_text: "Pour Marie.".into(),
+            back_photo: Some(photo_q(P::Bas, T::Petite)),
+            back_police: Some(crate::model::Police {
+                fichier: "objet-Essai.ttf".into(),
+                postscript: "Essai".into(),
+                nom: "Essai".into(),
+            }),
+            back_taille_pt: Some(14.0),
+            ..Default::default()
+        });
+        fs::write(dir.join("album.json"), serde_json::to_string(&album).unwrap()).unwrap();
+        let cp = PrinterProfile::par_id("cloudprinter").unwrap();
+        let out = dir.join("album-cover.pdf");
+        render_cover_pdf_at(&dir, cp, &out, instant()).expect("rendu");
+        let flux = flux_de(&fs::read(&out).unwrap());
+        let g = geometry(&album, cp);
+        let c = cadre_quatrieme(&g.back, album.cover.as_ref().unwrap().back_photo.as_ref().unwrap());
+        let pt = |mm: f64| format!("{:.2}", mm * 72.0 / 25.4);
+        let attendu = format!("q {} {} {} {} re W n", pt(c.x), pt(c.y), pt(c.w), pt(c.h));
+        assert!(flux.contains(&attendu), "cadre {attendu} absent : {flux}");
+        assert!(flux.contains("/Im1 Do") && flux.contains("/Im0 Do"), "{flux}");
+        let quatrieme = flux.lines().find(|l| l.contains("/F2 ")).expect("texte en face 2");
+        assert!(quatrieme.contains("/F2 14"), "à sa taille : {quatrieme}");
+
+        let mut w = PdfWriter::new(&album, &dir);
+        add_cover_page(&mut w, &album, PrinterProfile::par_id("prodigi").unwrap(), Face::Quatrieme)
+            .unwrap();
+        let feuillet = dir.join("feuillet.pdf");
+        w.save(&feuillet).unwrap();
+        let flux = flux_de(&fs::read(&feuillet).unwrap());
+        assert!(flux.contains("/Im1 Do") && flux.contains("/F2 "), "{flux}");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// La taille : celle du format sans champ, la sienne bornée sinon.
+    #[test]
+    fn la_taille_de_la_quatrieme() {
+        let mut c = Cover::default();
+        assert!((taille_quatrieme(&c, 210.0) - BACK_TEXT_PT_AT_210).abs() < 1e-12);
+        assert!((taille_quatrieme(&c, 300.0) - BACK_TEXT_PT_AT_210 * 300.0 / 210.0).abs() < 1e-12);
+        c.back_taille_pt = Some(14.0);
+        assert_eq!(taille_quatrieme(&c, 210.0), 14.0);
+        c.back_taille_pt = Some(0.0);
+        assert_eq!(taille_quatrieme(&c, 210.0), BACK_TAILLE_MIN_PT);
+        c.back_taille_pt = Some(400.0);
+        assert_eq!(taille_quatrieme(&c, 210.0), BACK_TAILLE_MAX_PT);
+        c.back_taille_pt = Some(f64::NAN);
+        assert!((taille_quatrieme(&c, 210.0) - BACK_TEXT_PT_AT_210).abs() < 1e-12);
     }
 
     /// The quatrième wraps on the real widths of the face, inside the panel.
@@ -873,6 +1203,7 @@ mod tests {
             photo: Some(crate::model::Slot::new("a.jpg".into(), [0.5, 0.42])),
             back_text: "Trois semaines sur la côte est.".into(),
             fond: None,
+            ..Default::default()
         });
         fs::write(dir.join("album.json"), serde_json::to_string(&album).unwrap()).unwrap();
 
@@ -992,6 +1323,7 @@ mod tests {
             photo: None,
             back_text: "Trois semaines sur la côte est.".into(),
             fond: fond.map(str::to_string),
+            ..Default::default()
         });
         fs::write(dir.join("album.json"), serde_json::to_string(&album).unwrap()).unwrap();
         let out = dir.join("album-cover.pdf");
@@ -1104,6 +1436,7 @@ mod tests {
             photo: Some(crate::model::Slot::new("a.jpg".into(), [0.5, 0.42])),
             back_text: "Pour Marie.".into(),
             fond: Some("#f3ead8".into()),
+            ..Default::default()
         });
         let gen = PrinterProfile::par_id("generique").unwrap();
         for (face, nom) in [(Face::Premiere, "premiere"), (Face::Quatrieme, "quatrieme")] {
@@ -1187,6 +1520,7 @@ mod tests {
             photo: Some(crate::model::Slot::new("a.jpg".into(), [0.5, 0.42])),
             back_text: "Trois semaines sur la côte est.".into(),
             fond: None,
+            ..Default::default()
         });
         fs::write(dir.join("album.json"), serde_json::to_string(&album).unwrap()).unwrap();
 

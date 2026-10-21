@@ -3706,29 +3706,102 @@ kbd {
   box-shadow: var(--shadow-paper);
 }
 
+/* La quatrième (1.2-d) : le panneau est un conteneur, pour que 100cqw y
+   soit sa largeur, donc la largeur du livre en millimètres. Le texte s'y
+   dessine à sa taille d'impression, comme un bloc libre : ni grossi, ni
+   plancher de lisibilité. */
 .cover-back {
   position: relative;
-  display: grid;
-  place-items: center;
   min-width: 0;
+  container-type: size;
 }
 
-.cover-back-text {
-  width: 70%;
-  height: 40%;
+.cover-back-lignes {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  fill: var(--paper-ink);
+  font-kerning: none;
+  font-feature-settings: "liga" 0, "clig" 0, "kern" 0;
+}
+
+.cover-back-zone {
+  position: absolute;
   background: transparent;
+  border: 1px dashed transparent;
+  cursor: text;
+  color: rgb(var(--paper-ink-rgb) / 0.4);
+  font-size: var(--fs-12);
+}
+
+.cover-back-zone:hover,
+.cover-back-zone:focus-visible,
+.cover-back-zone.vide {
+  border-color: rgb(var(--ink-rgb) / 0.22);
+}
+
+.cover-back-champ {
+  position: absolute;
+  padding: 0;
   border: 0;
-  outline: none;
+  outline: 1px solid var(--accent);
+  background: transparent;
   resize: none;
+  overflow: hidden;
   text-align: center;
-  font-family: var(--font-book);
-  font-size: clamp(11px, 1.4vw, 16px);
-  line-height: var(--lh-read);
+  font-family: inherit;
+  font-size: calc(var(--q-taille-mm) * 100cqw / var(--q-panneau-mm));
+  font-kerning: none;
+  font-feature-settings: "liga" 0, "clig" 0, "kern" 0;
   color: var(--paper-ink);
 }
 
-.cover-back-text::placeholder {
-  color: rgb(var(--paper-ink-rgb) / 0.4);
+.cover-back-cadre {
+  position: absolute;
+  overflow: hidden;
+}
+
+.cover-q {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 14px;
+  color: var(--muted);
+  font-size: var(--fs-12);
+}
+
+.cover-q-titre {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cover-q-groupe {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cover-q-groupe [aria-pressed="true"] {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.cover-q-alerte {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+  color: var(--accent);
+}
+
+.cover-q-polices {
+  flex-basis: 100%;
+  max-height: min(360px, 45vh);
+  overflow-y: auto;
+  border-top: 1px solid var(--rule);
+  padding-top: 4px;
 }
 
 .cover-spine {
@@ -3829,14 +3902,18 @@ kbd {
   background: var(--couv-fond);
 }
 
-.cover-sheet.avec-fond .cover-back-text,
+.cover-sheet.avec-fond .cover-back-champ,
 .cover-sheet.avec-fond .cover-spine-title,
 .cover-sheet.avec-fond .cover-front:not(:has(.cover-photo)) .cover-title-input,
 .cover-sheet.avec-fond .cover-front:not(:has(.cover-photo)) .cover-subtitle-input {
   color: var(--couv-encre);
 }
 
-.cover-sheet.avec-fond .cover-back-text::placeholder {
+.cover-sheet.avec-fond .cover-back-lignes {
+  fill: var(--couv-encre);
+}
+
+.cover-sheet.avec-fond .cover-back-zone {
   color: color-mix(in srgb, var(--couv-encre) 45%, transparent);
 }
 

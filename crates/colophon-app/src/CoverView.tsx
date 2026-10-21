@@ -29,6 +29,9 @@ import { cachedThumb, loadThumb } from "./thumbs";
 import { couleurValide, encreSurFond } from "./couleur";
 import { Livre3D } from "./Livre3D";
 import { PaletteFond } from "./PaletteFond";
+import { QuatriemePanneau, QuatriemeReglages } from "./QuatriemeView";
+import { avecCadre, avecPhotoQuatrieme } from "./quatrieme";
+import type { PoliceOfferte } from "./bridge";
 
 /** Le livre en petit, sous la feuille. */
 const HAUTEUR_LIVRE_PX = 84;
@@ -41,6 +44,8 @@ export function CoverView({
   onReglage,
   choixALOuverture = false,
   onChoixOuvert,
+  polices = [],
+  onPolices = () => {},
 }: {
   album: Album;
   /** The supplier the sheet is drawn for. Null while the profiles load: the
@@ -60,12 +65,19 @@ export function CoverView({
   /** Le choix s'est ouvert : l'appelant oublie la demande, pour qu'un retour
    *  à la couverture plus tard ne le rouvre pas. */
   onChoixOuvert?: () => void;
+  /** Les faces de la machine, pour la police de la quatrième. */
+  polices?: PoliceOfferte[];
+  /** Les lire, à la première ouverture de la liste. */
+  onPolices?: () => void;
 }) {
   const cover: Cover = album.cover ?? { title: album.title };
   // Text fields edit a local form and land on the undo stack at blur:
   // one ⌘Z per field touched, not one per keystroke.
   const [form, setForm] = useState<Cover>(cover);
-  const [picking, setPicking] = useState(choixALOuverture);
+  // Le choix de photo sert les deux faces : la première, ou la quatrième.
+  const [picking, setPicking] = useState<false | "premiere" | "quatrieme">(
+    choixALOuverture ? "premiere" : false,
+  );
   useEffect(() => {
     if (choixALOuverture) onChoixOuvert?.();
     // Une fois, à l'arrivée.
@@ -139,16 +151,16 @@ export function CoverView({
         className={"cover-sheet" + (fond ? " avec-fond" : "")}
         style={{ aspectRatio: `${album.trim_mm.w * 2 + spine} / ${album.trim_mm.h}`, ...peint }}
       >
-        {/* Back cover: the quatrième, optional. */}
-        <div className="cover-back" style={{ flex: album.trim_mm.w }}>
-          <textarea
-            className="cover-back-text"
-            value={form.back_text ?? ""}
-            placeholder={t("couverture.quatrieme")}
-            onChange={(e) => setForm({ ...form, back_text: e.target.value })}
-            onBlur={commitForm}
-          />
-        </div>
+        {/* Back cover: the quatrième, at its print size (1.2-d). */}
+        <QuatriemePanneau
+          cover={cover}
+          form={form}
+          trim={album.trim_mm}
+          safe={printer?.safe_mm ?? 0}
+          onForm={(back_text) => setForm((f) => ({ ...f, back_text }))}
+          onCommit={commitForm}
+          onCadre={(photo) => onCover(avecCadre({ ...form, back_photo: cover.back_photo }, { photo }))}
+        />
 
         {/* Spine: the profile's width, title along it above the floor where
             type stops being readable on a fold. */}
@@ -175,7 +187,7 @@ export function CoverView({
               onChange={(photo) => set({ photo })}
             />
           ) : (
-            <button className="cover-photo-empty" onClick={() => setPicking(true)}>
+            <button className="cover-photo-empty" onClick={() => setPicking("premiere")}>
               {t("couverture.choisir.photo")}
             </button>
           )}
@@ -202,7 +214,7 @@ export function CoverView({
           {cover.photo && (
             <button
               className="cover-photo-change"
-              onClick={() => setPicking(true)}
+              onClick={() => setPicking("premiere")}
               title={t("couverture.changer.titre")}
             >
               {t("couverture.changer")}
@@ -219,6 +231,15 @@ export function CoverView({
           <ReglageBloc src={cover.photo.src} onCommit={onReglage} />
         </div>
       )}
+
+      <QuatriemeReglages
+        cover={cover}
+        trimW={album.trim_mm.w}
+        polices={polices}
+        onPolices={onPolices}
+        onCover={onCover}
+        onChoisirPhoto={() => setPicking("quatrieme")}
+      />
 
       {/* Le fond, et le livre en petit qui le montre en volume. */}
       <div className="cover-fond">
@@ -256,29 +277,36 @@ export function CoverView({
       {picking && (
         <div className="cover-picker" role="listbox">
           <header className="cover-picker-bar">
-            <span>{t("couverture.picker.titre")}</span>
+            <span>
+              {t(picking === "quatrieme" ? "couverture.picker.quatrieme" : "couverture.picker.titre")}
+            </span>
             <button className="link" onClick={() => setPicking(false)}>
               {t("commun.fermer")}
             </button>
           </header>
           <div className="cover-picker-grid">
-            {srcs.map((src) => (
-              <button
-                key={src}
-                role="option"
-                aria-selected={cover.photo?.src === src}
-                className={
-                  "cover-picker-cell" +
-                  (cover.photo?.src === src ? " active" : "")
-                }
-                onClick={() => {
-                  set({ photo: { src, focal: [0.5, 0.42] } });
-                  setPicking(false);
-                }}
-              >
-                <LazyThumb src={src} />
-              </button>
-            ))}
+            {srcs.map((src) => {
+              const choisie =
+                (picking === "quatrieme" ? cover.back_photo?.photo.src : cover.photo?.src) === src;
+              return (
+                <button
+                  key={src}
+                  role="option"
+                  aria-selected={choisie}
+                  className={"cover-picker-cell" + (choisie ? " active" : "")}
+                  onClick={() => {
+                    if (picking === "quatrieme") {
+                      onCover(avecPhotoQuatrieme({ ...form, back_photo: cover.back_photo }, src));
+                    } else {
+                      set({ photo: { src, focal: [0.5, 0.42] } });
+                    }
+                    setPicking(false);
+                  }}
+                >
+                  <LazyThumb src={src} />
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -287,13 +315,16 @@ export function CoverView({
 }
 
 /** The front-cover photo: full-bleed, recroppable with the same gestures
- *  as a case (drag to frame, ⌥ refines, wheel to zoom). */
-function CoverPhoto({
+ *  as a case (drag to frame, ⌥ refines, wheel to zoom). The back cover's
+ *  framed photo is the same component in a smaller box. */
+export function CoverPhoto({
   photo,
   onChange,
+  titre,
 }: {
   photo: Slot;
   onChange: (photo: Slot) => void;
+  titre?: string;
 }) {
   const [url, setUrl] = useState<string | undefined>(() => cachedThumb(photo.src));
   const [draft, setDraft] = useState<Slot | null>(null);
@@ -383,7 +414,7 @@ function CoverPhoto({
         gesture.current = null;
         if (draft) onChange(draft);
       }}
-      title={t("planche.couverture.recadrer")}
+      title={titre ?? t("planche.couverture.recadrer")}
     >
       {url && (
         <img

@@ -302,7 +302,7 @@ impl Slot {
 
 /// The book's cover. Absent on albums composed before the cover editor;
 /// the interface then seeds it from the album title.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Cover {
     #[serde(default)]
     pub title: String,
@@ -321,6 +321,60 @@ pub struct Cover {
     /// visible. Elle se lit par [`Cover::fond_rgb`], jamais autrement.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fond: Option<String>,
+    /// La photo encadrée de la quatrième (1.2-d). Additive comme `fond`,
+    /// sans montée de schéma : une version plus ancienne la perd à
+    /// l'enregistrement, et la quatrième retombe sur son seul texte.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub back_photo: Option<PhotoQuatrieme>,
+    /// La face du texte de la quatrième, un fichier `objet-*` comme celle
+    /// d'un bloc ; absente, la face du livre.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub back_police: Option<Police>,
+    /// La taille du texte de la quatrième, en points d'impression ; absente,
+    /// celle que le format donne ([`crate::cover::taille_quatrieme`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub back_taille_pt: Option<f64>,
+}
+
+/// La photo de la quatrième : un cadre carré, posé dans la page et jamais à
+/// fond perdu, recadré comme une case.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PhotoQuatrieme {
+    pub photo: Slot,
+    #[serde(default)]
+    pub position: PositionQuatrieme,
+    #[serde(default)]
+    pub taille: TailleQuatrieme,
+}
+
+/// Où le cadre se tient dans la hauteur de la quatrième.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PositionQuatrieme {
+    #[default]
+    Haut,
+    Centre,
+    Bas,
+}
+
+/// La part de la boîte intérieure que le côté du cadre prend.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TailleQuatrieme {
+    Petite,
+    #[default]
+    Moyenne,
+    Grande,
+}
+
+impl TailleQuatrieme {
+    pub fn part(self) -> f64 {
+        match self {
+            TailleQuatrieme::Petite => 1.0 / 3.0,
+            TailleQuatrieme::Moyenne => 0.5,
+            TailleQuatrieme::Grande => 2.0 / 3.0,
+        }
+    }
 }
 
 impl Cover {

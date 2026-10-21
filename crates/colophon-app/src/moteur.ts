@@ -111,6 +111,17 @@ export const PHRASES_EN: Record<string, string> = {
   "couverture_vide.dossier":
     "the cover has no photo: it would print blank, with only the folder’s name",
   "couverture_vide.choisir": "choose a photo in Cover",
+  quatrieme_deborde:
+    "{n} line(s) of the back cover do not fit on the page: they leave the panel, run onto the photo or do not print",
+  "quatrieme_deborde.raccourcir":
+    "shorten the back-cover text, or make it or its photo smaller",
+  quatrieme_zone_sure:
+    "the back-cover text or photo enters the {sure_mm} mm safety margin {imprimeur} asks for",
+  "quatrieme_zone_sure.reduire": "make the back-cover text smaller, or break the overlong word",
+  quatrieme_resolution:
+    "{src} would print at {ppi} ppi on the back cover, {imprimeur} requires {min_ppi}",
+  "quatrieme_resolution.choisir":
+    "choose a higher-resolution photo for the back cover, or a smaller frame",
   dos_nu:
     "the spine is {dos_mm} mm wide: under {min_mm} mm it carries no title, so it will come out bare",
   "dos_nu.ajouter":

@@ -142,6 +142,22 @@
       "imprimeur",
       "pas"
     ],
+    "quatrieme_deborde": [
+      "n"
+    ],
+    "quatrieme_deborde.raccourcir": [],
+    "quatrieme_resolution": [
+      "src",
+      "ppi",
+      "imprimeur",
+      "min_ppi"
+    ],
+    "quatrieme_resolution.choisir": [],
+    "quatrieme_zone_sure": [
+      "imprimeur",
+      "sure_mm"
+    ],
+    "quatrieme_zone_sure.reduire": [],
     "resolution": [
       "src",
       "ppi",
@@ -178,6 +194,9 @@
     "objet_coupe",
     "objet_pli",
     "pagination",
+    "quatrieme_deborde",
+    "quatrieme_resolution",
+    "quatrieme_zone_sure",
     "resolution",
     "zone_sure"
   ],

@@ -843,6 +843,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                     photo: Some(model::Slot::new(src.to_string(), focal)),
                     back_text: String::new(),
                     fond: None,
+                    ..Default::default()
                 }
             });
         }
@@ -1281,6 +1282,8 @@ pub fn elaguer_polices_objet(dir: &Path, album: &model::Album) -> usize {
         .iter()
         .flat_map(|s| &s.objets)
         .filter_map(|o| o.police.as_ref().map(|p| p.fichier.as_str()))
+        // La quatrième peut porter une face de la même grammaire (1.2-d).
+        .chain(album.cover.iter().filter_map(|c| c.back_police.as_ref()).map(|p| p.fichier.as_str()))
         .collect();
     let Ok(entrees) = fs::read_dir(dir) else { return 0 };
     let mut n = 0;
@@ -1838,6 +1841,7 @@ mod tests {
             photo: None,
             back_text: "quatrième".into(),
             fond: None,
+            ..Default::default()
         };
         let opts = BuildOptions { cover: Some(main.clone()), ..options_datees() };
         let repris = build_album(&photos, &out, opts).unwrap().album;
@@ -2882,8 +2886,15 @@ mod tests {
         for reste in ["objet-Garde-Bold.ttf", crate::font::POLICE_TTF, "objet-Orpheline.otf.tmp", "notes.txt", OUVERTURE] {
             assert!(dir.join(reste).exists(), "{reste} reste");
         }
+        // La quatrième nomme la sienne : elle reste, même sans aucun bloc.
+        fs::write(dir.join("objet-Quatrieme.ttf"), b"x").unwrap();
+        album.cover = Some(model::Cover {
+            back_police: Some(police_d_objet("objet-Quatrieme.ttf")),
+            ..Default::default()
+        });
         album.spreads.clear();
         assert_eq!(elaguer_polices_objet(&dir, &album), 1, "plus personne ne la nomme");
+        assert!(dir.join("objet-Quatrieme.ttf").exists(), "celle de la quatrième reste");
         assert!(dir.join(crate::font::POLICE_TTF).exists(), "le livre n'est jamais touché");
         assert_eq!(elaguer_polices_objet(&dir.join("absent"), &album), 0);
         let _ = fs::remove_dir_all(&dir);
