@@ -1,0 +1,251 @@
+{
+  "date": "2026-10-20",
+  "session": "1.1-d",
+  "objet": "Album neuf sans faux-titre : la première planche ne porte rien sur sa page gauche (collée dans la couverture chez Cloudprinter), le reste du livre est celui d'hier.",
+  "methode": "booklibre --depuis-fiches crates/colophon-core/fiches/<jeu>.json, SOURCE_DATE_EPOCH=1760000000 ; « avant » = --garde (le Composer ne force rien quand il y a un faux-titre, donc la composition d'hier), « après » = le défaut. Prévol : --prevol --profil cloudprinter --sans-fichiers. Audit : --audit.",
+  "preuve_inversee": {
+    "corse-2013": {
+      "planches_avant": 54,
+      "planches_apres": 53,
+      "avant_planche_1": "garde",
+      "avant_planche_2": {
+        "gabarit": "full1",
+        "photo": "2013-10-27_160159_IMG_2652.jpg",
+        "legende": "Calvi, 27 octobre 2013"
+      },
+      "apres_planche_1": {
+        "gabarit": "g_v_1x1l_b8",
+        "photo": "2013-10-27_160159_IMG_2652.jpg",
+        "legende": "Calvi, 27 octobre 2013"
+      },
+      "planches_suivantes_differentes": 0,
+      "autres_champs_differents": [],
+      "prevol_cloudprinter_apres": []
+    },
+    "mauritanie-2019": {
+      "planches_avant": 59,
+      "planches_apres": 58,
+      "avant_planche_1": "garde",
+      "avant_planche_2": {
+        "gabarit": "solo",
+        "photo": "2019-03-10_210002_IMG_1009.heic",
+        "legende": "Atar, 24 février 2019"
+      },
+      "apres_planche_1": {
+        "gabarit": "g_v_1x1q_b8",
+        "photo": "2019-03-10_210002_IMG_1009.heic",
+        "legende": "Atar, 24 février 2019"
+      },
+      "planches_suivantes_differentes": 0,
+      "autres_champs_differents": [],
+      "prevol_cloudprinter_apres": []
+    },
+    "random-2024": {
+      "planches_avant": 52,
+      "planches_apres": 51,
+      "avant_planche_1": "garde",
+      "avant_planche_2": {
+        "gabarit": "full1",
+        "photo": "2024-01-09/IMG_5148.jpg",
+        "legende": "4 janvier – 10 février 2024"
+      },
+      "apres_planche_1": {
+        "gabarit": "g_v_1x1q_b8",
+        "photo": "2024-01-09/IMG_5148.jpg",
+        "legende": "4 janvier – 10 février 2024"
+      },
+      "planches_suivantes_differentes": 0,
+      "autres_champs_differents": [],
+      "prevol_cloudprinter_apres": []
+    }
+  },
+  "formats": {
+    "carre-21/corse-2013": {
+      "planche_1": "g_v_1x1l_b8",
+      "defauts": []
+    },
+    "carre-21/mauritanie-2019": {
+      "planche_1": "g_v_1x1q_b8",
+      "defauts": []
+    },
+    "carre-21/random-2024": {
+      "planche_1": "g_v_1x1q_b8",
+      "defauts": []
+    },
+    "carre-30/corse-2013": {
+      "planche_1": "g_v_1x1l_b8",
+      "defauts": []
+    },
+    "carre-30/mauritanie-2019": {
+      "planche_1": "g_v_1x1q_b8",
+      "defauts": []
+    },
+    "carre-30/random-2024": {
+      "planche_1": "g_v_1x1q_b8",
+      "defauts": []
+    },
+    "portrait-a4/corse-2013": {
+      "planche_1": "g_v_1x1l_b8",
+      "defauts": []
+    },
+    "portrait-a4/mauritanie-2019": {
+      "planche_1": "g_v_1x1q_b8",
+      "defauts": []
+    },
+    "portrait-a4/random-2024": {
+      "planche_1": "g_v_1x1q_b8",
+      "defauts": []
+    },
+    "paysage-a4/corse-2013": {
+      "planche_1": "g_v_1x1l_b8",
+      "defauts": []
+    },
+    "paysage-a4/mauritanie-2019": {
+      "planche_1": "g_v_1x1q_b8",
+      "defauts": []
+    },
+    "paysage-a4/random-2024": {
+      "planche_1": "g_v_1x1q_b8",
+      "defauts": []
+    },
+    "paysage-28x21/corse-2013": {
+      "planche_1": "g_v_1x1l_b8",
+      "defauts": [
+        [
+          "format_sans_produit",
+          true
+        ]
+      ]
+    },
+    "paysage-28x21/mauritanie-2019": {
+      "planche_1": "g_v_1x1q_b8",
+      "defauts": [
+        [
+          "format_sans_produit",
+          true
+        ]
+      ]
+    },
+    "paysage-28x21/random-2024": {
+      "planche_1": "g_v_1x1q_b8",
+      "defauts": [
+        [
+          "format_sans_produit",
+          true
+        ]
+      ]
+    },
+    "portrait-20x25/corse-2013": {
+      "planche_1": "g_v_1x1l_b8",
+      "defauts": [
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ]
+      ]
+    },
+    "portrait-20x25/mauritanie-2019": {
+      "planche_1": "g_v_1x1q_b8",
+      "defauts": [
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ]
+      ]
+    },
+    "portrait-20x25/random-2024": {
+      "planche_1": "g_v_1x1q_b8",
+      "defauts": [
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ],
+        [
+          "zone_sure",
+          false
+        ]
+      ]
+    }
+  },
+  "lecture": "Seule la première planche change (même photo, même légende, gabarit à droite seule avec bande) ; aucun défaut de prévol sur la planche 1 dans les 18 albums ; les seuls bloquants restants sont format_sans_produit en 28 × 21, connu. Audit vert partout. Une première version préférait la pleine page à bande (g_v_p_b8) : sa légende tombait sous la zone sûre (avertissement zone_sure planche 1 sur les trois jeux) ; le rang préfère désormais une légende à la hauteur des autres."
+}

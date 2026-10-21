@@ -678,8 +678,9 @@ pub fn check_mesure(
                         profil.nom,
                         if objets > 1 { "s" } else { "" }
                     ),
-                    remede: "cochez la page de garde dans l'écran Envoi : elle se pose en tête et \
-                             sa page de gauche reste blanche"
+                    remede: "déplacez ce qui est sur la page de gauche, ou ajoutez la page de garde \
+                             dans l'écran Envoi : elle se pose en tête et sa page de gauche reste \
+                             blanche"
                         .into(),
                     phrase: if objets > 1 {
                         phrase(
@@ -1750,6 +1751,7 @@ mod tests {
         assert!(refus[0].bloquant);
         assert_eq!(refus[0].planche, Some(1));
         assert!(refus[0].remede.contains("page de garde"), "{}", refus[0].remede);
+        assert!(refus[0].remede.starts_with("déplacez"), "{}", refus[0].remede);
         assert!(!r.ok);
 
         // La même planche ailleurs dans le livre ne gêne personne : c'est la

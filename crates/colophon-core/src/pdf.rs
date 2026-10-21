@@ -832,7 +832,13 @@ pub fn caption_anchor_of(
         // baseline drops under the lowest one like a photo caption does.
         let bas = rects.iter().map(|r| r.y).fold(f64::INFINITY, f64::min);
         if bas.is_finite() {
-            return Point { x: c[0].x, y: bas - PHOTO_CAPTION_DROP_MM };
+            // On the page that carries the frame: a spread whose photos are
+            // all on the right hangs its band there, not on the empty left
+            // page — the one the single-page cut drops on the first spread
+            // (1.1-d). Anything with a photo on the left keeps its anchor.
+            let a_droite = rects.iter().all(|r| r.x >= g.media_w / 2.0);
+            let x = if a_droite { c[1].x } else { c[0].x };
+            return Point { x, y: bas - PHOTO_CAPTION_DROP_MM };
         }
     }
     if declared < 0.0 {

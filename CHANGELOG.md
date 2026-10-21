@@ -20,6 +20,13 @@ sur la page des releases.
 
 ### Changed
 
+- A new album opens on a photograph: the half-title page is no longer added
+  (its days and towns stay on the colophon page, and you can still tick it in
+  Send). The first left page, pasted inside the cover at Cloudprinter, is
+  shown greyed out in the editor and in the spread table, and anything dropped
+  on it is refused with a sentence saying why. Albums composed before keep
+  their half-title. On the command line, `--garde` brings it back.
+
 - A photo under 250 ppi no longer blocks the export. Send names the pages it
   is on and lets you decide: "Download the PDF" asks once, naming them, then
   exports; ordering through Booklibre asks you to tick a box that names them.

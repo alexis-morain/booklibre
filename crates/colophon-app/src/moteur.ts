@@ -80,7 +80,7 @@ export const PHRASES_EN: Record<string, string> = {
   "imposition.objets":
     "{imprimeur} binds one PDF page per book page, and the left page of the first spread is not printed: it holds {objets} objects that would be lost",
   "imposition.garde":
-    "tick the half-title in Send: it goes first, and its left page stays blank",
+    "move what is on the left page, or add the half-title in Send: it goes first, and its left page stays blank",
   fond_perdu:
     "the album is composed with {album_mm} mm of bleed, {imprimeur} asks for {requis_mm}",
   "fond_perdu.recomposer":

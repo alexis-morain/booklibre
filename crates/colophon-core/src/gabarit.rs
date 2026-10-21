@@ -827,6 +827,32 @@ mod tests {
         assert!((r.y + r.h - g.media_h).abs() < 1e-9);
     }
 
+    /// 1.1-d : la bande pend sous le cadre, donc sur la page qui le porte.
+    /// Une photo seule à droite avec bande posait sa légende sur la gauche
+    /// vide, celle que la découpe en pages simples n'imprime pas pour la
+    /// première planche. Les gabarits qui portent une photo à gauche ne
+    /// bougent pas d'un micron.
+    #[test]
+    fn la_bande_pend_sur_la_page_qui_porte_les_photos() {
+        let g = geom();
+        let pli = g.media_w / 2.0;
+        for nom in ["g_v_p_b8", "g_v_1x1q_b8", "g_v_1x1l_b8"] {
+            let r = crate::pdf::slots_for(nom, 1, &g);
+            let at = crate::pdf::caption_anchor(nom, &r, &g);
+            assert!(at.x > pli, "{nom} : légende à {} pour un pli à {pli}", at.x);
+            let verso = format!("{nom}_verso");
+            let r = crate::pdf::slots_for(&verso, 1, &g);
+            let at = crate::pdf::caption_anchor(&verso, &r, &g);
+            assert!(at.x < pli, "{verso} : sa photo est à gauche, sa légende aussi");
+        }
+        // Une bande sur deux pages garde l'ancre d'hier, à gauche.
+        let r = crate::pdf::slots_for("g_1x1q_1x1q_b8", 2, &g);
+        let deux = crate::pdf::caption_anchor("g_1x1q_1x1q_b8", &r, &g);
+        let r = crate::pdf::slots_for("g_v_1x1q_b8_verso", 1, &g);
+        let gauche = crate::pdf::caption_anchor("g_v_1x1q_b8_verso", &r, &g);
+        assert_eq!(deux.x, gauche.x);
+    }
+
     /// A declared overlay prints over the photo: the geometry is exactly the
     /// zero-height one, only the caption's place and the linter's verdict
     /// change.

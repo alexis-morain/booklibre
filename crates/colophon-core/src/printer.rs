@@ -205,7 +205,17 @@ impl PrinterProfile {
     pub fn par_id(id: &str) -> Option<&'static PrinterProfile> {
         PROFILS.iter().find(|p| p.id == id)
     }
+
+    /// Le profil qu'un album neuf vise sans qu'on le lui dise : celui de la
+    /// CLI (`--profil`) et des deux portes d'Envoi. Le Composer le lit pour
+    /// savoir si la première page de gauche s'imprimera (1.1-d).
+    pub fn defaut() -> &'static PrinterProfile {
+        Self::par_id(PROFIL_DEFAUT).expect("le profil par défaut est dans la liste")
+    }
 }
+
+/// L'identifiant du profil par défaut, en toutes lettres pour `clap`.
+pub const PROFIL_DEFAUT: &str = "cloudprinter";
 
 /// Reference paper weight of the spine coefficients, in g/m².
 pub const GRAMMAGE_REFERENCE: f64 = 150.0;

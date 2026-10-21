@@ -287,6 +287,51 @@ export function coteDe(r: Rect, g: SpreadGeometry): Cote {
   return r.x + r.w / 2 < g.w / 2 ? -1 : 1;
 }
 
+/** Ce que le prévol lit d'un profil pour la page collée. */
+type Reliure = { pages_simples: boolean } | null | undefined;
+
+/** La moitié gauche de la planche `planche` est-elle collée dans la
+ *  couverture ? Chez qui relie page par page, la première page de gauche ne
+ *  s'imprime pas (`imposition.rs`) : la condition du prévol, et la seule. */
+function collee(planche: number, profil: Reliure): boolean {
+  return planche === 0 && profil?.pages_simples === true;
+}
+
+/**
+ * 1.1-d : ce point de la planche tombe-t-il sur la page collée dans la
+ * couverture ? `x` en millimètres de la planche, fond perdu compris. C'est le
+ * prédicat que l'éditeur partage — la moitié grisée, le dépôt refusé, la
+ * vignette de la table — et il dit la même chose que le prévol, qui bloque
+ * ce que cette page porterait (`imposition::objets_a_gauche`). Un profil
+ * encore inconnu ne refuse rien.
+ */
+export function gaucheCollee(
+  planche: number,
+  profil: Reliure,
+  x: number,
+  g: SpreadGeometry,
+): boolean {
+  return collee(planche, profil) && x < g.w / 2;
+}
+
+/**
+ * La page où un bloc ou un ornement naît : `droite` vrai ou faux, ou `null`
+ * quand la pose vise la page collée et se refuse. Sans page visée (le bouton
+ * de la barre), la gauche d'hier, sauf sur la page collée, où c'est la
+ * droite : rien n'y a été lâché, il n'y a rien à refuser.
+ */
+export function pageDePose(planche: number, profil: Reliure, droite?: boolean): boolean | null {
+  if (droite === undefined) return collee(planche, profil);
+  if (!droite && collee(planche, profil)) return null;
+  return droite;
+}
+
+/** Combien de la planche la page collée couvre, en millimètres depuis le
+ *  bord gauche du fond perdu : la moitié, ou rien. */
+export function largeurCollee(planche: number, profil: Reliure, g: SpreadGeometry): number {
+  return collee(planche, profil) ? g.w / 2 : 0;
+}
+
 /**
  * Ramener une boîte du bon côté du pli, en la translatant.
  *
