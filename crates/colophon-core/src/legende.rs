@@ -11,7 +11,7 @@
 
 use crate::langue::Langue;
 use crate::meta;
-use crate::model::Album;
+use crate::model::{Album, FormatDate, Legendes, Mention};
 use crate::places;
 use chrono::NaiveDate;
 use std::collections::BTreeMap;
@@ -99,6 +99,71 @@ pub fn dates_fiables(album: &Album, langue: Langue) -> BTreeMap<String, String> 
         }
     }
     dates
+}
+
+/// Ce que le réglage « sous les photos » écrit sous une photo, ou None
+/// (1.2-b). Rien n'est inventé : une date seulement si elle est fiable, un
+/// lieu seulement si le gazetteer en nomme un à moins de
+/// [`places::MAX_KM`]. Demandés ensemble et connus à moitié, on écrit la
+/// moitié connue.
+pub fn mention(root: &Path, src: &str, reglage: &Legendes) -> Option<String> {
+    let path = root.join(src);
+    if !path.is_file() {
+        return None;
+    }
+    let m = meta::read(&path);
+    let jour = m.taken_reliable.then(|| m.taken.date());
+    let lieu = m.gps.and_then(|(lat, lon)| places::nearest(lat, lon)).map(|(c, _)| c.name);
+    texte_de_mention(jour, lieu, reglage)
+}
+
+/// La table des mentions par src, pour les photos que l'app nomme : celles
+/// de l'album et celles de la réserve, qui peuvent y entrer. Une photo sans
+/// entrée est une photo sous laquelle rien ne s'écrit.
+pub fn mentions(album: &Album, reglage: &Legendes, srcs: &[String]) -> BTreeMap<String, String> {
+    let root = Path::new(&album.root);
+    let mut table = BTreeMap::new();
+    let posees = album.spreads.iter().flat_map(|s| &s.slots).map(|s| &s.src);
+    for src in posees.chain(srcs.iter()) {
+        if table.contains_key(src) {
+            continue;
+        }
+        if let Some(t) = mention(root, src, reglage) {
+            table.insert(src.clone(), t);
+        }
+    }
+    table
+}
+
+/// Pose sur chaque case la mention que [`Album::legendes`] demande, et
+/// l'ôte partout quand il n'en demande aucune. La seule écriture de
+/// `Slot::mention` du moteur : la composition et la recomposition
+/// l'appellent, l'app pose la même table par la commande `mentions_photos`.
+/// Aucune planche n'en devient `edited` : ce ne sont pas des mots de la main.
+pub fn poser_mentions(album: &mut Album) {
+    let table = match &album.legendes {
+        Some(r) => mentions(album, r, &[]),
+        None => BTreeMap::new(),
+    };
+    for slot in album.spreads.iter_mut().flat_map(|s| s.slots.iter_mut()) {
+        slot.mention = table.get(&slot.src).cloned();
+    }
+}
+
+/// La règle d'écriture, pure pour se tester sans photos.
+fn texte_de_mention(jour: Option<NaiveDate>, lieu: Option<&str>, r: &Legendes) -> Option<String> {
+    let date = jour.map(|d| match r.date {
+        FormatDate::Jour => r.langue.date(d, true),
+        FormatDate::Court => r.langue.date_courte(d),
+        FormatDate::Mois => r.langue.mois(d),
+    });
+    match (r.contenu, lieu, date) {
+        (Mention::Date, _, d) => d,
+        (Mention::Lieu, l, _) => l.map(str::to_string),
+        (Mention::DateLieu, Some(l), Some(d)) => Some(format!("{l}, {d}")),
+        (Mention::DateLieu, Some(l), None) => Some(l.to_string()),
+        (Mention::DateLieu, None, d) => d,
+    }
 }
 
 /// The day every trusted date of the spread agrees on. A spread shot across
@@ -310,6 +375,102 @@ mod tests {
         );
         assert_eq!(date_de(&dir, "b.jpg", Langue::Fr), None);
         assert_eq!(date_de(&dir, "c.jpg", Langue::Fr), None);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn reglage(contenu: Mention, date: FormatDate, langue: Langue) -> Legendes {
+        Legendes { contenu, date, langue }
+    }
+
+    /// Les quatre réglages devant les quatre états d'une photo : rien n'est
+    /// inventé, la moitié connue s'écrit seule.
+    #[test]
+    fn la_mention_n_ecrit_que_ce_que_la_photo_sait() {
+        let dl = reglage(Mention::DateLieu, FormatDate::Jour, Langue::Fr);
+        assert_eq!(texte_de_mention(Some(j(27)), Some("Calvi"), &dl).as_deref(), Some("Calvi, 27 octobre 2013"));
+        assert_eq!(texte_de_mention(None, Some("Calvi"), &dl).as_deref(), Some("Calvi"));
+        assert_eq!(texte_de_mention(Some(j(27)), None, &dl).as_deref(), Some("27 octobre 2013"));
+        assert_eq!(texte_de_mention(None, None, &dl), None);
+
+        let d = reglage(Mention::Date, FormatDate::Jour, Langue::Fr);
+        assert_eq!(texte_de_mention(Some(j(27)), Some("Calvi"), &d).as_deref(), Some("27 octobre 2013"));
+        assert_eq!(texte_de_mention(None, Some("Calvi"), &d), None, "le lieu ne remplace pas la date");
+
+        let l = reglage(Mention::Lieu, FormatDate::Jour, Langue::Fr);
+        assert_eq!(texte_de_mention(Some(j(27)), Some("Calvi"), &l).as_deref(), Some("Calvi"));
+        assert_eq!(texte_de_mention(Some(j(27)), None, &l), None, "la date ne remplace pas le lieu");
+    }
+
+    #[test]
+    fn la_mention_suit_son_format_et_sa_langue() {
+        let court = reglage(Mention::Date, FormatDate::Court, Langue::Fr);
+        assert_eq!(texte_de_mention(Some(j(27)), None, &court).as_deref(), Some("27 oct. 2013"));
+        let mois = reglage(Mention::DateLieu, FormatDate::Mois, Langue::En);
+        assert_eq!(texte_de_mention(Some(j(27)), Some("Calvi"), &mois).as_deref(), Some("Calvi, October 2013"));
+        let jour = reglage(Mention::Date, FormatDate::Jour, Langue::En);
+        assert_eq!(texte_de_mention(Some(j(27)), None, &jour).as_deref(), Some("27 October 2013"));
+    }
+
+    /// La plomberie, sur de vrais fichiers : une photo datée et placée par
+    /// son sidecar, une datée seulement, une qui n'a que son mtime, une qui
+    /// n'existe pas. `poser_mentions` écrit la table sur les cases, l'ôte
+    /// sans réglage, et ne marque aucune planche.
+    #[test]
+    fn poser_mentions_ecrit_la_table_et_l_ote() {
+        let dir = std::env::temp_dir()
+            .join(format!("colophon-mentions-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        // 2020-05-10 12:00:00 UTC, à Calvi.
+        std::fs::write(dir.join("a.jpg"), b"pas un jpeg").unwrap();
+        std::fs::write(
+            dir.join("a.jpg.json"),
+            r#"{"title":"x","photoTakenTime":{"timestamp":"1589112000"},"geoData":{"latitude":42.567,"longitude":8.757,"altitude":0.0}}"#,
+        )
+        .unwrap();
+        std::fs::write(dir.join("b.jpg"), b"pas un jpeg").unwrap();
+        std::fs::write(
+            dir.join("b.jpg.json"),
+            r#"{"title":"x","photoTakenTime":{"timestamp":"1589112000"}}"#,
+        )
+        .unwrap();
+        std::fs::write(dir.join("c.jpg"), b"pas un jpeg").unwrap();
+
+        let mut album = Album::new("t", &dir, crate::model::Size { w: 210.0, h: 210.0 });
+        album.spreads.push(crate::model::Spread {
+            template: "quad".into(),
+            slots: ["a.jpg", "b.jpg", "c.jpg", "d.jpg"]
+                .iter()
+                .map(|s| crate::model::Slot::new((*s).into(), [0.5, 0.42]))
+                .collect(),
+            caption: None,
+            text: None,
+            edited: false,
+            locked: false,
+            objets: Vec::new(),
+        });
+        let avant = serde_json::to_string(&album).unwrap();
+
+        // Sans réglage, rien ne s'écrit, et le fichier est celui d'avant.
+        poser_mentions(&mut album);
+        assert_eq!(serde_json::to_string(&album).unwrap(), avant);
+
+        album.legendes = Some(reglage(Mention::DateLieu, FormatDate::Jour, Langue::Fr));
+        poser_mentions(&mut album);
+        let m: Vec<Option<&str>> = album.spreads[0].slots.iter().map(|s| s.mention.as_deref()).collect();
+        assert_eq!(m, [Some("Calvi, 10 mai 2020"), Some("10 mai 2020"), None, None]);
+        assert!(!album.spreads[0].edited, "ce ne sont pas des mots de la main");
+        assert!(album.spreads[0].slots.iter().all(|s| s.caption.is_none()));
+
+        // La réserve aussi, par la table.
+        let table = mentions(&album, &reglage(Mention::Lieu, FormatDate::Jour, Langue::Fr), &["a.jpg".into(), "z.jpg".into()]);
+        assert_eq!(table.len(), 1, "{table:?}");
+        assert_eq!(table.get("a.jpg").map(String::as_str), Some("Calvi"));
+
+        // Rien : tout s'ôte, et le fichier redevient celui d'avant.
+        album.legendes = None;
+        poser_mentions(&mut album);
+        assert_eq!(serde_json::to_string(&album).unwrap(), avant);
         let _ = std::fs::remove_dir_all(&dir);
     }
 

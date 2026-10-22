@@ -5,7 +5,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { Ornement, setOrnements } from "./ornement";
-import { Album, Discard, OpenedAlbum, Police, Spread } from "./album";
+import { Album, Discard, Legendes, OpenedAlbum, Police, Spread } from "./album";
 
 import { Dump, setGeometrie, setGeometrieFormat } from "./geometrie";
 import { Lang, langue, t } from "./i18n";
@@ -178,6 +178,7 @@ export async function buildAlbum(
   spreads: number,
   densite: string,
   title: string | null,
+  legendes: Legendes | null = null,
 ): Promise<BuiltAlbum> {
   if (!inTauri) {
     const built = await devBuild();
@@ -193,6 +194,7 @@ export async function buildAlbum(
     spreads,
     densite,
     title,
+    legendes,
   });
   await chargeGeometrie();
   return built;
@@ -604,6 +606,19 @@ export async function datesFiables(
   const res = await fetch(`/__dev/dates?langue=${l}`);
   if (!res.ok) throw new Error(await res.text());
   return res.json();
+}
+
+/** Ce que le réglage « sous les photos » écrit sous chaque photo, par src
+ *  (1.2-b) : celles de l'album et celles de `srcs` (la réserve). Une photo
+ *  absente de la table n'a rien sous elle. Le moteur seul en décide ; le
+ *  harnais navigateur ne sait pas le faire et le dit. */
+export async function mentionsPhotos(
+  album: Album,
+  legendes: Legendes,
+  srcs: string[],
+): Promise<Record<string, string>> {
+  if (!inTauri) throw new Error("mentions_photos : le harnais navigateur n'a pas le moteur");
+  return invoke<Record<string, string>>("mentions_photos", { album, legendes, srcs });
 }
 
 /** The caption proposed for a spread whose caption is empty: town when it

@@ -40,6 +40,7 @@ import {
   PHOTO_CAPTION_SIZE_MM,
   PT_MM,
   Rect,
+  Slot,
   Spread,
   SpreadGeometry,
   slotsFor,
@@ -420,6 +421,28 @@ function union(a: Rect, b: Rect): Rect {
   };
 }
 
+/** Ce qui sépare une légende de sa date, ici comme dans `edits.ts`. */
+const POINT_MEDIAN = " · ";
+
+/**
+ * Ce qui s'imprime sous une case : la légende tapée, puis la mention que la
+ * machine y pose (1.2-b). Le miroir de `scene.rs::legende_imprimee`, avec ses
+ * deux règles : pas de répétition quand la légende finit déjà par la mention,
+ * et pas de mention quand la ligne de base tomberait sous la bande sûre basse
+ * (une photo à fond perdu en bas). `rect` est en repère écran, origine en
+ * haut à gauche.
+ */
+export function legendeImprimee(slot: Slot, rect: Rect, g: SpreadGeometry): string | null {
+  const caption = slot.caption ?? "";
+  const ligne = rect.y + rect.h + PHOTO_CAPTION_DROP_MM;
+  const aLaPlace = ligne <= g.h - g.bleed - g.margin * CAPTION_SAFE + 1e-9;
+  const m = slot.mention ?? "";
+  const mention =
+    m && aLaPlace && caption !== m && !caption.endsWith(POINT_MEDIAN + m) ? m : "";
+  if (!caption) return mention || null;
+  return mention ? caption + POINT_MEDIAN + mention : caption;
+}
+
 /**
  * The scene of one spread.
  *
@@ -464,13 +487,14 @@ export function sceneOf(
 
   spread.slots.forEach((slot, cell) => {
     const rect = rects[cell];
-    if (!rect || !slot.caption) return;
+    const text = rect && legendeImprimee(slot, rect, g);
+    if (!rect || !text) return;
     const at = { x: rect.x, y: rect.y + rect.h + PHOTO_CAPTION_DROP_MM };
     objects.push({
-      rect: inkBox(at.x, at.y, slot.caption, PHOTO_CAPTION_SIZE_MM, measure),
+      rect: inkBox(at.x, at.y, text, PHOTO_CAPTION_SIZE_MM, measure),
       angle: 0,
       reading,
-      role: { role: "photo_caption", cell, text: slot.caption, at },
+      role: { role: "photo_caption", cell, text, at },
     });
     reading += 1;
   });

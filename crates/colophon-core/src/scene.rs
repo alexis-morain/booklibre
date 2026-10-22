@@ -339,6 +339,40 @@ pub struct Line {
 
 /// Ink of one set line: the measured width, and the vertical box the engine
 /// has always used around a baseline.
+/// Ce qui s'imprime sous une case : la légende tapée, puis la mention que la
+/// machine y pose (1.2-b), séparées comme « Dater » les sépare. Écrit une
+/// fois ici et une fois dans `scene.ts::legendeImprimee`, jamais ailleurs.
+///
+/// Deux règles. Une légende qui se termine déjà par la mention (une date
+/// posée par « Dater ») ne la répète pas. Et la mention ne s'imprime que là
+/// où la ligne de base reste au-dessus de la bande sûre basse,
+/// `bleed + marge × CAPTION_SAFE`, celle des légendes de chapitre : sous une
+/// photo à fond perdu en bas, elle tomberait hors de la page. Une légende
+/// tapée garde sa place d'avant, que l'éditeur signale déjà.
+pub fn legende_imprimee(
+    slot: &crate::model::Slot,
+    rect: &Rect,
+    g: &SpreadGeometry,
+) -> Option<String> {
+    let caption = slot.caption.as_deref().unwrap_or("");
+    let a_la_place = rect.y - pdf::PHOTO_CAPTION_DROP_MM
+        >= g.bleed + g.margin * pdf::CAPTION_SAFE - 1e-9;
+    let mention = slot
+        .mention
+        .as_deref()
+        .filter(|m| !m.is_empty() && a_la_place)
+        .filter(|m| caption != *m && !caption.ends_with(&format!("{POINT_MEDIAN}{m}")));
+    match (caption.is_empty(), mention) {
+        (true, None) => None,
+        (true, Some(m)) => Some(m.to_string()),
+        (false, None) => Some(caption.to_string()),
+        (false, Some(m)) => Some(format!("{caption}{POINT_MEDIAN}{m}")),
+    }
+}
+
+/// Ce qui sépare une légende de sa date, ici comme dans `edits.ts`.
+const POINT_MEDIAN: &str = " · ";
+
 fn ink_box(
     x: f64,
     baseline: f64,
@@ -429,10 +463,8 @@ impl Scene {
         let mut reading = spread.slots.len();
 
         for (cell, (slot, rect)) in spread.slots.iter().zip(rects.iter()).enumerate() {
-            let Some(text) = &slot.caption else { continue };
-            if text.is_empty() {
-                continue;
-            }
+            let Some(text) = legende_imprimee(slot, rect, g) else { continue };
+            let text = &text;
             let baseline = rect.y - pdf::PHOTO_CAPTION_DROP_MM;
             let at = Point { x: rect.x, y: baseline };
             objects.push(Object {
@@ -824,6 +856,49 @@ mod tests {
         let mut s = spread("duo", 2);
         s.slots[0].caption = Some(String::new());
         assert_eq!(Scene::of(&s, &g).objects.len(), 2);
+    }
+
+    fn legendes_de(scene: &Scene) -> Vec<(usize, String)> {
+        scene
+            .objects
+            .iter()
+            .filter_map(|o| match &o.role {
+                Role::PhotoCaption { cell, text, .. } => Some((*cell, text.clone())),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// La mention s'imprime après la légende tapée, seule quand il n'y en a
+    /// pas, et pas deux fois quand « Dater » l'a déjà écrite (1.2-b).
+    #[test]
+    fn la_mention_suit_la_legende_sans_se_repeter() {
+        let g = geom();
+        let mut s = spread("duo", 2);
+        s.slots[0].mention = Some("Calvi, 27 octobre 2013".into());
+        s.slots[1].mention = Some("27 octobre 2013".into());
+        s.slots[1].caption = Some("la plage".into());
+        assert_eq!(
+            legendes_de(&Scene::of(&s, &g)),
+            [(0, "Calvi, 27 octobre 2013".to_string()), (1, "la plage · 27 octobre 2013".to_string())]
+        );
+        s.slots[1].caption = Some("la plage · 27 octobre 2013".into());
+        assert_eq!(legendes_de(&Scene::of(&s, &g))[1].1, "la plage · 27 octobre 2013");
+        s.slots[1].caption = Some("27 octobre 2013".into());
+        assert_eq!(legendes_de(&Scene::of(&s, &g))[1].1, "27 octobre 2013");
+    }
+
+    /// Sous une photo à fond perdu en bas, la ligne de base tomberait hors de
+    /// la page : la mention ne s'y imprime pas. Une légende tapée garde sa
+    /// place d'avant, que l'éditeur signale déjà.
+    #[test]
+    fn pas_de_place_pas_de_mention() {
+        let g = geom();
+        let mut s = spread("full1", 1);
+        s.slots[0].mention = Some("Calvi".into());
+        assert!(legendes_de(&Scene::of(&s, &g)).is_empty());
+        s.slots[0].caption = Some("la plage".into());
+        assert_eq!(legendes_de(&Scene::of(&s, &g)), [(0, "la plage".to_string())]);
     }
 
     /// The three text pages are one role. The half-title keeps its two type

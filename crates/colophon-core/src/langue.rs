@@ -39,6 +39,15 @@ const MONTHS_EN: [&str; 12] = [
     "September", "October", "November", "December",
 ];
 
+const MOIS_FR_COURTS: [&str; 12] = [
+    "janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.",
+    "nov.", "déc.",
+];
+
+const MONTHS_EN_SHORT: [&str; 12] = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
 impl Langue {
     /// `fr` or `en`, the codes `i18n.ts` stores. Anything else is refused
     /// rather than quietly read as French.
@@ -98,6 +107,26 @@ impl Langue {
         }
     }
 
+    /// « 27 oct. 2013 », « 27 Oct 2013 » : la date d'une mention au format
+    /// court. Les abréviations de l'Imprimerie nationale, celles de l'anglais
+    /// britannique sans point.
+    pub fn date_courte(self, d: NaiveDate) -> String {
+        let m = match self {
+            Langue::Fr => MOIS_FR_COURTS[d.month0() as usize],
+            Langue::En => MONTHS_EN_SHORT[d.month0() as usize],
+        };
+        format!("{} {} {}", d.day(), m, d.year())
+    }
+
+    /// « octobre 2013 », « October 2013 ».
+    pub fn mois(self, d: NaiveDate) -> String {
+        let m = match self {
+            Langue::Fr => MOIS_FR[d.month0() as usize],
+            Langue::En => MONTHS_EN[d.month0() as usize],
+        };
+        format!("{} {}", m, d.year())
+    }
+
     /// « a, b et c », « a, b and c ». The last separator is a word, the way a
     /// sentence joins things.
     pub fn liste(self, v: &[String]) -> String {
@@ -135,6 +164,19 @@ mod tests {
         assert_eq!(Langue::Fr.date(j(2013, 10, 27), true), "27 octobre 2013");
         assert_eq!(Langue::En.date(j(2013, 10, 27), true), "27 October 2013");
         assert_eq!(Langue::En.date(j(2013, 11, 3), false), "3 November");
+    }
+
+    /// Les deux formes de plus d'une mention (1.2-b) : le mois abrégé, et le
+    /// mois seul. Mai, juin, août et mars n'ont rien à abréger en français.
+    #[test]
+    fn une_date_courte_et_un_mois_dans_chaque_langue() {
+        assert_eq!(Langue::Fr.date_courte(j(2013, 10, 27)), "27 oct. 2013");
+        assert_eq!(Langue::Fr.date_courte(j(2013, 5, 1)), "1 mai 2013");
+        assert_eq!(Langue::Fr.date_courte(j(2013, 2, 9)), "9 févr. 2013");
+        assert_eq!(Langue::En.date_courte(j(2013, 10, 27)), "27 Oct 2013");
+        assert_eq!(Langue::En.date_courte(j(2013, 6, 2)), "2 Jun 2013");
+        assert_eq!(Langue::Fr.mois(j(2013, 10, 27)), "octobre 2013");
+        assert_eq!(Langue::En.mois(j(2013, 8, 1)), "August 2013");
     }
 
     #[test]

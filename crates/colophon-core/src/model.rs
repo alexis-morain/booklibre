@@ -50,6 +50,49 @@ pub struct Album {
     /// came later is not its: an additive field never needs one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub police: Option<Police>,
+    /// Ce que la machine écrit sous chaque photo : sa date, son lieu, ou les
+    /// deux (1.2-b). Absent veut dire rien, et c'est ce que dit tout album
+    /// d'avant : additif comme `police`, sans montée de schéma. Les mots
+    /// eux-mêmes sont posés sur les cases, [`Slot::mention`], par
+    /// [`crate::legende::poser_mentions`] et par rien d'autre.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub legendes: Option<Legendes>,
+}
+
+/// Le réglage « sous les photos » d'un album.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Legendes {
+    pub contenu: Mention,
+    #[serde(default)]
+    pub date: FormatDate,
+    /// La langue des mots, celle de l'interface au moment du choix : un
+    /// album rouvert dans l'autre langue garde les siens, comme la garde et
+    /// le colophon, et une photo posée plus tard parle comme ses voisines.
+    #[serde(default)]
+    pub langue: crate::langue::Langue,
+}
+
+/// Ce qu'une mention dit d'une photo.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Mention {
+    Date,
+    Lieu,
+    DateLieu,
+}
+
+/// La forme d'une date de mention. Pas de forme numérique : 27/10 se lit à
+/// l'envers en anglais américain.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FormatDate {
+    /// « 27 octobre 2013 »
+    #[default]
+    Jour,
+    /// « 27 oct. 2013 »
+    Court,
+    /// « octobre 2013 »
+    Mois,
 }
 
 /// The face copied beside `album.json`, and who it was when it was chosen.
@@ -292,11 +335,18 @@ pub struct Slot {
     /// Caption printed under the photo. Absent = none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub caption: Option<String>,
+    /// Les mots que la machine écrit sous la photo, sa date ou son lieu, selon
+    /// [`Album::legendes`]. Rangés à part de `caption` : « Rien » les retire
+    /// sans toucher une lettre tapée, et `reprise` ne les compte pas comme une
+    /// main. Jamais saisis, toujours dérivés de la photo ; la scène les imprime
+    /// après la légende ([`crate::scene::legende_imprimee`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mention: Option<String>,
 }
 
 impl Slot {
     pub fn new(src: String, focal: [f64; 2]) -> Self {
-        Self { src, focal, zoom: 1.0, caption: None }
+        Self { src, focal, zoom: 1.0, caption: None, mention: None }
     }
 }
 
@@ -753,6 +803,7 @@ impl Album {
             colophon: None,
             reglages: std::collections::BTreeMap::new(),
             police: None,
+            legendes: None,
         }
 
     }

@@ -42,6 +42,12 @@ struct Cli {
     #[arg(long, default_value = "fr", value_name = "LANG")]
     langue: String,
 
+    /// What the composition writes under each photo: `date`, `lieu` or
+    /// `date-lieu`, in the long date form and in `--langue`. Only what the
+    /// photo knows: a trusted capture date, a town the gazetteer names.
+    #[arg(long, value_name = "CONTENT")]
+    legendes: Option<String>,
+
     /// Compose the two alternative proposals beside the album, the way the
     /// app does. They land next to it as `album.<id>.json`; the audit gate
     /// reads them one by one.
@@ -682,6 +688,22 @@ fn main() -> Result<()> {
             cli.densite
         )
     })?;
+    let legendes = match cli.legendes.as_deref() {
+        None => None,
+        Some(id) => {
+            let contenu = match id {
+                "date" => colophon_core::model::Mention::Date,
+                "lieu" => colophon_core::model::Mention::Lieu,
+                "date-lieu" => colophon_core::model::Mention::DateLieu,
+                _ => anyhow::bail!("--legendes inconnu : {id} (date, lieu, date-lieu)"),
+            };
+            Some(colophon_core::model::Legendes {
+                contenu,
+                date: colophon_core::model::FormatDate::Jour,
+                langue,
+            })
+        }
+    };
     // The two halves of a composition, each reachable on its own: dump what
     // the photographs say, or compose from what they said. Neither replaces
     // the plain path below, which still runs both in a row.
@@ -735,6 +757,7 @@ fn main() -> Result<()> {
                 trim,
                 densite,
                 langue,
+                legendes,
                 progress: Box::new(|line| eprintln!("{line}")),
                 variantes: if cli.variantes {
                     colophon_core::build::variantes_offertes(densite, cli.spreads.max(8))
@@ -760,6 +783,7 @@ fn main() -> Result<()> {
             trim,
             densite,
             langue,
+            legendes,
             progress: Box::new(|line| eprintln!("{line}")),
             variantes: if cli.variantes {
                 colophon_core::build::variantes_offertes(densite, cli.spreads.max(8))

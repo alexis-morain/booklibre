@@ -64,6 +64,10 @@ pub struct BuildOptions {
     /// français par défaut. Elle n'est pas rangée dans l'album : les mots le
     /// sont, en toutes lettres.
     pub langue: crate::langue::Langue,
+    /// Ce que la composition écrit sous chaque photo (1.2-b) : demandé à la
+    /// création, porté par la recomposition comme `reglages`. `None` est le
+    /// défaut, et l'album n'en garde aucune trace.
+    pub legendes: Option<model::Legendes>,
 }
 
 
@@ -85,6 +89,7 @@ impl Default for BuildOptions {
             police: None,
             aujourdhui: None,
             langue: crate::langue::Langue::Fr,
+            legendes: None,
         }
     }
 }
@@ -847,6 +852,12 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                 }
             });
         }
+
+        // Les dates et les lieux sous les photos, sur les planches de cette
+        // proposition, épinglées comprises : une mention se dérive de la
+        // photo, elle n'est jamais le travail de personne.
+        album.legendes = opts.legendes;
+        crate::legende::poser_mentions(&mut album);
 
         // Photos that survived curation but not this proposal's own spread
         // budget. Per proposal, because a tighter book sets more of them
@@ -2974,5 +2985,64 @@ mod tests {
         let album = build_album(&photos, &out, options_datees()).unwrap().album;
         let t = colophon_de(&album);
         assert!(t.contains("Composé le 14 novembre 2023 avec Booklibre"), "{t}");
+    }
+
+    /// Le réglage « sous les photos » demandé à la création entre dans
+    /// l'album et ses mots sur les cases : la photo qui sait sa date et son
+    /// lieu les porte, les autres rien (1.2-b). Sans lui, aucun des deux
+    /// champs ne s'écrit.
+    #[test]
+    fn la_composition_pose_les_mentions_demandees() {
+        let (photos, out) = dossier_test("mentions");
+        for i in 0..3 {
+            jpeg_imprimable(&photos.join(format!("photo-{i}.jpg")), i);
+        }
+        std::fs::write(
+            photos.join("photo-0.jpg.json"),
+            r#"{"title":"x","photoTakenTime":{"timestamp":"1589112000"},"geoData":{"latitude":42.567,"longitude":8.757,"altitude":0.0}}"#,
+        )
+        .unwrap();
+        let reglage = model::Legendes {
+            contenu: model::Mention::DateLieu,
+            date: model::FormatDate::Jour,
+            langue: Langue::Fr,
+        };
+        let opts = BuildOptions { legendes: Some(reglage), ..options_datees() };
+        let album = build_album(&photos, &out, opts).unwrap().album;
+        assert_eq!(album.legendes, Some(reglage));
+        let mentions: Vec<(String, Option<String>)> = album
+            .spreads
+            .iter()
+            .flat_map(|s| &s.slots)
+            .map(|s| (s.src.clone(), s.mention.clone()))
+            .collect();
+        assert!(
+            mentions.contains(&("photo-0.jpg".into(), Some("Calvi, 10 mai 2020".into()))),
+            "{mentions:?}"
+        );
+        assert!(mentions.iter().filter(|(s, _)| s != "photo-0.jpg").all(|(_, m)| m.is_none()));
+        let ecrit = std::fs::read_to_string(out.join("album.json")).unwrap();
+        assert!(ecrit.contains("Calvi, 10 mai 2020"), "le fichier les porte");
+
+        // Une recomposition garde le réglage et repose les mots.
+        let repris = crate::recomposition::recomposer(
+            &out,
+            crate::recomposition::Recomposition {
+                aujourdhui: options_datees().aujourdhui,
+                ..Default::default()
+            },
+        )
+        .unwrap()
+        .album;
+        assert_eq!(repris.legendes, Some(reglage));
+        assert!(repris
+            .spreads
+            .iter()
+            .flat_map(|s| &s.slots)
+            .any(|s| s.mention.as_deref() == Some("Calvi, 10 mai 2020")));
+
+        let sans = build_album(&photos, &out, options_datees()).unwrap().album;
+        let ecrit = serde_json::to_string(&sans).unwrap();
+        assert!(!ecrit.contains("\"mention\"") && !ecrit.contains("\"legendes\""), "{ecrit}");
     }
 }

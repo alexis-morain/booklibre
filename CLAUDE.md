@@ -873,6 +873,21 @@ proposition de case et le bouton l'appellent tous les deux ; `dates_fiables` en 
 table, `edits.ts::daterLegendes` et `dedaterLegendes` sont idempotents et un seul pas
 d'annulation.
 
+**Dates et lieux sous les photos** (1.2-b) : `album.legendes` (contenu `date`, `lieu`,
+`date_lieu`, forme `jour`/`court`/`mois`, langue retenue au choix), additif, absent = rien.
+Les mots sont la **mention** de chaque case, `Slot::mention`, à part de `caption` : « Rien »
+retire tout sans toucher une lettre tapée, et `reprise` ne la voit pas. Une seule source,
+`legende::mention` (date si `taken_reliable`, ville si `places::nearest`, jamais rien
+d'inventé) ; `poser_mentions` l'écrit à la composition et à la recomposition
+(`BuildOptions.legendes`), la commande `mentions_photos` rend la table que `mentions.ts`
+pose, et `apply` la repose après toute édition (une photo remplacée prend ses mots, jamais
+ceux d'une autre ; une table d'un autre réglage ne s'applique pas). La scène imprime
+`caption · mention` par `scene::legende_imprimee` / `scene.ts::legendeImprimee`, sans
+répéter une date déjà posée par « Dater », et **sans mention sous une case dont la ligne de
+base tomberait sous la bande sûre** (une pleine page). `zone_sure` mesure chaque légende de
+photo à sa ligne de base. Le réglage : Planche → « Dates et lieux… » (`LegendesView.tsx`)
+et une case décochée à la création ; CLI `--legendes`.
+
 **Le glisser depuis la réserve** annonce une copie (`reserve.ts::effetDeDepot`), l'échange
 de deux cases un déplacement, et `dragDropEnabled` est coupé sur la fenêtre. Le
 portrait 20 × 25 mesure **203,2 mm** (`format.rs`), le vrai 8 × 10.
@@ -1539,7 +1554,7 @@ de scène porte un angle et une origine, **jamais une matrice**.
 ```
 
 Autres drapeaux : `--print`, `--cover`, `--prevol --profil <id>`, `--densite`,
-`--variantes`, `--reprise`, `--bascule <FORMAT> [--essai]`, `--dump-scene`,
+`--variantes`, `--legendes`, `--reprise`, `--bascule <FORMAT> [--essai]`, `--dump-scene`,
 `--dump-geometry`, `--dump-ornements`, `--profils`, `--preparer <DOSSIER>`. Cachés :
 `--fiche`, `--releve-album`, `--dates`, `--reserve`, `--remplir`, `--cover --apercu`, `--recomposer [--vers <FORMAT>]
 [--rythme <ID>]`, `--devis <album> --pays FR` (le

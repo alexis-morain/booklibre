@@ -159,6 +159,15 @@ one path both measures and draws, so what an editor shows and what a printer
 receives cannot drift apart.
 _Avoid_: font, typeface, family, style
 
+**Mention**:
+The words the machine writes under a photo: its date, its place, or both, as
+the album's setting asks (`album.legendes`). Derived from the photograph and
+never typed: a trusted capture date, a town the gazetteer names within reach,
+otherwise nothing — a mention is never invented. Stored on the cell
+(`Slot::mention`), apart from the caption a hand typed, and printed after it on
+the same line; a cell with no room under it (a full-bleed bottom) prints none.
+_Avoid_: auto-caption, automatic caption, date caption
+
 **The album's face**:
 The one face a book is set in, whatever else the machine carries: captions,
 chapter titles, half-title, colophon, cover and spine. It is a property of the
