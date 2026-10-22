@@ -2456,8 +2456,9 @@ input[type="radio"] {
 /* ---- the faithful preview (pdf.js) -------------------------------------- */
 
 .pdf-stage {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   width: 100%;
   height: 100%;
   min-width: 0;
@@ -2465,6 +2466,41 @@ input[type="radio"] {
   /* Never pushes the stage: the canvas is sized from the stage, and a canvas
      that could grow its own container would grow without end. */
   overflow: hidden;
+}
+
+/* Le livre au-dessus, la barre dessous : la barre a la hauteur que
+   `pdfview.tsx::BARRE_PX` retire de la scène avant d'y faire tenir le livre. */
+.visionneuse-livre {
+  flex: 1 1 auto;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 0;
+}
+
+.visionneuse-barre {
+  flex: none;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+/* La loupe : une page seule, ou la couverture à plat. Un clic la referme. */
+.loupe-page,
+.loupe-fermer {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-out;
+}
+
+.loupe-toile {
+  display: block;
+  background: #fff;
+  box-shadow: var(--shadow-paper);
 }
 
 /* The same shadow as the DOM spread, so switching between the two compares
@@ -2494,10 +2530,42 @@ input[type="radio"] {
   /* Sans quoi le glisser sur le coin ferait défiler la page sous le doigt. */
   touch-action: none;
   user-select: none;
+  /* Hors des coins, un clic ouvre la loupe sur la page. */
+  cursor: zoom-in;
 }
 
 .feuilletage.au-coin {
   cursor: pointer;
+}
+
+/* Le livre fermé, ou qui s'ouvre : à gauche il n'y a que la table, donc ni
+   papier ni ombre sur la scène — seule la page de droite en porte. */
+.feuilletage.ferme {
+  background: none;
+  box-shadow: none;
+  cursor: default;
+}
+
+.feuilletage.ferme .demi-droite {
+  box-shadow: var(--shadow-paper);
+}
+
+/* Le livre fermé se pose sur la page de droite, dos au pli, à la hauteur de
+   la coupe ; `Livre3D`, plus large de deux tranches, est centré dessus. */
+.livre-ferme {
+  position: absolute;
+  left: 50%;
+}
+
+.livre-ferme > .livre3d {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.livre-avant {
+  display: block;
 }
 
 /* Une moitié de planche, ou la planche entière : la taille est écrite en
@@ -2521,10 +2589,14 @@ input[type="radio"] {
   right: 0;
 }
 
-.feuillet {
+/* La feuille est une chaîne de lamelles (1.2-c) : la première, `.feuillet`,
+   a sa charnière au pli ; chacune des suivantes est l'enfant de la
+   précédente, accrochée à son bord libre. Les angles sont écrits par le
+   composant, depuis `feuille.ts::courbe`. */
+.feuillet,
+.lamelle {
   position: absolute;
   top: 0;
-  width: 50%;
   height: 100%;
   transform-style: preserve-3d;
   will-change: transform;
@@ -2538,13 +2610,33 @@ input[type="radio"] {
 
 /* Celui vers l'arrière part de la moitié gauche, même pli. */
 .feuillet.vers-arriere {
-  left: 0;
+  right: 50%;
   transform-origin: right center;
 }
 
+.lamelle {
+  width: 100%;
+}
+
+.lamelle.vers-avant {
+  left: 100%;
+  transform-origin: left center;
+}
+
+.lamelle.vers-arriere {
+  right: 100%;
+  transform-origin: right center;
+}
+
+/* Un demi-pixel de chaque côté : deux lamelles voisines se recouvrent d'un
+   pixel, sans quoi l'anticrénelage du navigateur dessinerait un fil clair à
+   chaque jointure. */
 .face {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  left: -0.5px;
+  right: -0.5px;
   overflow: hidden;
   background: #fff;
   /* Chaque face ne se voit que de son côté : c'est ce qui fait de deux
@@ -2556,23 +2648,20 @@ input[type="radio"] {
   transform: rotateY(180deg);
 }
 
-/* Le voile de courbure, dans la feuille et hors des faces : il tourne avec
-   elle, se voit des deux côtés, et son bord sombre reste collé à la charnière
-   quel que soit le côté qu'on regarde. L'opacité est écrite par le composant,
-   depuis `relief`, le même nombre que l'ombre dessous. */
-.feuille-courbure {
+.bande {
+  display: block;
+}
+
+/* Le voile d'une lamelle, dans la lamelle et hors des faces : il tourne avec
+   elle et se voit des deux côtés. Son opacité est écrite par le composant,
+   depuis `feuille.ts::voileDe`, donc une lamelle debout est plus sombre
+   qu'une lamelle couchée, et le papier se lit courbe. */
+.lamelle-voile {
   position: absolute;
   inset: 0;
+  background: rgb(0 0 0);
   opacity: 0;
   pointer-events: none;
-}
-
-.vers-avant .feuille-courbure {
-  background: linear-gradient(to right, rgb(0 0 0 / 0.55), rgb(0 0 0 / 0) 62%);
-}
-
-.vers-arriere .feuille-courbure {
-  background: linear-gradient(to left, rgb(0 0 0 / 0.55), rgb(0 0 0 / 0) 62%);
 }
 
 /* L'ombre portée sur la page que la feuille découvre, la plus dense au pli. */
@@ -4869,6 +4958,13 @@ button.envoi-defaut-ou:focus-visible {
 .livre3d.en-main .livre3d-objet,
 .livre3d.reduit .livre3d-objet {
   transition: none;
+}
+
+/* La pose qui précède l'ouverture, dans la visionneuse : plus brève que le
+   retour au repos, c'est un geste et non une détente. `Feuilletage.tsx`
+   attend la même durée (`DUREE_POSE`). */
+.livre3d.de-face .livre3d-objet {
+  transition-duration: 300ms;
 }
 
 @media (prefers-reduced-motion: reduce) {

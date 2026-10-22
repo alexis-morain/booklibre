@@ -113,10 +113,12 @@ Ce qui suit est l'état laissé par les vagues 2 à 6.
 livrée le 27/08 : le geste au coin, le clavier, le mouvement réduit, le *fait quand*
 tenu sur ses cinq points et mesuré. Les sept verdicts humains du bundle sont tombés le
 28/08, tous favorables : la session 2 n'avait rien à coder, et **l'état actuel est
-figé** — `DUREE_TOUR`/`DUREE_MIN` restent, une demande pendant un tour reste avalée, la
-courbure reste un ombrage (**la lamelle est morte, l'audit de licence de courbure ne
-sera jamais dû**), pas de chantier tactile. Le geste vit dans l'aperçu fidèle, **jamais
-dans l'éditeur** — la seule surface de lecture du projet, les autres vues étant une
+figé** — `DUREE_TOUR`/`DUREE_MIN` restent, une demande pendant un tour reste avalée,
+pas de chantier tactile. **La lamelle est levée (1.2-c)** : la page se courbe, en rendu
+maison, douze lamelles CSS 3D dont `feuille.ts::courbe` donne les angles — aucune
+bibliothèque, donc aucun audit dû ; une bibliothèque de courbure qui entrerait un jour
+passerait l'audit GPL-3.0 avant sa première ligne. Le geste vit dans la visionneuse,
+**jamais dans l'éditeur** — la seule surface de lecture du projet, les autres vues étant une
 grille, une table lumineuse et une revue photo par photo.
 
 **La feuille**, et c'est le modèle du livre : elle porte au recto la page de droite de la
@@ -127,8 +129,18 @@ les deux planches qu'il joint. `feuille.ts` décide (faces, coin, relâchement, 
 du PDF, jamais un redessin de la scène.** Trois règles à ne pas défaire : sans les images
 des deux planches, aucune feuille ne se monte et le changement se fait sec ; une feuille
 en vol garde la main jusqu'au bout, et un saut la retire ; `prefers-reduced-motion`
-supprime le mouvement au lieu de le raccourcir. La couverture ne tourne pas — feuille à
-plat, autre fichier, dos au milieu.
+supprime le mouvement au lieu de le raccourcir.
+
+**Une seule visionneuse (1.2-c)** : « Feuilleter » (barre de l'éditeur, menu, ⇧⌘P,
+Envoi) est l'aperçu fidèle. Sur la couverture elle montre le **livre fermé** —
+`Livre3D`, son avant découpé dans le PDF de couverture (`lecture.ts::decoupeAvant`) —
+qui s'ouvre : il se met de face, puis son plat tourne autour du dos comme une feuille
+(`feuilleDe(COUVERTURE, 1)`, verso = page gauche de la planche 1, à gauche la table), et
+← depuis la planche 1 le referme. La **loupe** montre une page seule, tirée à sa taille
+(`lecture.ts::largeurDeLoupe`, jamais un agrandissement CSS), flèches page par page,
+Échap la referme (`Tourneur::fermerLoupe`) ; « Couverture à plat » est la loupe de la
+couverture. La barre de la visionneuse rend le focus après un clic : le clavier d'App se
+tait devant un bouton.
 
 **La vague 3 est close** (3.1, 3.2 et 3.3 dans `main`). 3.1 a fait de `focal` un point
 de l'image, invariant au ratio ; 3.2 est la bascule, qui en est le premier usage ; 3.3
