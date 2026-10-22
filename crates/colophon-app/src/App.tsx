@@ -87,7 +87,7 @@ import {
 } from "./album";
 import { adopterGeometrie } from "./geometrie";
 import { ReglageBloc } from "./ReglageBloc";
-import { coteDe, horsMarge, recouvre, retournerBoite } from "./scene";
+import { coteDe, gaucheCollee, horsMarge, pageDePose, recouvre, retournerBoite } from "./scene";
 import { lire, serialiser } from "./pressePapier";
 import { filtreDe, poserReglages, useReglages } from "./reglages";
 import {
@@ -263,6 +263,20 @@ function gardesDePose(album: Album, spread: Spread, droite: boolean) {
       )
     : [];
   return { g, page, photos };
+}
+
+/**
+ * Combien de cases de la planche `at` tombent sur la page collée dans la
+ * couverture (1.1-d). Une photo ajoutée qui en pose une de plus se refuse :
+ * le gabarit qui grandit la mettrait là où rien ne s'imprime.
+ */
+function casesCollees(album: Album, at: number, reliure: { pages_simples: boolean } | undefined) {
+  const s = album.spreads[at];
+  if (!s?.slots.length) return 0;
+  const g = spreadGeometry(album);
+  return slotsFor(s.template, s.slots.length, g).filter((r) =>
+    gaucheCollee(at, reliure, r.x + r.w / 2, g),
+  ).length;
 }
 
 export default function App() {
@@ -1854,6 +1868,11 @@ export default function App() {
         else if (blocage !== null) setStatus(t("photo.coller.pleine"));
         else {
           const suivant = addPhoto(album!, index, photo);
+          const reliure = printers?.find((p) => p.id === profil);
+          if (casesCollees(suivant, index, reliure) > casesCollees(album!, index, reliure)) {
+            setStatus(t("planche.collee.refus"));
+            return;
+          }
           apply(() => suivant);
           setStatus(t("photo.collee", { n: suivant.spreads[index].slots.length }));
         }
@@ -1864,6 +1883,12 @@ export default function App() {
       if (!colle) return;
       e.preventDefault();
       const g = spreadGeometry(album!);
+      if (
+        gaucheCollee(index, printers?.find((p) => p.id === profil), colle.x + colle.w / 2, g)
+      ) {
+        setStatus(t("planche.collee.refus"));
+        return;
+      }
       const { page, photos } = gardesDePose(album!, spread, coteDe(colle, g) === 1);
       const rang = spread.objets?.length ?? 0;
       const suivant = pasteObjet(album!, index, colle, photos, page, g);
@@ -2690,9 +2715,16 @@ export default function App() {
    */
   const poser = (
     edit: (album: Album, page: Rect, photos: Rect[]) => Album,
-    droite = false,
+    vise?: boolean,
   ) => {
     if (!spread) return;
+    // La page collée dans la couverture ne reçoit rien (1.1-d) : la viser se
+    // refuse en le disant, ne viser aucune page pose à droite.
+    const droite = pageDePose(index, printers?.find((p) => p.id === profil), vise);
+    if (droite === null) {
+      setStatus(t("planche.collee.refus"));
+      return;
+    }
     const { page, photos } = gardesDePose(album, spread, droite);
     const rang = spread.objets?.length ?? 0;
     const suivant = edit(album, page, photos);
@@ -2856,10 +2888,16 @@ export default function App() {
     setChoix(null);
     const r = poserCandidate(album, ch.at, ch.mode, c);
     switch (r.type) {
-      case "posee":
+      case "posee": {
+        const reliure = printers?.find((p) => p.id === profil);
+        if (casesCollees(r.album, r.at, reliure) > casesCollees(album, r.at, reliure)) {
+          setStatus(t("planche.collee.refus"));
+          return;
+        }
         apply(() => r.album);
         setStatus(t("reserve.posee", { n: r.album.spreads[r.at].slots.length }));
         return;
+      }
       case "remplacee":
         if (view === "envoi") {
           appliquerDepuisEnvoi(r.album);
@@ -3014,6 +3052,7 @@ export default function App() {
           onLock={(at) => apply((a) => toggleLock(a, at))}
           onRemove={supprimerPlanche}
           onMenu={surMenuPlanche}
+          reliure={printers?.find((p) => p.id === profil) ?? null}
         />
       ) : (
         <main className="stage">
@@ -3059,6 +3098,8 @@ export default function App() {
                   album={album}
                   spread={spread}
                   planche={index}
+                  reliure={printers?.find((p) => p.id === profil) ?? null}
+                  onCollee={() => setStatus(t("planche.collee.refus"))}
                   selected={selected}
                   onSelect={choisirCase}
                   objet={objet}

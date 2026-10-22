@@ -20,8 +20,10 @@ import {
   decalage,
   depthOfCell,
   distanceToTrim,
+  gaucheCollee,
   hitTest,
   horsMarge,
+  pageDePose,
   recouvre,
   replier,
   retenirAuPli,
@@ -692,5 +694,40 @@ describe("la mention sous une photo", () => {
     expect(legendes(s)).toEqual([]);
     s.slots[0].caption = "la plage";
     expect(legendes(s)).toEqual([[0, "la plage"]]);
+  });
+});
+
+// 1.1-d : sans faux-titre, la moitié gauche de la première planche est la
+// page collée dans la couverture chez qui relie page par page. Une seule
+// condition, celle du prévol : la première planche, et un profil en pages
+// simples. Le dépôt et la pose la lisent tous les deux.
+describe("la page collée dans la couverture", () => {
+  const cp = { pages_simples: true };
+  const lulu = { pages_simples: false };
+
+  it("n'existe que sur la première planche, chez qui relie page par page", () => {
+    expect(gaucheCollee(0, cp, 10, g)).toBe(true);
+    expect(gaucheCollee(0, cp, g.w / 2 + 1, g)).toBe(false);
+    expect(gaucheCollee(1, cp, 10, g)).toBe(false);
+    expect(gaucheCollee(0, lulu, 10, g)).toBe(false);
+    // Le profil encore inconnu ne refuse rien : ce serait un rejet sans raison.
+    expect(gaucheCollee(0, null, 10, g)).toBe(false);
+  });
+
+  it("refuse un dépôt qu'on y lâche, jamais sur la page de droite", () => {
+    expect(gaucheCollee(0, cp, g.w / 4, g)).toBe(true);
+    expect(gaucheCollee(0, cp, (3 * g.w) / 4, g)).toBe(false);
+  });
+
+  it("envoie à droite la pose sans page, refuse la pose qui la vise", () => {
+    // Le bouton de la barre ne vise aucune page : il pose à gauche, sauf
+    // sur la page collée, où il pose à droite.
+    expect(pageDePose(0, cp)).toBe(true);
+    expect(pageDePose(2, cp)).toBe(false);
+    expect(pageDePose(0, lulu)).toBe(false);
+    // Le clic droit vise une page : la gauche collée refuse, la droite passe.
+    expect(pageDePose(0, cp, false)).toBe(null);
+    expect(pageDePose(0, cp, true)).toBe(true);
+    expect(pageDePose(3, cp, false)).toBe(false);
   });
 });

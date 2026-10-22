@@ -602,8 +602,10 @@ export const FR = {
     "Cet album a été composé avec trop peu de marge de coupe pour cet imprimeur : composez-le à nouveau depuis ses photos.",
   "envoi.simple.format_sans_produit":
     "Cet imprimeur n’imprime pas ce format : choisissez-en un autre dans Recomposer.",
+  "planche.collee": "Collée dans la couverture",
+  "planche.collee.refus": "Cette page est collée dans la couverture : rien ne s’y imprime",
   "envoi.simple.imposition":
-    "La première page de gauche ne s’imprime pas chez cet imprimeur, et elle porte quelque chose : cochez la page de garde plus bas.",
+    "La première page de gauche est collée dans la couverture et ne s’imprime pas, et elle porte quelque chose : déplacez-le, ou cochez la page de garde plus bas.",
   "envoi.simple.objet_coupe":
     "Un objet posé à la main dépasse la coupe : rentrez-le dans la page, ou réduisez-le.",
   "envoi.simple.objet_pli":
@@ -1852,8 +1854,10 @@ export const EN: Record<Cle, string> = {
     "This album was composed with too little trim margin for this printer: compose it again from its photos.",
   "envoi.simple.format_sans_produit":
     "This printer does not print this format: choose another one in Recompose.",
+  "planche.collee": "Pasted inside the cover",
+  "planche.collee.refus": "This page is pasted inside the cover: nothing prints on it",
   "envoi.simple.imposition":
-    "The first left page is not printed at this printer, and it holds something: tick the half-title below.",
+    "The first left page is pasted inside the cover and is not printed, and it holds something: move it, or tick the half-title below.",
   "envoi.simple.objet_coupe": "An object placed by hand runs past the trim: bring it inside the page, or make it smaller.",
   "envoi.simple.objet_pli": "An object placed by hand straddles the fold: slide it to one side.",
   "envoi.simple.pagination":

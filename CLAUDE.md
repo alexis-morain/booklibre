@@ -475,8 +475,9 @@ Titres de chapitre depuis le GPS (`core::places`, GeoNames CC-BY) ; seul
 `DateTimeOriginal` date un chapitre. **Deux rythmes** choisis au lancement, stockés dans
 `album.json`, relus à la recomposition (`layout::Densite`). **Une composition donne trois
 propositions** (`build::variantes_offertes`), en `album.<id>.json`, effacées à la fermeture
-de l'album ou au ⌘S, jamais par l'écriture automatique. **Deux planches ordinaires encadrent le livre** (`album.colophon`,
-décochables depuis Envoi) : colophon en queue, page de garde en tête, hors chapitres.
+de l'album ou au ⌘S, jamais par l'écriture automatique. **Deux planches ordinaires peuvent encadrer le livre** (`album.colophon`,
+cochables depuis Envoi) : colophon en queue, coché d'office ; page de garde en tête,
+décochée d'office depuis 1.1-d ; hors chapitres.
 
 ## La photothèque du Mac
 
@@ -1377,6 +1378,22 @@ première planche ne s'imprime pas — c'est la page qui fait face à l'intérie
 c'est ce qui met le faux-titre en page un et le colophon en page 95, deux rectos. En
 échange, cette moitié doit être vide : le prévol la refuse (`imposition`) au lieu de la
 tronquer en silence.
+
+**Sans faux-titre, la page un est une photo (1.1-d).** `BuildOptions::garde` vaut faux par
+défaut (CLI : `--garde` le rend) ; une recomposition reporte la garde d'un album qui en a
+une. Quand le profil par défaut (`PrinterProfile::defaut`, `PROFIL_DEFAUT` = Cloudprinter)
+relie en pages simples, `Composer::ouverture_a_droite` ouvre le livre sur la tête du premier
+chapitre, seule, dans le gabarit offert à une photo dont la scène ne porte rien à gauche
+**légende de chapitre comprise** (`imposition::objets_a_gauche`, jamais une liste de noms) :
+la recherche de place libre posait la légende sur la gauche vide. Rang : légende à la
+hauteur des autres (`CAPTION_SAFE`, sinon `zone_sure` avertit la page un), pleine page,
+justesse. En pratique les `g_v_1x1*_b8`, d'où le second changement : **une bande dont toutes
+les photos sont à droite pend à droite** (`caption_anchor_of`), ce qui n'a déplacé que les
+27 rectos `g_v_*_b8` du dump. Mesuré sur 3 jeux × 6 formats : seule la planche 1 change,
+prévol Cloudprinter sans défaut en page un (`docs/mesures/2026-10-20-sans-faux-titre.json`).
+L'éditeur grise la page collée (`scene.ts::gaucheCollee`, le prédicat du prévol, profil
+courant), refuse ce qu'on y lâche en le disant, pose bloc et ornement à droite
+(`pageDePose`), et la table grise la même moitié.
 
 **`Bleed::dos` a enfin un sens** : une planche n'a pas de bord au pli, une page simple en a
 un, et il ne se lit que par `imposition::pli_mm`.

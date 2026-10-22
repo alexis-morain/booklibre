@@ -24,6 +24,7 @@ import { couleurValide, encreSurFond } from "./couleur";
 import { useEffect, useRef, useState } from "react";
 import { t } from "./i18n";
 import { Album, Spread, spreadGeometry, slotsFor } from "./album";
+import { largeurCollee } from "./scene";
 import { badgesDe, useReleve } from "./photos";
 import { signesDePlanche } from "./qualite";
 import { SignesAlerte } from "./SignesAlerte";
@@ -53,8 +54,12 @@ export function PlanchesView({
   onLock,
   onRemove,
   onMenu,
+  reliure = null,
 }: {
   album: Album;
+  /** Le profil d'impression courant : la vignette de la première planche
+   *  grise sa page collée dans la couverture, comme l'éditeur (1.1-d). */
+  reliure?: { pages_simples: boolean } | null;
   /** Index of the highlighted cell; -1 is the cover, page zero. */
   current: number;
   onSelect: (at: number) => void;
@@ -244,6 +249,7 @@ export function PlanchesView({
       />
       {album.spreads.map((spread, i) => (
         <PlancheCell
+          reliure={reliure}
           key={i}
           album={album}
           spread={spread}
@@ -295,7 +301,9 @@ function PlancheCell({
   onRelache,
   onAnnule,
   avaleClic,
+  reliure,
 }: {
+  reliure: { pages_simples: boolean } | null;
   album: Album;
   spread: Spread;
   index: number;
@@ -385,11 +393,19 @@ function PlancheCell({
       aria-label={
         (spread.caption ? `${spread.caption} · ` : "") +
         t("table.cellule.nom", { n: index + 1 }) +
-        (ditAlerte ? ` · ${ditAlerte}` : "")
+        (ditAlerte ? ` · ${ditAlerte}` : "") +
+        (largeurCollee(index, reliure, spreadGeometry(album)) > 0
+          ? ` · ${t("planche.collee")}`
+          : "")
       }
       onKeyDown={onKey}
     >
-      <MiniSpread album={album} spread={spread} onSombre={surSombre} />
+      <MiniSpread
+        album={album}
+        spread={spread}
+        onSombre={surSombre}
+        colleeMm={largeurCollee(index, reliure, spreadGeometry(album))}
+      />
       <figcaption className="planche-meta">
         <span className="planche-num">{index + 1}</span>
         {spread.caption && <span className="planche-chapter">{spread.caption}</span>}
@@ -534,9 +550,13 @@ function MiniSpread({
   album,
   spread,
   onSombre,
+  colleeMm = 0,
 }: {
   album: Album;
   spread: Spread;
+  /** La page collée dans la couverture, en millimètres depuis la gauche :
+   *  zéro partout sauf sur la première planche chez qui relie page par page. */
+  colleeMm?: number;
   /** Une vignette décodée dit si sa case est sombre. */
   onSombre: (cell: number, sombre: boolean) => void;
 }) {
@@ -593,6 +613,14 @@ function MiniSpread({
         <span className="mini-text" aria-hidden="true">
           {spread.text.trim() ? spread.text : "texte"}
         </span>
+      )}
+      {colleeMm > 0 && (
+        <span
+          className="mini-collee"
+          style={{ width: `${(colleeMm / geom.w) * 100}%` }}
+          title={t("planche.collee")}
+          aria-hidden="true"
+        />
       )}
       <span className="mini-fold" aria-hidden="true" />
     </div>

@@ -35,9 +35,10 @@ pub struct BuildOptions {
     /// over what the album already said: taking the page away once must not
     /// have to be done again after every recomposition.
     pub colophon: bool,
-    /// Print the half-title page at the head of the book. Same default and
-    /// same carry-over as the colophon: they are the two pages the machine
-    /// writes about the book rather than with its photographs.
+    /// Print the half-title page at the head of the book. Off by default
+    /// since 1.1-d: a new album opens on a photograph, and its facts (days,
+    /// towns) stay on the colophon. A recomposition carries over what the
+    /// album already said, so an album that has one keeps it.
     pub garde: bool,
     /// Alternative proposals to compose beside the one asked for. Empty is
     /// the plain path: one album, exactly as before.
@@ -83,7 +84,7 @@ impl Default for BuildOptions {
             cover: None,
             densite: layout::Densite::default(),
             colophon: true,
-            garde: true,
+            garde: false,
             variantes: Vec::new(),
             reglages: std::collections::BTreeMap::new(),
             police: None,
@@ -705,6 +706,10 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
             }
 
             let mut composer = layout::Composer::avec_densite(&album, densite);
+            // Sans faux-titre, chez qui relie page par page, la moitié gauche
+            // de la première planche est collée dans la couverture (1.1-d).
+            composer.ouverture_a_droite =
+                !opts.garde && crate::printer::PrinterProfile::defaut().pages_simples;
             // Captions are worked out for the run of chapters at once, not one
             // by one: whether a place is worth naming depends on the chapter
             // before it.
@@ -2463,12 +2468,91 @@ mod tests {
         assert_eq!(slots, 10, "les dix photos sont dans l'album");
         let planches = planches_photo(&report.album);
         assert!((2..=6).contains(&planches), "{planches} planches pour 10 photos");
-        // Les deux pages de la machine encadrent le livre, dans cet ordre.
-        assert_eq!(report.album.spreads[0].template, crate::garde::TEMPLATE);
+        // Le livre s'ouvre sur une photo (1.1-d) et se ferme sur le colophon.
+        assert!(!report.album.spreads[0].slots.is_empty(), "{}", report.album.spreads[0].template);
         assert_eq!(
             report.album.spreads.last().unwrap().template,
             crate::colophon::TEMPLATE
         );
+    }
+
+    /// 1.1-d : un album neuf n'a pas de faux-titre. Il s'ouvre sur une photo,
+    /// la moitié gauche de sa première planche — collée dans la couverture
+    /// chez qui relie page par page — ne porte rien, et le prévol de
+    /// Cloudprinter n'a rien à en dire. Les faits que portait le faux-titre
+    /// restent sur le colophon, et la couverture les lit dans les faits.
+    ///
+    /// Le prévol entier à zéro se mesure sur les jeux de référence : un
+    /// dossier synthétique de douze photos n'a ni les 24 pages ni la
+    /// définition de couverture de Cloudprinter, et ces deux refus-là ne
+    /// disent rien de la première planche.
+    #[test]
+    fn un_album_neuf_s_ouvre_sur_une_photo_et_le_prevol_est_a_zero() {
+        let (photos, out) = dossier_test("sans-garde");
+        for i in 0..12 {
+            jpeg_imprimable(&photos.join(format!("photo-{i:02}.jpg")), i);
+        }
+        let report = build_album(&photos, &out, options_datees()).expect("un album");
+        let album = &report.album;
+        assert!(
+            !album.spreads.iter().any(|s| s.template == crate::garde::TEMPLATE),
+            "aucun faux-titre"
+        );
+        let premiere = &album.spreads[0];
+        assert!(!premiere.slots.is_empty(), "page 1 = une photo : {}", premiere.template);
+        let g = crate::pdf::geometry(album);
+        assert_eq!(
+            crate::imposition::objets_a_gauche(&crate::scene::Scene::of(premiere, &g), &g),
+            0,
+            "{} porte quelque chose à gauche",
+            premiere.template
+        );
+        assert!(album.colophon.is_some(), "les faits restent sur le colophon");
+        assert_eq!(album.spreads.last().unwrap().template, crate::colophon::TEMPLATE);
+        assert_eq!(
+            album.cover.as_ref().map(|c| c.subtitle.clone()),
+            album
+                .colophon
+                .as_ref()
+                .map(|f| crate::garde::ligne_des_dates(f, Langue::Fr).unwrap_or_default()),
+            "la couverture lit ses dates dans les faits, pas sur une planche"
+        );
+
+        let cp = crate::printer::PrinterProfile::par_id("cloudprinter").unwrap();
+        let r = crate::prevol::prevol_album(&out, cp).unwrap();
+        let propres_au_jeu = ["pagination", "couverture_resolution"];
+        let reste: Vec<_> = r
+            .defauts
+            .iter()
+            .filter(|d| d.bloquant && !propres_au_jeu.contains(&d.regle))
+            .collect();
+        assert!(reste.is_empty(), "prévol : {reste:?}");
+        assert!(!r.defauts.iter().any(|d| d.regle == "imposition"), "{:?}", r.defauts);
+        let _ = fs::remove_dir_all(&out);
+    }
+
+    /// Un album qui a son faux-titre le garde à la recomposition : 1.1-d ne
+    /// change que les albums neufs.
+    #[test]
+    fn la_recomposition_reporte_une_garde_existante() {
+        let (photos, out) = dossier_test("garde-reportee");
+        for i in 0..10 {
+            jpeg_imprimable(&photos.join(format!("photo-{i}.jpg")), i);
+        }
+        let opts = BuildOptions { garde: true, ..options_datees() };
+        let avant = build_album(&photos, &out, opts).expect("un album avec garde").album;
+        assert_eq!(avant.spreads[0].template, crate::garde::TEMPLATE);
+
+        let r = crate::recomposition::recomposer(
+            &out,
+            crate::recomposition::Recomposition {
+                aujourdhui: Some(jour_fixe()),
+                ..Default::default()
+            },
+        );
+        let repris = r.expect("recomposition").album;
+        assert_eq!(repris.spreads[0].template, crate::garde::TEMPLATE, "la garde reste");
+        let _ = fs::remove_dir_all(&out);
     }
 
     /// The threshold itself, tested through the refusal messages so it costs

@@ -5880,3 +5880,28 @@ button.envoi-defaut-ou:focus-visible {
   font-size: var(--fs-12);
   color: var(--muted);
 }
+
+/* 1.1-d : la page collée dans la couverture. Grisée par-dessus ce qu'elle
+   porterait, nommée en clair, transparente au pointeur. */
+.page-collee {
+  position: absolute;
+  pointer-events: none;
+  background: rgb(var(--paper-ink-rgb) / 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.page-collee span {
+  font-size: var(--fs-12);
+  color: var(--paper-ink);
+  text-align: center;
+  padding: 0 1em;
+}
+.mini-collee {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: rgb(var(--paper-ink-rgb) / 0.14);
+  pointer-events: none;
+}

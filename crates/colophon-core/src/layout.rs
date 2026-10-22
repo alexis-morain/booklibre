@@ -185,6 +185,12 @@ pub struct Composer {
     /// Sources left in the reserve because no cell prints them at the floor,
     /// in the order met: the build report says so (1.1-a2).
     pub trop_petites: Vec<String>,
+    /// La prochaine planche posée ouvre le livre, et sa moitié gauche ne
+    /// s'imprimera pas (1.1-d) : sans faux-titre, chez qui relie page par
+    /// page, c'est la page collée dans la couverture. Le Composer y pose une
+    /// photo seule à droite, légende comprise, et retombe à faux dès cette
+    /// planche posée. Faux par défaut : la règle d'hier, à l'octet.
+    pub ouverture_a_droite: bool,
 }
 
 impl Composer {
@@ -200,6 +206,7 @@ impl Composer {
             geom: pdf::geometry(album),
             densite,
             trop_petites: Vec::new(),
+            ouverture_a_droite: false,
         }
     }
 
@@ -210,7 +217,19 @@ impl Composer {
         root: &std::path::Path,
     ) -> Vec<Spread> {
         let mut photos = chapter.photos.clone();
-        promote_opening(&mut photos, &|p| self.holds_a_page(p));
+        // L'ouverture du livre se fait sur une page à elle quelle que soit la
+        // taille du chapitre : sa gauche ne s'imprime pas, une planche de deux
+        // photos y en perdrait une.
+        let premiere = self.ouverture_a_droite;
+        let minimum = if premiere { 1 } else { OPENING_MIN_PHOTOS };
+        promote_opening(&mut photos, minimum, &|p| self.holds_a_page(p));
+        // Et sur une photo qui tient sa page : le quartile haut peut n'en
+        // compter aucune, la première qui la tient vient alors en tête.
+        if premiere && !photos.first().is_some_and(|p| self.holds_a_page(p)) {
+            if let Some(j) = photos.iter().position(|p| self.holds_a_page(p)) {
+                photos[..=j].rotate_right(1);
+            }
+        }
         let feature_threshold = quantile(
             &photos.iter().map(Photo::effective_score).collect::<Vec<_>>(),
             FEATURE_QUANTILE,
@@ -230,7 +249,7 @@ impl Composer {
             let mut feature = false;
 
             // The chapter opens on a page of its own: the promoted opener.
-            if i == 0 && remaining >= OPENING_MIN_PHOTOS && self.holds_a_page(&photos[0]) {
+            if i == 0 && remaining >= minimum && self.holds_a_page(&photos[0]) {
                 take = 1;
                 feature = true;
             }
@@ -343,6 +362,18 @@ impl Composer {
                     None => take = clamp_take(take - 1, remaining),
                 }
             };
+            // L'ouverture du livre : si la disposition retenue laisse quoi que
+            // ce soit sur la page collée — la légende du chapitre, qui cherche
+            // sa place sur la page vide —, une disposition qui n'y laisse
+            // rien la remplace. Sinon elle reste, et le prévol le dira.
+            let (name, order) = match (self.ouverture_a_droite && take == 1)
+                .then(|| self.a_droite(&photos[i], feature, &name, caption.as_ref()))
+                .flatten()
+            {
+                Some(x) => x,
+                None => (name, order),
+            };
+            self.ouverture_a_droite = false;
 
             let cells = pdf::slots_for(&name, take, &self.geom);
             let slots = (0..take)
@@ -416,12 +447,77 @@ impl Composer {
     /// Full bleed only when the crop keeps most of the frame, prints at a
     /// clean resolution, and no face ends up against an edge.
     fn fits_full(&self, p: &Photo) -> bool {
-        let cell = pdf::slots_for("full1", 1, &self.geom)[0];
-        let a = p.analysis.aspect();
-        let ca = cell.w / cell.h;
-        (a / ca).min(ca / a) >= MIN_VISIBLE
-            && printable(p, &cell)
-            && face_feasible(p, &cell)
+        fits_full_cell(p, &pdf::slots_for("full1", 1, &self.geom)[0])
+    }
+
+    /// Whether a one-photo spread under this template leaves the left page
+    /// empty, chapter caption included: the question the preflight asks of
+    /// the first spread (`imposition::objets_a_gauche`), asked of the scene
+    /// the spread would make. A list of names would be a second answer.
+    fn vide_a_gauche(&self, nom: &str, caption: Option<&String>) -> bool {
+        let s = Spread {
+            template: nom.to_string(),
+            slots: vec![Slot::new(String::new(), crate::model::default_focal())],
+            caption: caption.cloned(),
+            text: None,
+            edited: false,
+            locked: false,
+            objets: Vec::new(),
+        };
+        crate::imposition::objets_a_gauche(&crate::scene::Scene::of(&s, &self.geom), &self.geom)
+            == 0
+    }
+
+    /// Whether the chapter caption of a one-photo spread under this template
+    /// stays where every other caption of the book stands: no lower than the
+    /// low caption line (`pdf::CAPTION_SAFE`), which clears the suppliers'
+    /// safe zone. A band hung under a full-bleed page does not, and the
+    /// preflight would warn about page one.
+    fn legende_au_sec(&self, nom: &str, caption: Option<&String>) -> bool {
+        if caption.is_none() {
+            return true;
+        }
+        let g = &self.geom;
+        let at = pdf::caption_anchor(nom, &pdf::slots_for(nom, 1, g), g);
+        at.y >= g.bleed + g.margin * pdf::CAPTION_SAFE - 1e-9
+    }
+
+    /// The book's opening spread when its left page will not print (1.1-d):
+    /// `None` when the template already chosen leaves that page empty, else
+    /// the offered one-photo template that does — its caption clear of the
+    /// safe zone first, then the best fit, a full page first when the
+    /// opening earned one. Same checks as every other cell — orientation,
+    /// 250 ppi, faces — so a photo no candidate takes keeps the template it
+    /// had, and the preflight says what that costs.
+    fn a_droite(
+        &self,
+        p: &Photo,
+        feature: bool,
+        retenue: &str,
+        caption: Option<&String>,
+    ) -> Option<(String, Vec<usize>)> {
+        if self.vide_a_gauche(retenue, caption) {
+            return None;
+        }
+        let mut best: Option<((bool, bool, f64), &str, Vec<usize>)> = None;
+        for spec in crate::gabarit::offerts().iter().filter(|s| s.capacite == 1) {
+            if !self.vide_a_gauche(spec.nom, caption) {
+                continue;
+            }
+            let cells = pdf::slots_for(spec.nom, 1, &self.geom);
+            let pleine = spec.droite == crate::gabarit::Page::Pleine;
+            if pleine && !(feature && fits_full_cell(p, &cells[0])) {
+                continue;
+            }
+            let Some((order, score)) = assign(std::slice::from_ref(p), &cells) else {
+                continue;
+            };
+            let rang = (!self.legende_au_sec(spec.nom, caption), !pleine, score);
+            if best.as_ref().is_none_or(|(b, ..)| rang < *b) {
+                best = Some((rang, spec.nom, order));
+            }
+        }
+        best.map(|(_, nom, order)| (nom.to_string(), order))
     }
 
     /// Best template for the chunk: the valid assignment (orientation-true,
@@ -450,6 +546,14 @@ impl Composer {
     }
 }
 
+/// Full bleed only when the crop keeps most of the frame, prints at a clean
+/// resolution, and no face ends up against an edge.
+fn fits_full_cell(p: &Photo, cell: &Rect) -> bool {
+    let a = p.analysis.aspect();
+    let ca = cell.w / cell.h;
+    (a / ca).min(ca / a) >= MIN_VISIBLE && printable(p, cell) && face_feasible(p, cell)
+}
+
 /// Template families able to hold a chunk of this size.
 fn families_for(n: usize) -> &'static [&'static str] {
     match n {
@@ -471,8 +575,8 @@ fn printable(p: &Photo, cell: &Rect) -> bool {
 
 /// Rotate the earliest top-quartile photo to the front of the chapter, so
 /// the opening spread carries it. Everything else keeps its order.
-fn promote_opening(photos: &mut [Photo], holds_a_page: &dyn Fn(&Photo) -> bool) {
-    if photos.len() < OPENING_MIN_PHOTOS {
+fn promote_opening(photos: &mut [Photo], minimum: usize, holds_a_page: &dyn Fn(&Photo) -> bool) {
+    if photos.len() < minimum {
         return;
     }
     // The linter's opening counter scores the same way, stars included
@@ -775,6 +879,7 @@ fn face_safe_focal(p: &Photo, cell: &Rect) -> [f64; 2] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
 
     fn photo(n: u64, w: u32, h: u32) -> Photo {
         Photo {
@@ -855,6 +960,90 @@ mod tests {
         let spreads = Composer::new(&album).compose(&chapter, None, std::path::Path::new("/"));
         let posees = spreads.iter().flat_map(|s| s.slots.iter()).count();
         assert_eq!(posees, 9);
+    }
+
+    fn chapitre(photos: Vec<Photo>) -> Chapter {
+        let (start, end) = (photos[0].meta.taken, photos[photos.len() - 1].meta.taken);
+        Chapter { start, end, photos }
+    }
+
+    fn carre() -> Album {
+        Album::new("t", std::path::Path::new("/"), crate::model::Size { w: 210.0, h: 210.0 })
+    }
+
+    /// Ce que la découpe en pages simples perdrait de la première planche :
+    /// la question du prévol, posée à la scène, légende de chapitre comprise.
+    fn a_gauche(s: &Spread, album: &Album) -> usize {
+        let g = pdf::geometry(album);
+        crate::imposition::objets_a_gauche(&crate::scene::Scene::of(s, &g), &g)
+    }
+
+    /// 1.1-d, décision 3 : sans faux-titre, la moitié gauche de la première
+    /// planche est collée dans la couverture. Le Composer y ouvre le livre sur
+    /// une photo seule à droite, et la légende du chapitre la suit sur cette
+    /// page : posée sur la gauche vide, elle serait perdue elle aussi.
+    #[test]
+    fn la_premiere_planche_n_a_rien_a_gauche_legende_comprise() {
+        let album = carre();
+        let legende = Some("Calvi, 27 octobre".to_string());
+        let photos: Vec<Photo> = (0..9).map(|n| photo(n, 4000, 3000)).collect();
+
+        // Témoin : la règle d'hier pose la légende sur la page de gauche, vide.
+        let hier = Composer::new(&album).compose(&chapitre(photos.clone()), legende.clone(), Path::new("/"));
+        assert!(a_gauche(&hier[0], &album) > 0, "{}", hier[0].template);
+
+        let mut composer = Composer::new(&album);
+        composer.ouverture_a_droite = true;
+        let spreads = composer.compose(&chapitre(photos), legende.clone(), Path::new("/"));
+        assert_eq!(spreads[0].slots.len(), 1, "{}", spreads[0].template);
+        assert_eq!(spreads[0].caption, legende, "la légende reste sur l'ouverture");
+        assert_eq!(a_gauche(&spreads[0], &album), 0, "{}", spreads[0].template);
+        // Une seule planche : la suivante est une planche comme les autres.
+        assert!(!composer.ouverture_a_droite);
+    }
+
+    /// Un premier chapitre trop court pour s'ouvrir sur une page à lui (sous
+    /// `OPENING_MIN_PHOTOS`) s'ouvre quand même à droite, sur sa meilleure
+    /// photo : la règle des têtes de chapitre, sans son minimum.
+    #[test]
+    fn un_premier_chapitre_court_s_ouvre_aussi_a_droite() {
+        let album = carre();
+        let mut photos: Vec<Photo> = (0..4).map(|n| photo(n, 4000, 3000)).collect();
+        photos[0].analysis.sharpness = 1.0;
+        photos[1].analysis.sharpness = 1.0;
+        photos[2].analysis.sharpness = 400.0; // la première du quartile haut
+        photos[3].analysis.sharpness = 300.0;
+
+        let hier = Composer::new(&album).compose(&chapitre(photos.clone()), None, Path::new("/"));
+        assert!(a_gauche(&hier[0], &album) > 0, "{}", hier[0].template);
+
+        let mut composer = Composer::new(&album);
+        composer.ouverture_a_droite = true;
+        let spreads = composer.compose(&chapitre(photos), None, Path::new("/"));
+        assert_eq!(a_gauche(&spreads[0], &album), 0, "{}", spreads[0].template);
+        assert_eq!(spreads[0].slots.len(), 1);
+        assert_eq!(spreads[0].slots[0].src, "p02.jpg", "la meilleure photo ouvre le livre");
+        let posees = spreads.iter().flat_map(|s| s.slots.iter()).count();
+        assert_eq!(posees + composer.trop_petites.len(), 4, "rien ne se perd");
+    }
+
+    /// Le plancher de 250 ppi tient aussi pour l'ouverture : aucune photo du
+    /// chapitre ne tient une page, donc aucune n'en prend une, et le prévol
+    /// dira la moitié gauche plutôt que le Composer n'imprime flou.
+    #[test]
+    fn l_ouverture_a_droite_ne_passe_pas_sous_le_plancher() {
+        let album = carre();
+        let photos: Vec<Photo> = (0..4).map(|n| photo(n, 1300, 1000)).collect();
+        let mut composer = Composer::new(&album);
+        composer.ouverture_a_droite = true;
+        let spreads = composer.compose(&chapitre(photos), None, Path::new("/"));
+        let g = pdf::geometry(&album);
+        for s in &spreads {
+            for (sl, cell) in s.slots.iter().zip(pdf::slots_for(&s.template, s.slots.len(), &g)) {
+                let p = photo(sl.src[1..3].parse().unwrap(), 1300, 1000);
+                assert!(printable(&p, &cell), "{} dans {}", sl.src, s.template);
+            }
+        }
     }
 
     #[test]

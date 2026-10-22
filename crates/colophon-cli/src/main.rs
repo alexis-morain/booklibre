@@ -54,6 +54,12 @@ struct Cli {
     #[arg(long)]
     variantes: bool,
 
+    /// Open the book on a half-title page (title, days, towns). Off by
+    /// default since 1.1-d: a new album opens on a photograph, and the same
+    /// facts stay on the colophon page.
+    #[arg(long)]
+    garde: bool,
+
     /// Write the folder's relevé to FICHIER: what the scan and the analysis
     /// measured, and nothing else. The reading half of a composition is the
     /// only one that touches a pixel; these fiches carry everything the
@@ -186,7 +192,7 @@ struct Cli {
 
     /// Printer profile the export and the preflight read: cloudprinter,
     /// prodigi, lulu, generique.
-    #[arg(long, default_value = "cloudprinter", value_name = "ID")]
+    #[arg(long, default_value = colophon_core::printer::PROFIL_DEFAUT, value_name = "ID")]
     profil: String,
 
     /// List the printer profiles and exit
@@ -764,6 +770,7 @@ fn main() -> Result<()> {
                 } else {
                     Vec::new()
                 },
+                garde: cli.garde,
                 ..Default::default()
             },
         )?;
@@ -790,6 +797,7 @@ fn main() -> Result<()> {
             } else {
                 Vec::new()
             },
+            garde: cli.garde,
             ..Default::default()
         },
     )?;

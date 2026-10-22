@@ -68,7 +68,9 @@ import {
   angleEcran,
   avecRecadrage,
   corners,
+  gaucheCollee,
   hitTest,
+  largeurCollee,
   retournerBoite,
   Point,
   Role,
@@ -112,6 +114,8 @@ export function SpreadView({
   onObjetReglage,
   polices = [],
   policeLivre = null,
+  reliure = null,
+  onCollee,
 }: {
   album: Album;
   spread: Spread;
@@ -162,6 +166,12 @@ export function SpreadView({
    *  `hitTest` que les gestes, et le pointeur en pixels de la fenêtre. Les
    *  deux rendus passent par là, le canvas comme le DOM. */
   onMenu?: (cible: Cible, point: { x: number; y: number }) => void;
+  /** Le profil d'impression courant, pour la page collée dans la couverture
+   *  (1.1-d) : la moitié gauche de la première planche chez qui relie page
+   *  par page. Grisée, et un dépôt qu'on y lâche se refuse. */
+  reliure?: { pages_simples: boolean } | null;
+  /** Un dépôt lâché sur la page collée : refusé, et App le dit. */
+  onCollee?: () => void;
 }) {
   const paper = useRef<HTMLDivElement>(null);
   const [mm, setMm] = useState(1);
@@ -792,6 +802,24 @@ export function SpreadView({
           width: `${geom.w * mm}px`,
           height: `${geom.h * mm}px`,
         }}
+        // La page collée refuse ce qu'on y lâche, avant toute case : la photo
+        // n'y imprimerait rien. En capture, pour les deux rendus à la fois.
+        onDragOverCapture={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          if (!gaucheCollee(planche, reliure, (e.clientX - r.left) / mm, geom)) return;
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = "none";
+          setDrop(null);
+        }}
+        onDropCapture={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          if (!gaucheCollee(planche, reliure, (e.clientX - r.left) / mm, geom)) return;
+          e.preventDefault();
+          e.stopPropagation();
+          setDrop(null);
+          onCollee?.();
+        }}
         onContextMenu={
           onMenu &&
           ((e) => {
@@ -1258,6 +1286,24 @@ export function SpreadView({
             onText={onText}
             objetDeScene={false}
           />
+        )}
+
+        {/* La page collée dans la couverture (1.1-d) : grisée et nommée,
+            au-dessus de ce qu'elle porterait, sous les anneaux de focus.
+            Invisible au pointeur : ce qui s'y trouve encore doit pouvoir
+            se choisir pour être déplacé. */}
+        {largeurCollee(planche, reliure, geom) > 0 && (
+          <div
+            className="page-collee"
+            style={{
+              left: 0,
+              top: 0,
+              width: `${largeurCollee(planche, reliure, geom) * mm}px`,
+              height: `${geom.h * mm}px`,
+            }}
+          >
+            <span>{t("planche.collee")}</span>
+          </div>
         )}
 
         {/* One focusable box per object, in reading order, laid over the

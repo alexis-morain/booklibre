@@ -418,7 +418,10 @@ mod tests {
     #[test]
     fn poser_mentions_ecrit_la_table_et_l_ote() {
         let dir = std::env::temp_dir()
-            .join(format!("colophon-mentions-{}", std::process::id()));
+            // Pas « colophon-mentions-» : c'est le dossier de
+            // `build::dossier_test("mentions")`, que ce test effaçait sous
+            // lui quand les deux tournaient ensemble.
+            .join(format!("colophon-legende-poser-mentions-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         // 2020-05-10 12:00:00 UTC, à Calvi.
