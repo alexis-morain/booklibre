@@ -213,7 +213,7 @@ export const FR = {
 
   "prefs.impression": "Impression",
   "prefs.impression.note":
-    "« Par Booklibre » : à chaque ouverture, Booklibre demande à tarifs.booklibre.app (servi par Cloudflare) la table de ses prix, pour vous dire pendant que vous composez combien coûtera le livre. Ce qui part est une requête pour ce seul fichier ; ce que Cloudflare en voit est votre adresse IP et le nom du logiciel qui la fait, rien de vos photographies, rien de votre album, aucun identifiant, et le pays choisi ne part pas. « Moi-même » : rien ne part, aucun prix ne s’affiche.",
+    "« Par Booklibre » : à chaque ouverture, Booklibre demande à prices.booklibre.app (servi par Cloudflare) la table de ses prix, pour vous dire pendant que vous composez combien coûtera le livre. Ce qui part est une requête pour ce seul fichier ; ce que Cloudflare en voit est votre adresse IP et le nom du logiciel qui la fait, rien de vos photographies, rien de votre album, aucun identifiant, et le pays choisi ne part pas. « Moi-même » : rien ne part, aucun prix ne s’affiche.",
 
   // -- « Comment l’imprimer ? » et le prix pendant la construction (1.1-f)
   "impression.question": "Comment comptez-vous l’imprimer ?",
@@ -1498,7 +1498,7 @@ export const EN: Record<Cle, string> = {
 
   "prefs.impression": "Printing",
   "prefs.impression.note":
-    "“Through Booklibre”: each time it opens, Booklibre asks tarifs.booklibre.app (served by Cloudflare) for its price table, so it can tell you while you compose what the book will cost. What goes out is a request for that one file; what Cloudflare sees of it is your IP address and the name of the software making it, nothing of your photographs, nothing of your album, no identifier, and the country you chose does not go out. “Myself”: nothing goes out, no price shows.",
+    "“Through Booklibre”: each time it opens, Booklibre asks prices.booklibre.app (served by Cloudflare) for its price table, so it can tell you while you compose what the book will cost. What goes out is a request for that one file; what Cloudflare sees of it is your IP address and the name of the software making it, nothing of your photographs, nothing of your album, no identifier, and the country you chose does not go out. “Myself”: nothing goes out, no price shows.",
 
   "impression.question": "How will you print it?",
   "impression.moi": "Myself",

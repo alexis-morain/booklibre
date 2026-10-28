@@ -169,6 +169,9 @@ jobs:
           # secret : une adresse publique. Absente, la release n'a ni la
           # question « Comment l'imprimer ? » ni aucun prix.
           S_TARIFS: ${{ vars.COLOPHON_TARIFS_REEL }}
+          # Le relais réel (Commander), une variable du dépôt elle aussi :
+          # absente, la release n'a pas le bouton Commander.
+          S_RELAIS: ${{ vars.COLOPHON_RELAIS_REEL }}
         # Tauri lit les variables Apple par leur seule présence : une
         # variable vide vaudrait un certificat vide et ferait échouer
         # l'import. Elles ne sont donc exportées que posées. Avec elles,
@@ -190,6 +193,7 @@ jobs:
           # Exportée seulement posée : vide, `core::tarifs` la refuserait et
           # le build s'arrêterait.
           if [ -n "$S_TARIFS" ]; then export COLOPHON_TARIFS_REEL="$S_TARIFS"; fi
+          if [ -n "$S_RELAIS" ]; then export COLOPHON_RELAIS_REEL="$S_RELAIS"; fi
           npm run tauri build -- \
             --target ${{ matrix.cible }} \
             --config src-tauri/tauri.release.conf.json

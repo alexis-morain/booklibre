@@ -14,7 +14,7 @@ without a click. Preferences (Cmd-comma) turns the check off.
 The second call exists only once you have answered "Through Booklibre" to
 "How will you print it?", on the welcome screen or in Preferences; until you
 answer, and if you answer "Myself", it never goes. Then, once each time the
-app opens, the Rust process asks the price server (`tarifs.booklibre.app`,
+app opens, the Rust process asks the price server (`prices.booklibre.app`,
 a Cloudflare Worker) for its price table: one HTTPS GET for one file, with
 no identifier, no header of its own, and not even the country you picked,
 which stays on your machine. Cloudflare sees the IP address and user agent of
@@ -45,10 +45,10 @@ test you start by hand with your own keys.
 The source also holds a way to order a printed copy from inside the app,
 through a relay: a small server that quotes, takes the payment with Stripe
 and places the order with Cloudprinter, so that the app holds no key. Which
-relay a build talks to is fixed when it is compiled. The published builds
-carry none, and call none: the order button does not exist in them, and
-nothing in these notes will say otherwise until a release announces it. A
-debug build points at a test relay, as does a release built from source with
+relay a build talks to is fixed when it is compiled. Since 1.1, the published
+builds for macOS and Windows carry Booklibre's relay, `api.booklibre.app` (a
+Cloudflare Worker), and ordering is open for delivery in France; up to 1.0.1
+they carried none. A debug build points at a test relay, as does a release built from source with
 `COLOPHON_RELAIS_SANDBOX=1`; a release built with `COLOPHON_RELAIS_REEL` set
 points at that address. Setting both stops the build.
 

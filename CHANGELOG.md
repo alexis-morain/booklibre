@@ -9,10 +9,20 @@ sur la page des releases.
 
 ## [Non publié]
 
+## [1.1.0] - 2026-10-28
+
 ### Added
 
+- Order the printed album from Booklibre, for delivery in France. Send →
+  Order quotes the book, uploads the two PDFs, and opens the payment on
+  Stripe's page in your browser; the album is printed and shipped by
+  Cloudprinter. Your card, name and address are typed on Stripe's page, never
+  in the app. An order can be cancelled from the app until production starts,
+  and is then refunded. The PDF export stays free, offline and without an
+  account. The Mac App Store version has no ordering.
+
 - While you build an album, the foot of the book and of the spreads shows what
-  it would cost printed and delivered by Booklibre ("From €46 delivered"),
+  it would cost printed and delivered by Booklibre ("From €38 delivered"),
   following the number of pages. Only if you answer "Through Booklibre" to "How
   will you print it?" (welcome screen, then Preferences): the app then reads a
   price table once per launch, with nothing of your album. "Myself" turns it
