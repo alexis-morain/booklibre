@@ -125,7 +125,7 @@ export function Proprietes({
           <dt>{t("props.chapitre")}</dt>
           <dd>
             {chapitre ? (
-              <span className="tag chap">{chapitre.titre}</span>
+              <span className="tag chap" title={chapitre.titre}>{chapitre.titre}</span>
             ) : (
               <span className="props-aucun">{t("props.aucun")}</span>
             )}
