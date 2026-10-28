@@ -191,14 +191,6 @@ in the code. In the app, Send prepares a folder for Cloudprinter (interior,
 cover, `export.json`, and a sheet of what the order form asks for), or writes
 one plain PDF for any other shop.
 
-Since 1.1, the macOS and Windows builds can also order the book from
-Booklibre, for delivery in France: Send → Order quotes it, uploads the two
-PDFs, and opens the payment on Stripe's page in your browser; Cloudprinter
-prints and ships it. The app holds no key and never sees your card or your
-address. The export stays free, offline and without an account; the Mac App
-Store version has no ordering. What leaves the machine, and when, is in
-[SECURITY.md](SECURITY.md).
-
 The album is always composed as spreads — nothing crosses the fold, and the
 editor shows two facing pages — but the export writes whatever shape the
 profile asks for. A shop that imposes spreads gets them whole. A binder that
