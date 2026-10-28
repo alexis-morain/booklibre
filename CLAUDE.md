@@ -1302,7 +1302,7 @@ blanche. « Changer de format sans recomposer », lien du panneau, est le seul c
 `BasculeView` ; l'ancien « Format et police » est devenu **Police** (`PoliceView.tsx`),
 sans format, et la destination `format` d'Envoi mène à Recomposer.
 
-Menu natif (`menu.ts`), barre en trois zones, couverture = cellule zéro de Planches,
+Menu natif (`menu.ts`), barre latérale et barre du haut (voir **DA**), couverture = cellule zéro de Planches,
 export uniquement par Envoi. **Toute commande passe par la table `raw` d'App et
 `menu.ts`** ; les cinq panneaux s'excluent. Recomposer, le changement de format sans
 recomposer et Police sont **une seule place** (l'état `bascule` d'App, une union de trois
@@ -1310,12 +1310,43 @@ valeurs) : ils s'excluent par construction et le compte ne bouge pas. Fichier po
 « Recomposer… » et « Police… ». **Aide puis Signaler** (`signaler.ts`) :
 rapport entier visible avant envoi, jamais un chemin ni une légende.
 
-**DA** : piste A, chrome clair sur blanc, plus un mode sombre qui suit le système, un
-bloc de tokens, contraste vérifié. Neutres froids, terracotta `#b04a1f` / `#e07a4a`, zéro
-serif, radius zéro partout, **six tailles et rien sous 12 px** (`--fs-12` à `--fs-28`).
-Vérifié le 26/09 dans le harnais : aucun texte sous 4,5:1 en sombre, aucun débordement
-horizontal. Les deux colonnes d'*Envoi* ne partagent pas leurs lignes de grille. `--ink-rgb` = encre du papier, `--chip-*` = pastilles sur photo, `--salle-*` = la
-salle sombre.
+**DA** : « La page calme » (`DESIGN.md`, plan `plans/2026-10-28-da-la-page-calme.md` côté gestion).
+Chrome blanc, encre gris chaud, un seul filet, police du système pour tout le chrome (aucune
+police chargée pour lui) ; `--font-book` et Source Sans 3 ne servent que le livre. Trois
+rayons, un rôle chacun (`--r-tag` 4, `--r-ctl` 6, `--r-panel` 10), **le papier reste carré**.
+Action presque noire, **une seule par écran** (`.cta`, secondaire `.btn-second`, discret
+`.link`) ; le terracotta ne vit que dans le chapitre (étiquette, repère) et la marque ; le
+bleu `--link` est le focus et la sélection, et **ce qui est dessiné sur le papier garde sa
+paire fixe** (`--link-paper`, `--paper-warn`), sinon le sombre rend du pâle sur du crème.
+Quatre étiquettes (`.tag` : `chap`, `qual`, `main`, `pret`, gris par défaut), aucune
+décorative ; le rouge est l'erreur et la destruction, jamais une étiquette. **Jamais de
+bordure colorée sur un côté** (un encart a un fond pâle). Deux ombres : `--shadow-float`
+pour ce qui flotte, `--shadow-sheet` pour la feuille sur la table. Six tailles, rien sous
+12 px (`--fs-12` à `--fs-28`). Le sombre suit le système. **`couleurs-chrome.test.ts` lit
+`styles.css` et tient chaque paire** (texte 4,5:1, frontière de champ 3:1, clair et
+sombre) : une paire neuve s'y ajoute avant de partir. Les bordures d'un champ prennent
+`--field-border`, celles d'un bouton qui porte son libellé prennent `--line`. La salle
+sombre de la revue clavier (`--salle-*`) et les `--chip-*` sur photo ne bougent pas. `--ink-rgb`
+= encre du papier, `--ui-rgb` = encre du chrome.
+
+**La structure** : barre latérale (`Lateral.tsx`, 240 px, `⌘\`, entrée « Barre latérale » du
+menu Affichage, repliée d'elle-même sous 1180 px de fenêtre tant que personne n'a tranché),
+barre du haut en fil d'Ariane (`Bar` dans `App.tsx` : annuler, rétablir, Recomposer discret,
+Commander secondaire **seulement si un relais est compilé** — `useRelais`, la même sonde
+qu'Envoi —, « Exporter le PDF » mène à Envoi, qui est le seul chemin d'export ; aucun des
+deux sur Envoi), les vues et les chapitres à gauche (`chapitres.ts` : un chapitre est une
+planche dont `caption` est posée, jusqu'à la suivante). Le Livre est la planche sur sa table
+et **le panneau de propriétés** (`Proprietes.tsx`, 290 px) : chapitre, disposition (le
+sélecteur de gabarit, qui s'ouvre vers la gauche), moment (la prise de vue de la première
+photo, si le fichier la dit), état, qualité, puis la photo choisie, son encart qualité et
+ses réglages. La ligne de contexte ne garde que « Feuilleter » et l'aide du geste.
+Planches : vues en onglets (Toutes, À vérifier, Éditées) ; **le glisser et Alt + flèches
+n'existent que sur la vue complète** (réordonner entre des voisines qu'on ne voit pas serait
+un piège), le clavier marche sur les cellules visibles. « À vérifier » compte ce que les
+vignettes décodées ont dit : son nombre peut croître au défilement (« sombre » lit les
+pixels). Le menu contextuel porte raccourcis, filets et Supprimer seul en rouge
+(`Entree.raccourci|filet|danger`). Pas de zone de dépôt à l'accueil : `dragDropEnabled`
+est faux, la zone mentirait.
 
 ## Le PDF
 
