@@ -477,6 +477,7 @@ function PlancheCell({
       />
       <figcaption className="planche-meta">
         <span className="planche-num">{index + 1}</span>
+        {spread.caption && <span className="tag chap planche-chapitre">{spread.caption}</span>}
         <span className="planche-flags">
           {lignes.map((l) => (
             <span key={l.code} className="tag qual">
@@ -513,11 +514,6 @@ function PlancheCell({
           </button>
         </span>
       </figcaption>
-      {spread.caption && (
-        <p className="planche-chapitre">
-          <span className="tag chap">{spread.caption}</span>
-        </p>
-      )}
     </figure>
   );
 }

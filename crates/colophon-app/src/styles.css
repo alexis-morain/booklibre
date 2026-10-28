@@ -1314,7 +1314,7 @@ textarea {
   left: 16px;
   padding: 6px 12px;
   background: rgb(var(--ink-rgb) / 0.85);
-  border-left: 2px solid var(--salle-accent);
+  border-radius: var(--r-tag);
   font-family: var(--font-ui);
   font-size: var(--fs-14);
 }
@@ -3824,7 +3824,7 @@ kbd {
 
 .planche-meta {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 4px 8px;
   min-height: 22px;
@@ -5267,8 +5267,9 @@ button.envoi-defaut-ou:focus-visible {
 /* Said at the head when the screen no longer aims at Cloudprinter. */
 .envoi-libre {
   margin: 0 0 14px;
-  padding-left: 12px;
-  border-left: 2px solid var(--line);
+  padding: 8px 12px;
+  background: var(--wash);
+  border-radius: var(--r-ctl);
   color: var(--ink-muted);
   max-width: 58ch;
 }
@@ -6091,6 +6092,11 @@ button.envoi-defaut-ou:focus-visible {
   color: var(--field-border);
 }
 
+/* The title's sizer keeps a space for the caret: the first slash takes it back. */
+.bar-fil h1 + .bar-crumb {
+  margin-left: -6px;
+}
+
 .bar-sp {
   flex: 1 1 0;
 }
@@ -6388,6 +6394,15 @@ button.envoi-defaut-ou:focus-visible {
   min-width: 0;
 }
 
+/* A long chapter title shortens rather than runs out of the panel. */
+.props-ligne dd > .tag {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
 .props-etat {
   display: flex;
   flex-wrap: wrap;
@@ -6621,16 +6636,18 @@ button.envoi-defaut-ou:focus-visible {
 }
 
 /* The chapter a spread opens, named under it. */
+/* The chapter rides beside the spread's number and gives way first: the
+   flags on the right keep their room, the date shortens to an ellipsis. */
 .planche-chapitre {
-  margin: 2px 0 2px;
+  display: block;
+  flex: 0 1 auto;
   min-width: 0;
-}
-
-.planche-chapitre .tag {
-  display: inline-block;
-  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.planche-meta .planche-flags {
+  flex: none;
 }
 
 /* ---- the welcome page ----------------------------------------------------- */
