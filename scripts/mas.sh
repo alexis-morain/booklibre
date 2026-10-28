@@ -124,11 +124,13 @@ PY
   echo "mas : numéro de build $numero"
 
   # Aucune notarisation ici : le Store ne la demande pas, et Tauri la tente
-  # dès que ces variables existent.
+  # dès que ces variables existent. Ni relais ni tarifs non plus : la version
+  # du Store n'a pas Commander (1.1), quel que soit le shell qui la construit.
   (
     cd "$APP_DIR"
     env -u APPLE_ID -u APPLE_PASSWORD -u APPLE_TEAM_ID -u APPLE_API_KEY -u APPLE_API_ISSUER \
       -u APPLE_CERTIFICATE -u APPLE_CERTIFICATE_PASSWORD \
+      -u COLOPHON_RELAIS_REEL -u COLOPHON_RELAIS_SANDBOX -u COLOPHON_TARIFS_REEL \
       APPLE_SIGNING_IDENTITY="$identite" VITE_COLOPHON_MAS=1 \
       npm run tauri build -- --target "$CIBLE" --bundles app \
       --config "$OLDPWD/$conf" \

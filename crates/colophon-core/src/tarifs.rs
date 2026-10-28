@@ -229,7 +229,7 @@ mod tests {
     fn l_adresse_suit_celle_du_relais() {
         assert_eq!(url_pour(true, false, None), Some(SANDBOX));
         assert_eq!(url_pour(false, true, None), Some(SANDBOX));
-        assert_eq!(url_pour(false, false, Some("https://tarifs.booklibre.app")), Some("https://tarifs.booklibre.app"));
+        assert_eq!(url_pour(false, false, Some("https://prices.booklibre.app")), Some("https://prices.booklibre.app"));
         // La release publique sans adresse : aucun prix, aucun appel.
         assert_eq!(url_pour(false, false, None), None);
         // Le gate tourne en debug : le sandbox, jamais une autre adresse.

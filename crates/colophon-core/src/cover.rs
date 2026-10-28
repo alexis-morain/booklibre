@@ -1259,8 +1259,12 @@ mod tests {
     /// Booklibre : avec les deux revenus à « Colophon », le code de R-s1
     /// rendait encore l'ancienne empreinte, `[193, 145, 59, …]` — le nom est
     /// donc le seul octet qui ait bougé.
+    ///
+    /// Reprise à la 1.1.0, où [`neutre`] masque aussi le producteur : la même
+    /// empreinte sort avec la version mise à 1.0.1 et à 1.1.0, et l'ancienne
+    /// (`[145, 244, 10, …]`) était celle de la 1.0.1 non masquée.
     const EMPREINTE_SANS_FOND: [u8; 16] =
-        [145, 244, 10, 161, 159, 104, 200, 192, 242, 183, 82, 253, 173, 16, 196, 243];
+        [164, 102, 28, 39, 2, 22, 118, 68, 191, 214, 146, 37, 84, 163, 130, 143];
 
     /// L'instant figé de [`feuille_figee`].
     fn instant() -> chrono::DateTime<chrono::Local> {
@@ -1270,7 +1274,10 @@ mod tests {
 
     /// Les octets d'une feuille dont on a masqué les trois écritures de
     /// l'instant — `/CreationDate` et `/ModDate`, les dates du paquet XMP,
-    /// l'`/ID` qui en dérive. Elles s'écrivent en heure locale, donc le même
+    /// l'`/ID` qui en dérive — et le nom du producteur, qui porte la version :
+    /// deux fois en clair dans le XMP, deux fois en UTF-16 dans `/Info`
+    /// (`/Producer` et `/Creator`). Sans lui, chaque version du logiciel
+    /// changeait l'empreinte (trouvé au passage à la 1.1.0). Elles s'écrivent en heure locale, donc le même
     /// instant donne d'autres chiffres en UTC sur la CI qu'en UTC+2 sur le
     /// Mac ; leur longueur, elle, ne bouge pas, ni rien d'autre du fichier.
     /// Chacune doit être trouvée : un masque qui ne masque rien laisserait
@@ -1281,14 +1288,18 @@ mod tests {
             .iter()
             .map(|b| format!("{b:02X}"))
             .collect();
+        let producteur = crate::pdfx::producer();
+        let utf16: Vec<u8> = producteur.encode_utf16().flat_map(u16::to_be_bytes).collect();
         let mut out = octets.to_vec();
-        for (motif, attendu) in [
-            (crate::pdfx::pdf_date(t), 2),
-            (crate::pdfx::xmp_date(t), 3),
-            (id.clone(), 2),
-            (id.to_lowercase(), 0),
+        for (motif, m, attendu) in [
+            (crate::pdfx::pdf_date(t), None, 2),
+            (crate::pdfx::xmp_date(t), None, 3),
+            (id.clone(), None, 2),
+            (id.to_lowercase(), None, 0),
+            (producteur.clone(), None, 2),
+            (format!("{producteur} (UTF-16)"), Some(utf16.as_slice()), 2),
         ] {
-            let m = motif.as_bytes();
+            let m = m.unwrap_or(motif.as_bytes());
             let mut n = 0;
             let mut i = 0;
             while i + m.len() <= out.len() {
