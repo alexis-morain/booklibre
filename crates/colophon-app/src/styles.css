@@ -46,19 +46,18 @@
 
   /* Four tags, four meanings, none decorative: terracotta = chapter,
      yellow = to look at before printing, blue = what a hand changed,
-     green = verified. Grey for the rest. Fill, ink, mid-tone for marks. */
+     green = verified. Grey for the rest. Fill and ink; the terracotta and
+     the blue also keep a mid-tone for the small marks that carry them. */
   --chap: #f6e3d8;
   --chap-ink: #7a3313;
   --chap-rule: #b04a1f;
   --qual: #fbf0d4;
   --qual-ink: #5c4210;
-  --qual-rule: #a87316;
   --main: #e1edf6;
   --main-ink: #1d4466;
   --main-rule: #3a78ad;
   --pret: #e3f0e4;
   --pret-ink: #245133;
-  --pret-rule: #3f8458;
   --gris: #efefed;
   --gris-ink: #55534e;
 
@@ -103,7 +102,6 @@
 
   /* Diagram fills (format cards, pace previews): paper shaded twice. */
   --case-fill: #cfc6b6;
-  --case-fill-active: #b9ad98;
 
   /* The type scale: six sizes, no half-pixels, nothing under 12 — a chip
      on a photo and a licence line are read by the same eyes; three
@@ -185,13 +183,11 @@
     --chap-rule: #e07a4a;
     --qual: #3a3220;
     --qual-ink: #ecc87a;
-    --qual-rule: #d9a441;
     --main: #22303d;
     --main-ink: #9cc4e6;
     --main-rule: #5a9ee6;
     --pret: #233427;
     --pret-ink: #9fd4ac;
-    --pret-rule: #5fae78;
     --gris: #2c2c2a;
     --gris-ink: #b5b4af;
 
@@ -243,7 +239,7 @@ button {
 code,
 kbd {
   font-family: var(--font-mono);
-  font-size: 0.92em;
+  font-size: max(0.92em, var(--fs-12));
 }
 
 /* Checkboxes came out in the system blue, the one colour the palette does
@@ -336,9 +332,18 @@ textarea {
 /* ---- reading shell ---------------------------------------------------- */
 
 .app {
+  display: flex;
+  height: 100%;
+  background: var(--ground);
+}
+
+/* The column beside the sidebar. One clamped column: the drawer's strip must
+   scroll inside it, never widen it (a hundred 88 px cells would push the
+   book off screen). */
+.app-main {
+  flex: 1 1 auto;
+  min-width: 0;
   display: grid;
-  /* One clamped column: the drawer's strip must scroll inside it, never
-     widen it (a hundred 88 px cells would push the book off screen). */
   grid-template-columns: minmax(0, 100%);
   grid-template-rows: auto minmax(0, 1fr) auto auto auto;
   height: 100%;
@@ -347,72 +352,8 @@ textarea {
 /* Three zones, three natures: the album (title), the places (tabs, centred,
    alone), the file actions (right, quiet). The spread's own context lives
    next to the spread, in the context line. */
-.bar {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: baseline;
-  gap: 20px;
-  padding: 32px 28px 12px 84px; /* room for the macOS traffic lights */
-  border-bottom: 1px solid var(--line);
-}
-
-.bar h1 {
-  margin: 0;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--font-ui);
-  font-size: var(--fs-22);
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
 /* The title is a field that looks like a title: no box, no chrome, just the
    rule appearing under the pointer to say it can be typed into. */
-.bar-titre {
-  width: 100%;
-  margin: 0;
-  padding: 0 0 2px;
-  border: 0;
-  border-bottom: 1px solid transparent;
-  background: none;
-  color: inherit;
-  font: inherit;
-  letter-spacing: inherit;
-  text-overflow: ellipsis;
-  transition: border-color var(--turn);
-}
-
-.bar-titre:hover {
-  border-bottom-color: var(--line);
-}
-
-.bar-titre:focus {
-  outline: none;
-  border-bottom-color: var(--link);
-  text-overflow: clip;
-}
-
-.bar .meta {
-  margin: 0;
-  display: flex;
-  gap: 12px;
-  align-items: baseline;
-  color: var(--ink-muted);
-  font-size: var(--fs-13);
-}
-
-.bar .actions {
-  justify-self: end;
-}
-
-.bar .template {
-  color: var(--link);
-  font-family: var(--font-mono);
-  font-size: var(--fs-12);
-}
-
 .link {
   color: var(--ink-muted);
   padding: 3px 8px;
@@ -436,17 +377,11 @@ textarea {
   color: var(--error);
 }
 
-.actions {
-  margin: 0;
-  display: flex;
-  gap: 16px;
-  align-items: baseline;
-}
-
 .actions-sep {
   width: 1px;
   align-self: center;
-  height: 14px;
+  height: 16px;
+  margin: 0 4px;
   background: var(--line);
 }
 
@@ -509,10 +444,8 @@ textarea {
   padding: 2px 0;
   font-size: var(--fs-12);
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--ink-muted);
-  background: var(--wash);
+  background: var(--ground);
 }
 
 .tpl-groupe-cases {
@@ -616,10 +549,8 @@ textarea {
   padding: 2px 0;
   font-size: var(--fs-12);
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--ink-muted);
-  background: var(--wash);
+  background: var(--ground);
 }
 
 .orn-groupe-cases {
@@ -654,8 +585,9 @@ textarea {
 .stage {
   display: grid;
   place-items: center;
-  padding: 28px 40px;
+  padding: 24px 32px 8px;
   min-height: 0;
+  background: var(--table);
   /* The spread sizes itself against the stage that remains once the bar,
      the drawer and the foot took their fixed heights: container units,
      not viewport arithmetic that goes stale with every new band. */
@@ -1431,25 +1363,6 @@ textarea {
   color: var(--ink-muted);
 }
 
-.views {
-  display: inline-flex;
-  gap: 2px;
-}
-
-.view-tab {
-  padding: 2px 10px;
-  color: var(--ink-muted);
-  border: 1px solid var(--line);
-  font-size: var(--fs-12);
-  border-radius: var(--r-ctl);
-}
-
-.view-tab.active {
-  color: var(--ground);
-  background: var(--ink);
-  border-color: var(--ink);
-}
-
 /* ---- the foot ----------------------------------------------------------- */
 
 /* Fixed height whatever it shows: the page above never moves. Top row is the
@@ -1550,7 +1463,7 @@ textarea {
 
 .foot-pos {
   color: var(--ink-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: var(--fs-12);
   min-width: 62px;
   text-align: right;
@@ -1708,20 +1621,20 @@ textarea {
 
 /* Piste A: the wordmark is a quiet tool label, not an editorial kicker. */
 .kicker {
-  margin: 0 0 18px;
-  font-size: var(--fs-13);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--ink-muted);
+  margin: 0 0 28px;
+  font-size: var(--fs-14);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
 }
 
 .empty h1 {
-  margin: 0 0 22px;
+  margin: 0 0 18px;
   font-family: var(--font-ui);
   font-size: var(--fs-28);
-  font-weight: 600;
+  font-weight: 700;
   line-height: var(--lh-title);
-  letter-spacing: -0.012em;
+  letter-spacing: -0.02em;
 }
 
 .lede {
@@ -1925,9 +1838,6 @@ textarea {
 }
 
 /* Sous le plancher de résolution : la même terracotta que les alertes. */
-.fiche-sous {
-  color: var(--link);
-}
 
 .fiche-attente,
 .fiche-erreur {
@@ -3575,7 +3485,7 @@ kbd {
 }
 
 .app > .warn,
-.app > .fault {
+.app-main > .fault {
   margin: 0;
 }
 
@@ -3619,27 +3529,14 @@ kbd {
   overflow-wrap: anywhere;
 }
 
-/* ---- badges and locks --------------------------------------------------- */
+/* ---- the planche's flags and its padlock --------------------------------- */
 
-.spread-flags,
 .planche-flags {
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
-/* « Éditée à la main » : a square accent point, title on hover. Discreet on
-   purpose; the information, not an alarm. */
-.badge-edited {
-  width: 7px;
-  height: 7px;
-  background: var(--main-rule);
-  display: inline-block;
-  border-radius: 2px;
-}
-
-/* « Une case en alerte » : the alert's triangle at the size of the edited
-   point, same accent, the title counting the cells. */
 .lock {
   display: inline-grid;
   place-items: center;
@@ -3688,6 +3585,7 @@ kbd {
    through the grid, and nothing else moves. */
 .drawer {
   border-top: 1px solid var(--line);
+  background: var(--ground);
 }
 
 .drawer-bar {
@@ -3784,10 +3682,10 @@ kbd {
 
 .planches {
   overflow-y: auto;
-  padding: 20px 28px 40px;
+  padding: 14px 28px 40px;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 12px;
   align-content: start;
 }
@@ -3810,7 +3708,7 @@ kbd {
 
 .planche-cell.current {
   border-color: var(--ink);
-  background: var(--wash);
+  box-shadow: inset 0 0 0 1px var(--ink);
 }
 
 .planche-cell.dropping {
@@ -3926,16 +3824,16 @@ kbd {
 
 .planche-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  height: 22px;
+  gap: 4px 8px;
+  min-height: 22px;
   padding-top: 3px;
   font-size: var(--fs-12);
   color: var(--ink-muted);
 }
 
 .planche-num {
-  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -3943,7 +3841,7 @@ kbd {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--link);
+  color: var(--ink-muted);
 }
 
 .planche-flags {
@@ -4341,8 +4239,9 @@ kbd {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 28px;
+  padding: 0 16px;
   border-top: 1px solid var(--line);
+  background: var(--ground);
   color: var(--ink-muted);
   font-size: var(--fs-12);
 }
@@ -4905,11 +4804,7 @@ button.envoi-defaut-ou:focus-visible {
 }
 
 .envoi-provisoire {
-  display: inline-block;
   margin-top: 3px;
-  color: var(--qual-ink);
-  font-size: var(--fs-12);
-  border-bottom: 1px dotted currentColor;
   cursor: help;
 }
 
@@ -5453,6 +5348,44 @@ button.envoi-defaut-ou:focus-visible {
 .menu-ctx-item:hover:not(:disabled) {
   background: var(--action-tint);
   color: var(--ink);
+}
+
+.menu-ctx-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  position: relative;
+}
+
+.menu-ctx-item.filet {
+  margin-top: 9px;
+}
+
+.menu-ctx-item.filet::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  right: -5px;
+  top: -5px;
+  height: 1px;
+  background: var(--line);
+}
+
+.menu-ctx-item.danger {
+  color: var(--error);
+}
+
+.menu-ctx-item.danger:hover:not(:disabled),
+.menu-ctx-item.danger.vise:not(:disabled) {
+  background: var(--error-tint);
+  color: var(--error);
+}
+
+.menu-ctx-raccourci {
+  color: var(--ink-muted);
+  font-size: var(--fs-12);
 }
 
 .menu-ctx-item:focus-visible {
@@ -6078,4 +6011,670 @@ button.envoi-defaut-ou:focus-visible {
   bottom: 0;
   background: rgb(var(--paper-ink-rgb) / 0.14);
   pointer-events: none;
+}
+
+/* ---- the top bar: where you are, then what you can do ------------------- */
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 48px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--ground);
+}
+
+/* No sidebar: the traffic lights sit over the bar's left end. */
+.bar.sans-lateral {
+  padding-left: 84px;
+}
+
+.bar-ico {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-ctl);
+  color: var(--ink-muted);
+  transition: background var(--turn), color var(--turn);
+}
+
+.bar-ico:hover:not(:disabled) {
+  background: var(--action-tint);
+  color: var(--ink);
+}
+
+.bar-ico:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.bar-fil {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-14);
+  white-space: nowrap;
+}
+
+.bar-fil h1 {
+  margin: 0;
+  min-width: 0;
+  font-family: var(--font-ui);
+  font-size: var(--fs-14);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.bar-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bar-crumb > :last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-crumb .courant {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.bar-barre {
+  color: var(--field-border);
+}
+
+.bar-sp {
+  flex: 1 1 0;
+}
+
+/* The title is a field that looks like a title: no box, just the rule
+   appearing under the pointer to say it can be typed into. The box grows
+   with what is typed (the hidden copy sizes the grid cell). */
+.bar-titre-boite {
+  display: inline-grid;
+  max-width: 26ch;
+}
+
+.bar-titre-boite::after {
+  content: attr(data-valeur) " ";
+  grid-area: 1 / 1;
+  visibility: hidden;
+  white-space: pre;
+  padding: 2px 6px;
+  font-weight: 600;
+}
+
+.bar-titre {
+  grid-area: 1 / 1;
+  width: 0;
+  min-width: 100%;
+  margin: 0;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--r-ctl);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-overflow: ellipsis;
+  transition: background var(--turn);
+}
+
+.bar-titre:hover {
+  background: var(--action-tint);
+}
+
+.bar-titre:focus {
+  outline: 2px solid var(--link);
+  outline-offset: 0;
+  background: var(--ground);
+  text-overflow: clip;
+}
+
+/* ---- the sidebar --------------------------------------------------------- */
+
+.lateral {
+  flex: none;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 8px 10px;
+  background: var(--sidebar);
+  border-right: 1px solid var(--line);
+}
+
+/* Room for the traffic lights, which float over the top left. */
+.lateral-haut {
+  flex: none;
+  height: 40px;
+}
+
+.lateral-album {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--r-ctl);
+  text-align: left;
+  transition: background var(--turn);
+}
+
+.lateral-album:hover {
+  background: var(--action-tint);
+}
+
+.lateral-couv {
+  flex: none;
+  width: 24px;
+  box-shadow: 0 0 0 1px rgb(var(--ink-rgb) / 0.12);
+}
+
+.lateral-couv .mini-cover {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: var(--paper);
+}
+
+.lateral-couv .mini-cover-title {
+  display: none;
+}
+
+.lateral-album-nom {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-14);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.lateral-album-nom small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink-muted);
+  font-size: var(--fs-12);
+  font-weight: 400;
+}
+
+.lateral-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 8px;
+}
+
+.lateral-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: var(--r-ctl);
+  color: var(--ink-muted);
+  font-size: var(--fs-14);
+  text-align: left;
+  transition: background var(--turn), color var(--turn);
+}
+
+.lateral-item:hover {
+  background: var(--action-tint);
+}
+
+.lateral-item.actif {
+  background: var(--action-tint);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.lateral-item svg {
+  flex: none;
+}
+
+.lateral-nom {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lateral-n,
+.lateral-touche {
+  flex: none;
+  color: var(--ink-muted);
+  font-size: var(--fs-12);
+  font-weight: 400;
+}
+
+/* The shortcut shows where there is no count, and in place of the count
+   under the pointer or the focus. */
+.lateral-touche {
+  display: none;
+}
+
+.lateral-item:not(:has(.lateral-n)) .lateral-touche,
+.lateral-item:hover .lateral-touche,
+.lateral-item:focus-visible .lateral-touche {
+  display: inline;
+}
+
+.lateral-item:hover .lateral-n,
+.lateral-item:focus-visible .lateral-n {
+  display: none;
+}
+
+.lateral-chapitres .lateral-touche {
+  display: none;
+}
+
+.lateral-titre {
+  flex: none;
+  margin: 18px 8px 4px;
+  color: var(--ink-muted);
+  font-size: var(--fs-12);
+  font-weight: 600;
+}
+
+.lateral-chapitres {
+  flex: 1 1 auto;
+  min-height: 60px;
+  margin-top: 0;
+  overflow-y: auto;
+}
+
+.lateral-chapitres .lateral-item {
+  flex: none;
+  height: 28px;
+}
+
+/* The chapter's mark: the terracotta of the book, six pixels of it. */
+.lateral-repere {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin: 0 3px 0 5px;
+  border-radius: 2px;
+  background: var(--chap-rule);
+}
+
+.lateral-item.actif .lateral-repere {
+  background: var(--ink);
+}
+
+.lateral-pied {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+/* ---- the book view: the sheet on its table, its properties beside it --- */
+
+.livre {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  min-height: 0;
+}
+
+.livre-table {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.props {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 18px;
+  overflow-y: auto;
+  border-left: 1px solid var(--line);
+  background: var(--ground);
+  font-size: var(--fs-13);
+}
+
+.props h2 {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--fs-18);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.props-titre {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-12);
+  font-weight: 600;
+}
+
+.props-liste {
+  margin: 0;
+}
+
+.props-ligne {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-height: 32px;
+}
+
+.props-ligne dt {
+  color: var(--ink-muted);
+}
+
+.props-ligne dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.props-etat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.props-aucun {
+  color: var(--ink-muted);
+}
+
+.props-aide {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+.props-filet {
+  width: 100%;
+  margin: 2px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.props-figer {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  font-size: var(--fs-12);
+}
+
+.props-photo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.props-photo-tete {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.props-photo-tete .mini-thumb {
+  width: 56px;
+  height: 42px;
+  border-radius: var(--r-tag);
+}
+
+.props-photo-tete .mini-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.props-photo-nom {
+  min-width: 0;
+}
+
+.props-photo-nom b {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.props-photo-nom small {
+  display: block;
+  color: var(--ink-muted);
+  font-size: var(--fs-12);
+}
+
+.props-photo-gestes,
+.props-ajouter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.props-photo-gestes .link {
+  margin-left: -8px;
+}
+
+.props-photo-gestes .link ~ .link {
+  margin-left: 0;
+}
+
+/* The disposition is a value: the picker's button reads as one, and its
+   panel opens leftwards over the table instead of off the window's edge. */
+.props .tpl {
+  display: flex;
+  max-width: 100%;
+}
+
+.props .tpl-current {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: var(--fs-13);
+  white-space: nowrap;
+}
+
+.props .tpl-current > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.props .tpl-panel,
+.props .orn-panel {
+  top: calc(100% + 6px);
+  bottom: auto;
+  left: auto;
+  right: 0;
+  max-width: min(560px, calc(100vw - 340px));
+}
+
+/* An encart: a pale ground, a sentence, and the gestures it offers. Never a
+   coloured edge, never a border: the tone says what it is. */
+.encart {
+  padding: 10px 12px;
+  border-radius: var(--r-ctl);
+  color: var(--ink);
+  font-size: var(--fs-13);
+}
+
+.encart.qual {
+  background: var(--qual);
+}
+
+.encart p {
+  margin: 0;
+}
+
+.encart p + p {
+  margin-top: 4px;
+}
+
+.encart small {
+  color: var(--ink-muted);
+}
+
+.encart-gestes {
+  display: flex;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.encart-gestes button {
+  padding: 0;
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--ui-rgb) / 0.3);
+  text-underline-offset: 3px;
+}
+
+/* The adjustments, stacked: a label, a slider, the figure it holds. */
+.props .reglage-bloc {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.props .reglage-champ {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 36px;
+  gap: 8px;
+  align-items: center;
+}
+
+.props .reglage-champ input[type="range"] {
+  width: 100%;
+  min-width: 0;
+}
+
+.props .reglage-nb {
+  display: flex;
+  gap: 8px;
+}
+
+.reglage-valeur {
+  color: var(--ink);
+  font-size: var(--fs-12);
+  text-align: right;
+}
+
+.props .reglage-rendre {
+  align-self: flex-start;
+  margin-left: -8px;
+}
+
+/* ---- the light table: views, then the grid ------------------------------ */
+
+.planches-vue {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  background: var(--ground);
+}
+
+.planches-barre {
+  display: flex;
+  gap: 2px;
+  padding: 14px 28px 0;
+}
+
+.planches-onglet {
+  padding: 5px 10px;
+  border-radius: var(--r-ctl);
+  color: var(--ink-muted);
+  font-size: var(--fs-13);
+  transition: background var(--turn), color var(--turn);
+}
+
+.planches-onglet:hover {
+  background: var(--action-tint);
+}
+
+.planches-onglet.actif {
+  background: var(--action-tint);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.planches-vide {
+  grid-column: 1 / -1;
+  margin: 24px 0;
+  color: var(--ink-muted);
+}
+
+/* The chapter a spread opens, named under it. */
+.planche-chapitre {
+  margin: 2px 0 2px;
+  min-width: 0;
+}
+
+.planche-chapitre .tag {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- the welcome page ----------------------------------------------------- */
+
+/* The brand: two pages and a fold, the book's ink beside its terracotta. */
+.marque {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.marque-booklibre {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5px;
+  width: 20px;
+  height: 13px;
+}
+
+.marque-booklibre::before,
+.marque-booklibre::after {
+  content: "";
+  border-radius: 1.5px;
+  background: var(--ink);
+}
+
+.marque-booklibre::after {
+  background: var(--chap-rule);
+}
+
+.accueil-portes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.accueil-portes .cta,
+.accueil-photos {
+  padding: 0 20px;
+  height: 44px;
+  font-size: var(--fs-14);
+}
+
+.warn.fault {
+  background: var(--error-tint);
 }

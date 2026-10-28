@@ -13,6 +13,7 @@ import { useRef } from "react";
 import type { Reglage } from "./album";
 import { estIdentite, REGLAGE_BORNE, reglageOuIdentite } from "./reglage";
 import { poserBrouillon, reglageDe, useReglages } from "./reglages";
+import { formatNombre } from "./fiche";
 import { t } from "./i18n";
 
 export function ReglageBloc({
@@ -66,6 +67,10 @@ export function ReglageBloc({
           poserBrouillon(src, null);
         }}
       />
+      <output className="reglage-valeur typed">
+        {shown[cle] > 0 ? "+" : ""}
+        {formatNombre(shown[cle], 2)}
+      </output>
     </label>
   );
 
