@@ -160,7 +160,7 @@ prouver() {
   if grep -rqF "plugin:updater" "$APP_DIR/dist"; then echouer "le bundle web porte encore le plugin updater"; fi
   # Les tarifs (1.1-f, C59) : ni l'adresse du Worker ni sa ressource. La
   # version App Store n'appelle aucun serveur.
-  if grep -aqF "colophon-tarifs" "$binaire" || grep -aqF "/v1/tarifs" "$binaire"; then
+  if grep -aqF "colophon-tarifs" "$binaire" || grep -aqF "/v1/prices" "$binaire"; then
     echouer "le binaire porte encore l'adresse des tarifs"
   fi
   codesign --verify --strict "$BUNDLE" || echouer "signature invalide"

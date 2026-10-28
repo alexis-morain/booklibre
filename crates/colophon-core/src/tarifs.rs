@@ -2,7 +2,7 @@
 //! 46 € livré » pendant qu'on construit l'album.
 //!
 //! **Un Worker à part, `colophon-tarifs`**, publie une seule ressource,
-//! `GET /v1/tarifs` : par format et par pays, le prix de vente TTC en
+//! `GET /v1/prices` : par format et par pays, le prix de vente TTC en
 //! centimes pour chaque nombre pair de pages, déjà calculé par le relais.
 //! L'app lit une case et ne recalcule rien. Aucune intention n'est créée,
 //! aucun en-tête propre ne part, aucun identifiant : un GET nu, par le même
@@ -26,7 +26,7 @@ use std::fmt;
 const SANDBOX: &str = "https://colophon-tarifs-sandbox.alexis-c1f.workers.dev";
 
 /// Le chemin de la seule ressource.
-pub const CHEMIN: &str = "/v1/tarifs";
+pub const CHEMIN: &str = "/v1/prices";
 
 /// Un instantané plus vieux que sept jours ne dit plus un prix (C52) : le
 /// Worker le refuse déjà, l'app aussi, au cas où une réponse traînerait.
@@ -156,7 +156,7 @@ impl Tarifs {
     }
 }
 
-/// Lit `GET {base}/v1/tarifs` : un GET nu, sans bearer, sans en-tête propre.
+/// Lit `GET {base}/v1/prices` : un GET nu, sans bearer, sans en-tête propre.
 /// `maintenant_s` est l'heure Unix, pour la péremption.
 pub fn lire(base: &str, transport: &dyn Transport, maintenant_s: i64) -> Result<Tarifs, Erreur> {
     let url = format!("{}{CHEMIN}", base.trim_end_matches('/'));
@@ -240,7 +240,7 @@ mod tests {
     fn un_get_nu_vers_la_seule_ressource() {
         let f = Faux::new(200, document());
         let t = lire("https://tarifs.example/", &f, LUNDI + 3600).unwrap();
-        assert_eq!(*f.vus.borrow(), vec![("https://tarifs.example/v1/tarifs".to_string(), false)]);
+        assert_eq!(*f.vus.borrow(), vec![("https://tarifs.example/v1/prices".to_string(), false)]);
         assert_eq!(t.pays, vec!["FR"]);
         assert_eq!(t.formats["carre-21"]["FR"].ttc_centimes, vec![Some(4600), Some(4650), None]);
     }
@@ -293,7 +293,7 @@ mod tests {
         struct Coupe;
         impl Transport for Coupe {
             fn get(&self, _: &str, _: Option<&Secret>) -> Result<(u16, String), String> {
-                Err("tls: https://t/v1/tarifs".into())
+                Err("tls: https://t/v1/prices".into())
             }
             fn post_json(&self, _: &str, _: Option<&Secret>, _: &Value) -> Result<(u16, String), String> {
                 unreachable!()

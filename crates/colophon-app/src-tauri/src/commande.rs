@@ -539,7 +539,7 @@ mod tests {
             self.reponse.clone()
         }
         fn post_json(&self, url: &str, _: Option<&Secret>, _: &serde_json::Value) -> Result<(u16, String), String> {
-            assert!(url.ends_with("/v1/intentions/a/abandon"), "{url}");
+            assert!(url.ends_with("/v1/orders/a/abandon"), "{url}");
             self.abandons.set(self.abandons.get() + 1);
             self.reponse.clone()
         }
