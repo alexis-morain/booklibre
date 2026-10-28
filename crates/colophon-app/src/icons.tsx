@@ -113,3 +113,94 @@ export function SigneFlou() {
     </svg>
   );
 }
+
+// ---- the chrome's line icons -------------------------------------------------
+// 24-unit grid, 1.5 stroke in currentColor, decorative: the label or the
+// title beside each one says what it is.
+
+function Trait({ children, taille = 17 }: { children: React.ReactNode; taille?: number }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={taille}
+      height={taille}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+
+export const IcoLivre = () => (
+  <Trait>
+    <path d="M3 5.5C6 4.5 9 4.5 12 6c3-1.5 6-1.5 9-.5V19c-3-1-6-1-9 .5-3-1.5-6-1.5-9-.5z" />
+    <path d="M12 6v13.5" />
+  </Trait>
+);
+export const IcoTri = () => (
+  <Trait>
+    <rect x="3.5" y="3.5" width="7" height="7" rx="1" />
+    <rect x="13.5" y="3.5" width="7" height="7" rx="1" />
+    <rect x="3.5" y="13.5" width="7" height="7" rx="1" />
+    <path d="M14 14l6 6M20 14l-6 6" />
+  </Trait>
+);
+export const IcoPlanches = () => (
+  <Trait>
+    <rect x="3" y="4" width="8" height="6" rx="1" />
+    <rect x="13" y="4" width="8" height="6" rx="1" />
+    <rect x="3" y="14" width="8" height="6" rx="1" />
+    <rect x="13" y="14" width="8" height="6" rx="1" />
+  </Trait>
+);
+export const IcoEnvoi = () => (
+  <Trait>
+    <path d="M6 3h9l4 4v14H6z" />
+    <path d="M14 3v5h5M9 13l2.5 2.5L16 11" />
+  </Trait>
+);
+export const IcoPolice = () => (
+  <Trait>
+    <path d="M4 7h16M4 12h16M4 17h10" />
+  </Trait>
+);
+export const IcoPlus = () => (
+  <Trait>
+    <path d="M12 5v14M5 12h14" />
+  </Trait>
+);
+export const IcoOuvrir = () => (
+  <Trait>
+    <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+  </Trait>
+);
+export const IcoAnnuler = () => (
+  <Trait>
+    <path d="M9 14L4 9l5-5" />
+    <path d="M4 9h10a6 6 0 010 12h-3" />
+  </Trait>
+);
+export const IcoRetablir = () => (
+  <Trait>
+    <path d="M15 14l5-5-5-5" />
+    <path d="M20 9H10a6 6 0 000 12h3" />
+  </Trait>
+);
+/** The sidebar itself: a window with its left column marked. */
+export const IcoPanneau = () => (
+  <Trait>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M9 4v16" />
+  </Trait>
+);
+
+/** The brand: two pages and a fold, the book's ink beside its terracotta.
+ *  The only place a square of terracotta sits outside a chapter. */
+export function MarqueBooklibre() {
+  return <span className="marque-booklibre" aria-hidden="true" />;
+}

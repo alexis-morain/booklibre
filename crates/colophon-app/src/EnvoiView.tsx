@@ -622,7 +622,7 @@ function PourLesImprimeurs({ report, chosen }: { report: PrevolReport; chosen: P
             {chosen.dos.mode === "calcule" ? t("envoi.dos.fournir") : t("envoi.dos.non")}
           </span>
           {chosen.certitude === "provisoire" && (
-            <span className="envoi-provisoire" title={chosen.reserves.map(texteMoteur).join(" · ")}>
+            <span className="envoi-provisoire tag qual" title={chosen.reserves.map(texteMoteur).join(" · ")}>
               {t("envoi.provisoire")}
             </span>
           )}

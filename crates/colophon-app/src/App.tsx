@@ -77,7 +77,6 @@ import {
   Legendes,
   OpenedAlbum,
   Rect,
-  Reglage,
   Slot,
   slotsFor,
   Spread,
@@ -86,10 +85,10 @@ import {
   TITRE_MAX,
 } from "./album";
 import { adopterGeometrie } from "./geometrie";
-import { ReglageBloc } from "./ReglageBloc";
 import { coteDe, gaucheCollee, horsMarge, pageDePose, recouvre, retournerBoite } from "./scene";
 import { lire, serialiser } from "./pressePapier";
-import { filtreDe, poserReglages, useReglages } from "./reglages";
+import { poserReglages } from "./reglages";
+import { MiniThumb } from "./MiniThumb";
 import {
   changeTemplate,
   duplicateObjet,
@@ -135,8 +134,7 @@ import {
 } from "./edits";
 import { BilanView } from "./BilanView";
 import { SpreadView } from "./SpreadView";
-import { TemplatePicker } from "./TemplatePicker";
-import { OrnementPanel, OrnementPicker } from "./OrnementPicker";
+import { OrnementPanel } from "./OrnementPicker";
 import { Ornement, PACK_INTERNE, rapport } from "./ornement";
 import { MenuContextuel } from "./MenuContextuel";
 import { Cible, EntreeId, entreesPour, placerMenu } from "./contextuel";
@@ -154,7 +152,7 @@ import { FichePhoto } from "./FichePhoto";
 import { choixOfferts, faceFor, cleDeForme, formeDe } from "./gabarit";
 import { RevueView, TriView } from "./TriView";
 import { Drawer } from "./Drawer";
-import { PlanchesView, LockGlyph } from "./PlanchesView";
+import { PlanchesView } from "./PlanchesView";
 import { ditSuppression } from "./planches";
 import { CoverView } from "./CoverView";
 import { EnvoiView } from "./EnvoiView";
@@ -176,7 +174,11 @@ import { useVeille } from "./maj";
 
 import { SignalerView } from "./SignalerView";
 import { SignalKind } from "./signaler";
-import { Chevron, CoverGlyph } from "./icons";
+import { Chevron, CoverGlyph, IcoAnnuler, IcoPanneau, IcoRetablir, MarqueBooklibre } from "./icons";
+import { Lateral } from "./Lateral";
+import { Proprietes } from "./Proprietes";
+import { Chapitre, chapitreDe, chapitres } from "./chapitres";
+import { useRelais } from "./CommandeView";
 import { installMenu, MenuActions, RecentAlbum } from "./menu";
 import { readRecents, pushRecent, forgetRecent, albumId } from "./recents";
 import { StockageView } from "./StockageView";
@@ -191,8 +193,11 @@ import { chargerReleve } from "./photos";
 import { LegendeQualite } from "./LegendeQualite";
 import { PrixLivre, QuestionAccueil } from "./ChoixImpression";
 import { chargerTarifs } from "./impression";
-import { cachedThumb, loadThumb, resetThumbs } from "./thumbs";
+import { loadThumb, resetThumbs } from "./thumbs";
 import "./styles.css";
+
+/** Sous cette largeur de fenêtre, la barre latérale se replie d'elle-même. */
+const LARGEUR_LATERALE = 1180;
 
 /** Full album snapshots: a 50-spread album is a few tens of kilobytes. */
 type History = { album: Album; past: Album[]; future: Album[] };
@@ -348,6 +353,20 @@ export default function App() {
   // said. Dies with the album it judged, like the verdict offer above.
   const [preparation, setPreparation] = useState<Preparation | null>(null);
   const [view, setView] = useState<View>("livre");
+  // La barre latérale : tant que personne n'a tranché (⌘\), elle suit la
+  // largeur de la fenêtre et se replie d'elle-même sous le seuil, où la
+  // planche n'aurait plus que la moitié de la place.
+  const [lateralVoulu, setLateralVoulu] = useState<boolean | null>(null);
+  const [large, setLarge] = useState(() => window.innerWidth >= LARGEUR_LATERALE);
+  useEffect(() => {
+    const suivre = () => setLarge(window.innerWidth >= LARGEUR_LATERALE);
+    window.addEventListener("resize", suivre);
+    return () => window.removeEventListener("resize", suivre);
+  }, []);
+  const lateral = lateralVoulu ?? large;
+  // Commander n'est offert que si un relais est compilé : la release publique
+  // ne l'annonce nulle part (la sonde est la même qu'Envoi).
+  const { relais } = useRelais();
   useEffect(() => {
     if (!gabaritAOuvrir || view !== "livre") return;
     setGabaritAOuvrir(false);
@@ -1580,6 +1599,7 @@ export default function App() {
       if (inField()) document.execCommand("redo");
       else redo();
     },
+    "barre-laterale": () => setLateralVoulu(!lateral),
     "vue-livre": () => album && gotoView("livre"),
     "vue-tri": () => album && gotoView("tri"),
     "vue-planches": () => album && gotoView("planches"),
@@ -1994,6 +2014,7 @@ export default function App() {
       annuler: () => fire("menu", "annuler"),
       retablir: () => fire("menu", "retablir"),
       vue: (v) => fire("menu", `vue-${v}`),
+      barreLaterale: () => fire("menu", "barre-laterale"),
       couverture: () => fire("menu", "couverture"),
       revue: () => fire("menu", "revue"),
       reserve: () => fire("menu", "reserve"),
@@ -2260,7 +2281,7 @@ export default function App() {
         // A focused field keeps its letters and its own editing chords,
         // native ⌘Z included; a few app chords still pass.
         const appChord =
-          e.metaKey && ["s", "o", "1", "2", "3", "4"].includes(key);
+          e.metaKey && ["s", "o", "1", "2", "3", "4", "\\"].includes(key);
         if (!appChord) return;
         if (cible.tagName === "BUTTON") cible.blur();
       }
@@ -2288,6 +2309,8 @@ export default function App() {
                         ? "informations"
                       : key === "l"
                         ? "figer"
+                        : key === "\\"
+                        ? "barre-laterale"
                         : key === ","
                         ? "preferences"
                         : key === "/"
@@ -2934,27 +2957,57 @@ export default function App() {
   const statut = echecEcriture ? t("auto.echec", { raison: echecEcriture }) : status;
   const entries = triEntries(album, curation, opened?.thumb_srcs ?? []);
   const triEntry = entries.find((e) => e.src === triSelected) ?? null;
+  const listeChapitres = chapitres(album);
+  const chapitreCourant = chapitreDe(listeChapitres, index);
+  const commanderOffert = relais !== null && relais.etat !== "absent";
+  /** Un chapitre se rejoint par sa première planche : en Planches on y reste,
+   *  partout ailleurs on ouvre le Livre. */
+  const allerAuChapitre = (debut: number) => {
+    if (view !== "planches") gotoView("livre");
+    setIndex(debut);
+  };
 
   return (
     <div className={"app" + (echecEcriture ? " echec-ecriture" : "")}>
+      {lateral && (
+        <Lateral
+          album={album}
+          view={view}
+          triCount={entries.length}
+          index={index}
+          onView={gotoView}
+          onCouverture={() => {
+            if (view !== "planches") gotoView("livre");
+            setIndex(COVER);
+          }}
+          onChapitre={allerAuChapitre}
+          chapitres={listeChapitres}
+          courant={chapitreCourant}
+          onPolice={inTauri ? ouvrirPolice : undefined}
+          onNouveau={() => void closeAlbum()}
+          onOuvrir={inTauri ? undefined : openAlbum}
+          virgule={langue() === "fr"}
+        />
+      )}
+      <div className="app-main">
       <Bar
         album={album}
         canUndo={(hist?.past.length ?? 0) > 0}
         canRedo={(hist?.future.length ?? 0) > 0}
         view={view}
-        triCount={entries.length}
-        onView={gotoView}
+        index={index}
+        chapitre={chapitreCourant}
+        lateral={lateral}
+        onLateral={() => setLateralVoulu(!lateral)}
         onUndo={undo}
         onRedo={redo}
-        onSave={() => void save()}
         onRename={(titre) => {
           apply((a) => renameAlbum(a, titre));
           setStatus(t("etat.titre.modifie"));
         }}
         onRecompose={() => void ouvrirRecomposer()}
-        onFormat={inTauri ? ouvrirPolice : undefined}
-        onOpen={inTauri ? undefined : openAlbum}
-        onClose={inTauri ? undefined : closeAlbum}
+        onExporter={() => gotoView("envoi")}
+        onCommander={commanderOffert ? () => gotoView("envoi") : undefined}
       />
       {view === "tri" ? (
         <TriView
@@ -3055,6 +3108,8 @@ export default function App() {
           reliure={printers?.find((p) => p.id === profil) ?? null}
         />
       ) : (
+        <div className="livre">
+        <div className="livre-table">
         <main className="stage">
           {/* La clé rejoue l'animation d'entrée à chaque planche — sauf dans
               l'aperçu fidèle, où le tour de feuille EST la transition : la
@@ -3144,61 +3199,63 @@ export default function App() {
             )}
           </div>
         </main>
-      )}
-      {view === "livre" && (
         <ContextLine
-          album={album}
           spread={spread}
           onCover={onCover}
           selected={selected}
           objet={objet}
-          onAjouterObjet={
-            spread && !onCover
-              ? () => poser((a, page, photos) => addObjet(a, index, page, photos))
-              : undefined
-          }
-          onAjouterOrnement={
-            spread && !onCover
-              ? (o) =>
-                  poser((a, page, photos) =>
-                    addOrnement(
-                      a,
-                      index,
-                      page,
-                      PACK_INTERNE,
-                      o.id,
-                      rapport(o.dessin),
-                      photos,
-                    ),
-                  )
-              : undefined
-          }
-          onTemplate={(t) => apply((a) => changeTemplate(a, index, t))}
-          onReglage={(src, r) => apply((a) => setReglage(a, src, r))}
-          spreadIndex={index}
           fidele={fidele}
           onFidele={() => void basculerFidele()}
-          onLock={
-            spread
-              ? () => {
-                  const was = spread.locked;
-                  apply((a) => toggleLock(a, index));
-                  setStatus(
-                    was
-                      ? t("planche.liberee")
-                      : t("planche.figee.status"),
-                  );
-                }
-              : undefined
-          }
         />
-      )}
-      {view === "livre" && !onCover && (
-        <Drawer
-          entries={entries}
-          open={drawerOpen}
-          onToggle={() => setDrawerOpen((o) => !o)}
-        />
+        {!onCover && (
+          <Drawer
+            entries={entries}
+            open={drawerOpen}
+            onToggle={() => setDrawerOpen((o) => !o)}
+          />
+        )}
+        </div>
+        {!fidele && (
+          <Proprietes
+            album={album}
+            spread={spread}
+            index={index}
+            onCover={onCover}
+            chapitre={chapitreCourant}
+            selected={selected}
+            onTemplate={(tpl) => apply((a) => changeTemplate(a, index, tpl))}
+            onLock={
+              spread
+                ? () => {
+                    const was = spread.locked;
+                    apply((a) => toggleLock(a, index));
+                    setStatus(was ? t("planche.liberee") : t("planche.figee.status"));
+                  }
+                : undefined
+            }
+            onReglage={(src, r) => apply((a) => setReglage(a, src, r))}
+            onInformations={() => fire("menu", "informations")}
+            onRemplacer={(cell, point) => ouvrirChoix({ type: "remplacer", cell }, point)}
+            onRetirer={(cell) => {
+              if (selected === cell) setSelected(null);
+              apply((a) => removePhoto(a, index, cell));
+            }}
+            onAjouterObjet={
+              spread && !onCover
+                ? () => poser((a, page, photos) => addObjet(a, index, page, photos))
+                : undefined
+            }
+            onAjouterOrnement={
+              spread && !onCover
+                ? (o) =>
+                    poser((a, page, photos) =>
+                      addOrnement(a, index, page, PACK_INTERNE, o.id, rapport(o.dessin), photos),
+                    )
+                : undefined
+            }
+          />
+        )}
+        </div>
       )}
       {view === "tri" && revue !== null && entries.length > 0 && (
         <RevueView
@@ -3415,6 +3472,7 @@ export default function App() {
         />
       )}
         {prefs && <PrefsView onClose={() => setPrefs(false)} />}
+      </div>
     </div>
   );
 }
@@ -3456,6 +3514,7 @@ function TitreAlbum({
   };
 
   return (
+    <span className="bar-titre-boite" data-valeur={brouillon}>
     <input
       className="bar-titre"
       value={brouillon}
@@ -3480,6 +3539,7 @@ function TitreAlbum({
         }
       }}
     />
+    </span>
   );
 }
 
@@ -3521,130 +3581,111 @@ function MajBandeau({
 }
 
 /**
- * The bar tells three things apart, left to right: which album (the title),
- * where you are (the tabs, centred, nothing else among them), what you can
- * do to the file (a few quiet actions; everything else lives in the menu).
- * The context of the current spread is not the bar's business any more: it
- * sits on its own line next to the planche, in the book view.
+ * The top bar says where you are and what you can do about it: the album and
+ * the road down to the spread as a breadcrumb, undo and redo, then the few
+ * actions that leave the editor. The views live in the sidebar. One primary
+ * button, and none on Envoi, which is where it leads.
  */
 function Bar({
   album,
   canUndo,
   canRedo,
   view,
-  triCount,
-  onView,
+  index,
+  chapitre,
+  lateral,
+  onLateral,
   onUndo,
   onRedo,
-  onSave,
   onRename,
   onRecompose,
-  onFormat,
-  onOpen,
-  onClose,
+  onExporter,
+  onCommander,
 }: {
   album: Album;
   canUndo: boolean;
   canRedo: boolean;
   view: View;
-  triCount: number;
-  onView: (v: View) => void;
+  /** La planche affichée ; -1 est la couverture. */
+  index: number;
+  chapitre: Chapitre | null;
+  lateral: boolean;
+  onLateral: () => void;
   onUndo: () => void;
   onRedo: () => void;
-  onSave: () => void;
   onRename: (titre: string) => void;
-  onRecompose?: () => void;
-  onFormat?: () => void;
-  /** Browser harness only: the shell reaches these through the menu. */
-  onOpen?: () => void;
-  onClose?: () => void;
+  onRecompose: () => void;
+  onExporter: () => void;
+  /** Absent quand aucun relais n'est compilé : rien n'annonce la commande. */
+  onCommander?: () => void;
 }) {
+  const fil: string[] =
+    view === "livre"
+      ? [
+          ...(chapitre && index >= 0 ? [chapitre.titre] : []),
+          index === COVER ? t("table.couverture") : t("bar.planche.n", { n: index + 1 }),
+        ]
+      : [t(`bar.${view}` as const)];
   return (
-    <header className="bar">
-      <h1>
-        <TitreAlbum titre={album.title} onRename={onRename} />
-      </h1>
-      <p className="meta">
-        <span className="views" role="tablist">
-          <button
-            className={"view-tab" + (view === "livre" ? " active" : "")}
-            onClick={() => onView("livre")}
-            aria-keyshortcuts="Meta+1"
-            title="⌘1"
-          >
-            {t("bar.livre")}
-          </button>
-          <button
-            className={"view-tab" + (view === "tri" ? " active" : "")}
-            onClick={() => onView("tri")}
-            aria-keyshortcuts="Meta+2"
-            title="⌘2"
-          >
-            {t("bar.tri")} · {triCount}
-          </button>
-          <button
-            className={"view-tab" + (view === "planches" ? " active" : "")}
-            onClick={() => onView("planches")}
-            aria-keyshortcuts="Meta+3"
-            title="⌘3"
-          >
-            {t("bar.planches")}
-          </button>
-          <button
-            className={"view-tab" + (view === "envoi" ? " active" : "")}
-            onClick={() => onView("envoi")}
-            aria-keyshortcuts="Meta+4"
-            title={t("bar.envoi.titre")}
-          >
-            {t("bar.envoi")}
-          </button>
-        </span>
-      </p>
-      <p className="actions">
-        <button className="link" onClick={onUndo} disabled={!canUndo} title="⌘Z">
-          {t("bar.annuler")}
-        </button>
-        <button className="link" onClick={onRedo} disabled={!canRedo} title="⇧⌘Z">
-          {t("bar.retablir")}
-        </button>
-        <span className="actions-sep" aria-hidden="true" />
-        {onRecompose && (
-          <button
-            className="link"
-            onClick={onRecompose}
-            title={t("bar.recomposer.titre")}
-          >
-            {t("bar.recomposer")}
-          </button>
-        )}
-        {onFormat && (
-          <button className="link" onClick={onFormat} title={t("bar.format.titre")}>
-            {t("bar.format")}
-          </button>
-        )}
-        <button
-          className="link"
-          onClick={onSave}
-          title="⌘S"
-        >
-          {t("bar.enregistrer")}
-        </button>
-        {onClose && onOpen && (
-          <>
-            <span className="actions-sep" aria-hidden="true" />
-            <button
-              className="link"
-              onClick={onClose}
-              title={t("bar.nouveau.titre")}
-            >
-              {t("bar.nouveau")}
+    <header className={"bar" + (lateral ? "" : " sans-lateral")}>
+      <button
+        className="bar-ico"
+        onClick={onLateral}
+        aria-pressed={lateral}
+        aria-keyshortcuts="Meta+Backslash"
+        aria-label={t(lateral ? "lateral.masquer" : "lateral.afficher")}
+        title={t(lateral ? "lateral.masquer" : "lateral.afficher")}
+      >
+        <IcoPanneau />
+      </button>
+      <nav className="bar-fil" aria-label={t("bar.fil")}>
+        <h1>
+          <TitreAlbum titre={album.title} onRename={onRename} />
+        </h1>
+        {fil.map((c, i) => (
+          <span key={i} className="bar-crumb">
+            <span className="bar-barre" aria-hidden="true">
+              /
+            </span>
+            <span className={i === fil.length - 1 ? "courant" : undefined}>{c}</span>
+          </span>
+        ))}
+      </nav>
+      <span className="bar-sp" />
+      <button
+        className="bar-ico"
+        onClick={onUndo}
+        disabled={!canUndo}
+        aria-label={t("bar.annuler")}
+        title={t("bar.annuler.titre")}
+      >
+        <IcoAnnuler />
+      </button>
+      <button
+        className="bar-ico"
+        onClick={onRedo}
+        disabled={!canRedo}
+        aria-label={t("bar.retablir")}
+        title={t("bar.retablir.titre")}
+      >
+        <IcoRetablir />
+      </button>
+      <span className="actions-sep" aria-hidden="true" />
+      <button className="link" onClick={onRecompose} title={t("bar.recomposer.titre")}>
+        {t("bar.recomposer")}
+      </button>
+      {view !== "envoi" && (
+        <>
+          {onCommander && (
+            <button className="btn-second" onClick={onCommander} title={t("bar.commander.titre")}>
+              {t("bar.commander")}
             </button>
-            <button className="link" onClick={onOpen} title="⌘O">
-              {t("bar.ouvrir")}
-            </button>
-          </>
-        )}
-      </p>
+          )}
+          <button className="cta small" onClick={onExporter} title={t("bar.exporter.titre")}>
+            {t("bar.exporter")}
+          </button>
+        </>
+      )}
     </header>
   );
 }
@@ -3704,41 +3745,22 @@ function OrnementAuPointeur({
 }
 
 function ContextLine({
-  album,
   spread,
   onCover,
   selected,
-  spreadIndex,
-  onTemplate,
-  onLock,
-  onReglage,
+  objet,
   fidele,
   onFidele,
-  objet,
-  onAjouterObjet,
-  onAjouterOrnement,
 }: {
-  album: Album;
   spread: Spread | null;
   onCover: boolean;
   selected: number | null;
-  spreadIndex: number;
-  onTemplate: (t: string) => void;
-  onLock?: () => void;
-  /** L'objet libre choisi, et de quoi en poser un. */
+  /** L'objet libre choisi. */
   objet?: number | null;
-  onAjouterObjet?: () => void;
-  onAjouterOrnement?: (o: Ornement) => void;
-  /** One history step through `edits.ts::setReglage`, at slider release. */
-  onReglage: (src: string, reglage: Reglage) => void;
   /** The faithful preview is on, and the toggle that turns it off. */
   fidele: boolean;
   onFidele: () => void;
 }) {
-  // A spread that holds photographs, so a template picker means something:
-  // the empty page, the text page and the two pages the machine writes
-  // about the book have nothing to switch to.
-  const photoSpread = spread ? templateCapacity(spread.template) > 0 : false;
   return (
     <div className="context-line">
       {/* The one control that leaves the DOM behind. Always here, on the
@@ -3757,79 +3779,28 @@ function ContextLine({
       {onCover ? (
         <span className="context-hint">{t("contexte.couverture")}</span>
       ) : (
-        spread && (
-          <>
-            {photoSpread && (
-              <TemplatePicker
-                album={album}
-                spread={spread}
-                index={spreadIndex}
-                onPick={onTemplate}
-              />
-            )}
-            <span className="spread-flags">
-              {spread.edited && (
-                <span
-                  className="badge-edited"
-                  title={t("table.editee")}
-                />
-              )}
-              {onLock && (
-                <button
-                  className={"lock" + (spread.locked ? " locked" : "")}
-                  onClick={onLock}
-                  aria-pressed={spread.locked ?? false}
-                  title={spread.locked ? t("table.figee") : t("table.figer")}
-                >
-                  <LockGlyph open={!spread.locked} />
-                </button>
-              )}
+        spread &&
+        (() => {
+          const aide =
+            objet !== null && objet !== undefined
+              ? // Un ornement n'a pas de champ : lui proposer le double-clic
+                // serait promettre un geste qui ne fait rien. Sa boîte, elle,
+                // garde ses proportions, et c'est la seule chose que la
+                // phrase doit apprendre.
+                spread.objets?.[objet]?.type === "ornement"
+                ? t("contexte.ornement")
+                : t("contexte.objet")
+              : selected !== null
+                ? t("contexte.recadrage")
+                : "";
+          // Coupée d'une ellipse quand la barre est étroite : la phrase
+          // entière reste au survol.
+          return (
+            <span className="context-hint" title={aide || undefined}>
+              {aide}
             </span>
-            {/* Poser un bloc de texte : là où vivent déjà le sélecteur de
-                gabarit et les réglages d'une photo. Pas un sixième panneau. */}
-            {onAjouterObjet && (
-              <button
-                className="link"
-                onClick={onAjouterObjet}
-                title={t("objet.ajouter.titre")}
-              >
-                {t("objet.ajouter")}
-              </button>
-            )}
-            {/* Et l'ornement juste à côté : les deux contenus d'un objet
-                libre se posent du même endroit de la barre. */}
-            {onAjouterOrnement && <OrnementPicker onPick={onAjouterOrnement} />}
-            {/* The three adjustments of the chosen photo, native controls in
-                a bar already tabbable: no sixth panel, no menu entry. */}
-            {selected !== null && spread.slots[selected] && (
-              <ReglageBloc
-                src={spread.slots[selected].src}
-                onCommit={onReglage}
-              />
-            )}
-            {(() => {
-              const aide =
-                objet !== null && objet !== undefined
-                  ? // Un ornement n'a pas de champ : lui proposer le double-clic
-                    // serait promettre un geste qui ne fait rien. Sa boîte, elle,
-                    // garde ses proportions, et c'est la seule chose que la
-                    // phrase doit apprendre.
-                    spread.objets?.[objet]?.type === "ornement"
-                    ? t("contexte.ornement")
-                    : t("contexte.objet")
-                  : selected !== null
-                    ? t("contexte.recadrage")
-                    : "";
-              // Coupée d'une ellipse quand la barre est étroite : la phrase
-              // entière reste au survol.
-              return (
-                <span className="context-hint" title={aide || undefined}>
-                  {aide}
-                </span>
-              );
-            })()}
-          </>
-        )
+          );
+        })()
       )}
     </div>
   );
@@ -4041,28 +4012,6 @@ function TriFoot({
   );
 }
 
-/** A postage-stamp thumbnail, for the foot. */
-function MiniThumb({ src }: { src: string }) {
-  const [url, setUrl] = useState<string | undefined>(() => cachedThumb(src));
-  useReglages();
-  useEffect(() => {
-    let alive = true;
-    if (!cachedThumb(src)) setUrl(undefined);
-    loadThumb(src).then(
-      (u) => alive && setUrl(u),
-      () => {},
-    );
-    return () => {
-      alive = false;
-    };
-  }, [src]);
-  return (
-    <span className="mini-thumb">
-      {url && <img src={url} alt="" style={{ filter: filtreDe(src) }} />}
-    </span>
-  );
-}
-
 /** The pace every new album is composed at: the engine's default. The
  *  creation screen no longer asks (the difference did not show); Recomposer
  *  offers the other one. */
@@ -4224,7 +4173,10 @@ function Empty({
   return (
     <div className="empty">
       <div className={"empty-block" + (dir || building ? " wide" : "")}>
-        <p className="kicker">Booklibre</p>
+        <p className="kicker marque">
+          <MarqueBooklibre />
+          Booklibre
+        </p>
 
         {!dir && !building && !photosOuvert && (
           <>
@@ -4234,22 +4186,22 @@ function Empty({
                 .map((l, i) => (i === 0 ? l : [<br key={i} />, l]))}
             </h1>
             <p className="lede">{t("accueil.lede")}</p>
-            <button className="cta" onClick={() => void pick()}>
-              {t("accueil.choisir")}
-            </button>
+            <div className="accueil-portes">
+              <button className="cta" onClick={() => void pick()}>
+                {t("accueil.choisir")}
+              </button>
+              {photosPossible && (
+                <button className="btn-second accueil-photos" onClick={() => void ouvrirPhotos()}>
+                  {t("photos.titre")}
+                </button>
+              )}
+            </div>
             <p className="hint">
               <button className="link" onClick={onOpen}>
                 {t("accueil.ou.ouvrir")}
               </button>{" "}
               (<kbd>⌘</kbd> <kbd>O</kbd>)
             </p>
-            {photosPossible && (
-              <p className="hint">
-                <button className="link" onClick={() => void ouvrirPhotos()}>
-                  {t("accueil.ou.photos")}
-                </button>
-              </p>
-            )}
             <QuestionAccueil />
             {recents.length > 0 && (
               <div className="recents">

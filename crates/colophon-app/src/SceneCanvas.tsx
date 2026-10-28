@@ -62,7 +62,7 @@ function couleurs(el: HTMLElement): Couleurs {
     paper: v("--paper"),
     ink: v("--paper-ink"),
     inkSoft: v("--paper-ink-soft"),
-    accent: v("--accent"),
+    accent: v("--link-paper"),
     voile: `rgb(${v("--paper-rgb")} / 0.4)`,
     vide: `rgb(${v("--ink-rgb")} / 0.06)`,
     police: v("--font-book") || "sans-serif",

@@ -118,7 +118,13 @@ export function MenuContextuel({
           }}
           type="button"
           role="menuitem"
-          className={"menu-ctx-item" + (rang === i ? " vise" : "")}
+          className={
+            "menu-ctx-item" +
+            (rang === i ? " vise" : "") +
+            (e.filet ? " filet" : "") +
+            (e.danger ? " danger" : "")
+          }
+          aria-keyshortcuts={e.raccourci ? e.raccourci.replace("⌘", "Meta+") : undefined}
           tabIndex={-1}
           disabled={Boolean(e.desactive)}
           aria-disabled={Boolean(e.desactive)}
@@ -128,7 +134,12 @@ export function MenuContextuel({
           onMouseEnter={() => actives[i] && setRang(i)}
           onClick={() => onChoisir(e.id)}
         >
-          {libelles[i]}
+          <span>{libelles[i]}</span>
+          {e.raccourci && (
+            <span className="menu-ctx-raccourci" aria-hidden="true">
+              {e.raccourci}
+            </span>
+          )}
         </button>
       ))}
     </div>

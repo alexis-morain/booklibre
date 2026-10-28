@@ -33,14 +33,14 @@ describe("entreesPour", () => {
     expect(e.map((x) => x.id)).toEqual(["ajouter", "bloc", "ornement"]);
   });
 
-  it("un objet libre : copier, couper, dupliquer, supprimer, réglages", () => {
+  it("un objet libre : copier, couper, dupliquer, réglages, puis supprimer seul au bout", () => {
     const e = entreesPour({ type: "objet", index: 0 }, { fiche: false });
     expect(e.map((x) => x.id)).toEqual([
       "copier",
       "couper",
       "dupliquer",
-      "supprimer",
       "reglages",
+      "supprimer",
     ]);
   });
 
@@ -58,6 +58,19 @@ describe("entreesPour", () => {
       "supprimer",
     ]);
     expect(e.every((x) => x.desactive === undefined)).toBe(true);
+  });
+
+  it("Supprimer est seul de son groupe et le seul en rouge, sur l'objet comme sur la planche", () => {
+    for (const cible of [
+      { type: "objet", index: 0 } as const,
+      { type: "planche", index: 1, origine: true, photos: true } as const,
+    ]) {
+      const e = entreesPour(cible, { fiche: true });
+      const rouges = e.filter((x) => x.danger);
+      expect(rouges.map((x) => x.id)).toEqual(["supprimer"]);
+      expect(rouges[0].filet).toBe(true);
+      expect(e[e.length - 1].id).toBe("supprimer");
+    }
   });
 
   it("une planche insérée à la main ne se recompose pas, et le dit", () => {

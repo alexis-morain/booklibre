@@ -25,9 +25,8 @@ import { useEffect, useRef, useState } from "react";
 import { t } from "./i18n";
 import { Album, Spread, spreadGeometry, slotsFor } from "./album";
 import { largeurCollee } from "./scene";
-import { badgesDe, useReleve } from "./photos";
-import { signesDePlanche } from "./qualite";
-import { SignesAlerte } from "./SignesAlerte";
+import { Alerte, badgesDe, useReleve } from "./photos";
+import { legendeQualite, motDeLigne } from "./qualite";
 import { reglagePose, useReglages } from "./reglages";
 import { thumbCropStyle } from "./SpreadView";
 import { cachedThumb, loadThumb } from "./thumbs";
@@ -73,6 +72,48 @@ export function PlanchesView({
   onMenu: (at: number, point: { x: number; y: number }) => void;
 }) {
   const [dropAt, setDropAt] = useState<number | null>(null);
+  const [vue, setVue] = useState<Vue>("toutes");
+  // Les cases sombres, que seule une vignette décodée sait : « i:c ».
+  const [sombres, setSombres] = useState<ReadonlySet<string>>(() => new Set());
+  const surSombre = (i: number, c: number, sombre: boolean) =>
+    setSombres((avant) => {
+      const cle = `${i}:${c}`;
+      if (avant.has(cle) === sombre) return avant;
+      const apres = new Set(avant);
+      if (sombre) apres.add(cle);
+      else apres.delete(cle);
+      return apres;
+    });
+  // Les cases en alerte, par la règle de la planche (`badgesDe`) : ce que le
+  // relevé sait tout de suite, et « sombre » quand la vignette d'une case
+  // s'est décodée, puisqu'elle lit ses pixels. Un seul calcul, pour les
+  // étiquettes des cellules et pour les vues filtrées.
+  const releve = useReleve();
+  const geom = spreadGeometry(album);
+  const parPlanche: Alerte[][][] = album.spreads.map((spread, i) => {
+    const rects = slotsFor(spread.template, spread.slots.length, geom);
+    return spread.slots.map((slot, c) => {
+      const r = rects[c];
+      if (!r) return [];
+      const b = badgesDe(slot.src, null, r, 1, slot.zoom ?? 1, undefined, releve);
+      return sombres.has(`${i}:${c}`) ? [...b.alertes, { code: "sombre" as const }] : b.alertes;
+    });
+  });
+  const aVerifier = parPlanche.map((cases) => cases.some((a) => a.length > 0));
+  const comptes: Record<Vue, number> = {
+    toutes: album.spreads.length,
+    verifier: aVerifier.filter(Boolean).length,
+    editees: album.spreads.filter((s) => s.edited).length,
+  };
+  const garde = (i: number) =>
+    vue === "toutes" || (vue === "verifier" ? aVerifier[i] : album.spreads[i].edited === true);
+  /** Les cellules à l'écran, dans l'ordre du livre ; -1 est la couverture,
+   *  qui n'est que de la vue complète. */
+  const visibles = [
+    ...(vue === "toutes" ? [-1] : []),
+    ...album.spreads.map((_, i) => i).filter(garde),
+  ];
+  const arret = visibles.includes(current) ? current : (visibles[0] ?? current);
   const [tenue, setTenue] = useState<{ at: number; dx: number; dy: number } | null>(null);
   const appui = useRef<Appui | null>(null);
   // Le clic qui suit le relâchement d'un glisser n'est pas une sélection.
@@ -103,6 +144,10 @@ export function PlanchesView({
 
   const surAppui = (e: React.PointerEvent<HTMLElement>, at: number) => {
     if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
+    // Réordonner dans une vue filtrée déplacerait une planche entre des
+    // voisines qu'on ne voit pas : le glisser n'a lieu que sur la table
+    // entière.
+    if (vue !== "toutes") return;
     avaleClic.current = false;
     appui.current = {
       from: at,
@@ -171,16 +216,19 @@ export function PlanchesView({
 
   const surTouche = (e: React.KeyboardEvent, at: number) => {
     const dernier = album.spreads.length - 1;
+    const pos = visibles.indexOf(at);
     // Arrêtée ici, la touche n'atteint pas la table de commandes d'App, qui
-    // ferait le même pas une seconde fois.
-    const aller = (to: number) => {
+    // ferait le même pas une seconde fois. On marche sur les cellules
+    // visibles : sur la table entière c'est le même pas qu'avant.
+    const vers = (p: number) => visibles[Math.min(visibles.length - 1, Math.max(0, p))];
+    const aller = (p: number) => {
       e.preventDefault();
       e.stopPropagation();
-      onSelect(Math.min(dernier, Math.max(-1, to)));
+      if (visibles.length > 0) onSelect(vers(p));
     };
     // ⌥ flèche déplace la planche elle-même : le livre se réordonne au
     // clavier comme à la souris, et le focus suit la planche déplacée.
-    if (e.altKey && at >= 0) {
+    if (e.altKey && at >= 0 && vue === "toutes") {
       const vers: Record<string, number> = {
         ArrowRight: at + 1,
         ArrowLeft: at - 1,
@@ -198,22 +246,22 @@ export function PlanchesView({
     }
     switch (e.key) {
       case "ArrowRight":
-        aller(at + 1);
+        aller(pos + 1);
         break;
       case "ArrowLeft":
-        aller(at - 1);
+        aller(pos - 1);
         break;
       case "ArrowDown":
-        aller(at + colonnes());
+        aller(pos + colonnes());
         break;
       case "ArrowUp":
-        aller(at - colonnes());
+        aller(pos - colonnes());
         break;
       case "Home":
-        aller(-1);
+        aller(0);
         break;
       case "End":
-        aller(dernier);
+        aller(visibles.length - 1);
         break;
       // Entrée et Espace ouvrent : la cellule se comporte comme le bouton
       // qu'elle est pour qui ne la voit pas.
@@ -238,22 +286,49 @@ export function PlanchesView({
     }
   };
 
+  const onglets: [Vue, string][] = [
+    ["toutes", t("planches.vue.toutes")],
+    ["verifier", t("planches.vue.verifier")],
+    ["editees", t("planches.vue.editees")],
+  ];
   return (
+    <div className="planches-vue">
+    <div className="planches-barre" role="tablist" aria-label={t("planches.vues")}>
+      {onglets.map(([v, nom]) => (
+        <button
+          key={v}
+          role="tab"
+          aria-selected={vue === v}
+          className={"planches-onglet" + (vue === v ? " actif" : "")}
+          onClick={() => setVue(v)}
+        >
+          {nom}
+          {v !== "toutes" && <span className="typed"> {comptes[v]}</span>}
+        </button>
+      ))}
+    </div>
     <div className="planches" role="list" aria-label={t("table.liste")} ref={grille}>
-      <CoverCell
-        album={album}
-        current={current === -1}
-        onSelect={() => onSelect(-1)}
-        onOpen={() => onOpen(-1)}
-        onKey={(e) => surTouche(e, -1)}
-      />
-      {album.spreads.map((spread, i) => (
+      {vue === "toutes" && (
+        <CoverCell
+          album={album}
+          current={current === -1}
+          arret={arret === -1}
+          onSelect={() => onSelect(-1)}
+          onOpen={() => onOpen(-1)}
+          onKey={(e) => surTouche(e, -1)}
+        />
+      )}
+      {visibles.length === 0 && <p className="planches-vide">{t("planches.vue.vide")}</p>}
+      {album.spreads.map((spread, i) => !garde(i) ? null : (
         <PlancheCell
           reliure={reliure}
           key={i}
           album={album}
           spread={spread}
           index={i}
+          parCase={parPlanche[i]}
+          onSombre={(c, sombre) => surSombre(i, c, sombre)}
+          arret={i === arret}
           current={i === current}
           dropping={dropAt === i}
           onSelect={() => onSelect(i)}
@@ -280,13 +355,21 @@ export function PlanchesView({
         />
       ))}
     </div>
+    </div>
   );
 }
+
+/** Les vues de la table : tout, ce que le contrôle voudra relire, ce qu'une
+ *  main a touché. */
+type Vue = "toutes" | "verifier" | "editees";
 
 function PlancheCell({
   album,
   spread,
   index,
+  parCase,
+  onSombre,
+  arret,
   current,
   dropping,
   onSelect,
@@ -307,6 +390,12 @@ function PlancheCell({
   album: Album;
   spread: Spread;
   index: number;
+  /** Les alertes de chaque case, calculées une fois par la vue. */
+  parCase: Alerte[][];
+  /** Une vignette décodée dit si sa case est sombre. */
+  onSombre: (cell: number, sombre: boolean) => void;
+  /** L'unique arrêt de tabulation de la grille. */
+  arret: boolean;
   current: boolean;
   dropping: boolean;
   onSelect: () => void;
@@ -324,28 +413,8 @@ function PlancheCell({
   /** Vrai une fois si le clic qui arrive suit un glisser. */
   avaleClic: () => boolean;
 }) {
-  // Les cases en alerte, par la règle de la planche (`badgesDe`) : ce que le
-  // relevé sait tout de suite, et « sombre » quand la vignette d'une case
-  // s'est décodée, puisqu'il lit ses pixels.
-  const releve = useReleve();
-  const [sombres, setSombres] = useState<ReadonlySet<number>>(() => new Set());
-  const rects = slotsFor(spread.template, spread.slots.length, spreadGeometry(album));
-  const parCase = spread.slots.map((slot, i) => {
-    const r = rects[i];
-    if (!r) return [];
-    const b = badgesDe(slot.src, null, r, 1, slot.zoom ?? 1, undefined, releve);
-    return sombres.has(i) ? [...b.alertes, { code: "sombre" as const }] : b.alertes;
-  });
   const enAlerte = parCase.filter((a) => a.length > 0).length;
-  const signes = signesDePlanche(parCase);
-  const surSombre = (i: number, sombre: boolean) =>
-    setSombres((avant) => {
-      if (avant.has(i) === sombre) return avant;
-      const apres = new Set(avant);
-      if (sombre) apres.add(i);
-      else apres.delete(i);
-      return apres;
-    });
+  const lignes = legendeQualite([parCase]);
   const ditAlerte =
     enAlerte === 0
       ? ""
@@ -388,7 +457,7 @@ function PlancheCell({
       // cellule courante : les flèches font le reste, et Tab ne devient pas
       // soixante pressions pour traverser un album.
       data-at={index}
-      tabIndex={current ? 0 : -1}
+      tabIndex={arret ? 0 : -1}
       aria-current={current ? true : undefined}
       aria-label={
         (spread.caption ? `${spread.caption} · ` : "") +
@@ -403,20 +472,22 @@ function PlancheCell({
       <MiniSpread
         album={album}
         spread={spread}
-        onSombre={surSombre}
+        onSombre={onSombre}
         colleeMm={largeurCollee(index, reliure, spreadGeometry(album))}
       />
       <figcaption className="planche-meta">
         <span className="planche-num">{index + 1}</span>
-        {spread.caption && <span className="planche-chapter">{spread.caption}</span>}
         <span className="planche-flags">
+          {lignes.map((l) => (
+            <span key={l.code} className="tag qual">
+              {motDeLigne(l)}
+            </span>
+          ))}
           {spread.edited && (
-            <span
-              className="badge-edited"
-              title={t("table.editee")}
-            />
+            <span className="tag main" title={t("table.editee")}>
+              {t("table.tag.editee")}
+            </span>
           )}
-          <SignesAlerte alertes={signes} enLigne />
           <button
             className={"lock" + (spread.locked ? " locked" : "")}
             onClick={(e) => {
@@ -442,6 +513,11 @@ function PlancheCell({
           </button>
         </span>
       </figcaption>
+      {spread.caption && (
+        <p className="planche-chapitre">
+          <span className="tag chap">{spread.caption}</span>
+        </p>
+      )}
     </figure>
   );
 }
@@ -454,12 +530,14 @@ function PlancheCell({
 function CoverCell({
   album,
   current,
+  arret,
   onSelect,
   onOpen,
   onKey,
 }: {
   album: Album;
   current: boolean;
+  arret: boolean;
   onSelect: () => void;
   onOpen: () => void;
   onKey: (e: React.KeyboardEvent) => void;
@@ -478,7 +556,7 @@ function CoverCell({
       }}
       title={t("table.couverture.titre")}
       data-at={-1}
-      tabIndex={current ? 0 : -1}
+      tabIndex={arret ? 0 : -1}
       aria-current={current ? true : undefined}
       aria-label={t("table.couverture")}
       onKeyDown={onKey}

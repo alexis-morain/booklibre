@@ -30,6 +30,7 @@ export type MenuActions = {
   annuler(): void;
   retablir(): void;
   vue(v: "livre" | "tri" | "planches" | "envoi"): void;
+  barreLaterale(): void;
   couverture(): void;
   apercuFidele(): void;
   revue(): void;
@@ -191,6 +192,13 @@ export async function installMenu(
   const affichage = await Submenu.new({
     text: t("menu.affichage"),
     items: [
+      // ⌘\ : la barre latérale, entre les vues et le reste de ce qu'on
+      // montre ou cache, comme dans tout logiciel qui en a une.
+      await item("barreLaterale", t("menu.lateral"), {
+        accelerator: "CmdOrCtrl+Backslash",
+        enabled: albumOpen,
+      }),
+      await sep(),
       await vue("livre", t("menu.livre"), "1"),
       await vue("tri", t("menu.tri"), "2"),
       await vue("planches", t("menu.planches"), "3"),

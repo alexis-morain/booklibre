@@ -16,7 +16,7 @@ import { reglagePose, useReglages } from "./reglages";
 import { SignesAlerte } from "./SignesAlerte";
 
 /** Les alertes de chaque case de chaque planche, par la règle des cases. */
-function useAlertesDeLAlbum(album: Album): Alerte[][][] {
+export function useAlertesDeLAlbum(album: Album): Alerte[][][] {
   const releve = useReleve();
   useReglages();
   // Une vignette décodée peut faire naître un « sombre » : on recompte.
@@ -38,6 +38,24 @@ function useAlertesDeLAlbum(album: Album): Alerte[][][] {
         releve,
       ).alertes;
     });
+  });
+}
+
+/** Les alertes des cases d'une seule planche, par la même règle : le panneau
+ *  de propriétés n'a pas besoin de compter tout l'album à chaque rendu. */
+export function useAlertesDeLaPlanche(album: Album, index: number): Alerte[][] {
+  const releve = useReleve();
+  useReglages();
+  const [, setDecodees] = useState(0);
+  useEffect(() => surImage(() => setDecodees((n) => n + 1)), []);
+  const geom = useMemo(() => spreadGeometry(album), [album]);
+  const spread = album.spreads[index];
+  if (!spread) return [];
+  const rects = slotsFor(spread.template, spread.slots.length, geom);
+  return spread.slots.map((slot, i) => {
+    const r = rects[i];
+    if (!r) return [];
+    return badgesDe(slot.src, imageDe(slot.src), r, 1, slot.zoom ?? 1, reglagePose(slot.src), releve).alertes;
   });
 }
 

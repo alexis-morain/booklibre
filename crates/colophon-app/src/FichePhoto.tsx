@@ -106,7 +106,7 @@ export function FichePhoto({
               {ppi < MIN_EFFECTIVE_PPI && (
                 <>
                   {", "}
-                  <span className="fiche-sous">
+                  <span className="tag qual">
                     {t("fiche.ppi.sous", { min: MIN_EFFECTIVE_PPI })}
                   </span>
                 </>

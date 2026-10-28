@@ -43,6 +43,12 @@ export type Entree = {
   cle: Cle;
   /** Inactive, et pourquoi : l'infobulle le dit. */
   desactive?: Cle;
+  /** Le raccourci clavier, dit à droite en sourdine. */
+  raccourci?: string;
+  /** Un filet au-dessus : l'entrée ouvre un autre groupe. */
+  filet?: boolean;
+  /** Détruit quelque chose : seule entrée en rouge. */
+  danger?: boolean;
 };
 
 /** Les entrées du menu d'une cible, dans l'ordre. `fiche` dit si la fiche
@@ -56,9 +62,9 @@ export function entreesPour(cible: Cible, options: { fiche: boolean }): Entree[]
       return [
         { id: "remplacer", cle: "ctx.remplacer" },
         { id: "retirer", cle: "ctx.retirer" },
-        { id: "copier", cle: "ctx.copier" },
-        { id: "voir-original", cle: "ctx.voir.original", desactive: fiche },
-        { id: "informations", cle: "ctx.informations", desactive: fiche },
+        { id: "copier", cle: "ctx.copier", raccourci: "⌘C", filet: true },
+        { id: "voir-original", cle: "ctx.voir.original", desactive: fiche, filet: true },
+        { id: "informations", cle: "ctx.informations", desactive: fiche, raccourci: "⌘I" },
       ];
     case "page":
       return [
@@ -68,28 +74,29 @@ export function entreesPour(cible: Cible, options: { fiche: boolean }): Entree[]
       ];
     case "objet":
       return [
-        { id: "copier", cle: "ctx.copier" },
-        { id: "couper", cle: "ctx.couper" },
-        { id: "dupliquer", cle: "ctx.dupliquer" },
-        { id: "supprimer", cle: "ctx.supprimer" },
-        { id: "reglages", cle: "ctx.reglages" },
+        { id: "copier", cle: "ctx.copier", raccourci: "⌘C" },
+        { id: "couper", cle: "ctx.couper", raccourci: "⌘X" },
+        { id: "dupliquer", cle: "ctx.dupliquer", raccourci: "⌘D" },
+        { id: "reglages", cle: "ctx.reglages", filet: true },
+        { id: "supprimer", cle: "ctx.supprimer", raccourci: "⌫", filet: true, danger: true },
       ];
     case "planche":
       return [
-        { id: "dupliquer", cle: "ctx.dupliquer" },
+        { id: "dupliquer", cle: "ctx.dupliquer", raccourci: "⌘D" },
         { id: "inserer-avant", cle: "ctx.inserer.avant" },
         { id: "inserer-apres", cle: "ctx.inserer.apres" },
         {
           id: "recomposer-planche",
           cle: "ctx.recomposer.planche",
           desactive: cible.origine === false ? "ctx.planche.sans.origine" : undefined,
+          filet: true,
         },
         {
           id: "mise-en-page",
           cle: "ctx.mise.en.page",
           desactive: cible.photos ? undefined : "ctx.planche.sans.photo",
         },
-        { id: "supprimer", cle: "ctx.supprimer" },
+        { id: "supprimer", cle: "ctx.supprimer", raccourci: "⌫", filet: true, danger: true },
       ];
   }
 }
