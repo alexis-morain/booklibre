@@ -747,7 +747,7 @@ lecture par ouverture, en mémoire. « Moi-même » oublie la table. Le pays vie
 (noms par `Intl.DisplayNames`), « Un autre pays » dit « pas encore livré » et continue ; il ne
 part jamais. **Jamais dans la version App Store** : `tarifs_offerts` et `tarifs_lire` y sont
 coupés par `cfg`, le front ne pose pas la question, `mas.sh` refuse un binaire qui porte
-`colophon-tarifs` ou `/v1/tarifs`. **L'adresse est compilée comme celle du relais**
+`colophon-tarifs` ou `/v1/prices`. **L'adresse est compilée comme celle du relais**
 (`tarifs::url_pour`) : le sandbox en debug ou avec `COLOPHON_RELAIS_SANDBOX=1`, sinon
 `COLOPHON_TARIFS_REEL` (hôte seul, `reel_valide`), posé par `release.yml` depuis la variable du
 dépôt du même nom, seulement si elle l'est. Sans adresse, ni question ni prix. Un GET nu par

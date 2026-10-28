@@ -478,7 +478,7 @@ pub struct Etat {
     pub dernier_code: Option<i64>,
 }
 
-/// Ce que `POST /v1/intentions/{id}/abandon` rend, réponse par réponse du
+/// Ce que `POST /v1/orders/{id}/abandon` rend, réponse par réponse du
 /// contrat. Tout le reste est une [`Erreur`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Abandon {
@@ -674,37 +674,37 @@ impl Relais<'_> {
         Self::verdict(self.transport.post_json(&self.url(chemin), secret, corps), secret)
     }
 
-    /// `GET /v1/pays` : les pays ouverts à la commande.
+    /// `GET /v1/countries` : les pays ouverts à la commande.
     pub fn pays(&self) -> Result<Vec<Pays>, Erreur> {
         #[derive(Deserialize)]
         struct R {
             pays: Vec<Pays>,
         }
-        Ok(lire::<R>(&self.get("/v1/pays", None)?, None)?.pays)
+        Ok(lire::<R>(&self.get("/v1/countries", None)?, None)?.pays)
     }
 
-    /// `POST /v1/intentions` : la grille des prix, les deux URL de dépôt, et
+    /// `POST /v1/orders` : la grille des prix, les deux URL de dépôt, et
     /// l'identifiant et le secret de l'intention.
     pub fn creer(&self, demande: &Demande) -> Result<Intention, Erreur> {
         let corps = serde_json::to_value(demande).map_err(|e| Erreur::Reponse(e.to_string()))?;
-        let texte = self.post("/v1/intentions", None, &corps)?;
+        let texte = self.post("/v1/orders", None, &corps)?;
         // Le corps porte le secret : une erreur de lecture ne doit pas le
         // recopier, et on ne le connaît qu'une fois lu.
         serde_json::from_str(&texte).map_err(|_| Erreur::Reponse("intention".into()))
     }
 
-    /// `POST /v1/intentions/{id}/fichiers` : le relais vérifie et fige les
+    /// `POST /v1/orders/{id}/files` : le relais vérifie et fige les
     /// deux objets déposés. Rend le nouvel état.
     pub fn fichiers(&self, id: &str, secret: &Secret) -> Result<String, Erreur> {
         #[derive(Deserialize)]
         struct R {
             etat: String,
         }
-        let texte = self.post(&format!("/v1/intentions/{id}/fichiers"), Some(secret), &json!({}))?;
+        let texte = self.post(&format!("/v1/orders/{id}/files"), Some(secret), &json!({}))?;
         Ok(lire::<R>(&texte, Some(secret))?.etat)
     }
 
-    /// `POST /v1/intentions/{id}/paiement` : l'URL de la session Checkout du
+    /// `POST /v1/orders/{id}/payment` : l'URL de la session Checkout du
     /// niveau choisi. L'app la garde (`ouvrir_paiement`) et ne l'envoie qu'au
     /// navigateur du système.
     pub fn paiement(&self, id: &str, secret: &Secret, niveau: &str) -> Result<String, Erreur> {
@@ -712,16 +712,16 @@ impl Relais<'_> {
         struct R {
             url: String,
         }
-        let texte = self.post(&format!("/v1/intentions/{id}/paiement"), Some(secret), &json!({ "niveau": niveau }))?;
+        let texte = self.post(&format!("/v1/orders/{id}/payment"), Some(secret), &json!({ "niveau": niveau }))?;
         Ok(lire::<R>(&texte, Some(secret))?.url)
     }
 
-    /// `GET /v1/intentions/{id}` : l'état, le mode, le dernier code.
+    /// `GET /v1/orders/{id}` : l'état, le mode, le dernier code.
     pub fn etat(&self, id: &str, secret: &Secret) -> Result<Etat, Erreur> {
-        lire(&self.get(&format!("/v1/intentions/{id}"), Some(secret))?, Some(secret))
+        lire(&self.get(&format!("/v1/orders/{id}"), Some(secret))?, Some(secret))
     }
 
-    /// `POST /v1/intentions/{id}/annulation`. Rend le nouvel état
+    /// `POST /v1/orders/{id}/cancel`. Rend le nouvel état
     /// (`annulee`, ou `annulation_en_cours` quand le remboursement attend) ;
     /// trop tard, le relais répond 409 `trop_tard`.
     pub fn annuler(&self, id: &str, secret: &Secret) -> Result<String, Erreur> {
@@ -729,11 +729,11 @@ impl Relais<'_> {
         struct R {
             etat: String,
         }
-        let texte = self.post(&format!("/v1/intentions/{id}/annulation"), Some(secret), &json!({}))?;
+        let texte = self.post(&format!("/v1/orders/{id}/cancel"), Some(secret), &json!({}))?;
         Ok(lire::<R>(&texte, Some(secret))?.etat)
     }
 
-    /// `POST /v1/intentions/{id}/abandon` : le relais expire chez Stripe
+    /// `POST /v1/orders/{id}/abandon` : le relais expire chez Stripe
     /// toute session ouverte de l'intention, puis l'abandonne. Les quatre
     /// réponses du contrat deviennent un [`Abandon`] ; un 200 qui ne dit ni
     /// `abandonnee` ni `purgee`, un 409 qui n'est pas `avancee` avec un état
@@ -746,7 +746,7 @@ impl Relais<'_> {
         let masque = |t: &str| secret.masquer(t);
         let (statut, texte) = self
             .transport
-            .post_json(&self.url(&format!("/v1/intentions/{id}/abandon")), Some(secret), &json!({}))
+            .post_json(&self.url(&format!("/v1/orders/{id}/abandon")), Some(secret), &json!({}))
             .map_err(|e| Erreur::Reseau(masque(&e)))?;
         let hors_contrat = || Erreur::Reponse(format!("abandon : réponse hors contrat ({statut})"));
         match statut {
@@ -1071,7 +1071,7 @@ mod tests {
         assert_eq!(r.abandonner("abc", &s), Ok(Abandon::Inconnue));
         assert_eq!(r.abandonner("abc", &s), Ok(Abandon::Inconnue));
         let recu = t.recu.borrow();
-        assert_eq!((recu[0].0.as_str(), recu[0].1.as_str()), ("POST", "https://relais.exemple/v1/intentions/abc/abandon"));
+        assert_eq!((recu[0].0.as_str(), recu[0].1.as_str()), ("POST", "https://relais.exemple/v1/orders/abc/abandon"));
         assert_eq!(recu[0].2.as_deref(), Some(SECRET), "le secret part en bearer");
         assert_eq!(recu[0].3, json!({}), "corps vide");
         drop(recu);
@@ -1143,7 +1143,7 @@ mod tests {
         assert_eq!(p[0].code, "FR");
         assert!(p[0].etats.is_empty());
         let r = t.recu.borrow();
-        assert_eq!((r[0].0.as_str(), r[0].1.as_str(), r[0].2.as_deref()), ("GET", "https://relais.exemple/v1/pays", None));
+        assert_eq!((r[0].0.as_str(), r[0].1.as_str(), r[0].2.as_deref()), ("GET", "https://relais.exemple/v1/countries", None));
     }
 
     #[test]
@@ -1155,7 +1155,7 @@ mod tests {
         assert_eq!(i.grille.len(), 2);
         assert_eq!(i.grille[0].prix_ttc_centimes, 4600);
         let r = t.recu.borrow();
-        assert_eq!(r[0].1, "https://relais.exemple/v1/intentions");
+        assert_eq!(r[0].1, "https://relais.exemple/v1/orders");
         assert_eq!(r[0].2, None, "la création n'a pas encore de secret");
         // Exactement les clés que `lireDemande` du relais permet : il refuse
         // toute autre, `papier` compris.
@@ -1191,10 +1191,10 @@ mod tests {
         assert_eq!(
             chemins,
             [
-                ("POST", "https://relais.exemple/v1/intentions/abc/fichiers"),
-                ("POST", "https://relais.exemple/v1/intentions/abc/paiement"),
-                ("GET", "https://relais.exemple/v1/intentions/abc"),
-                ("POST", "https://relais.exemple/v1/intentions/abc/annulation"),
+                ("POST", "https://relais.exemple/v1/orders/abc/files"),
+                ("POST", "https://relais.exemple/v1/orders/abc/payment"),
+                ("GET", "https://relais.exemple/v1/orders/abc"),
+                ("POST", "https://relais.exemple/v1/orders/abc/cancel"),
             ]
         );
         for x in recu.iter() {
@@ -1464,7 +1464,7 @@ mod tests {
         let rendu = Relais { base: &base, transport: &reseau }.abandonner("abc", &secret());
         let (recu, corps) = serveur.join().unwrap();
         assert_eq!(rendu, Ok(Abandon::Fait("abandonnee".into())));
-        assert!(recu[0].starts_with("POST /v1/intentions/abc/abandon "), "{recu:?}");
+        assert!(recu[0].starts_with("POST /v1/orders/abc/abandon "), "{recu:?}");
         assert!(recu.iter().any(|l| l.eq_ignore_ascii_case("content-type: application/json")), "{recu:?}");
         assert!(recu.iter().any(|l| l == &format!("authorization: Bearer {SECRET}") || l == &format!("Authorization: Bearer {SECRET}")), "{recu:?}");
         assert_eq!(corps, "{}");
