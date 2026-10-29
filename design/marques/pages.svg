@@ -1,0 +1,15 @@
+<!-- Marque 4, « les deux pages » (DA « La page calme », 28/10).
+
+     La marque du site et de l'accueil de l'app, agrandie : deux pages côte à
+     côte et le pli entre elles, l'encre du livre à gauche, son terracotta à
+     droite. Mêmes proportions que `.mark i` du site et `.marque-booklibre`
+     de l'app (20 × 13, gouttière 1,5, coins 1,5), multipliées par 28.
+
+     Le fond est le papier, dans la grille d'icône de macOS : un carré
+     arrondi de 824 px posé à 100 px du bord, le reste transparent. Plein
+     cadre, macOS l'enfermait dans un second carré gris. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#f6f2e9"/>
+  <rect x="232" y="330" width="259" height="364" rx="42" fill="#191918"/>
+  <rect x="533" y="330" width="259" height="364" rx="42" fill="#b04a1f"/>
+</svg>

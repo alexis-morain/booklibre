@@ -1655,7 +1655,8 @@ les octets de l'album, `police.ts` les noms et les refus d'une face,
 `envoi.ts` la logique pure d'Envoi, `commande.ts` celle de Commander, `CommandeView.tsx`
 son parcours, `Livre3D.tsx` et `volume.ts` le livre en volume, `fond.ts` et
 `PaletteFond.tsx` le fond de la couverture) plus
-la coquille Tauri, marques d'icône dans `design/marques`.
+la coquille Tauri, marques d'icône dans `design/marques` (posée depuis le 28/10 : `pages.svg`, les
+deux pages de la DA « La page calme », par `scripts/icone.sh`).
 
 
 Chaîne de distribution : `NOTICES.md` et `src-tauri/notices.md`, la copie embarquée,
