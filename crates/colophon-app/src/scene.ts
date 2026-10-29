@@ -287,6 +287,18 @@ export function coteDe(r: Rect, g: SpreadGeometry): Cote {
   return r.x + r.w / 2 < g.w / 2 ? -1 : 1;
 }
 
+/**
+ * Le côté où retenir un objet qu'on **déplace** : celui où son centre est
+ * arrivé. Le pli reste dur — l'objet ne s'y met jamais à cheval —, mais il se
+ * franchit : passé le milieu, l'objet saute sur l'autre page. Retenu du côté
+ * de départ, un bloc né à gauche n'atteignait jamais la droite. La page
+ * collée dans la couverture ne reçoit rien, donc on y reste à droite.
+ * Tailler et tourner gardent le côté de départ : là, sauter surprendrait.
+ */
+export function coteDuGlisse(r: Rect, g: SpreadGeometry, gaucheInterdite: boolean): Cote {
+  return gaucheInterdite ? 1 : coteDe(r, g);
+}
+
 /** Ce que le prévol lit d'un profil pour la page collée. */
 type Reliure = { pages_simples: boolean } | null | undefined;
 

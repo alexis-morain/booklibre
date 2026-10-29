@@ -9,6 +9,20 @@ sur la page des releases.
 
 ## [Non publié]
 
+### Changed
+
+- A new album opens on a blank page 1: no photo sits right behind the cover
+  any more. Bringing a photo back from the sorting view, pasting, dropping or
+  moving a spread never puts one there either.
+- A new text block starts at 26 pt instead of 12, readable on screen.
+- The cover photo picker marks the photos too small for the cover sheet of
+  your printer, with the resolution they would print at.
+
+### Fixed
+
+- A text block or an ornament can be dragged across the fold to the right
+  page; it used to stop at the fold of the page it was born on.
+
 ## [1.1.0] - 2026-10-28
 
 ### Added

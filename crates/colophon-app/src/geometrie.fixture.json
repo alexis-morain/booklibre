@@ -49,6 +49,10 @@
           210.0
         ]
       ],
+      "photo": [
+        239.0,
+        258.0
+      ],
       "profil": "cloudprinter",
       "profil_cotes": {
         "bas": 3.0,
@@ -60,6 +64,7 @@
           "mode": "calcule"
         },
         "ext": 3.0,
+        "fichiers": "deux",
         "haut": 3.0,
         "mors": 5.0,
         "rempli": 18.0
@@ -82,6 +87,10 @@
           210.0
         ]
       ],
+      "photo": [
+        239.00000000000003,
+        258.0
+      ],
       "profil": "cloudprinter",
       "profil_cotes": {
         "bas": 3.0,
@@ -93,6 +102,7 @@
           "mode": "calcule"
         },
         "ext": 3.0,
+        "fichiers": "deux",
         "haut": 3.0,
         "mors": 5.0,
         "rempli": 18.0
@@ -115,6 +125,10 @@
           210.0
         ]
       ],
+      "photo": [
+        239.0,
+        258.0
+      ],
       "profil": "cloudprinter",
       "profil_cotes": {
         "bas": 3.0,
@@ -126,6 +140,7 @@
           "mode": "calcule"
         },
         "ext": 3.0,
+        "fichiers": "deux",
         "haut": 3.0,
         "mors": 5.0,
         "rempli": 18.0
@@ -148,6 +163,10 @@
           210.0
         ]
       ],
+      "photo": [
+        210.0,
+        210.0
+      ],
       "profil": "prodigi",
       "profil_cotes": {
         "bas": 0.0,
@@ -156,6 +175,7 @@
           "mode": "fourni"
         },
         "ext": 0.0,
+        "fichiers": "un",
         "haut": 0.0,
         "mors": 0.0,
         "rempli": 0.0
@@ -178,6 +198,10 @@
           210.0
         ]
       ],
+      "photo": [
+        210.0,
+        210.0
+      ],
       "profil": "prodigi",
       "profil_cotes": {
         "bas": 0.0,
@@ -186,6 +210,7 @@
           "mode": "fourni"
         },
         "ext": 0.0,
+        "fichiers": "un",
         "haut": 0.0,
         "mors": 0.0,
         "rempli": 0.0
@@ -208,6 +233,10 @@
           210.0
         ]
       ],
+      "photo": [
+        210.0,
+        210.0
+      ],
       "profil": "prodigi",
       "profil_cotes": {
         "bas": 0.0,
@@ -216,6 +245,7 @@
           "mode": "fourni"
         },
         "ext": 0.0,
+        "fichiers": "un",
         "haut": 0.0,
         "mors": 0.0,
         "rempli": 0.0
@@ -238,6 +268,10 @@
           210.0
         ]
       ],
+      "photo": [
+        212.99999999999997,
+        216.0
+      ],
       "profil": "lulu",
       "profil_cotes": {
         "bas": 3.0,
@@ -249,6 +283,7 @@
           "mode": "calcule"
         },
         "ext": 3.0,
+        "fichiers": "deux",
         "haut": 3.0,
         "mors": 0.0,
         "rempli": 0.0
@@ -271,6 +306,10 @@
           210.0
         ]
       ],
+      "photo": [
+        213.00000000000003,
+        216.0
+      ],
       "profil": "lulu",
       "profil_cotes": {
         "bas": 3.0,
@@ -282,6 +321,7 @@
           "mode": "calcule"
         },
         "ext": 3.0,
+        "fichiers": "deux",
         "haut": 3.0,
         "mors": 0.0,
         "rempli": 0.0
@@ -304,6 +344,10 @@
           210.0
         ]
       ],
+      "photo": [
+        213.0,
+        216.0
+      ],
       "profil": "lulu",
       "profil_cotes": {
         "bas": 3.0,
@@ -315,6 +359,7 @@
           "mode": "calcule"
         },
         "ext": 3.0,
+        "fichiers": "deux",
         "haut": 3.0,
         "mors": 0.0,
         "rempli": 0.0
@@ -337,6 +382,10 @@
           210.0
         ]
       ],
+      "photo": [
+        216.0,
+        216.0
+      ],
       "profil": "generique",
       "profil_cotes": {
         "bas": 3.0,
@@ -345,6 +394,7 @@
           "mode": "fourni"
         },
         "ext": 3.0,
+        "fichiers": "un",
         "haut": 3.0,
         "mors": 0.0,
         "rempli": 0.0
@@ -367,6 +417,10 @@
           210.0
         ]
       ],
+      "photo": [
+        216.0,
+        216.0
+      ],
       "profil": "generique",
       "profil_cotes": {
         "bas": 3.0,
@@ -375,6 +429,7 @@
           "mode": "fourni"
         },
         "ext": 3.0,
+        "fichiers": "un",
         "haut": 3.0,
         "mors": 0.0,
         "rempli": 0.0
@@ -397,6 +452,10 @@
           210.0
         ]
       ],
+      "photo": [
+        216.0,
+        216.0
+      ],
       "profil": "generique",
       "profil_cotes": {
         "bas": 3.0,
@@ -405,6 +464,7 @@
           "mode": "fourni"
         },
         "ext": 3.0,
+        "fichiers": "un",
         "haut": 3.0,
         "mors": 0.0,
         "rempli": 0.0

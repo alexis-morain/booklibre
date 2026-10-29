@@ -706,10 +706,6 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
             }
 
             let mut composer = layout::Composer::avec_densite(&album, densite);
-            // Sans faux-titre, chez qui relie page par page, la moitié gauche
-            // de la première planche est collée dans la couverture (1.1-d).
-            composer.ouverture_a_droite =
-                !opts.garde && crate::printer::PrinterProfile::defaut().pages_simples;
             // Captions are worked out for the run of chapters at once, not one
             // by one: whether a place is worth naming depends on the chapter
             // before it.
@@ -806,6 +802,16 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
             let titre = crate::cover::titre_du_livre(&album).to_string();
             let garde = crate::garde::spread(&titre, f, crate::garde::place(&g), opts.langue);
             album.spreads.insert(0, garde);
+        }
+
+        // La page 1 ne porte aucune photo : sans faux-titre, le livre s'ouvre
+        // sur une planche vide. Sa gauche est collée dans la couverture chez
+        // qui relie page par page, et une photo seule à droite, juste derrière
+        // la couverture, n'était pas ce qu'on attend d'un livre. Une première
+        // planche déjà sans photo (le faux-titre, une page de texte épinglée)
+        // tient ce rôle, et on n'en ajoute pas une seconde.
+        if album.spreads.first().is_some_and(|s| !s.slots.is_empty()) {
+            album.spreads.insert(0, crate::model::Spread::vide());
         }
 
         // La couverture, quand personne n'en a encore choisi. Sans elle,
@@ -2468,18 +2474,18 @@ mod tests {
         assert_eq!(slots, 10, "les dix photos sont dans l'album");
         let planches = planches_photo(&report.album);
         assert!((2..=6).contains(&planches), "{planches} planches pour 10 photos");
-        // Le livre s'ouvre sur une photo (1.1-d) et se ferme sur le colophon.
-        assert!(!report.album.spreads[0].slots.is_empty(), "{}", report.album.spreads[0].template);
+        // Le livre s'ouvre sur une page blanche et se ferme sur le colophon.
+        assert!(report.album.spreads[0].slots.is_empty(), "{}", report.album.spreads[0].template);
         assert_eq!(
             report.album.spreads.last().unwrap().template,
             crate::colophon::TEMPLATE
         );
     }
 
-    /// 1.1-d : un album neuf n'a pas de faux-titre. Il s'ouvre sur une photo,
-    /// la moitié gauche de sa première planche — collée dans la couverture
-    /// chez qui relie page par page — ne porte rien, et le prévol de
-    /// Cloudprinter n'a rien à en dire. Les faits que portait le faux-titre
+    /// Un album neuf n'a pas de faux-titre (1.1-d), et sa page 1 ne porte
+    /// aucune photo : sa première planche est vide, la moitié gauche — collée
+    /// dans la couverture chez qui relie page par page — comme la droite, et
+    /// le prévol de Cloudprinter n'a rien à en dire. Les faits que portait le faux-titre
     /// restent sur le colophon, et la couverture les lit dans les faits.
     ///
     /// Le prévol entier à zéro se mesure sur les jeux de référence : un
@@ -2487,7 +2493,7 @@ mod tests {
     /// définition de couverture de Cloudprinter, et ces deux refus-là ne
     /// disent rien de la première planche.
     #[test]
-    fn un_album_neuf_s_ouvre_sur_une_photo_et_le_prevol_est_a_zero() {
+    fn un_album_neuf_s_ouvre_sur_une_page_blanche_et_le_prevol_est_a_zero() {
         let (photos, out) = dossier_test("sans-garde");
         for i in 0..12 {
             jpeg_imprimable(&photos.join(format!("photo-{i:02}.jpg")), i);
@@ -2499,7 +2505,9 @@ mod tests {
             "aucun faux-titre"
         );
         let premiere = &album.spreads[0];
-        assert!(!premiere.slots.is_empty(), "page 1 = une photo : {}", premiere.template);
+        assert_eq!(premiere.template, "vide", "page 1 sans photo");
+        assert!(premiere.slots.is_empty() && premiere.caption.is_none());
+        assert!(!album.spreads[1].slots.is_empty(), "les photos suivent");
         let g = crate::pdf::geometry(album);
         assert_eq!(
             crate::imposition::objets_a_gauche(&crate::scene::Scene::of(premiere, &g), &g),

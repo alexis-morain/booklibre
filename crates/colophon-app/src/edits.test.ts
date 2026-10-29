@@ -33,6 +33,7 @@ import {
   movePhoto,
   moveBlocker,
   moveSpread,
+  photoEnPageUne,
   nudgeObjet,
   pasteObjet,
   placePhoto,
@@ -155,25 +156,55 @@ describe("rescuePhoto", () => {
   const back = { src: "back.jpg", focal: [0.5, 0.42] as [number, number] };
 
   it("lands on the anchor spread when it can grow", () => {
-    const a = album(spread("trio", 3), spread("duo", 2));
-    const r = rescuePhoto(a, back, 0);
-    expect(r?.at).toBe(0);
-    expect(r?.album.spreads[0].template).toBe("quad");
-    expect(r?.album.spreads[0].slots[3].src).toBe("back.jpg");
+    const a = album(spread("vide", 0), spread("trio", 3), spread("duo", 2));
+    const r = rescuePhoto(a, back, 1);
+    expect(r?.at).toBe(1);
+    expect(r?.album.spreads[1].template).toBe("quad");
+    expect(r?.album.spreads[1].slots[3].src).toBe("back.jpg");
     r && assertSound(r.album);
   });
 
   it("spills to a neighbour when the anchor is full", () => {
-    const a = album(spread("quad", 4), spread("duo", 2));
+    const a = album(spread("vide", 0), spread("quad", 4), spread("duo", 2));
+    const r = rescuePhoto(a, back, 1);
+    expect(r?.at).toBe(2);
+    expect(r?.album.spreads[2].template).toBe("trio");
+    r && assertSound(r.album);
+  });
+
+  it("never lands on page one, even from there", () => {
+    // Sauver une photo depuis le tri, le livre ouvert sur sa première
+    // planche, la posait juste derrière la couverture.
+    const a = album(spread("vide", 0), spread("duo", 2));
     const r = rescuePhoto(a, back, 0);
     expect(r?.at).toBe(1);
-    expect(r?.album.spreads[1].template).toBe("trio");
-    r && assertSound(r.album);
+    expect(r?.album.spreads[0].slots).toHaveLength(0);
+    // Une première planche qui porte déjà des photos (un album d'avant) ne
+    // grandit pas non plus.
+    const avant = album(spread("solo", 1), spread("quad", 4));
+    expect(rescuePhoto(avant, back, 0)).toBeNull();
   });
 
   it("gives up when the whole neighbourhood is full", () => {
     const a = album(spread("quad", 4), spread("quad", 4), spread("quad", 4));
     expect(rescuePhoto(a, back, 1)).toBeNull();
+  });
+});
+
+describe("photoEnPageUne", () => {
+  it("dit quand une édition pose une photo de plus sur la page 1", () => {
+    const a = album(spread("vide", 0), spread("duo", 2));
+    expect(photoEnPageUne(a, a)).toBe(false);
+    // Grandir la première planche, y déplacer une planche de photos, ou
+    // supprimer la planche blanche : trois chemins vers la même page.
+    expect(photoEnPageUne(a, addPhoto(a, 0, { src: "x.jpg", focal: [0.5, 0.5] }))).toBe(true);
+    expect(photoEnPageUne(a, moveSpread(a, 1, 0))).toBe(true);
+    expect(photoEnPageUne(a, removeSpread(a, 0))).toBe(true);
+    // Ce qu'elle portait déjà ne compte pas : un album d'avant reste
+    // modifiable ailleurs, et retirer une photo de sa page 1 passe.
+    const avant = album(spread("duo", 2), spread("duo", 2));
+    expect(photoEnPageUne(avant, removePhoto(avant, 0, 0))).toBe(false);
+    expect(photoEnPageUne(avant, addPhoto(avant, 1, { src: "x.jpg", focal: [0.5, 0.5] }))).toBe(false);
   });
 });
 
@@ -554,6 +585,9 @@ describe("addObjet", () => {
     const o = b.spreads[0].objets![0];
     expect(o.type).toBe("texte");
     expect(texteDe(o)).toBe("");
+    // Il naît au corps du titre de couverture : à 12 pt, dessiné à sa taille
+    // d'impression, il se lisait à peine à l'écran.
+    expect(o.type === "texte" && o.taille_pt).toBe(26);
     // Il tient tout entier dans la boîte de contenu, donc du bon côté du pli
     // et à l'intérieur de la marge, par construction.
     expect(o.x).toBeGreaterThanOrEqual(PAGE.x);

@@ -91,8 +91,11 @@ export type Dump = {
       rempli: number;
       debord: number;
       mors: number;
+      fichiers: "un" | "deux";
     };
     sheet: [number, number];
+    /** La surface de la photo de première, `[w, h]` en mm. */
+    photo: [number, number];
     spine: number;
     /** `[x, width]` of the back panel then the front one. */
     panels: [[number, number], [number, number]];

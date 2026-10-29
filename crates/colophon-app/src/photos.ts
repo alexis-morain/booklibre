@@ -179,7 +179,7 @@ export function nomDAlerte(a: Alerte): string {
 
 /** Où la photo vit : une case de planche, ou la réserve, où elle n'a pas
  *  de case et se mesure sur une demi-page. */
-export type LieuDAlerte = "case" | "reserve";
+export type LieuDAlerte = "case" | "reserve" | "couverture";
 
 /** L'alerte et son geste, dans la bulle d'un signe : une phrase simple,
  *  sans chiffre technique. Le chiffre est à `detailDAlerte`. */
@@ -189,7 +189,9 @@ export function phraseDAlerte(a: Alerte, lieu: LieuDAlerte = "case"): string {
       return t(
         lieu === "reserve"
           ? "alerte.phrase.reserve.sous_resolution"
-          : "alerte.phrase.sous_resolution",
+          : lieu === "couverture"
+            ? "alerte.phrase.couverture.sous_resolution"
+            : "alerte.phrase.sous_resolution",
       );
     case "sombre":
       return t("alerte.phrase.sombre");
@@ -308,4 +310,24 @@ export function alertesDeReserve(
   if (p < MIN_EFFECTIVE_PPI) alertes.push({ code: "sous_resolution", ppi: Math.round(p) });
   if (estFloue(m.nettete, releveAlbum)) alertes.push({ code: "floue" });
   return alertes;
+}
+
+/**
+ * Ce que le choix de la photo de couverture dit d'une candidate : trop
+ * petite pour la surface où la première s'imprime chez cet imprimeur
+ * (`album.ts::surfacePhotoCouverture`), au plancher de son profil. La
+ * feuille est plus grande que la page, elle demande plus de pixels qu'une
+ * case. On avertit, on ne retire rien du choix ; le prévol reste l'autorité
+ * à l'export. Sans relevé, ou pour une photo qu'il ne connaît pas, rien.
+ */
+export function alerteDeCouverture(
+  src: string,
+  surface: { w: number; h: number },
+  minPpi: number,
+  releveAlbum: ReleveAlbum | null,
+): Alerte | null {
+  const m = releveAlbum?.photos[src];
+  if (!m) return null;
+  const p = effectivePpi(surface, m.largeur, m.hauteur);
+  return p < minPpi ? { code: "sous_resolution", ppi: Math.round(p) } : null;
 }

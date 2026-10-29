@@ -363,10 +363,11 @@ pub struct Remplissage {
 /// `album.json` réparé à la main en porte), et la planche vide, qui compte
 /// pour une case. Une page blanche dessinée par son gabarit (la gauche d'un
 /// `solo`) n'est pas un trou ; une page de texte, une planche figée et une
-/// planche vide qui porte un objet libre ne se touchent pas.
+/// planche vide qui porte un objet libre ne se touchent pas. La première
+/// planche non plus : la page 1 ne porte aucune photo, vide est sa forme.
 pub fn cases_vides(album: &Album) -> Vec<Case> {
     let mut cases = Vec::new();
-    for (planche, s) in album.spreads.iter().enumerate() {
+    for (planche, s) in album.spreads.iter().enumerate().skip(1) {
         if s.locked || s.text.as_deref().is_some_and(|t| !t.is_empty()) {
             continue;
         }
@@ -951,7 +952,10 @@ mod tests {
         })).unwrap());
         // Un trio réparé à la main avec une seule photo : deux cases sans photo.
         let trou = Spread { template: "trio".into(), ..planche(&["t.jpg"]) };
+        // La première planche, la page 1, n'est jamais un trou : rien n'y
+        // pose de photo, même vide.
         let a = album(vec![
+            vide(),
             vide(),
             pleine_page(&["p.jpg"]),
             planche(&["a.jpg", "b.jpg"]),
@@ -961,7 +965,7 @@ mod tests {
             trou,
             Spread { template: "colophon".into(), ..planche(&[]) },
         ]);
-        assert_eq!(cases_vides(&a), cases(&[(0, 0), (6, 1), (6, 2)]));
+        assert_eq!(cases_vides(&a), cases(&[(1, 0), (7, 1), (7, 2)]));
     }
 
     /// Des faits de photos de 6000 × 4000 : elles tiennent toute case.
@@ -1018,7 +1022,7 @@ mod tests {
     fn une_mal_formee_ne_prend_pas_la_case_d_un_gabarit() {
         // La case d'un quad est loin d'un panorama : il la trahit, la
         // photo droite d'un autre jour passe devant lui.
-        let a = album(vec![Spread { template: "quad".into(), ..planche(&["p.jpg", "q.jpg", "r.jpg"]) }]);
+        let a = album(vec![vide(), Spread { template: "quad".into(), ..planche(&["p.jpg", "q.jpg", "r.jpg"]) }]);
         let mut faits = grandes(&[
             ("p.jpg", 0, 5.0, "2013-10-27 10:00:00"),
             ("q.jpg", 1, 5.0, "2013-10-27 10:00:00"),
@@ -1048,7 +1052,7 @@ mod tests {
     fn une_quasi_doublon_de_la_planche_n_est_pas_posee() {
         // Un quad réparé à la main : la case libre ne reçoit pas le quasi-
         // doublon d'une photo qu'il porte déjà.
-        let a = album(vec![Spread { template: "quad".into(), ..planche(&["p.jpg", "q.jpg", "r.jpg"]) }]);
+        let a = album(vec![vide(), Spread { template: "quad".into(), ..planche(&["p.jpg", "q.jpg", "r.jpg"]) }]);
         let mut faits = grandes(&[
             ("p.jpg", 0, 5.0, "2013-10-27 10:00:00"),
             ("q.jpg", 1, 5.0, "2013-10-27 10:00:00"),
@@ -1065,7 +1069,7 @@ mod tests {
     fn les_cases_d_une_planche_se_remplissent_dans_l_ordre_et_la_premiere_ratee_l_arrete() {
         // Un quad réparé à la main avec une photo : trois cases, deux photos
         // qui tiennent. La troisième case reste vide, et le dit.
-        let a = album(vec![Spread { template: "quad".into(), ..planche(&["p.jpg"]) }]);
+        let a = album(vec![vide(), Spread { template: "quad".into(), ..planche(&["p.jpg"]) }]);
         let faits = grandes(&[
             ("p.jpg", 0, 5.0, "2013-10-27 10:00:00"),
             ("x.jpg", 1, 9.0, "2013-10-27 11:00:00"),
@@ -1073,7 +1077,7 @@ mod tests {
         ]);
         let (poses, restees) = remplir_avec(&a, &reserve(&["x.jpg", "y.jpg"]), &faits, &date_de(&faits));
         assert_eq!(poses.iter().map(|p| (p.cellule, p.src.as_str())).collect::<Vec<_>>(), [(1, "x.jpg"), (2, "y.jpg")]);
-        assert_eq!(restees, cases(&[(0, 3)]));
+        assert_eq!(restees, cases(&[(1, 3)]));
     }
 
     #[test]

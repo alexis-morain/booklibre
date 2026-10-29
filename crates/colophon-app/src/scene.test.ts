@@ -17,6 +17,7 @@ import {
   contains,
   corners,
   coteDe,
+  coteDuGlisse,
   decalage,
   depthOfCell,
   distanceToTrim,
@@ -575,6 +576,20 @@ describe("the two guards a gesture applies", () => {
     const tenu = retenirAuPli(r, 45, g, -1);
     expect(tenu.x).toBeLessThan(r.x);
     expect(traverseLePli(tenu, 45, g)).toBe(false);
+  });
+
+  it("lets a dragged object cross to the page its centre reaches", () => {
+    // Retenu du côté de départ, un bloc né à gauche ne passait jamais à
+    // droite : la main le pousse au-delà du pli, il saute sur l'autre page.
+    // Centre 5 mm au-delà du pli, la boîte encore à cheval dessus.
+    const passe = { x: pli() - 20, y: 100, w: 50, h: 20 };
+    expect(coteDuGlisse(passe, g, false)).toBe(1);
+    const tenu = retenirAuPli(passe, 0, g, coteDuGlisse(passe, g, false));
+    expect(tenu.x).toBeCloseTo(pli(), 9);
+    // Sur la page collée, la gauche ne reçoit rien : il reste à droite.
+    const recule = { x: pli() - 45, y: 100, w: 50, h: 20 };
+    expect(coteDuGlisse(recule, g, false)).toBe(-1);
+    expect(coteDuGlisse(recule, g, true)).toBe(1);
   });
 
   it("leaves an object that already clears the fold exactly where it is", () => {
