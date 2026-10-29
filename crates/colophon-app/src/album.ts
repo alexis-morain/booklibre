@@ -589,6 +589,25 @@ export function coverSheet(
   };
 }
 
+/**
+ * La surface où la photo de première s'imprime chez un fournisseur, en mm.
+ * Port de `cover.rs::photo_rect_du_profil` : sur la feuille à plat, du bout
+ * du dos au bord droit, toute la hauteur ; sur une feuille seule, toute la
+ * feuille. Le choix de la photo y mesure ses ppi, contre ceux du profil.
+ */
+export function surfacePhotoCouverture(
+  album: { trim_mm: { w: number; h: number }; spreads: unknown[] },
+  profil: Parameters<typeof coverSheet>[1] & { fichiers: "un" | "deux" },
+): { w: number; h: number } {
+  const b = profil.bleed_mm;
+  if (profil.fichiers === "un") {
+    return { w: album.trim_mm.w + b.exterieur * 2, h: album.trim_mm.h + b.haut + b.bas };
+  }
+  const sheet = coverSheet(album, profil);
+  const x = sheet.spine ? sheet.spine[0] + sheet.spine[1] : sheet.front[0];
+  return { w: sheet.w - x, h: sheet.h };
+}
+
 /** Below this a spine is a fold, not a surface: no title on it (hydrated). */
 export let SPINE_TEXT_MIN_MM = 9;
 

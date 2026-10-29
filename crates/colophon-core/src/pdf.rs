@@ -684,6 +684,7 @@ pub fn dump_geometry(album: &Album) -> serde_json::Value {
                     spreads
                 ];
                 let c = crate::cover::geometry(&a, p);
+                let photo = crate::cover::photo_rect_du_profil(&a, p);
                 serde_json::json!({
                     "profil": p.id,
                     "spreads": spreads,
@@ -701,8 +702,12 @@ pub fn dump_geometry(album: &Album) -> serde_json::Value {
                         "rempli": p.rempli_mm,
                         "debord": p.debord_mm,
                         "mors": p.mors_mm,
+                        "fichiers": p.fichiers,
                     },
                     "sheet": [c.media_w, c.media_h],
+                    // La surface où la photo de première s'imprime chez ce
+                    // fournisseur : le choix de la photo y mesure ses ppi.
+                    "photo": [photo.w, photo.h],
                     "spine": c.spine_mm(),
                     "panels": [
                         [c.back.x, c.back.w],

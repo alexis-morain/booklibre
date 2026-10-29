@@ -235,15 +235,31 @@ export function rescuePhoto(
   slot: Slot,
   anchor: number,
 ): { album: Album; at: number } | null {
-  const candidates = [anchor, anchor + 1, anchor - 1];
+  // La page 1 ne reçoit aucune photo : depuis la première planche, la
+  // recherche part de la suivante.
+  const depuis = Math.max(anchor, 1);
+  const candidates = [depuis, depuis + 1, depuis - 1];
   for (const at of candidates) {
     const spread = album.spreads[at];
-    if (!spread) continue;
+    if (!spread || at === 0) continue;
     const grown = grownWith(spread, slot);
     if (!grown) continue;
     return { album: withSpread(album, at, grown), at };
   }
   return null;
+}
+
+/**
+ * Une édition pose-t-elle sur la page 1 une photo qu'elle n'avait pas ? La
+ * première planche ne porte aucune photo : c'est la page juste derrière la
+ * couverture. Une seule question pour tous les chemins — grandir la planche,
+ * y glisser une photo, y déplacer une planche, supprimer celle qui la tenait
+ * vide —, posée par `apply` sur l'avant et l'après. Ce qu'elle portait déjà
+ * (un album composé avant cette règle) ne compte pas.
+ */
+export function photoEnPageUne(avant: Album, apres: Album): boolean {
+  const deja = new Set((avant.spreads[0]?.slots ?? []).map((s) => s.src));
+  return (apres.spreads[0]?.slots ?? []).some((s) => !deja.has(s.src));
 }
 
 /** Swap two photos of the same spread, focal points travelling with them. */
@@ -491,8 +507,11 @@ export function setSpreadText(album: Album, at: number, text: string): Album {
 // qui n'ont pas de geste, l'appellent d'ici. Aucune ne le refait : une
 // seconde version du contrôle divergerait de la première.
 
-/** La taille de corps d'un bloc neuf, et la part de la page qu'il occupe. */
-export const OBJET_TAILLE_PT = 12;
+/** La taille de corps d'un bloc neuf, et la part de la page qu'il occupe.
+ *  Le corps du titre de couverture (`cover.rs::TITLE_PT_AT_210`), le plus
+ *  gros que le livre emploie : un bloc se dessine à sa taille d'impression,
+ *  et à 12 pt il se lisait à peine à l'écran. */
+export const OBJET_TAILLE_PT = 26;
 const OBJET_PART = 0.6;
 /** Le décalage en cascade d'un bloc posé quand la planche en porte déjà. */
 const OBJET_CASCADE_MM = 4;

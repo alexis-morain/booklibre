@@ -18,10 +18,13 @@ import {
   ZOOM_MAX,
   ZOOM_MIN,
   coverSheet,
+  surfacePhotoCouverture,
 } from "./album";
 import { t } from "./i18n";
 import { Printer } from "./bridge";
 import { LazyThumb } from "./TriView";
+import { alerteDeCouverture, useReleve } from "./photos";
+import { SignesAlerte } from "./SignesAlerte";
 import { ReglageBloc } from "./ReglageBloc";
 import type { Reglage } from "./album";
 import { filtreDe, useReglages } from "./reglages";
@@ -115,6 +118,12 @@ export function CoverView({
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
   }, [picking]);
+
+  // Ce que chaque photo imprimerait sur la première, chez cet imprimeur :
+  // le choix avertit d'une photo trop petite au lieu de la cacher. Sans
+  // profil, rien à mesurer.
+  const releve = useReleve();
+  const surfacePhoto = printer && surfacePhotoCouverture(album, printer);
 
   // Every distinct photo the album shows, for the picker.
   const srcs = Array.from(
@@ -288,6 +297,10 @@ export function CoverView({
             {srcs.map((src) => {
               const choisie =
                 (picking === "quatrieme" ? cover.back_photo?.photo.src : cover.photo?.src) === src;
+              const alerte =
+                picking === "premiere" && surfacePhoto
+                  ? alerteDeCouverture(src, surfacePhoto, printer.min_ppi, releve)
+                  : null;
               return (
                 <button
                   key={src}
@@ -304,6 +317,7 @@ export function CoverView({
                   }}
                 >
                   <LazyThumb src={src} />
+                  {alerte && <SignesAlerte alertes={[alerte]} lieu="couverture" />}
                 </button>
               );
             })}

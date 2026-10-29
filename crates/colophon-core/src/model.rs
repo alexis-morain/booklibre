@@ -183,6 +183,19 @@ pub struct Spread {
 }
 
 impl Spread {
+    /// Une planche sans rien : ni photo, ni légende, ni texte.
+    pub fn vide() -> Self {
+        Spread {
+            template: "vide".into(),
+            slots: Vec::new(),
+            caption: None,
+            text: None,
+            edited: false,
+            locked: false,
+            objets: Vec::new(),
+        }
+    }
+
     /// Survives a recomposition untouched.
     pub fn pinned(&self) -> bool {
         self.edited || self.locked

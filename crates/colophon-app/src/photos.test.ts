@@ -12,6 +12,7 @@ import { MIN_EFFECTIVE_PPI, Rect } from "./album";
 import type { MesurePhoto, ReleveAlbum } from "./bridge";
 import { setLangue } from "./i18n";
 import {
+  alerteDeCouverture,
   alertesDeReserve,
   badgesDe,
   chargerReleve,
@@ -151,6 +152,38 @@ describe("la réserve, sur une demi-page", () => {
     const r = releve({ "f.jpg": mesure({ nettete: 2 }) });
     expect(alertesDeReserve("f.jpg", CARRE, r)).toEqual([{ code: "floue" }]);
     expect(alertesDeReserve("f.jpg", CARRE, null)).toEqual([]);
+  });
+});
+
+describe("la couverture, sur sa surface chez l'imprimeur", () => {
+  it("avertit au choix, au plancher du profil", () => {
+    // La feuille de Corsica 2013 en carré 30 chez Cloudprinter : 329 × 348
+    // mm. Un iPhone de 3264 × 2448 y imprime à 179 ppi, ce que dit le prévol.
+    const r = releve({
+      "iphone.jpg": mesure({ largeur: 3264, hauteur: 2448 }),
+      "leica.jpg": mesure({ largeur: 5952, hauteur: 3968 }),
+    });
+    const feuille = { w: 329, h: 348 };
+    expect(alerteDeCouverture("iphone.jpg", feuille, 250, r)).toEqual({
+      code: "sous_resolution",
+      ppi: 179,
+    });
+    expect(alerteDeCouverture("leica.jpg", feuille, 250, r)).toBeNull();
+    // Le plancher est celui de l'imprimeur, pas celui des planches.
+    expect(alerteDeCouverture("leica.jpg", feuille, 300, r)).toEqual({
+      code: "sous_resolution",
+      ppi: 290,
+    });
+    // Une photo que le relevé ne connaît pas ne s'invente rien.
+    expect(alerteDeCouverture("inconnue.jpg", feuille, 250, r)).toBeNull();
+    expect(alerteDeCouverture("iphone.jpg", feuille, 250, null)).toBeNull();
+  });
+
+  it("dit la couverture dans sa phrase", () => {
+    setLangue("fr");
+    expect(phraseDAlerte({ code: "sous_resolution", ppi: 179 }, "couverture")).toMatch(
+      /couverture/,
+    );
   });
 });
 

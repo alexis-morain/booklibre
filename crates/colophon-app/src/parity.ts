@@ -15,6 +15,7 @@ import {
   captionAnchor,
   CAPTION_SIZE_MM,
   coverSheet,
+  surfacePhotoCouverture,
   cropWindow,
   gardeLayout,
   PHOTO_CAPTION_SIZE_MM,
@@ -272,6 +273,20 @@ export function geometryProblems(dump: Dump, label: string): string[] {
     }
     if (!near(got.spine?.[1] ?? 0, c.spine)) {
       problems.push(`${tag} dos: rust ${c.spine}, ts ${got.spine?.[1] ?? 0}`);
+    }
+    const photo = surfacePhotoCouverture(
+      { trim_mm: dump.trim_mm, spreads: new Array(c.spreads).fill(null) },
+      {
+        dos: p.dos,
+        bleed_mm: { haut: p.haut, bas: p.bas, exterieur: p.ext },
+        rempli_mm: p.rempli,
+        debord_mm: p.debord,
+        mors_mm: p.mors,
+        fichiers: p.fichiers,
+      },
+    );
+    if (!near(photo.w, c.photo[0]) || !near(photo.h, c.photo[1])) {
+      problems.push(`${tag} photo: rust ${c.photo.join(" × ")}, ts ${photo.w} × ${photo.h}`);
     }
     const panels: [number, number][] = [got.back, got.front];
     c.panels.forEach((want, i) => {

@@ -4169,6 +4169,7 @@ kbd {
 }
 
 .cover-picker-cell {
+  position: relative;
   width: 100%;
   aspect-ratio: 1;
   padding: 0;
@@ -4183,6 +4184,11 @@ kbd {
 
 .cover-picker-cell.active {
   border-color: var(--ink);
+}
+
+.cover-picker-cell > .slot-alerte {
+  top: 0;
+  left: 0;
 }
 
 .cover-picker-cell .tri-thumb,

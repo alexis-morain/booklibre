@@ -657,6 +657,7 @@ export const FR = {
     "Cet imprimeur n’imprime pas ce format : choisissez-en un autre dans Recomposer.",
   "planche.collee": "Collée dans la couverture",
   "planche.collee.refus": "Cette page est collée dans la couverture : rien ne s’y imprime",
+  "page.une.refus": "La page 1, juste derrière la couverture, reste sans photo",
   "envoi.simple.imposition":
     "La première page de gauche est collée dans la couverture et ne s’imprime pas, et elle porte quelque chose : déplacez-le, ou cochez la page de garde plus bas.",
   "envoi.simple.objet_coupe":
@@ -1133,6 +1134,8 @@ export const FR = {
   "alerte.phrase.floue": "Photo peu nette : parmi les moins nettes de son dossier.",
   "alerte.phrase.reserve.sous_resolution":
     "Trop petite pour une demi-page : elle risque d’imprimer floue. Donnez-lui une case plus petite.",
+  "alerte.phrase.couverture.sous_resolution":
+    "Trop petite pour la couverture : la feuille est plus grande qu’une page, elle y imprimerait floue. Choisissez-en une plus définie.",
   "alerte.sous_resolution": "{ppi} ppi, sous {plancher}",
   "alerte.sombre": "sombre",
   "alerte.floue": "peu nette",
@@ -1962,6 +1965,7 @@ export const EN: Record<Cle, string> = {
     "This printer does not print this format: choose another one in Recompose.",
   "planche.collee": "Pasted inside the cover",
   "planche.collee.refus": "This page is pasted inside the cover: nothing prints on it",
+  "page.une.refus": "Page 1, right behind the cover, holds no photo",
   "envoi.simple.imposition":
     "The first left page is pasted inside the cover and is not printed, and it holds something: move it, or tick the half-title below.",
   "envoi.simple.objet_coupe": "An object placed by hand runs past the trim: bring it inside the page, or make it smaller.",
@@ -2421,6 +2425,8 @@ export const EN: Record<Cle, string> = {
   "alerte.phrase.floue": "Not sharp: among the least sharp of its folder.",
   "alerte.phrase.reserve.sous_resolution":
     "Too small for half a page: it may print blurry. Give it a smaller cell.",
+  "alerte.phrase.couverture.sous_resolution":
+    "Too small for the cover: the sheet is larger than a page, it would print blurry there. Choose a sharper one.",
   "alerte.sous_resolution": "{ppi} ppi, under {plancher}",
   "alerte.sombre": "dark",
   "alerte.floue": "not sharp",

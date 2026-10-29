@@ -1116,9 +1116,13 @@ ensuite. Le calque ne décide de rien de géométrique : `retenirAuPli` et `hors
 dans `scene.ts`, et le clavier les appelle aussi.
 
 **Le pli bute, la marge avertit.** La butée est une translation, pas un refus — le geste
-continue de suivre la main —, et le côté est pris **au début** du geste, sinon un
-glissement ferait sauter l'objet d'une page à l'autre en le touchant. Vérifié à l'écran
-le 05/09 : bloc tourné à −46° poussé 293 px au-delà, bord droit arrêté au pli au pixel.
+continue de suivre la main. Pour tailler et tourner, le côté est pris **au début** du
+geste, sinon l'objet sauterait d'une page à l'autre en touchant le pli. **Déplacer le relit
+à chaque pas** (`scene.ts::coteDuGlisse`, retours du 28/10) : passé le milieu, l'objet
+saute sur l'autre page, jamais à cheval ; retenu du côté de départ, un bloc né à gauche ne
+gagnait jamais la droite. La page collée reste interdite. Vérifié à l'écran le 05/09 :
+bloc tourné à −46° poussé 293 px au-delà, bord droit arrêté au pli au pixel. Un bloc neuf
+naît à 26 pt (`OBJET_TAILLE_PT`, le titre de couverture), 12 pt se lisait à peine.
 
 **Un geste ne pose qu'un pas d'annulation** : un brouillon local pendant, une édition à la
 fin. Le brouillon entre par la **planche**, pas par la scène — la boîte décide où les
@@ -1411,18 +1415,17 @@ c'est ce qui met le faux-titre en page un et le colophon en page 95, deux rectos
 échange, cette moitié doit être vide : le prévol la refuse (`imposition`) au lieu de la
 tronquer en silence.
 
-**Sans faux-titre, la page un est une photo (1.1-d).** `BuildOptions::garde` vaut faux par
-défaut (CLI : `--garde` le rend) ; une recomposition reporte la garde d'un album qui en a
-une. Quand le profil par défaut (`PrinterProfile::defaut`, `PROFIL_DEFAUT` = Cloudprinter)
-relie en pages simples, `Composer::ouverture_a_droite` ouvre le livre sur la tête du premier
-chapitre, seule, dans le gabarit offert à une photo dont la scène ne porte rien à gauche
-**légende de chapitre comprise** (`imposition::objets_a_gauche`, jamais une liste de noms) :
-la recherche de place libre posait la légende sur la gauche vide. Rang : légende à la
-hauteur des autres (`CAPTION_SAFE`, sinon `zone_sure` avertit la page un), pleine page,
-justesse. En pratique les `g_v_1x1*_b8`, d'où le second changement : **une bande dont toutes
-les photos sont à droite pend à droite** (`caption_anchor_of`), ce qui n'a déplacé que les
-27 rectos `g_v_*_b8` du dump. Mesuré sur 3 jeux × 6 formats : seule la planche 1 change,
-prévol Cloudprinter sans défaut en page un (`docs/mesures/2026-10-20-sans-faux-titre.json`).
+**Sans faux-titre, la page un est blanche (retours du 28/10, défait l'ouverture sur une
+photo de 1.1-d).** `BuildOptions::garde` vaut faux par défaut (CLI : `--garde` le rend) ;
+une recomposition reporte la garde d'un album qui en a une. Sans elle, `build.rs` pose une
+planche `vide` en tête dès que la première porte une photo (`Spread::vide`) : rien juste
+derrière la couverture, gauche collée comme droite. `Composer::ouverture_a_droite` et sa
+recherche de gabarit sont retirés ; reste de 1.1-d **une bande dont toutes les photos sont
+à droite pend à droite** (`caption_anchor_of`). `reserve::cases_vides` saute la planche 0,
+et côté app `edits.ts::photoEnPageUne` est posée par `apply` sur l'avant et l'après de
+toute édition : aucun chemin (repêcher, coller, glisser, déplacer ou supprimer une planche)
+n'ajoute de photo à la page 1 ; ce qu'un album d'avant y porte reste. `rescuePhoto` cherche
+à partir de la planche 1.
 L'éditeur grise la page collée (`scene.ts::gaucheCollee`, le prédicat du prévol, profil
 courant), refuse ce qu'on y lâche en le disant, pose bloc et ornement à droite
 (`pageDePose`), et la table grise la même moitié.

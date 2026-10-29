@@ -99,6 +99,7 @@ import {
   moveSpread,
   nudgeObjet,
   pasteObjet,
+  photoEnPageUne,
   placePhoto,
   removePhoto,
   removeSpread,
@@ -799,6 +800,12 @@ export default function App() {
       if (!h) return h;
       const edite = edit(h.album);
       if (edite === h.album) return h;
+      // Aucun chemin ne pose de photo sur la page 1 : la question est posée
+      // ici une fois, sur l'avant et l'après, plutôt qu'à chaque geste.
+      if (photoEnPageUne(h.album, edite)) {
+        queueMicrotask(() => setStatus(t("page.une.refus")));
+        return h;
+      }
       // Chaque case porte les mots de sa photo, jamais ceux d'une autre :
       // une photo remplacée, ajoutée ou sauvée prend aussitôt les siens.
       const next = avecMentions(edite, tableMentions.current);

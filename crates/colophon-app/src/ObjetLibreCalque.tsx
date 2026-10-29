@@ -19,7 +19,16 @@
 import { useRef } from "react";
 import { Rect, SpreadGeometry } from "./album";
 import { t } from "./i18n";
-import { angleEcran, centre, Cote, coteDe, horsMarge, retenirAuPli, tourner } from "./scene";
+import {
+  angleEcran,
+  centre,
+  Cote,
+  coteDe,
+  coteDuGlisse,
+  horsMarge,
+  retenirAuPli,
+  tourner,
+} from "./scene";
 
 /** La boîte et l'angle qu'un geste est en train de rendre. */
 export type PoseObjet = { rect: Rect; angle: number };
@@ -41,6 +50,7 @@ export function ObjetLibreCalque({
   mm,
   deborde,
   rapport,
+  gaucheInterdite = false,
   onDraft,
   onCommit,
   onEcrire,
@@ -50,6 +60,9 @@ export function ObjetLibreCalque({
   pose: PoseObjet;
   geom: SpreadGeometry;
   mm: number;
+  /** La page de gauche est collée dans la couverture (1.1-d) : un
+   *  déplacement n'y passe pas. */
+  gaucheInterdite?: boolean;
   /** Le texte dépasse le bas de sa boîte : dit ici, jamais coupé. */
   deborde: boolean;
   /** Le rapport largeur/hauteur que la boîte doit garder, s'il y en a un.
@@ -101,9 +114,9 @@ export function ObjetLibreCalque({
           ? { x: b.left + b.width / 2, y: b.top + b.height / 2 }
           : { x: e.clientX, y: e.clientY },
         pose,
-        // Le côté est pris **au début** du geste et gardé jusqu'à sa fin :
-        // sans ça un glissement ferait sauter l'objet d'une page à l'autre au
-        // moment où il touche le pli.
+        // Le côté est pris **au début** du geste et gardé jusqu'à sa fin pour
+        // tailler et tourner : sans ça l'objet sauterait d'une page à l'autre
+        // au moment où il touche le pli. Déplacer le relit à chaque pas.
         cote: coteDe(rect, geom),
         bouge: false,
         dernier: null,
@@ -131,10 +144,13 @@ export function ObjetLibreCalque({
     }
 
     // Le pli est dur : on bute, on ne refuse pas — le geste continue de
-    // suivre la main.
+    // suivre la main. Un déplacement le franchit quand le centre passe de
+    // l'autre côté : sinon un bloc né à gauche ne gagnait jamais la droite.
+    const cote =
+      g.mode === "deplacer" ? coteDuGlisse(suivante.rect, geom, gaucheInterdite) : g.cote;
     suivante = {
       ...suivante,
-      rect: retenirAuPli(suivante.rect, suivante.angle, geom, g.cote),
+      rect: retenirAuPli(suivante.rect, suivante.angle, geom, cote),
     };
     g.dernier = suivante;
     onDraft(suivante);

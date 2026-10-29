@@ -1148,6 +1148,7 @@ export function SpreadView({
                 mm={mm}
                 deborde={bloc?.overflow ?? false}
                 rapport={orn && rapport(orn.dessin)}
+                gaucheInterdite={largeurCollee(planche, reliure, geom) > 0}
                 onDraft={setDraftObjet}
                 onCommit={(p) => {
                   setDraftObjet(null);
