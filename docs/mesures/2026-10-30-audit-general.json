@@ -1,0 +1,142 @@
+{
+  "date": "2026-10-30",
+  "main": "da1c28951e26",
+  "gate_local": {
+    "code_de_sortie": 0,
+    "tests_moteur": "505 ok, 19 ignorés",
+    "pdf_png": "1526 cases, 6 formats"
+  },
+  "audit_rustsec": {
+    "run": 41163676828,
+    "conclusion": "success"
+  },
+  "protection_main": {
+    "checks": [
+      "check (macos-14)",
+      "check (ubuntu-24.04)",
+      "check (windows-2022)"
+    ],
+    "force_push": false,
+    "suppression": false,
+    "enforce_admins": false
+  },
+  "composition": {
+    "jeu": "corse-2013",
+    "photos_lues": 572,
+    "retenues": 106,
+    "planches": 54,
+    "secondes_cli_a_froid": 71.96,
+    "apercu_pdf_compris": true
+  },
+  "export": {
+    "interieur": {
+      "pages": 108,
+      "mediabox_pt": 612.28345,
+      "veraPDF_2b": "PASS",
+      "encre_moyenne_pct": 50.2,
+      "pages_sous_1pct": [
+        1,
+        2,
+        5,
+        9,
+        13,
+        17,
+        18,
+        21,
+        33,
+        37,
+        46,
+        49,
+        50,
+        62,
+        65,
+        69,
+        78,
+        82,
+        85,
+        86,
+        93,
+        101,
+        102,
+        106,
+        108
+      ],
+      "pages_a_zero": "page 1, page 108 et pages vides des dispositions solo_*_verso ; les autres portent seulement une légende de date"
+    },
+    "couverture": {
+      "mm": [
+        491.3,
+        258.0
+      ],
+      "dos_mm": 13.29,
+      "veraPDF_2b": "PASS",
+      "encre_pct": 48.9
+    },
+    "prevol_cloudprinter": {
+      "code": 0,
+      "defauts": 0
+    },
+    "police": "SourceSans3-Regular, CID TrueType Identity-H, embarquée",
+    "titre_polonais": {
+      "texte_extrait": "Zażółć gęślą jaźń",
+      "caractere_absent": 0,
+      "veraPDF_2b": "PASS"
+    }
+  },
+  "album_json_tronque": {
+    "code": 1,
+    "message": "album.json illisible, ligne et colonne"
+  },
+  "mas_essai": {
+    "archs": [
+      "x86_64",
+      "arm64"
+    ],
+    "bac_a_sable": true,
+    "occurrences": {
+      "api.booklibre.app": 0,
+      "prices.booklibre.app": 0,
+      "workers.dev": 0,
+      "latest.json": 0,
+      "/v1/prices": 0,
+      "/v1/orders": 0
+    }
+  },
+  "dmg_1_1_0_arm64": {
+    "spctl": "accepted, Notarized Developer ID",
+    "stapler": "ok",
+    "occurrences": {
+      "api.booklibre.app": 1,
+      "prices.booklibre.app": 1,
+      "workers.dev": 0
+    }
+  },
+  "mises_a_jour": {
+    "latest_json": "1.1.0",
+    "signatures_minisign": {
+      "darwin-aarch64": true,
+      "darwin-x86_64": true,
+      "windows-x86_64": true
+    },
+    "chemin_1_0_1": "alexis-morain/colophon redirige, même document"
+  },
+  "relais": {
+    "reel_pays": [
+      "FR"
+    ],
+    "prix_reel_genere_le": "2026-10-30T04:00:15Z",
+    "prix_sandbox_genere_le": "2026-10-28T04:14:02Z",
+    "alertes_sandbox": [
+      "2026-10-29 tarifs_echec portrait-a4 FR 174 p : statut",
+      "2026-10-30 tarifs_echec portrait-a4 FR 122 p : statut"
+    ]
+  },
+  "non_verifie": [
+    "parcours d'édition dans la fenêtre",
+    "import Photos",
+    "bascule de langue, clavier, VoiceOver",
+    "réseau à l'usage de l'édition App Store",
+    "mise à jour depuis une 1.0.1 installée",
+    "Windows sur une vraie machine"
+  ]
+}
