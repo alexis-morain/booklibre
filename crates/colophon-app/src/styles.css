@@ -6490,6 +6490,11 @@ button.envoi-defaut-ou:focus-visible {
   gap: 4px;
 }
 
+/* Supprimer la planche : en bas du panneau, seul sur sa ligne. */
+.props-supprimer {
+  align-self: flex-start;
+}
+
 .props-photo-gestes .link {
   margin-left: -8px;
 }

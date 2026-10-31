@@ -79,6 +79,7 @@ export function Proprietes({
   onRetirer,
   onAjouterObjet,
   onAjouterOrnement,
+  onSupprimer,
 }: {
   album: Album;
   spread: Spread | null;
@@ -95,6 +96,9 @@ export function Proprietes({
   onRetirer: (cell: number) => void;
   onAjouterObjet?: () => void;
   onAjouterOrnement?: (o: Ornement) => void;
+  /** Supprimer la planche affichée, comme le menu et la vue Planches : un
+   *  pas d'annulation, ⌘Z la ramène (retours du 30/10). */
+  onSupprimer?: () => void;
 }) {
   const alertes = useAlertesDeLaPlanche(album, onCover ? -1 : index);
   const slot = spread && selected !== null ? (spread.slots[selected] ?? null) : null;
@@ -267,6 +271,19 @@ export function Proprietes({
             )}
             {onAjouterOrnement && <OrnementPicker onPick={onAjouterOrnement} />}
           </div>
+        </>
+      )}
+
+      {onSupprimer && (
+        <>
+          <hr className="props-filet" />
+          <button
+            className="btn-second props-supprimer"
+            onClick={onSupprimer}
+            title={t("planche.supprimer", { n: index + 1 })}
+          >
+            {t("props.supprimer")}
+          </button>
         </>
       )}
     </aside>
