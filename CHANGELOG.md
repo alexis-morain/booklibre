@@ -9,8 +9,14 @@ sur la page des releases.
 
 ## [Non publié]
 
+## [1.2.0] - 2026-10-31
+
 ### Changed
 
+- A new look, quieter: the system's own typeface for the interface, a
+  sidebar with the views and the chapters (⌘\ hides it), a breadcrumb at the
+  top, a properties panel beside the spread in Book, and labels in Spreads.
+  The paper stays square and cream; the book's typeface is unchanged.
 - A new album opens on a blank page 1: no photo sits right behind the cover
   any more. Bringing a photo back from the sorting view, pasting, dropping or
   moving a spread never puts one there either.
