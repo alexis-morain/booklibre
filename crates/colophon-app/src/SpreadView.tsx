@@ -50,6 +50,7 @@ import { captionSuggestion, detectedFocal, PoliceOfferte } from "./bridge";
 import { auRognage, SceneProxies } from "./SceneProxies";
 import { SignesAlerte } from "./SignesAlerte";
 import { fontLoaded, measureMm, pile, substituer, surLaFace, tourDeFace } from "./font";
+import { blocQuiTient, GROSSISSEMENT, legendeSousSaCase } from "./texte-ecran";
 
 import {
   Alerte,
@@ -494,7 +495,8 @@ export function SpreadView({
         if (onSpreadCaption) setEditingCaption(true);
         break;
       case "text":
-        if (onText && spread.template === "texte") setEditingText(true);
+        if (onText && (spread.template === "texte" || spread.template === COLOPHON_TEMPLATE))
+          setEditingText(true);
         break;
       // Le clavier fait ce que le double-clic fait : choisir le bloc et
       // ouvrir son champ. Choisir d'abord, pour que la barre de contexte
@@ -717,6 +719,9 @@ export function SpreadView({
   });
 
   const roomMm = geom.w / 2 - geom.margin - geom.gutter / 2;
+  /** The lowest line a block of text may reach on screen: half a margin
+   *  above the trimmed foot, where the chapter captions stop too. */
+  const basDuTexteMm = geom.h - geom.bleed - geom.margin * 0.5;
 
   /**
    * The one block of text a spread can carry — half-title, text page or
@@ -754,11 +759,23 @@ export function SpreadView({
         );
       });
     }
-    // The colophon is read-only: the engine writes it from what it measured,
-    // and typing over it would turn a statement of fact into a caption. The
-    // Envoi screen is the one place it can be taken away.
+    // The colophon is written by the engine from what it measured, and since
+    // 30/10 it can be rewritten like a text page (Alexis: « pouvoir modifier
+    // et supprimer ce texte »). Deleting its spread takes it away, and so
+    // does the Envoi screen.
     const colophon = spread.template === COLOPHON_TEMPLATE;
     const sizeMm = colophon ? COLOPHON_SIZE_MM : TEXT_SIZE_MM;
+    const { corpsPx, interlignePx } = blocQuiTient({
+      text: spread.text ?? "",
+      ancreMm: role.at.y,
+      sizeMm,
+      leadingMm: colophon ? COLOPHON_LEADING_MM : TEXT_LEADING_MM,
+      mm,
+      plancherPx: colophon ? 11 : 13,
+      roomMm,
+      basMm: basDuTexteMm,
+      mesure: measureMm,
+    });
     return (
       <TextBlock
         text={spread.text ?? ""}
@@ -766,11 +783,11 @@ export function SpreadView({
         mm={mm}
         sizeMm={sizeMm}
         roomMm={roomMm}
-        fontPx={Math.max(sizeMm * mm * 1.35, colophon ? 11 : 13)}
-        leadPx={(colophon ? COLOPHON_LEADING_MM : TEXT_LEADING_MM) * mm * 1.35}
+        fontPx={corpsPx}
+        leadPx={interlignePx}
         editing={editingText}
         onEditing={setEditingText}
-        onText={spread.template === "texte" ? onText : undefined}
+        onText={spread.template === "texte" || colophon ? onText : undefined}
         objetDeScene
       />
     );
@@ -940,20 +957,29 @@ export function SpreadView({
               );
             }
 
-            // At print size, on its own baseline. The ink the scene measured
-            // is what says whether the line runs past its case.
+            // On its own baseline, unless the screen's larger type would
+            // climb into the photo: then it hangs just under it (30/10).
+            // The ink the scene measured is what says whether the line runs
+            // past its case.
             case "photo_caption": {
               const cell = cellRects.get(role.cell);
               const over = cell !== undefined && o.rect.w > cell.w;
+              const corpsPx = Math.max(PHOTO_CAPTION_SIZE_MM * mm * GROSSISSEMENT, 9);
+              const { lignePx } = legendeSousSaCase({
+                ligneMm: role.at.y,
+                basCaseMm: cell ? cell.y + cell.h : -Infinity,
+                mm,
+                corpsPx,
+              });
               return (
                 <span
                   key={`cap-${role.cell}`}
                   className={"photo-caption" + (over ? " overflow" : "")}
                   style={{
                     left: `${role.at.x * mm}px`,
-                    top: `${role.at.y * mm}px`,
+                    top: `${lignePx}px`,
                     maxWidth: "none",
-                    fontSize: `${Math.max(PHOTO_CAPTION_SIZE_MM * mm * 1.35, 9)}px`,
+                    fontSize: `${corpsPx}px`,
                   }}
                   title={over ? t("planche.legende.deborde") : undefined}
                   // Nommée par son proxy, comme tout objet de la scène.

@@ -30,6 +30,7 @@ import { angleEcran, centre, Point, Scene } from "./scene";
 import { ornementDe, peindre as peindreOrnement } from "./ornement";
 import { imageDe, imageRegleeDe, surImage } from "./photos";
 import { filtreDe, reglagePose, surReglage } from "./reglages";
+import { GROSSISSEMENT, legendeSousSaCase } from "./texte-ecran";
 
 /** The screen has always shown small type bigger than it prints: below
  *  these, in CSS pixels, a line stops being readable on a screen. The DOM
@@ -39,8 +40,6 @@ import { filtreDe, reglagePose, surReglage } from "./reglages";
  *  what the scene was for. */
 const PLANCHER_LEGENDE = 9;
 const PLANCHER_TEXTE = 11;
-/** Screen type is drawn a third larger than it prints, like the DOM's. */
-const GROSSISSEMENT = 1.35;
 
 type Couleurs = {
   paper: string;
@@ -186,16 +185,26 @@ export function peindre(
         ctx.restore();
         break;
       }
-      case "photo_caption":
+      // Same rule as the DOM: the larger screen type never climbs into the
+      // photo, it hangs under it (30/10).
+      case "photo_caption": {
+        const cas = cases.get(role.cell);
+        const { lignePx } = legendeSousSaCase({
+          ligneMm: role.at.y,
+          basCaseMm: cas ? cas.y + cas.h : -Infinity,
+          mm,
+          corpsPx: Math.max(PHOTO_CAPTION_SIZE_MM * mm * GROSSISSEMENT, PLANCHER_LEGENDE),
+        });
         texte(
           role.text,
           role.at.x,
-          role.at.y,
+          lignePx / mm,
           PHOTO_CAPTION_SIZE_MM,
           PLANCHER_LEGENDE,
           c.inkSoft,
         );
         break;
+      }
       // No floor: the DOM renderer gives the chapter caption none either,
       // and a title that shrinks with the window is the one piece of type
       // whose size a reader is judging.

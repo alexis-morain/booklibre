@@ -3260,6 +3260,7 @@ export default function App() {
                     )
                 : undefined
             }
+            onSupprimer={spread && !onCover ? () => supprimerPlanche(index) : undefined}
           />
         )}
         </div>

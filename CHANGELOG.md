@@ -17,11 +17,18 @@ sur la page des releases.
 - A new text block starts at 26 pt instead of 12, readable on screen.
 - The cover photo picker marks the photos too small for the cover sheet of
   your printer, with the resolution they would print at.
+- The colophon page at the end of the book can be rewritten: click its text,
+  like a text page. Deleting its spread takes it away.
+- The spread properties panel has a button to delete the spread on screen;
+  ⌘Z brings it back.
 
 ### Fixed
 
 - A text block or an ornament can be dragged across the fold to the right
   page; it used to stop at the fold of the page it was born on.
+- On screen, a photo caption no longer runs over its photo on a small
+  spread, and the colophon no longer runs off its page. The printed file was
+  right; the editor's larger type was not.
 
 ## [1.1.0] - 2026-10-28
 
