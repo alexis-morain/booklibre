@@ -9,9 +9,9 @@ Booklibre was called Colophon until version 1.0.1.
 Website: [booklibre.app](https://booklibre.app). Contact:
 [hello@booklibre.app](mailto:hello@booklibre.app).
 
-> **Status:** 1.0, the first public release. The release chain builds
-> installers for macOS and Windows; the Windows build has not yet been tried
-> on real hardware. HEIC, RAW and the Apple Photos import work on macOS only.
+> **Status:** 1.1. The release chain builds installers for macOS and
+> Windows; the Windows build has not yet been tried on real hardware. HEIC,
+> RAW and the Apple Photos import work on macOS only.
 
 ![The Sort view: every discarded photo, and why](docs/images/tri.png)
 
@@ -57,10 +57,8 @@ with.
 - **Shows you the file, not a drawing of it.** The editor draws in the DOM,
   the press reads a PDF, and those two can never agree by construction. So
   ⇧⌘P stops drawing and renders the PDF itself, page by page.
-- **Opens like a book.** A half-title on page one: the album's title, the
-  dates of the trip, the towns crossed. Three lines, nothing else, taken
-  from what the composition measured, never a sentence written for you. On
-  by default, one click to remove in Send.
+- **Opens like a book.** Page one is left blank, so no photograph sits
+  right behind the cover; the book starts on the first spread.
 - **Signs its own work.** A last, quiet page says what only the machine
   knows: how many photographs were kept out of how many read, over what
   span, in which towns, with which cameras. On by default, one click to
@@ -204,7 +202,7 @@ editor shows two facing pages — but the export writes whatever shape the
 profile asks for. A shop that imposes spreads gets them whole. A binder that
 reads one PDF page as one page of the book, as Cloudprinter and Prodigi do,
 gets the interior cut in two on the way out, with the bleed it wants at the
-fold, the half-title on page one, and a blank verso closing the block. Same
+fold, a blank page one, and a blank verso closing the block. Same
 album, same book, two files.
 
 ## Privacy
@@ -212,13 +210,20 @@ album, same book, two files.
 No account, no login, no sync, no telemetry, ever, not even anonymous, not
 even opt-in.
 
-One thing leaves your machine, and you can stop it: at launch, Booklibre asks
-its website, booklibre.app (served by Cloudflare), whether a newer version
-exists, and GitHub if the site does not answer. That request carries your IP address
+One thing leaves your machine on its own, and you can stop it: at launch,
+Booklibre asks its website, booklibre.app (served by Cloudflare), whether a
+newer version exists, and GitHub if the site does not answer. That request carries your IP address
 and the name of your system, and nothing else; no photograph, no album, no
 identifier. Nothing is downloaded or installed without a click, and
 Preferences turns the check off. For an application distributed outside any
 store, that question is how a fix reaches you, which is why it ships on.
+
+Two more requests happen only if you ask for them, in the macOS and Windows
+builds: if you choose to print through Booklibre, the app reads the price
+table from prices.booklibre.app once each time it opens; if you order the
+book, it sends the album's two PDFs to the relay at api.booklibre.app, which
+passes them to the printer and deletes them within 30 days. The Mac App Store
+version has neither. [SECURITY.md](SECURITY.md) lists every request.
 
 Everything else is offline. Booklibre reads your photographs and never modifies
 them. The album lives in a single readable `album.json` you can repair with a
@@ -290,8 +295,10 @@ partner it needs you to use, and puts no watermark, no logo and no barcode on
 your book.
 
 **Do my photos go to a cloud?**
-No. There is no server. Booklibre works with the network switched off, and it
-will still work the day this repository stops being maintained.
+Only if you order the printed book from the app: its two PDFs then go to the
+relay and on to the printer, and are deleted within 30 days. Otherwise
+nothing leaves your machine. Booklibre works with the network switched off,
+and it will still work the day this repository stops being maintained.
 
 **Do I keep my file?**
 Yes. The album is a folder on your disk with a readable `album.json` in it,
@@ -325,9 +332,11 @@ preview cannot fill asks for the sensor. On Windows and Linux, RAW is where
 HEIC is: counted and named, never silently dropped.
 
 **How do you make money?**
-Not from this. The software is free and stays free, and the full-resolution
-PDF export is free and stays free, offline and without an account, whatever
-happens next.
+The software is free and stays free, and the full-resolution PDF export is
+free and stays free, offline and without an account, whatever happens next.
+If you order the printed album from inside the app (France only for now), a
+small margin goes to the project. Nothing makes you: the PDF goes to
+whichever print shop you like.
 
 **Windows? Linux?**
 The release chain builds a Windows installer, and the test suite runs on

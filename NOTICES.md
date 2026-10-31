@@ -955,7 +955,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ### Community Data License Agreement Permissive 2.0
 
-- webpki-roots 1.0.9
+- webpki-roots 1.0.11
 
 ```
 # Community Data License Agreement - Permissive - Version 2.0
@@ -1066,7 +1066,7 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 ### ISC License
 
-- rustls-webpki 0.103.14
+- rustls-webpki 0.103.16
 
 ```
 Except as otherwise noted, this project is licensed under the following
@@ -2113,7 +2113,7 @@ DEALINGS IN THE SOFTWARE.
 ### MIT License
 
 - hyper-rustls 0.27.9
-- rustls 0.23.45
+- rustls 0.23.46
 
 ```
 Copyright (c) 2016 Joseph Birr-Pixton <jpixton@gmail.com>
@@ -3885,7 +3885,7 @@ DEALINGS IN THE SOFTWARE.
 
 ### MIT License
 
-- ctutils 0.4.2
+- ctutils 0.4.6
 
 ```
 Copyright (c) 2025-2026 The RustCrypto Project Developers
@@ -5025,7 +5025,7 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 ### MIT License
 
 - tokio-util 0.7.19
-- tokio 1.53.1
+- tokio 1.54.1
 
 ```
 MIT License
