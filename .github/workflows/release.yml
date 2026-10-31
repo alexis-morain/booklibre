@@ -70,11 +70,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14
+          - os: macos-15
             cible: aarch64-apple-darwin
             suffixe: macos-arm64
             extension: dmg
-          - os: macos-14
+          - os: macos-15
             cible: x86_64-apple-darwin
             suffixe: macos-x64
             extension: dmg

@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ github.event_name == 'pull_request' && fromJSON('["macos-14", "ubuntu-24.04", "windows-2022"]') || fromJSON('["ubuntu-24.04"]') }}
+        os: ${{ github.event_name == 'pull_request' && fromJSON('["macos-15", "ubuntu-24.04", "windows-2022"]') || fromJSON('["ubuntu-24.04"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
 
