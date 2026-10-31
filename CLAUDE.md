@@ -14,7 +14,7 @@ modifiable, PDF prêt à imprimer. Tauri 2 (Rust + React), GPL-3.0, version 1.1.
 geste d'Alexis, et `release.yml` le refuse si les quatre fichiers de version ou la section
 `## [1.1.0]` du CHANGELOG manquent. Depuis la 1.1, la release compile le relais réel et les
 tarifs (variables du dépôt `COLOPHON_RELAIS_REEL` et `COLOPHON_TARIFS_REEL`) ; `mas.sh` les retire. Le tag `v1.0.0` (`b222272`) existe, ne sort jamais (import
-Photos cassé) et ne se repose pas ; le Mac App Store garde sa 1.0.0 (build 173, déjà corrigé).
+Photos cassé) et ne se repose pas ; au Mac App Store, la 1.0.0 (build 173) a été retirée de la revue et la 1.1.0 (build 198) y attend, sortie manuelle.
 
 **Le logiciel s'appelle Booklibre (R-s1), le code s'appelle encore Colophon.** Tout ce
 qu'un utilisateur lit dit Booklibre : `productName`, fenêtre, menus, i18n, installeurs,
