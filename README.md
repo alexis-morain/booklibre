@@ -9,7 +9,7 @@ Booklibre was called Colophon until version 1.0.1.
 Website: [booklibre.app](https://booklibre.app). Contact:
 [hello@booklibre.app](mailto:hello@booklibre.app).
 
-> **Status:** 1.1. The release chain builds installers for macOS and
+> **Status:** 1.2. The release chain builds installers for macOS and
 > Windows; the Windows build has not yet been tried on real hardware. HEIC,
 > RAW and the Apple Photos import work on macOS only.
 
