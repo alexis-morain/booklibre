@@ -50,6 +50,7 @@ pub mod scene;
 pub mod survol;
 pub mod tarifs;
 pub mod thumb;
+pub mod voyage;
 
 pub use build::{
     build_album, composer, releve, render_album_pdf, write_album_json, BuildOptions,

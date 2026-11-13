@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 #[command(after_help = FORMAT_HELP.as_str())]
 struct Cli {
     /// Folder of photos to build the album from
-    #[arg(required_unless_present_any = ["formats", "profils", "profils_json", "dump_geometry", "dump_ornements", "dump_lut", "dump_scene", "print", "cover", "audit", "reprise", "prevol", "preparer", "sheets", "bascule", "proposition", "gabarits", "reserve", "remplir", "devis", "fiche", "releve_album", "survol", "dates", "banc_gabarits", "depuis_fiches", "recomposer"])]
+    #[arg(required_unless_present_any = ["formats", "profils", "profils_json", "dump_geometry", "dump_ornements", "dump_lut", "dump_scene", "print", "cover", "audit", "reprise", "prevol", "preparer", "sheets", "bascule", "proposition", "gabarits", "reserve", "remplir", "devis", "fiche", "releve_album", "survol", "dates", "banc_gabarits", "depuis_fiches", "recomposer", "voyage_importer", "voyage_lire"])]
     photos: Option<PathBuf>,
 
     /// Output directory (album.json, album.pdf, thumbnail cache)
@@ -164,6 +164,22 @@ struct Cli {
     #[arg(long, value_name = "DOSSIER")]
     preparer: Option<PathBuf>,
 
+    /// Importe un voyage depuis son lien public (`polarsteps.com/<qui>/<id>-<nom>`,
+    /// avec son `?s=…` pour un voyage privé) : les photos et un voyage.json
+    /// dans --voyage-vers, puis le bilan. Une requête à la fois, un voyage
+    /// par lien collé. Absent de la version Mac App Store.
+    #[arg(long, value_name = "URL", requires = "voyage_vers")]
+    voyage_importer: Option<String>,
+
+    /// Le dossier où --voyage-importer écrit les photos et voyage.json.
+    #[arg(long, value_name = "DOSSIER", requires = "voyage_importer")]
+    voyage_vers: Option<PathBuf>,
+
+    /// Lit le voyage.json de DOSSIER et en imprime le bilan : étapes, photos,
+    /// vidéos ignorées, photos sous le repère, trace présente ou non.
+    #[arg(long, value_name = "DOSSIER")]
+    voyage_lire: Option<PathBuf>,
+
     /// Bascule l'album de --out vers un autre format, et dit ce que ça coûte.
     /// Le même album : mêmes planches, même ordre, mêmes photos. Seul le
     /// gabarit d'une planche dont les photos trahiraient leurs nouvelles
@@ -305,6 +321,28 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     if cli.formats {
         println!("{}", format::help());
+        return Ok(());
+    }
+
+    if let (Some(url), Some(vers)) = (&cli.voyage_importer, &cli.voyage_vers) {
+        let voyage = colophon_core::voyage::lien::importer(
+            url,
+            vers,
+            &colophon_core::voyage::lien::Reseau::default(),
+            &colophon_core::voyage::lien::Reglages::default(),
+            &|faites, total| {
+                if faites % 50 == 0 || faites == total {
+                    eprintln!("photos : {faites}/{total}");
+                }
+            },
+        )?;
+        println!("« {} »\n{}", voyage.titre, voyage.bilan());
+        return Ok(());
+    }
+
+    if let Some(dossier) = &cli.voyage_lire {
+        let voyage = colophon_core::voyage::lire(dossier)?;
+        println!("« {} »\n{}", voyage.titre, voyage.bilan());
         return Ok(());
     }
 

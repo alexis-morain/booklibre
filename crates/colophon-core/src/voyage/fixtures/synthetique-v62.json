@@ -1,0 +1,101 @@
+{
+  "id": 4242,
+  "uuid": "00000000-0000-4000-8000-000000004242",
+  "name": "Voyage synthétique",
+  "display_name": "Voyage synthétique",
+  "start_date": "2024-05-01T04:00:00+00:00",
+  "end_date": "2024-05-09T21:59:59+00:00",
+  "timezone_id": "Europe/Paris",
+  "total_km": 3210.5,
+  "country_count": 0,
+  "summary": "Trois étapes écrites à la main 🌍",
+  "user_id": 777,
+  "user": { "id": 777, "username": "PIEGE-UTILISATEUR", "first_name": "PIEGE-PRENOM", "last_name": "PIEGE-NOM" },
+  "trip_buddies": [ { "id": 778, "first_name": "PIEGE-COMPAGNON" } ],
+  "users": { "aaaaaaaa-0000-4000-8000-000000000000": { "id": 779, "username": "PIEGE-LECTEUR" } },
+  "steps": [
+    {
+      "id": 1,
+      "uuid": "11111111-1111-4111-8111-111111111111",
+      "type": 1,
+      "name": null,
+      "display_name": "Lyon",
+      "description": "Départ 🎒 par la gare de Perrache.",
+      "start_time": "2024-05-01T06:15:00.000000+00:00",
+      "end_time": null,
+      "timezone_id": "Europe/Paris",
+      "location": { "lat": 45.7485, "lon": 4.8467, "locality": "Lyon", "country": "France", "country_code": "FR", "full_detail": "Rhône, France" },
+      "weather_condition": "rain",
+      "weather_temperature": 12.5,
+      "user_likes": ["PIEGE-LIKE"],
+      "comment_count": 3,
+      "media": [
+        { "uuid": "bbbbbbbb-0002-4000-8000-000000000002", "type": 0, "order": 1, "path": "https://polarsteps.s3.amazonaws.com/full/b2.jpg", "large_thumbnail_path": "https://media.prod.polarsteps.com/user_images/steps/large_thumb/u_777/b2.jpg", "full_res_width": 3000.0, "full_res_height": 4000.0 },
+        { "uuid": "aaaaaaaa-0001-4000-8000-000000000001", "type": 0, "order": 0, "path": "https://polarsteps.s3.amazonaws.com/full/a1.jpg", "large_thumbnail_path": "https://media.prod.polarsteps.com/user_images/steps/large_thumb/u_777/a1.jpg", "full_res_width": 3000.0, "full_res_height": 4000.0 },
+        { "uuid": "cccccccc-0003-4000-8000-000000000003", "type": 1, "order": 2, "path": "https://polarsteps.s3.amazonaws.com/full/v3.mp4", "large_thumbnail_path": "https://media.prod.polarsteps.com/user_images/steps/large_thumb/u_777/v3.jpg", "full_res_width": null, "full_res_height": null }
+      ]
+    },
+    {
+      "id": 2,
+      "uuid": "22222222-2222-4222-8222-222222222222",
+      "type": 1,
+      "name": "Arrivée à Tunis",
+      "display_name": "Tunis",
+      "description": "Le soleil.",
+      "start_time": "2024-05-03T10:00:00.000000+00:00",
+      "end_time": "2024-05-03T18:00:00.000000+00:00",
+      "timezone_id": "Africa/Tunis",
+      "location": { "lat": 36.8065, "lon": 10.1815, "locality": "Tunis", "country": "Tunisie", "country_code": "TN" },
+      "weather_condition": "tornado-of-frogs",
+      "weather_temperature": null,
+      "media": [
+        { "uuid": "dddddddd-0004-4000-8000-000000000004", "type": 0, "order": 0, "path": "https://polarsteps.s3.amazonaws.com/full/d4.jpg", "large_thumbnail_path": "https://media.prod.polarsteps.com/user_images/steps/large_thumb/u_777/d4.jpg" }
+      ]
+    },
+    {
+      "id": 3,
+      "uuid": "33333333-3333-4333-8333-333333333333",
+      "type": 1,
+      "name": null,
+      "display_name": "Retour à Marseille",
+      "description": null,
+      "start_time": "2024-05-08T08:30:00.000000+00:00",
+      "end_time": null,
+      "timezone_id": "Europe/Paris",
+      "location": { "lat": 43.2965, "lon": 5.3698, "locality": "Marseille", "country": "France", "country_code": "FR" },
+      "weather_condition": null,
+      "weather_temperature": null,
+      "media": []
+    }
+  ],
+  "planned_steps": [],
+  "route_segments": [
+    {
+      "type": "past_zelda_steps", "transport_mode": "flight",
+      "start_object_type": "step", "end_object_type": "step",
+      "start_object_uuid": "11111111-1111-4111-8111-111111111111",
+      "end_object_uuid": "22222222-2222-4222-8222-222222222222",
+      "route": "_p~iF~ps|U_ulLnnqC_mqNvxq`@"
+    },
+    {
+      "type": "past_zelda_steps", "transport_mode": "none",
+      "start_object_type": "step", "end_object_type": "zelda_step",
+      "start_object_uuid": "22222222-2222-4222-8222-222222222222",
+      "end_object_uuid": "99999999-9999-4999-8999-999999999999",
+      "route": "off_illisible"
+    },
+    {
+      "type": "future_directions", "transport_mode": "car",
+      "start_object_type": "step", "end_object_type": "step",
+      "start_object_uuid": "22222222-2222-4222-8222-222222222222",
+      "end_object_uuid": "33333333-3333-4333-8333-333333333333",
+      "route": "_p~iF~ps|U_ulLnnqC"
+    }
+  ],
+  "zelda_steps": [
+    { "id": 1, "uuid": "z1", "time": "2024-05-01T06:00:00+00:00", "location": { "lat": 45.75, "lon": 4.85, "country_code": "FR" } },
+    { "id": 2, "uuid": "z2", "time": "2024-05-01T07:00:00+00:00", "location": { "lat": 45.5, "lon": 5.0 } },
+    { "id": 3, "uuid": "z3", "time": "2024-05-03T09:00:00+00:00", "location": { "lat": 36.8, "lon": 10.18 } },
+    { "id": 4, "uuid": "z4", "time": "2024-05-08T08:00:00+00:00", "location": { "lat": 43.3, "lon": 5.37 } }
+  ]
+}
