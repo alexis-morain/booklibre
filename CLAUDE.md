@@ -529,6 +529,34 @@ annoncera donc que Colophon peut modifier la photothèque, ce qui est faux ; la
 `NSPhotoLibraryUsageDescription` de l'`Info.plist` est le seul endroit où la vérité se
 rétablit, et c'est elle que l'utilisateur lit.
 
+## Le voyage (P-s1)
+
+**`core::voyage`** : `Voyage` (étapes, lieux, dates, récits, météo, segments de trajet, trace)
+sérialisé en `voyage.json` à côté des photos, `version: 1` (`lire` refuse une version plus
+récente, `TropRecent`). Même patron que la photothèque : **une source produit un dossier**, le
+moteur n'apprend pas son nom (seul `Provenance` la porte, jamais un nom d'utilisateur ni un jeton).
+`Voyage::bilan` compte étapes, photos, vidéos ignorées, photos sous `SEUIL_COTE_COURT_PX` (2126,
+le ppi réel viendra à la composition) et dit si la trace est là.
+
+**`core::voyage::lien`** lit le lien public d'un voyage Polarsteps (`api.polarsteps.com`, API
+**figée en 62**, jeton `?s=` transmis tel quel) : `ureq` comme le relais, par un `Transport`
+qu'un faux remplace en test (aucun test ne touche le réseau, fixture synthétique dans
+`voyage/fixtures/`). Garde-fous : une requête à la fois, `User-Agent` Booklibre, 120 ms de pause,
+plafonds de réponse, d'étapes, de photos, de trace et d'octets (`Limites`), hôtes de photos en
+liste fermée, jamais d'énumération, de cookie ni de redirection suivie. **La conversion cueille
+ses champs un à un** : `user`, `trip_buddies`, `users` ne sont jamais lus. Un champ obligatoire
+manquant ou changé de type donne `Erreur::Format` (« passe par l'export »), jamais un voyage à
+moitié rempli. Les pays se **recomptent** depuis les codes des étapes (le compteur de la source
+vaut 0 sur un tour du monde, et `00` n'est pas un pays). Une photo déjà là n'est pas redemandée
+(reprise d'un import interrompu : environ 1,1 s par photo, 28 minutes pour 1 546). Pièges :
+`order` des médias n'est pas l'ordre de la réponse ; `route` préfixée `off_` ne se lit pas ;
+le trajet prévu (`future_directions`) n'est pas un trajet fait.
+**Absent de l'édition Mac App Store** : le module est dans le moteur, mais l'app ne l'appellera
+que derrière `cfg(not(feature = "mas"))` (P-s3), le linker ne garde rien de ce que personne n'appelle,
+et `mas.sh` refuse un binaire qui porte `api.polarsteps.com` (comme pour les tarifs). CLI :
+`--voyage-importer <URL> --voyage-vers <DOSSIER>`, `--voyage-lire <DOSSIER>`. Mesure :
+`docs/mesures/2026-11-12-le-lien-polarsteps.json`.
+
 ## Envoi, le dossier préparé et la commande
 
 **Envoi parle à qui fait un album, pas à un imprimeur** (A2, `EnvoiView.tsx`, `envoi.ts`).
@@ -1643,7 +1671,7 @@ Workspace Cargo. **`colophon-core`** : `scan` → `meta` → `thumb` → `analyz
 l'empreinte d'un album, le dossier préparé, MD5 et SHA-256), `colophon` (la page),
 `fiche` (la fiche d'une photo), `qualite` (la mesure de l'alerte), `legende` (la
 proposition et les dates), `reserve`, `commande` (CloudCore), `depot` (le seau S3), `relais` (le client du relais
-marchand).
+marchand), `voyage` (le voyage neutre et le lecteur du lien).
 **`colophon-cli`** : clap. **`colophon-app`** : React et Vite (`bridge.ts` seule porte,
 `album.ts` géométries, `scene.ts` la scène et `hitTest`, `SceneCanvas.tsx` le peintre,
 `SceneProxies.tsx` le clavier, `rendu.ts` l'interrupteur, `feuille.ts` le modèle de la

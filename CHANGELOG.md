@@ -9,6 +9,15 @@ sur la page des releases.
 
 ## [Non publié]
 
+### Added
+
+- `booklibre --voyage-importer <link> --voyage-vers <folder>` reads a trip from
+  its public link (one trip, pasted by hand) into a folder: the photos and a
+  `voyage.json`, then a summary of what came across (steps, photos, videos left
+  out, photos under the print size, track present or not). `--voyage-lire
+  <folder>` prints the same summary for an existing `voyage.json`. No screen
+  yet, and the link reader is not in the Mac App Store edition.
+
 ## [1.2.0] - 2026-10-31
 
 ### Changed

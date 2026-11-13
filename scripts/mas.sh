@@ -165,6 +165,12 @@ prouver() {
   if grep -aqF "colophon-tarifs" "$binaire" || grep -aqF "/v1/prices" "$binaire"; then
     echouer "le binaire porte encore l'adresse des tarifs"
   fi
+  # Le lecteur du lien d'un voyage (P-s1, plan D2) : l'adresse de l'API d'un
+  # service tiers dont les CGU interdisent le scraping, absente du Store
+  # (règle 5.2.2). L'app ne l'appelle que derrière `cfg(not(feature = "mas"))`.
+  if grep -aqF "api.polarsteps.com" "$binaire"; then
+    echouer "le binaire porte encore l'adresse de l'API des voyages"
+  fi
   codesign --verify --strict "$BUNDLE" || echouer "signature invalide"
   codesign -d --entitlements - --xml "$BUNDLE" 2>/dev/null | python3 -c '
 import plistlib, sys

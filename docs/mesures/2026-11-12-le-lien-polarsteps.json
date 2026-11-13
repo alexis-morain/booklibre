@@ -1,0 +1,130 @@
+{
+  "date": "2026-11-12",
+  "objet": "Ce que rend le lien public d'un voyage Polarsteps, sans compte ni cookie (P-s0, volet lien)",
+  "voyage_mesure": "un voyage public tiers de 93 étapes (identité non retenue)",
+  "point_d_entree": "GET https://api.polarsteps.com/trips/<id>?polarsteps_api_version=<v>",
+  "sans_version": "404",
+  "versions": {
+    "62": {
+      "statut": 200,
+      "octets": 2846664,
+      "zelda_steps": 3037,
+      "note": "trace GPS présente (zelda_steps : location.lat/lon, time)"
+    },
+    "70": {
+      "statut": 200,
+      "octets": 1914197,
+      "zelda_steps": 0,
+      "note": "trace GPS retirée, le reste identique"
+    }
+  },
+  "voyage": [
+    "id",
+    "uuid",
+    "name",
+    "summary",
+    "start_date",
+    "end_date",
+    "timezone_id",
+    "total_km",
+    "country_count (0 ici : non fiable)",
+    "cover_photo",
+    "steps",
+    "route_segments",
+    "zelda_steps",
+    "planned_steps",
+    "user (id, username, first_name, last_name : jamais lu)"
+  ],
+  "etape": [
+    "id",
+    "uuid",
+    "display_name",
+    "name (souvent null)",
+    "description (jusqu'à 3295 signes)",
+    "start_time",
+    "end_time",
+    "timezone_id",
+    "location {lat, lon, locality, country, country_code, full_detail}",
+    "weather_condition",
+    "weather_temperature (°C)",
+    "media[]",
+    "cover_media_uuid",
+    "main_media_item_path"
+  ],
+  "media": [
+    "uuid",
+    "type (0 photo, 1 vidéo)",
+    "order",
+    "path (full_res)",
+    "large_thumbnail_path",
+    "small_thumbnail_path",
+    "full_res_width",
+    "full_res_height",
+    "full_res_unavailable",
+    "description",
+    "step_id",
+    "taken_time (null ici)"
+  ],
+  "route_segments": {
+    "n": 175,
+    "type": {
+      "past_zelda_steps": 139,
+      "future_directions": 36
+    },
+    "transport_mode": {
+      "none": 113,
+      "flight": 27,
+      "car": 15,
+      "null": 20
+    },
+    "route": "polyligne encodée (format Google à vérifier ; préfixe 'off_' sur certaines)"
+  },
+  "meteo_vue": {
+    "rain": 60,
+    "partly-cloudy-day": 22,
+    "clear-day": 2,
+    "null": 9
+  },
+  "photos": {
+    "n": 1546,
+    "videos": 234,
+    "full_res_cote_court_median_px": 1975,
+    "full_res_cote_court_max_px": 4320,
+    "full_res_au_moins_2126_px": 78,
+    "full_res_anonyme": "403 sur polarsteps.s3.amazonaws.com et media.prod.polarsteps.com, avec ou sans Referer",
+    "large_thumb_anonyme": "200, 960 x 1280 px, ~200 Ko"
+  },
+  "consequences": [
+    "Le lien anonyme donne la structure complète (étapes, textes, lieux, météo, transports, trace en v62) mais des photos de 960 px au plus : 250 ppi jusqu'à ~9,7 cm de côté, pas au-delà.",
+    "Même la pleine résolution stockée chez Polarsteps est petite (médiane 1975 px) : le zip ne fera pas de miracle, les originaux du téléphone si.",
+    "La trace GPS dépend de la version d'API : figer la 62 et se replier sur les étapes si zelda_steps disparaît.",
+    "country_count n'est pas fiable (0 pour un tour du monde) : le recompter depuis les country_code des étapes."
+  ],
+  "session": "P-s1 : le lecteur du lien (core::voyage::lien), copie anonymisée de la mesure du 12/11 puis passage du lecteur sur le même voyage",
+  "import_p_s1": {
+    "voyage": "le même voyage public tiers (identité non retenue), lu par `booklibre --voyage-importer`, API figée en version 62",
+    "bilan": {
+      "etapes": 93,
+      "etapes_sans_photo": 0,
+      "etapes_avec_meteo": 84,
+      "pays_recomptes": 13,
+      "photos": 1546,
+      "photos_sous_le_repere_de_2126_px": 1546,
+      "videos_ignorees": 234,
+      "trajets_faits": 139,
+      "points_de_trace": 3037
+    },
+    "disque": {
+      "voyage_json_octets": 878708,
+      "photos_octets_environ": 345000000,
+      "photos_par_voyage_de_1546": "environ 0,22 Mo chacune"
+    },
+    "debit": "environ 1,1 s par photo, une requête à la fois avec 120 ms de pause : 1 546 photos prennent environ 28 minutes, d'où la reprise d'un import interrompu (une photo déjà là n'est pas redemandée) et la progression à montrer en P-s3",
+    "ce_que_le_reel_a_appris": [
+      "country_code vaut « 00 » pour un lieu sans pays : ce n'est pas un pays, le recomptage n'accepte que deux lettres (13 pays au lieu de 14)",
+      "l'API a répondu 502 une fois, puis 200 vingt secondes plus tard : l'import échoue franchement sur un statut autre que 200, la personne relance, la reprise ne coûte que la demande du voyage",
+      "route_segments.route : 138 des 139 trajets faits ont une polyligne lisible (format de Google, précision 1e-5) ; le préfixe off_ n'est pas lisible et ne donne aucun point",
+      "26 trajets faits portent un mode de transport nommé (flight, car), 113 portent « none »"
+    ]
+  }
+}

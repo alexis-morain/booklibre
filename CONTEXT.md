@@ -431,3 +431,18 @@ holds no photograph; an album composed that way carries it as `releve.json`,
 and the linter measures from it. The fiches of the reference sets live in
 `crates/colophon-core/fiches/`.
 _Avoid_: dump, snapshot, manifest
+
+**Voyage**:
+A trip as a neutral file, `voyage.json`, written beside the photos it names:
+steps, places, dates, texts, a track, and a `provenance` label saying who
+produced it. A source (the public link of a trip today) produces a folder; the
+engine reads the folder and never learns the source's name. Versioned
+(`version: 1`), readable and repairable by hand.
+_Avoid_: itinerary, journey, trip file, import
+
+**Étape (of a voyage)**:
+One stop of a voyage: a name, a story, a local start time and its time zone, a
+place, an optional weather, and its photos in order. Not a chapter: the
+Composer will make one chapter of each step, but a step belongs to the voyage
+file and a chapter to the album.
+_Avoid_: stage, stop, leg (a leg is a `Segment`, the way between two steps)
