@@ -330,7 +330,7 @@ fn une_etape_sans_photo_est_une_page_de_texte_ou_rien() {
             _ => None,
         })
         .collect();
-    assert!(textes.iter().any(|t| t == "Le train de nuit, 5 juin 2025"), "{textes:?}");
+    assert!(textes.iter().any(|t| t == "5 juin 2025"), "{textes:?}");
     assert!(textes.iter().any(|t| t.contains("Dix heures de rails")));
     // Ni photo ni récit : rien, et le bilan le compte.
     assert!(!noms_de_chapitres(&r.album).contains(&"Une étape vide".to_string()));
@@ -345,10 +345,10 @@ fn la_mention_est_la_date_locale_et_le_lieu_de_l_etape() {
     // « Lyon » : sa date, dans son fuseau, et son lieu, dans le texte de
     // l'ouverture (récit court) : rien ne se superpose sous les photos.
     let lyon = r.album.spreads.iter().find(|s| s.caption.as_deref() == Some("Lyon")).unwrap();
-    assert!(textes(lyon).iter().any(|(t, _)| t == "Lyon, 1 juin 2025"), "{:?}", textes(lyon));
+    assert!(textes(lyon).iter().any(|(t, _)| t == "1 juin 2025"), "{:?}", textes(lyon));
     assert!(lyon.slots.iter().all(|sl| sl.mention.is_none()));
     // « Turin » n'a pas de récit : sa mention est sous sa première photo.
-    let turin = r.album.spreads.iter().flat_map(|s| &s.slots).find(|sl| sl.mention.as_deref() == Some("Turin, 2 juin 2025"));
+    let turin = r.album.spreads.iter().flat_map(|s| &s.slots).find(|sl| sl.mention.as_deref() == Some("2 juin 2025"));
     assert!(turin.is_some());
     // Une seule mention par étape.
     let n = r.album.spreads.iter().flat_map(|s| &s.slots).filter(|sl| sl.mention.is_some()).count();
@@ -743,4 +743,17 @@ fn un_texte_a_gauche_ouvre_sur_des_photos_a_droite() {
             assert!(s.template.contains("_t"), "{}", s.template);
         }
     }
+}
+
+#[test]
+fn le_lieu_deja_dans_le_nom_de_l_etape_ne_se_repete_pas() {
+    let r = legendes_par_defaut(crate::langue::Langue::Fr);
+    let mut e = ecrire_voyage_etape();
+    e.nom = "Bloomington".into();
+    e.lieu.localite = Some("Bloomington".into());
+    assert_eq!(mention(&e, &r).as_deref(), Some("1 juin 2025"));
+    // Un lieu qui n'est qu'un bout de mot du nom reste écrit.
+    e.nom = "Diving - Day 3 of 5".into();
+    e.lieu.localite = Some("Ra".into());
+    assert_eq!(mention(&e, &r).as_deref(), Some("Ra, 1 juin 2025"));
 }

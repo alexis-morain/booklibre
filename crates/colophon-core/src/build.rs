@@ -1035,7 +1035,14 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         // la couverture, n'était pas ce qu'on attend d'un livre. Une première
         // planche déjà sans photo (le faux-titre, une page de texte épinglée)
         // tient ce rôle, et on n'en ajoute pas une seconde.
-        if album.spreads.first().is_some_and(|s| !s.slots.is_empty()) {
+        //
+        // Dans un voyage, la première planche peut être une planche de texte de
+        // la composition (des étapes sans photo regroupées) : sa page de gauche
+        // porterait du texte que l'imprimeur ne tire pas. Le livre s'ouvre alors
+        // sur la planche blanche, comme avec une photo.
+        let ouvre_sur_du_texte = voyage.is_some()
+            && album.spreads.first().is_some_and(|s| s.template == "vide" && !s.objets.is_empty());
+        if album.spreads.first().is_some_and(|s| !s.slots.is_empty()) || ouvre_sur_du_texte {
             album.spreads.insert(0, crate::model::Spread::vide());
         }
 

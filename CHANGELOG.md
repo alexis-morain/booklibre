@@ -21,7 +21,8 @@ sur la page des releases.
   chapter, in the trip's order, and the photos follow their step. The text is
   laid out by a few plain rules, in this order:
   1. A step's name opens its text as a title; its date and place (never typed,
-     never from the gazetteer) sit under it, written once.
+     never from the gazetteer) sit under it, and a place the name already says
+     is not written again.
   2. A short story heads the opening's left page with photos beneath it and on
      the right page; a longer one fills the left page and the first photos go
      on the right; a story longer than a page runs on to a second page, and
@@ -30,7 +31,9 @@ sur la page des releases.
      the next step: its text joins the next opening, or a page that several
      short steps share. The step stays a chapter in the book; only the layout
      groups, and the summary counts the steps grouped.
-  4. No text spread has a blank right page, except the book's last one.
+  4. No text spread has a blank right page, except the book's last one (when
+     no layout can hold a step's photos beside its text, the page stays blank and
+     the summary says so). The book still opens on a blank spread.
   Emojis stay in `voyage.json`, are not printed, and are counted. The step's
   date and place setting can be turned off like any other and a recomposition
   keeps it off. Without a `voyage.json` the composition is unchanged to the

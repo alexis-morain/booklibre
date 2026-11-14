@@ -67,7 +67,17 @@ pub fn lieu_nomme(e: &Etape) -> Option<&str> {
 /// La mention de l'étape : sa date locale et son lieu, selon le réglage de
 /// l'album. Dérivée de l'étape, jamais saisie, jamais du gazetteer.
 pub fn mention(e: &Etape, r: &Legendes) -> Option<String> {
-    let lieu = lieu_nomme(e).map(|l| sans_emojis(l).0);
+    // Le lieu que le nom de l'étape dit déjà ne s'écrit pas une deuxième fois
+    // sous lui : « Bloomington » et « Bloomington, 25 mai 2024 » en tête de la
+    // même page, c'est trois fois le même mot avec le pied de page.
+    let mots = |t: &str| {
+        let propre: String = t.chars().map(|c| if c.is_alphanumeric() { c } else { ' ' }).collect();
+        format!(" {} ", propre.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase())
+    };
+    let nom = mots(&sans_emojis(&e.nom).0);
+    let lieu = lieu_nomme(e)
+        .map(|l| sans_emojis(l).0)
+        .filter(|l| !nom.contains(&mots(l)));
     crate::legende::texte_de_mention(jour_local(e), lieu.as_deref(), r)
 }
 
@@ -538,7 +548,16 @@ impl Flux {
             essais.push(TexteOuvert::Tete((h + 8.0).ceil() as u32));
         }
         essais.push(TexteOuvert::Page);
-        for texte in essais {
+        // D'abord avec la barre du linter pour la photo de tête ; à défaut, sans
+        // elle : une photo plus faible à droite vaut mieux qu'une page blanche,
+        // et le linter le compte (`ouverture_faible`).
+        let essais: Vec<(TexteOuvert, Option<f64>)> = [barre, None]
+            .into_iter()
+            .enumerate()
+            .filter(|(i, b)| *i == 0 || b.is_none() && barre.is_some())
+            .flat_map(|(_, b)| essais.iter().map(move |t| (*t, b)))
+            .collect();
+        for (texte, barre) in essais {
             let mut reste = photos.clone();
             let Some(mut ouverture) = composer.ouverture_avec_texte(&mut reste, barre, root, texte)
             else {

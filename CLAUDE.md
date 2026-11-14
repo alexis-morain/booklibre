@@ -578,7 +578,7 @@ les deux pages (`Composer::ouverture_avec_texte`, `TexteOuvert::Tete`, gabarit g
 sont à droite (`g_v_<grille>`). Les cases sont petites (960 px ne tiennent à 250 ppi que sous dix
 centimètres de large). Un récit plus long qu'une page court sur la seconde ; au-delà de deux
 pages le bloc dépasse et le bilan nomme l'étape. La mention est celle de l'étape (`jiff`, fuseau
-de l'étape, `legende::mentions_du_voyage`) ; « date + lieu » n'est que le défaut de la
+de l'étape, `legende::mentions_du_voyage`, sans le lieu que le nom de l'étape dit déjà ; le livre s'ouvre sur une planche blanche même quand la première planche est du texte) ; « date + lieu » n'est que le défaut de la
 **première** composition (`BuildOptions::legendes_de_voyage_par_defaut`, faux en recomposition :
 « Rien » reste Rien). Une planche épinglée se replace par l'ordre du voyage, et une étape dont une
 planche gardée porte déjà le titre ne refait ni titre ni page de récit. Le linter ne compte pas

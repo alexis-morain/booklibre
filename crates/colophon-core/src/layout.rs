@@ -439,7 +439,22 @@ impl Composer {
     /// Zéro, et l'étape se traite comme une étape sans photo (P-s2).
     pub fn photos_posables(&self, chapter: &Chapter, root: &std::path::Path) -> usize {
         let mut essai = self.clone();
-        essai.compose(chapter, None, root).iter().map(|s| s.slots.len()).sum()
+        let posees: usize = essai.compose(chapter, None, root).iter().map(|s| s.slots.len()).sum();
+        if posees > 0 {
+            return posees;
+        }
+        // `compose` seul ne tient pas des photos d'orientations mêlées ; une
+        // ouverture avec texte les tient en grilles séparées, une par page.
+        for texte in [TexteOuvert::Tete(40), TexteOuvert::Page] {
+            let mut photos = chapter.photos.clone();
+            let mut essai = self.clone();
+            essai.promouvoir_ouverture(&mut photos);
+            let barre = Self::barre_d_ouverture(&photos);
+            if let Some(o) = essai.ouverture_avec_texte(&mut photos, barre, root, texte) {
+                return o.slots.len();
+            }
+        }
+        0
     }
 
     /// Fait passer en tête la photo qui doit ouvrir le chapitre, comme
