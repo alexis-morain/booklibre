@@ -32,10 +32,23 @@ fn photo(chemin: &Path, graine: u32, w: u32, h: u32) {
             *ch = (rng >> 24) as u8;
         }
     }
-    let img = image::RgbImage::from_fn(w, h, |x, y| {
-        image::Rgb(cases[((y * 8 / h).min(7) * 8 + (x * 8 / w).min(7)) as usize])
-    });
-    img.save(chemin).unwrap();
+    // Une ligne par rangée de cases, copiée pour chaque ligne de l'image : en
+    // debug, un calcul par pixel sur 6 Mpx coûte des secondes par photo.
+    let (wu, hu) = (w as usize, h as usize);
+    let lignes: Vec<Vec<u8>> = (0..8)
+        .map(|rang| {
+            let mut l = Vec::with_capacity(wu * 3);
+            for x in 0..wu {
+                l.extend_from_slice(&cases[rang * 8 + (x * 8 / wu).min(7)]);
+            }
+            l
+        })
+        .collect();
+    let mut buf = Vec::with_capacity(wu * hu * 3);
+    for y in 0..hu {
+        buf.extend_from_slice(&lignes[(y * 8 / hu).min(7)]);
+    }
+    image::RgbImage::from_raw(w, h, buf).unwrap().save(chemin).unwrap();
 }
 
 fn instant(s: &str) -> DateTime<Utc> {
