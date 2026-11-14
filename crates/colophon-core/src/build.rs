@@ -785,16 +785,16 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         .unwrap_or_default();
     let rang_de = |s: &model::Spread| -> Option<(usize, usize)> {
         let v = voyage.as_ref()?;
-        match s.slots.first() {
-            Some(sl) => ordre_voyage.get(sl.src.as_str()).copied(),
-            None => {
-                let c = s.caption.as_deref()?;
-                v.etapes
-                    .iter()
-                    .position(|e| crate::voyage::composition::sans_emojis(&e.nom).0 == c)
-                    .map(|i| (i, 0))
-            }
-        }
+        // Une planche qui porte le titre d'une étape en est l'ouverture : rang 0
+        // de l'étape, même si la photo qu'elle met en tête est la dernière de
+        // l'étape (l'ouverture prend la mieux notée).
+        let de_titre = s.caption.as_deref().and_then(|c| {
+            v.etapes
+                .iter()
+                .position(|e| crate::voyage::composition::sans_emojis(&e.nom).0 == c)
+                .map(|i| (i, 0))
+        });
+        de_titre.or_else(|| s.slots.first().and_then(|sl| ordre_voyage.get(sl.src.as_str()).copied()))
     };
 
     let compose_une = |densite: layout::Densite,

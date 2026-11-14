@@ -168,21 +168,6 @@ fn mentions_du_voyage(album: &Album, r: &Legendes) -> Option<BTreeMap<String, St
         .collect();
     let g = crate::pdf::geometry(album);
     for spread in &album.spreads {
-        // Une ouverture dont le texte porte le titre de l'étape en porte aussi
-        // la mention (date, lieu) : rien sous les photos, où le nom du
-        // chapitre pend déjà.
-        let a_son_titre = spread.objets.iter().any(|o| {
-            matches!(&o.contenu, crate::model::Contenu::Texte { taille_pt, .. }
-                if *taille_pt >= crate::voyage::composition::TITRE_PT)
-        });
-        if a_son_titre && !spread.slots.is_empty() {
-            for slot in &spread.slots {
-                if let Some(&i) = etape_de.get(slot.src.as_str()) {
-                    vues.insert(i);
-                }
-            }
-            continue;
-        }
         let rects = crate::pdf::slots_for(&spread.template, spread.slots.len(), &g);
         // Le nom du chapitre pend sous la photo la plus basse de la page de
         // gauche : la mention, au même endroit, s'y superposerait. Quand les

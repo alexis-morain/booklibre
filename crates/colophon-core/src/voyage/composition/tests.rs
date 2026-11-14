@@ -55,26 +55,29 @@ fn instant(s: &str) -> DateTime<Utc> {
     DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc)
 }
 
-const FORMES: [(u32, u32); 5] = [(3000, 2000), (2000, 3000), (2400, 2400), (3000, 2000), (2000, 3000)];
+/// Les mêmes formes en plus petit : pour les albums ordinaires des tests, qui ne
+/// regardent pas ce que les cases impriment (la composition en debug sous Windows
+/// pèse sur les 45 minutes du job).
+const PETITES: [(u32, u32); 5] = [(2400, 1600), (1600, 2400), (1900, 1900), (2400, 1600), (1600, 2400)];
 
 /// Les étapes d'un voyage inventé : `(nom, nombre de photos, récit)`.
 fn etapes_inventees() -> Vec<(&'static str, usize, Option<String>)> {
     let long = "Une longue journée de marche dans la vallée, sous un ciel changeant. ".repeat(40);
     vec![
         ("Lyon", 7, Some("Départ de la gare, valises lourdes et café tiède.".into())),
-        ("Turin", 6, None),
-        ("Gênes 🌊", 8, Some("Le port, la focaccia 🍞 et le vent 🌬️ sur la jetée. 🇮🇹".into())),
-        ("Nice", 6, Some(long.clone())),
+        ("Turin", 5, None),
+        ("Gênes 🌊", 5, Some("Le port, la focaccia 🍞 et le vent 🌬️ sur la jetée. 🇮🇹".into())),
+        ("Nice", 4, Some(long.clone())),
         ("Le train de nuit", 0, Some(format!("{0} {0} {0}", "Dix heures de rails, un thé, un livre, et le jour qui se lève sur la mer. Le contrôleur passe deux fois, la lumière baisse, une femme s'endort contre la vitre et un enfant compte les tunnels à voix basse. À l'aube, la mer apparaît d'un coup, plate et grise, puis argentée, et tout le wagon se réveille en même temps pour la regarder."))),
         ("Marseille", 7, Some("Un récit assez court.".into())),
         ("Une étape vide", 0, None),
-        ("Arles", 6, Some("x".repeat(10).to_string())),
+        ("Arles", 5, Some("x".repeat(10).to_string())),
         ("Escale", 0, Some("Une halte, deux mots.".into())),
         ("Halte floue", 2, Some("Deux vignettes, aucune planche pour elles.".into())),
-        ("Avignon", 9, None),
-        ("Orange", 6, Some("Les gradins vides à l'aube, et personne pour nous dire où aller.".into())),
+        ("Avignon", 5, None),
+        ("Orange", 5, Some("Les gradins vides à l'aube, et personne pour nous dire où aller.".into())),
         ("Valence", 7, Some("Des heures dans une salle d'attente, à regarder les horaires changer. ".repeat(110))),
-        ("Retour à Lyon", 6, None),
+        ("Retour à Lyon", 5, None),
     ]
 }
 
@@ -86,7 +89,7 @@ fn ecrire_voyage(photos: &Path) -> Voyage {
     for (i, (nom, n, recit)) in etapes_inventees().into_iter().enumerate() {
         let mut ph = Vec::new();
         for j in 0..n {
-            let (w, h) = if nom == "Halte floue" { (300, 200) } else { FORMES[(i + j) % FORMES.len()] };
+            let (w, h) = if nom == "Halte floue" { (300, 200) } else { PETITES[(i + j) % PETITES.len()] };
             let fichier = format!("e{:03}-p{:02}.jpg", i + 1, j + 1);
             photo(&photos.join(&fichier), graine, w, h);
             graine += 1;
@@ -350,6 +353,19 @@ fn la_mention_est_la_date_locale_et_le_lieu_de_l_etape() {
     // Une seule mention par étape.
     let n = r.album.spreads.iter().flat_map(|s| &s.slots).filter(|sl| sl.mention.is_some()).count();
     assert!(n <= 11, "{n} mentions pour 11 étapes à photos");
+    // Et la date et le lieu d'une étape ne s'écrivent qu'une fois dans le
+    // livre : dans son texte, ou sous sa photo, jamais les deux.
+    let reglage = legendes_par_defaut(crate::langue::Langue::Fr);
+    for e in &c.voyage.etapes {
+        let Some(m) = mention(e, &reglage) else { continue };
+        let ecrites = r.album.spreads.iter().flat_map(|s| &s.slots).filter(|sl| sl.mention.as_deref() == Some(m.as_str())).count()
+            + r.album.spreads.iter().flat_map(textes_de).filter(|t| *t == m).count();
+        assert!(ecrites <= 1, "« {m} » est écrite {ecrites} fois");
+    }
+}
+
+fn textes_de(s: &crate::model::Spread) -> Vec<String> {
+    textes(s).into_iter().map(|(t, _)| t).collect()
 }
 
 #[test]
@@ -393,8 +409,8 @@ fn sans_emojis_compte_les_suites_et_laisse_le_reste_intact() {
 #[test]
 fn un_dossier_sans_voyage_json_ou_avec_un_voyage_illisible_se_compose_pareil() {
     let (photos, out) = dossier("identite");
-    for i in 0..30u32 {
-        let (w, h) = FORMES[i as usize % 5];
+    for i in 0..14u32 {
+        let (w, h) = PETITES[i as usize % 5];
         let chemin = photos.join(format!("p{i:02}.jpg"));
         photo(&chemin, i, w, h);
         let f = fs::File::options().write(true).open(&chemin).unwrap();
@@ -507,8 +523,8 @@ fn ajouter_page_de_texte(dir: &Path) {
 fn chapitre_orphelin_ne_passe_sur_les_pages_de_texte_que_dans_un_voyage() {
     // Un album ordinaire : la page de texte légendée compte, comme avant.
     let (photos, out) = dossier("orphelin-ordinaire");
-    for i in 0..30u32 {
-        let (w, h) = FORMES[i as usize % 5];
+    for i in 0..14u32 {
+        let (w, h) = PETITES[i as usize % 5];
         photo(&photos.join(format!("p{i:02}.jpg")), i, w, h);
     }
     build_album(&photos, &out, options()).unwrap();
