@@ -121,6 +121,9 @@ pub fn mention(root: &Path, src: &str, reglage: &Legendes) -> Option<String> {
 /// de l'album et celles de la réserve, qui peuvent y entrer. Une photo sans
 /// entrée est une photo sous laquelle rien ne s'écrit.
 pub fn mentions(album: &Album, reglage: &Legendes, srcs: &[String]) -> BTreeMap<String, String> {
+    if let Some(table) = mentions_du_voyage(album, reglage) {
+        return table;
+    }
     let root = Path::new(&album.root);
     let mut table = BTreeMap::new();
     let posees = album.spreads.iter().flat_map(|s| &s.slots).map(|s| &s.src);
@@ -133,6 +136,85 @@ pub fn mentions(album: &Album, reglage: &Legendes, srcs: &[String]) -> BTreeMap<
         }
     }
     table
+}
+
+/// Dans le dossier d'un voyage (`voyage.json`, P-s2), la mention d'une photo
+/// est celle de son **étape** : sa date locale et son lieu, dérivés des
+/// données de l'étape, jamais de l'EXIF ni du gazetteer d'une vignette qui n'en
+/// porte pas. Elle s'écrit sous la première photo posée de chaque étape, dans
+/// l'ordre du livre, et nulle part ailleurs. `None` : ce n'est pas un dossier
+/// de voyage, la règle d'avant s'applique à l'identique.
+fn mentions_du_voyage(album: &Album, r: &Legendes) -> Option<BTreeMap<String, String>> {
+    use crate::voyage::composition::{lecture, mention, Lecture};
+    let Lecture::Voyage(v) = lecture(Path::new(&album.root)) else { return None };
+    let etape_de: BTreeMap<&str, usize> = v
+        .etapes
+        .iter()
+        .enumerate()
+        .flat_map(|(i, e)| e.photos.iter().map(move |p| (p.fichier.as_str(), i)))
+        .collect();
+    let mut vues = std::collections::BTreeSet::new();
+    let mut table = BTreeMap::new();
+    // Une mention que le bloc de titre d'une ouverture porte déjà ne s'écrit pas
+    // une seconde fois sous la photo.
+    let ecrites: std::collections::BTreeSet<&str> = album
+        .spreads
+        .iter()
+        .flat_map(|s| &s.objets)
+        .filter_map(|o| match &o.contenu {
+            crate::model::Contenu::Texte { texte, .. } => Some(texte.as_str()),
+            _ => None,
+        })
+        .collect();
+    let g = crate::pdf::geometry(album);
+    for spread in &album.spreads {
+        // Une ouverture dont le texte porte le titre de l'étape en porte aussi
+        // la mention (date, lieu) : rien sous les photos, où le nom du
+        // chapitre pend déjà.
+        let a_son_titre = spread.objets.iter().any(|o| {
+            matches!(&o.contenu, crate::model::Contenu::Texte { taille_pt, .. }
+                if *taille_pt >= crate::voyage::composition::TITRE_PT)
+        });
+        if a_son_titre && !spread.slots.is_empty() {
+            for slot in &spread.slots {
+                if let Some(&i) = etape_de.get(slot.src.as_str()) {
+                    vues.insert(i);
+                }
+            }
+            continue;
+        }
+        let rects = crate::pdf::slots_for(&spread.template, spread.slots.len(), &g);
+        // Le nom du chapitre pend sous la photo la plus basse de la page de
+        // gauche : la mention, au même endroit, s'y superposerait. Quand les
+        // deux pages portent des photos, elle va sous la première de droite.
+        let a_droite = |k: usize| rects.get(k).is_some_and(|r| r.x >= g.media_w / 2.0);
+        let des_deux_cotes = spread.caption.is_some()
+            && (0..spread.slots.len()).any(a_droite)
+            && (0..spread.slots.len()).any(|k| !a_droite(k));
+        let mut choisis = Vec::new();
+        for (k, slot) in spread.slots.iter().enumerate() {
+            let Some(&i) = etape_de.get(slot.src.as_str()) else { continue };
+            if vues.contains(&i) || choisis.iter().any(|&(j, _)| j == i) {
+                if !(des_deux_cotes && a_droite(k)) {
+                    continue;
+                }
+                // Une case de droite remplace le choix fait à gauche, une fois.
+                match choisis.iter().position(|&(j, kk)| j == i && !a_droite(kk)) {
+                    Some(at) => choisis[at].1 = k,
+                    None => continue,
+                }
+                continue;
+            }
+            choisis.push((i, k));
+        }
+        for (i, k) in choisis {
+            vues.insert(i);
+            if let Some(m) = mention(&v.etapes[i], r).filter(|m| !ecrites.contains(m.as_str())) {
+                table.insert(spread.slots[k].src.clone(), m);
+            }
+        }
+    }
+    Some(table)
 }
 
 /// Pose sur chaque case la mention que [`Album::legendes`] demande, et
@@ -151,7 +233,7 @@ pub fn poser_mentions(album: &mut Album) {
 }
 
 /// La règle d'écriture, pure pour se tester sans photos.
-fn texte_de_mention(jour: Option<NaiveDate>, lieu: Option<&str>, r: &Legendes) -> Option<String> {
+pub(crate) fn texte_de_mention(jour: Option<NaiveDate>, lieu: Option<&str>, r: &Legendes) -> Option<String> {
     let date = jour.map(|d| match r.date {
         FormatDate::Jour => r.langue.date(d, true),
         FormatDate::Court => r.langue.date_courte(d),
