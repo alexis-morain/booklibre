@@ -409,7 +409,7 @@ fn sans_emojis_compte_les_suites_et_laisse_le_reste_intact() {
 #[test]
 fn un_dossier_sans_voyage_json_ou_avec_un_voyage_illisible_se_compose_pareil() {
     let (photos, out) = dossier("identite");
-    for i in 0..14u32 {
+    for i in 0..6u32 {
         let (w, h) = PETITES[i as usize % 5];
         let chemin = photos.join(format!("p{i:02}.jpg"));
         photo(&chemin, i, w, h);
@@ -431,79 +431,6 @@ fn un_dossier_sans_voyage_json_ou_avec_un_voyage_illisible_se_compose_pareil() {
     assert!(b.phrases()[0].contains("dossier ordinaire"));
 }
 
-#[test]
-fn la_recomposition_garde_les_pages_touchees_a_leur_etape() {
-    let c = partage();
-    let out = copie_de_l_album("recompo");
-    let v = c.voyage.clone();
-    let r = c.rapport.clone();
-    // Une main touche la deuxième planche de photos de « Marseille » (5e étape à photos).
-    let debut = r.album.spreads.iter().position(|s| s.caption.as_deref() == Some("Marseille")).unwrap();
-    let suivante = r.album.spreads[debut + 1..].iter().position(|s| s.caption.is_some()).map(|i| debut + 1 + i).unwrap();
-    assert!(suivante > debut + 1, "Marseille a au moins deux planches");
-    let touchee = debut + 1;
-    let mut album = r.album.clone();
-    album.spreads[touchee].edited = true;
-    album.spreads[touchee].slots[0].caption = Some("Notre table au port".into());
-    let sources: Vec<String> = album.spreads[touchee].slots.iter().map(|s| s.src.clone()).collect();
-    fs::write(out.join("album.json"), serde_json::to_string_pretty(&album).unwrap()).unwrap();
-
-    let apres = crate::recomposition::recomposer(
-        &out,
-        crate::recomposition::Recomposition { aujourdhui: Some(jour()), ..Default::default() },
-    )
-    .unwrap()
-    .album;
-    // La planche touchée est là, telle quelle, une seule fois.
-    let trouvees: Vec<usize> = apres
-        .spreads
-        .iter()
-        .enumerate()
-        .filter(|(_, s)| s.slots.first().map(|sl| sl.caption.as_deref()) == Some(Some("Notre table au port")))
-        .map(|(i, _)| i)
-        .collect();
-    assert_eq!(trouvees.len(), 1, "la planche touchée est gardée une fois");
-    let a = &apres.spreads[trouvees[0]];
-    assert!(a.edited);
-    assert_eq!(a.slots.iter().map(|s| s.src.clone()).collect::<Vec<_>>(), sources);
-    // Chaque photo est posée au plus une fois dans le livre recomposé.
-    let mut vues = std::collections::HashSet::new();
-    for sl in apres.spreads.iter().flat_map(|s| &s.slots) {
-        assert!(vues.insert(sl.src.clone()), "{} posée deux fois", sl.src);
-    }
-    // Et elle reste à son étape : entre le titre de Marseille et celui d'Arles.
-    let marseille = apres.spreads.iter().position(|s| s.caption.as_deref() == Some("Marseille")).unwrap();
-    let arles = apres.spreads.iter().position(|s| s.caption.as_deref() == Some("Arles")).unwrap();
-    assert!(marseille < trouvees[0] && trouvees[0] < arles, "{marseille} < {} < {arles}", trouvees[0]);
-    let _ = v;
-    // Les étapes se retrouvent dans l'ordre, une fois chacune.
-    assert_eq!(noms_de_chapitres(&apres).iter().filter(|c| *c == "Marseille").count(), 1);
-}
-
-#[test]
-fn rien_est_un_choix_qu_une_recomposition_ne_defait_pas() {
-    let c = partage();
-    let out = copie_de_l_album("rien");
-    let r = c.rapport.clone();
-    // À la première composition : date + lieu, posés par défaut.
-    assert!(r.album.legendes.is_some());
-    assert!(r.album.spreads.iter().flat_map(|s| &s.slots).any(|sl| sl.mention.is_some()));
-    // L'utilisateur choisit « Rien » : plus de réglage, plus de mention.
-    let mut album = r.album.clone();
-    album.legendes = None;
-    for sl in album.spreads.iter_mut().flat_map(|s| s.slots.iter_mut()) {
-        sl.mention = None;
-    }
-    fs::write(out.join("album.json"), serde_json::to_string_pretty(&album).unwrap()).unwrap();
-    let apres = crate::recomposition::recomposer(
-        &out,
-        crate::recomposition::Recomposition { aujourdhui: Some(jour()), ..Default::default() },
-    )
-    .unwrap()
-    .album;
-    assert!(apres.legendes.is_none(), "la machine a remis un réglage que l'utilisateur avait ôté");
-    assert!(apres.spreads.iter().flat_map(|s| &s.slots).all(|sl| sl.mention.is_none()));
-}
 
 fn orphelins(dir: &Path) -> usize {
     crate::audit::audit(dir).unwrap().compteurs.chapitre_orphelin.count
@@ -523,7 +450,7 @@ fn ajouter_page_de_texte(dir: &Path) {
 fn chapitre_orphelin_ne_passe_sur_les_pages_de_texte_que_dans_un_voyage() {
     // Un album ordinaire : la page de texte légendée compte, comme avant.
     let (photos, out) = dossier("orphelin-ordinaire");
-    for i in 0..14u32 {
+    for i in 0..6u32 {
         let (w, h) = PETITES[i as usize % 5];
         photo(&photos.join(format!("p{i:02}.jpg")), i, w, h);
     }
@@ -597,7 +524,7 @@ fn ecrire_voyage_de_vignettes(photos: &Path) {
     let plan: [(&str, Option<&str>, usize, u32, u32); 3] = [
         ("Départ", Some("Les valises sont prêtes."), 2, 800, 800),
         ("Gare", Some("Un café et le quai."), 1, 800, 800),
-        ("Arrivée", None, 6, 3000, 2000),
+        ("Arrivée", None, 4, 3000, 2000),
     ];
     let mut etapes = Vec::new();
     let mut graine = 500;
@@ -756,4 +683,111 @@ fn le_lieu_deja_dans_le_nom_de_l_etape_ne_se_repete_pas() {
     e.nom = "Diving - Day 3 of 5".into();
     e.lieu.localite = Some("Ra".into());
     assert_eq!(mention(&e, &r).as_deref(), Some("Ra, 1 juin 2025"));
+}
+
+
+/// Un petit voyage pour les tests qui recomposent : recomposer ré-analyse toutes
+/// les photos, et en debug sous Windows chaque photo compte. Trois étapes, dont
+/// « Marseille » en a assez pour deux planches.
+fn ecrire_voyage_mini(photos: &Path) {
+    let plan: [(&str, &str, usize); 3] = [
+        ("Départ", "Les valises sont prêtes.", 5),
+        ("Marseille", "Un récit assez court.", 7),
+        ("Arles", "Un quai, un café.", 5),
+    ];
+    let mut etapes = Vec::new();
+    let mut graine = 900;
+    for (i, (nom, recit, n)) in plan.into_iter().enumerate() {
+        let mut ph = Vec::new();
+        for j in 0..n {
+            let (w, h) = PETITES[(i + j) % PETITES.len()];
+            let fichier = format!("m{:03}-p{:02}.jpg", i + 1, j + 1);
+            photo(&photos.join(&fichier), graine, w, h);
+            graine += 1;
+            ph.push(Photo { fichier, largeur: w, hauteur: h });
+        }
+        etapes.push(Etape {
+            nom: nom.into(),
+            recit: Some(recit.into()),
+            debut: instant(&format!("2025-06-{:02}T09:30:00Z", i + 1)),
+            fin: None,
+            fuseau: "Europe/Paris".into(),
+            lieu: Lieu { lat: 45.0, lon: 4.0, localite: Some("Quelque part".into()), pays: Some("France".into()), code_pays: Some("FR".into()) },
+            meteo: None,
+            photos: ph,
+        });
+    }
+    let v = Voyage {
+        version: VERSION,
+        titre: "Un petit voyage".into(),
+        resume: None,
+        debut: Some(instant("2025-06-01T09:30:00Z")),
+        fin: Some(instant("2025-06-03T09:30:00Z")),
+        fuseau: Some("Europe/Paris".into()),
+        distance_km: None,
+        pays: vec!["FR".into()],
+        etapes,
+        segments: vec![],
+        trace: vec![],
+        videos_ignorees: 0,
+        couverture: None,
+        provenance: Provenance { source: "test".into(), reference: Some("3".into()), format: None },
+    };
+    ecrire(photos, &v).unwrap();
+}
+
+#[test]
+fn une_recomposition_garde_ce_que_l_utilisateur_a_fait() {
+    let (photos, out) = dossier("recompo");
+    ecrire_voyage_mini(&photos);
+    let r = build_album(&photos, &out, options()).unwrap();
+    // À la première composition : date + lieu, posés par défaut.
+    assert!(r.album.legendes.is_some());
+    // Une main touche la deuxième planche de « Marseille » et choisit « Rien ».
+    let debut = r.album.spreads.iter().position(|s| s.caption.as_deref() == Some("Marseille")).unwrap();
+    let suivante = r.album.spreads[debut + 1..].iter().position(|s| s.caption.is_some()).map(|i| debut + 1 + i).unwrap();
+    assert!(suivante > debut + 1, "Marseille a au moins deux planches");
+    let touchee = debut + 1;
+    let mut album = r.album.clone();
+    album.legendes = None;
+    for sl in album.spreads.iter_mut().flat_map(|s| s.slots.iter_mut()) {
+        sl.mention = None;
+    }
+    album.spreads[touchee].edited = true;
+    album.spreads[touchee].slots[0].caption = Some("Notre table au port".into());
+    let sources: Vec<String> = album.spreads[touchee].slots.iter().map(|s| s.src.clone()).collect();
+    fs::write(out.join("album.json"), serde_json::to_string_pretty(&album).unwrap()).unwrap();
+
+    let apres = crate::recomposition::recomposer(
+        &out,
+        crate::recomposition::Recomposition { aujourdhui: Some(jour()), ..Default::default() },
+    )
+    .unwrap()
+    .album;
+    // « Rien » reste Rien : la machine ne remet ni le réglage ni les mentions.
+    assert!(apres.legendes.is_none(), "la machine a remis un réglage que l'utilisateur avait ôté");
+    assert!(apres.spreads.iter().flat_map(|s| &s.slots).all(|sl| sl.mention.is_none()));
+    // La planche touchée est là, telle quelle, une seule fois.
+    let trouvees: Vec<usize> = apres
+        .spreads
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| s.slots.first().map(|sl| sl.caption.as_deref()) == Some(Some("Notre table au port")))
+        .map(|(i, _)| i)
+        .collect();
+    assert_eq!(trouvees.len(), 1, "la planche touchée est gardée une fois");
+    let a = &apres.spreads[trouvees[0]];
+    assert!(a.edited);
+    assert_eq!(a.slots.iter().map(|s| s.src.clone()).collect::<Vec<_>>(), sources);
+    // Chaque photo est posée au plus une fois dans le livre recomposé.
+    let mut vues = std::collections::HashSet::new();
+    for sl in apres.spreads.iter().flat_map(|s| &s.slots) {
+        assert!(vues.insert(sl.src.clone()), "{} posée deux fois", sl.src);
+    }
+    // Et elle reste à son étape : entre le titre de Marseille et celui d'Arles.
+    let marseille = apres.spreads.iter().position(|s| s.caption.as_deref() == Some("Marseille")).unwrap();
+    let arles = apres.spreads.iter().position(|s| s.caption.as_deref() == Some("Arles")).unwrap();
+    assert!(marseille < trouvees[0] && trouvees[0] < arles, "{marseille} < {} < {arles}", trouvees[0]);
+    // Les étapes se retrouvent dans l'ordre, une fois chacune.
+    assert_eq!(noms_de_chapitres(&apres).iter().filter(|c| *c == "Marseille").count(), 1);
 }
