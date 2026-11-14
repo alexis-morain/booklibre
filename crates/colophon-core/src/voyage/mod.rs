@@ -14,6 +14,7 @@
 //! Le lecteur du lien public est à part ([`lien`]) : lui seul porte une
 //! adresse réseau, et la version Mac App Store ne l'appelle jamais.
 
+pub mod composition;
 pub mod lien;
 
 use chrono::{DateTime, Utc};
@@ -61,6 +62,11 @@ pub struct Voyage {
     /// en silence.
     #[serde(default)]
     pub videos_ignorees: u32,
+    /// Le nom de fichier de la photo de couverture de la source, quand elle
+    /// est dans le dossier (P-s2). Additif : un `voyage.json` d'avant ne
+    /// l'a pas, et la composition choisit alors comme pour tout dossier.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub couverture: Option<String>,
     pub provenance: Provenance,
 }
 
@@ -285,6 +291,7 @@ mod tests {
             segments: vec![Segment { mode: Some("flight".into()), de: Some(0), a: None, polyligne: vec![Point { lat: 0.1, lon: -0.2 }] }],
             trace: vec![PointDeTrace { lat: 45.0, lon: 4.0, instant: instant("2024-05-01T06:00:00+00:00") }],
             videos_ignorees: 2,
+            couverture: None,
             provenance: Provenance { source: "polarsteps-lien".into(), reference: Some("4242".into()), format: Some("api-62".into()) },
         }
     }

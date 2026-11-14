@@ -31,7 +31,7 @@ walkdir = "2"
 # rien d'OpenSSL. Licences auditées avant la première ligne, arbre compris.
 ureq = { version = "3.4", default-features = false, features = ["rustls"] }
 rusty-s3 = { version = "0.10", default-features = false, features = ["rustcrypto"] }
-jiff = { version = "0.2", default-features = false, features = ["std"] }
+jiff = { version = "0.2", default-features = false, features = ["std", "tzdb-bundle-always"] }
 
 [profile.release]
 opt-level = 3

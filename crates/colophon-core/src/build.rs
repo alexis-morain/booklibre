@@ -69,6 +69,11 @@ pub struct BuildOptions {
     /// création, porté par la recomposition comme `reglages`. `None` est le
     /// défaut, et l'album n'en garde aucune trace.
     pub legendes: Option<model::Legendes>,
+    /// Un album de voyage reçoit « date + lieu » sous la première photo de
+    /// chaque étape **à sa première composition seulement** (P-s2). Une
+    /// recomposition le met à `false` : `legendes: None` y veut dire « Rien »,
+    /// et un choix de l'utilisateur n'est jamais remis par la machine.
+    pub legendes_de_voyage_par_defaut: bool,
 }
 
 
@@ -91,6 +96,7 @@ impl Default for BuildOptions {
             aujourdhui: None,
             langue: crate::langue::Langue::Fr,
             legendes: None,
+            legendes_de_voyage_par_defaut: true,
         }
     }
 }
@@ -201,6 +207,10 @@ pub struct BuildReport {
     /// The alternatives composed beside the album, empty when none were
     /// asked for. Each is on disk as `album.<id>.json`.
     pub variantes: Vec<VarianteResume>,
+    /// Ce que la composition d'un voyage (`voyage.json`) a fait de ses étapes,
+    /// de leurs récits et de leurs émojis (P-s2). `None` : un dossier
+    /// ordinaire, rien à dire.
+    pub voyage: Option<crate::voyage::composition::Bilan>,
 }
 
 /// The reading half of a composition: scan, thumbnails, metadata, analysis,
@@ -422,7 +432,17 @@ fn ecarte_originales_editees(
 pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildReport> {
     let say = &opts.progress;
     let root = releve.racine.clone();
-    let title = opts.title.clone().unwrap_or_else(|| {
+    // Un `voyage.json` à côté des photos change la façon de découper : une
+    // étape est un chapitre (P-s2). Absent, tout ce qui suit est la
+    // composition d'avant, à l'octet.
+    let (voyage, refus_voyage) = match crate::voyage::composition::lecture(&root) {
+        crate::voyage::composition::Lecture::Voyage(v) => (Some(*v), None),
+        crate::voyage::composition::Lecture::Refus(r) => (None, Some(r)),
+        crate::voyage::composition::Lecture::Absent => (None, None),
+    };
+    let title = opts.title.clone().or_else(|| {
+        voyage.as_ref().map(|v| crate::voyage::composition::sans_emojis(&v.titre).0)
+    }).unwrap_or_else(|| {
         root.file_name()
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_else(|| "Album".into())
@@ -517,12 +537,17 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
     // it, so only the certain rejects apply and the spread budget follows
     // the photos that are actually there.
     let petit = photos.len() + rejected.len() < pipeline::PETIT_DOSSIER;
-    if petit {
+    if petit && voyage.is_none() {
         say(&format!(
             "petit dossier ({} photos) : seuls les rejets certains s'appliquent",
             photos.len()
         ));
     }
+
+    // Un voyage se compose d'un seul passage, toutes ses photos placées : ses
+    // vignettes n'ont pas d'EXIF, les filtres statistiques ne mesureraient que
+    // cela. Les rejets certains (illisible, panorama, définition) restent.
+    let petit = petit || voyage.is_some();
 
     // And a folder where the fingerprint is not the majority's — scanned
     // prints, a Takeout stripped of its sidecars — is not a phone dump with
@@ -599,7 +624,14 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         focal: focal_of(&p.path),
     }));
 
-    let (kept, dups) = pipeline::dedup(photos, petit);
+    // Le dédoublonnage trie par date de prise de vue : sur un voyage, l'ordre
+    // est celui des étapes, et les quasi-jumeaux d'une étape partent à
+    // `thin_twins` plus bas.
+    let (kept, dups) = if voyage.is_some() {
+        (photos, Vec::new())
+    } else {
+        pipeline::dedup(photos, petit)
+    };
     say(&format!("dedup: {} kept", kept.len()));
     discards.extend(dups.iter().map(|(lost, won)| model::Discard {
         src: rel(lost),
@@ -622,9 +654,49 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
     // album turns into a procession of solos.
     let max_chapters = (spreads_target / 4).clamp(4, 20);
 
-    let chapters = pipeline::chapters(kept);
-    let natural = chapters.len();
-    let mut base = pipeline::merge_chapters(chapters, max_chapters);
+    // Pour un voyage : une étape, un chapitre, ses photos dans l'ordre de
+    // l'étape. `etape_de_chapitre[k]` est le rang de l'étape du chapitre k.
+    let mut etape_de_chapitre: Vec<usize> = Vec::new();
+    let mut photos_absentes = 0usize;
+    let mut hors_etapes: Vec<PathBuf> = Vec::new();
+    let (natural, mut base) = if let Some(v) = &voyage {
+        let mut par_src: std::collections::HashMap<String, Photo> =
+            kept.into_iter().map(|p| (rel(&p.path), p)).collect();
+        let epinglees: std::collections::HashSet<&str> = opts
+            .pinned
+            .iter()
+            .flat_map(|(sp, _)| sp.slots.iter().map(|sl| sl.src.as_str()))
+            .collect();
+        let mut cs = Vec::with_capacity(v.etapes.len());
+        for (i, e) in v.etapes.iter().enumerate() {
+            let mut ph = Vec::new();
+            for f in &e.photos {
+                match par_src.remove(&f.fichier) {
+                    Some(p) => ph.push(p),
+                    // Écartée plus haut (définition, panorama) ou tenue par
+                    // une planche épinglée : on la sait ailleurs. Seule une
+                    // photo que le dossier n'a pas est absente.
+                    None if times.contains_key(&f.fichier) || epinglees.contains(f.fichier.as_str()) => {}
+                    None => photos_absentes += 1,
+                }
+            }
+            let debut = e.debut.naive_utc();
+            cs.push(pipeline::Chapter {
+                photos: ph,
+                start: debut,
+                end: e.fin.map_or(debut, |f| f.naive_utc()),
+            });
+            etape_de_chapitre.push(i);
+        }
+        // Des photos que le dossier a et qu'aucune étape ne nomme : ni
+        // posées, ni perdues en silence, elles vont à la réserve.
+        hors_etapes = par_src.into_values().map(|p| p.path).collect();
+        hors_etapes.sort();
+        (cs.len(), cs)
+    } else {
+        let chapters = pipeline::chapters(kept);
+        (chapters.len(), pipeline::merge_chapters(chapters, max_chapters))
+    };
     let twins: Vec<_> = base.iter_mut().flat_map(pipeline::thin_twins).collect();
     // Same-moment capping is a statistical filter: off on small folders,
     // where three frames of one minute may be the whole event.
@@ -675,6 +747,56 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         .aujourdhui
         .unwrap_or_else(|| crate::pdfx::stamp().date_naive());
 
+    // Ce que la composition d'un voyage utilise (P-s2) : le réglage des
+    // mentions, la mesure du texte dans la face de l'album (la même que
+    // l'émetteur et le linter), les étapes dont une planche gardée à la main
+    // porte déjà le titre, et le bilan de chaque composition.
+    let reglage_voyage = opts.legendes.unwrap_or_else(|| {
+        crate::voyage::composition::legendes_par_defaut(opts.langue)
+    });
+    // Le réglage que l'album portera : celui qu'on a demandé ; sinon, pour un
+    // voyage à sa première composition, le défaut ; sinon (« Rien »), aucun.
+    let legendes_album = opts
+        .legendes
+        .or_else(|| (voyage.is_some() && opts.legendes_de_voyage_par_defaut).then_some(reglage_voyage));
+    let face_voyage = crate::font::face_album(out, opts.police.as_ref().map(|p| p.fichier.as_str()));
+    let mesure_face = |t: &str, pt: f64| face_voyage.face.largeur_mm(t, pt);
+    let deja_ouvertes: std::collections::HashSet<String> = opts
+        .pinned
+        .iter()
+        .filter_map(|(sp, _)| sp.caption.clone())
+        .collect();
+    let resumes_voyage: std::cell::RefCell<Vec<Vec<crate::voyage::composition::Resume>>> =
+        std::cell::RefCell::new(Vec::new());
+    // Rang d'une photo dans le livre du voyage : (étape, 0 pour la page de
+    // texte, 1 + rang dans l'étape pour une photo). Les planches épinglées
+    // retrouvent ainsi leur place par l'ordre du voyage, pas par une date.
+    let ordre_voyage: std::collections::HashMap<&str, (usize, usize)> = voyage
+        .as_ref()
+        .map(|v| {
+            v.etapes
+                .iter()
+                .enumerate()
+                .flat_map(|(i, e)| {
+                    e.photos.iter().enumerate().map(move |(j, p)| (p.fichier.as_str(), (i, j + 1)))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let rang_de = |s: &model::Spread| -> Option<(usize, usize)> {
+        let v = voyage.as_ref()?;
+        match s.slots.first() {
+            Some(sl) => ordre_voyage.get(sl.src.as_str()).copied(),
+            None => {
+                let c = s.caption.as_deref()?;
+                v.etapes
+                    .iter()
+                    .position(|e| crate::voyage::composition::sans_emojis(&e.nom).0 == c)
+                    .map(|i| (i, 0))
+            }
+        }
+    };
+
     let compose_une = |densite: layout::Densite,
                        cible: usize|
      -> (model::Album, Vec<model::Discard>, usize, Ecart) {
@@ -706,26 +828,99 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
             }
 
             let mut composer = layout::Composer::avec_densite(&album, densite);
+            if voyage.is_some() {
+                composer = composer.avec_mosaique_de_secours();
+            }
             // Captions are worked out for the run of chapters at once, not one
             // by one: whether a place is worth naming depends on the chapter
             // before it.
-            let captions = chapter_captions(&trial, opts.langue);
+            let captions = if voyage.is_some() {
+                vec![None; trial.len()]
+            } else {
+                chapter_captions(&trial, opts.langue)
+            };
             let mut spreads: Vec<model::Spread> = Vec::new();
+            let mut resumes: Vec<crate::voyage::composition::Resume> = Vec::new();
             // A chapter the composer emptied keeps its title here: no blank
             // spread is made up for it, the report names it (1.1-a2).
             let mut vides: Vec<String> = Vec::new();
-            for (c, caption) in trial.iter().zip(captions) {
-                let titre = caption.clone().unwrap_or_default();
-                let faites = composer.compose(c, caption, &root);
+            // Le texte d'un voyage attend ses pages : une planche n'a jamais une
+            // page blanche, ses deux faces sont du texte ou un texte et des
+            // photos (`voyage::composition::Flux`).
+            let mut flux = crate::voyage::composition::Flux::default();
+            for (k, (c, caption)) in trial.iter().zip(captions).enumerate() {
+                let mut titre = caption.clone().unwrap_or_default();
+                let faites = if let Some(v) = &voyage {
+                    use crate::voyage::composition as vc;
+                    let e = &v.etapes[etape_de_chapitre[k]];
+                    let (nom, n1) = vc::sans_emojis(&e.nom);
+                    let (recit, n2) = match e.recit.as_deref() {
+                        Some(r) => {
+                            let (t, n) = vc::sans_emojis(r);
+                            (Some(t), n)
+                        }
+                        None => (None, 0),
+                    };
+                    let mention = legendes_album.and_then(|r| vc::mention(e, &r));
+                    let g = *composer.geometrie();
+                    let recit = recit.as_deref().map(str::trim).filter(|r| !r.is_empty()).map(String::from);
+                    let bloc = vc::Bloc { titre: nom.clone(), mention, recit: recit.clone() };
+                    let legende = Some(nom.clone()).filter(|n| !n.is_empty());
+                    let rang = resumes.len();
+                    let mut sp = Vec::new();
+                    let neuf = |placement| {
+                        vc::Resume::neuf(&nom, recit.as_deref(), n1 + n2, placement, &mesure_face)
+                    };
+                    if deja_ouvertes.contains(&nom) {
+                        // Une planche gardée à la main porte le titre : elle est
+                        // l'ouverture, les photos restantes se composent à la suite.
+                        flux.vider(&g, &mesure_face, &mut resumes, &mut sp);
+                        resumes.push(neuf(vc::Placement::PhotosSeules));
+                        if !c.photos.is_empty() {
+                            sp.extend(composer.compose(c, None, &root));
+                        }
+                    } else if composer.photos_posables(c, &root) > 0 {
+                        let placement = match &recit {
+                            None => vc::Placement::PhotosSeules,
+                            Some(_) if vc::poids(&bloc, &mesure_face) <= vc::lignes_pour_etre_court(&g) => {
+                                vc::Placement::ACote
+                            }
+                            Some(_) => vc::Placement::EnPage,
+                        };
+                        resumes.push(neuf(placement));
+                        if recit.is_some() {
+                            flux.ajouter(&g, &mesure_face, bloc, rang, false, &mut resumes, &mut sp);
+                        }
+                        flux.ouvrir(&mut composer, &mesure_face, &root, c, legende, &mut resumes, &mut sp);
+                    } else if recit.is_none() {
+                        // Ni photo posable ni récit : rien à poser, le bilan le dit.
+                        resumes.push(neuf(vc::Placement::Rien));
+                    } else {
+                        resumes.push(neuf(vc::Placement::PageDeTexte));
+                        flux.ajouter(&g, &mesure_face, bloc, rang, true, &mut resumes, &mut sp);
+                    }
+                    titre = nom;
+                    sp
+                } else {
+                    composer.compose(c, caption, &root)
+                };
                 if faites.is_empty() && !c.photos.is_empty() {
                     vides.push(titre);
                 }
                 spreads.extend(faites);
             }
+            // Le texte qui attend encore : la dernière planche du livre.
+            if voyage.is_some() {
+                let g = *composer.geometrie();
+                flux.vider(&g, &mesure_face, &mut resumes, &mut spreads);
+            }
             // What the spreads show, not what the chapters held: the composer
             // leaves a photo no cell prints in the reserve (1.1-a).
             let kept = spreads.iter().map(|s| s.slots.len()).sum();
             let ecart = (composer.trop_petites.len(), vides);
+            if voyage.is_some() {
+                resumes_voyage.borrow_mut().push(resumes);
+            }
 
             let got = spreads.len();
             let off = got.abs_diff(cible) * 100 / cible.max(1);
@@ -759,6 +954,16 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
             let mut last_at: Option<usize> = None;
             for (spread, anchor) in &opts.pinned {
                 let at = match anchor {
+                    // Un voyage range ses planches par l'ordre des étapes :
+                    // la date d'un fichier téléchargé ne dit rien du livre.
+                    _ if rang_de(spread).is_some() => {
+                        let r = rang_de(spread);
+                        album
+                            .spreads
+                            .iter()
+                            .position(|s| rang_de(s).zip(r).is_some_and(|(a, b)| a > b))
+                            .unwrap_or(album.spreads.len())
+                    }
                     Some(t) => album
                         .spreads
                         .iter()
@@ -784,6 +989,26 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
             photos_scanned,
             aujourdhui,
         ));
+        // Les dates et les lieux d'un voyage sont ceux de ses étapes : les
+        // vignettes n'ont pas d'EXIF, et la page de garde comme la couverture
+        // les lisent ici.
+        if let (Some(v), Some(f)) = (&voyage, album.colophon.as_mut()) {
+            let jours: Vec<chrono::NaiveDate> =
+                v.etapes.iter().filter_map(crate::voyage::composition::jour_local).collect();
+            f.debut = jours.iter().min().copied();
+            f.fin = jours.iter().max().copied();
+            let mut lieux: Vec<String> = Vec::new();
+            for e in &v.etapes {
+                if let Some(l) = crate::voyage::composition::lieu_nomme(e) {
+                    let l = crate::voyage::composition::sans_emojis(l).0;
+                    if !lieux.contains(&l) {
+                        lieux.push(l);
+                    }
+                }
+            }
+            lieux.truncate(6);
+            f.lieux = lieux;
+        }
         if let (true, Some(f)) = (opts.colophon, &album.colophon) {
             album.spreads.push(crate::colophon::spread(
                 f,
@@ -847,7 +1072,13 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                     })
                 })
                 .collect();
-            album.cover = photo_de_couverture(&dans_le_livre).map(|src| {
+            // La couverture de la source, quand le dossier l'a : celle que le
+            // voyageur avait choisie passe avant le choix de la machine.
+            let de_la_source = voyage
+                .as_ref()
+                .and_then(|v| v.couverture.as_deref())
+                .filter(|f| par_src.contains_key(*f));
+            album.cover = de_la_source.or_else(|| photo_de_couverture(&dans_le_livre)).map(|src| {
                 let focal = par_src[src].focal.unwrap_or_else(model::default_focal);
                 model::Cover {
                     title: title.clone(),
@@ -867,7 +1098,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         // Les dates et les lieux sous les photos, sur les planches de cette
         // proposition, épinglées comprises : une mention se dérive de la
         // photo, elle n'est jamais le travail de personne.
-        album.legendes = opts.legendes;
+        album.legendes = legendes_album;
         crate::legende::poser_mentions(&mut album);
 
         // Photos that survived curation but not this proposal's own spread
@@ -891,6 +1122,12 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                     focal: focal_of(&photo.path),
                 })
             })
+            .chain(hors_etapes.iter().map(|p| model::Discard {
+                src: rel(p),
+                reason: "hors_budget".into(),
+                kept: None,
+                focal: focal_of(p),
+            }))
             .collect();
 
         (album, hors_budget, photos_kept, ecart)
@@ -924,6 +1161,29 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         composees.push((spec, album, hors_budget, kept));
     }
     let (trop_petites, chapitres_vides) = ecart;
+    let bilan_voyage = match (&voyage, refus_voyage) {
+        (Some(v), _) => {
+            let rs = resumes_voyage.borrow();
+            let mut b = crate::voyage::composition::Bilan::de(
+                &title,
+                v.etapes.len(),
+                rs.first().map_or(&[][..], |r| &r[..]),
+            );
+            b.photos_absentes = photos_absentes;
+            b.photos_hors_etapes = hors_etapes.len();
+            b.couverture_de_la_source = v.couverture.as_deref().is_some_and(|f| {
+                composees[0].1.cover.as_ref().and_then(|c| c.photo.as_ref()).is_some_and(|p| p.src == f)
+            });
+            Some(b)
+        }
+        (None, Some(r)) => Some(crate::voyage::composition::Bilan { refus: Some(r), ..Default::default() }),
+        (None, None) => None,
+    };
+    if let Some(b) = &bilan_voyage {
+        for phrase in b.phrases() {
+            say(&phrase);
+        }
+    }
     // The first proposal is the one asked for, and the album this build
     // opens. It is written under its own name too: the choice screen has to
     // be able to come back to it after showing another.
@@ -1037,6 +1297,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
             trop_petites,
             chapitres_vides,
             variantes,
+            voyage: bilan_voyage,
         });
     }
     let cache = thumb::ThumbCache::new(out)?;
@@ -1093,6 +1354,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         trop_petites,
         chapitres_vides,
         variantes,
+        voyage: bilan_voyage,
     })
 }
 

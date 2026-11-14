@@ -17,6 +17,32 @@ sur la page des releases.
   out, photos under the print size, track present or not). `--voyage-lire
   <folder>` prints the same summary for an existing `voyage.json`. No screen
   yet, and the link reader is not in the Mac App Store edition.
+- A folder that holds a `voyage.json` now composes as a trip: one step is one
+  chapter, in the trip's order, and the photos follow their step. The text is
+  laid out by a few plain rules, in this order:
+  1. A step's name opens its text as a title; its date and place (never typed,
+     never from the gazetteer) sit under it, written once.
+  2. A short story heads the opening's left page with photos beneath it and on
+     the right page; a longer one fills the left page and the first photos go
+     on the right; a story longer than a page runs on to a second page, and
+     what does not fit two pages is named in the summary, never cut.
+  3. A step without usable photos (none, or none a page can print) waits for
+     the next step: its text joins the next opening, or a page that several
+     short steps share. The step stays a chapter in the book; only the layout
+     groups, and the summary counts the steps grouped.
+  4. No text spread has a blank right page, except the book's last one.
+  Emojis stay in `voyage.json`, are not printed, and are counted. The step's
+  date and place setting can be turned off like any other and a recomposition
+  keeps it off. Without a `voyage.json` the composition is unchanged to the
+  byte. A `voyage.json` that cannot be read leaves an ordinary composition and
+  says so.
+- The link reader now records the source's cover photo in `voyage.json`.
+
+### Changed
+
+- The linter measures a chapter's opening on the chapter's first photo, and in a
+  trip a text-only chapter is not counted by `chapitre_orphelin`; ordinary
+  albums are counted as before.
 
 ## [1.2.0] - 2026-10-31
 

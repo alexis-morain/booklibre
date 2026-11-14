@@ -171,6 +171,16 @@ impl Densite {
 /// density reads.
 pub const PHOTOS_PER_SPREAD_X10: usize = 32;
 
+/// Où le texte d'une ouverture se pose, quand il ouvre sur des photos.
+#[derive(Debug, Clone, Copy)]
+pub enum TexteOuvert {
+    /// En tête de la page de gauche, dans une bande de tant de millimètres.
+    Tete(u32),
+    /// Sur toute la page de gauche : les photos sont à droite.
+    Page,
+}
+
+#[derive(Clone)]
 pub struct Composer {
     /// Runs across the whole album so facing pages keep alternating between
     /// chapters, not just inside one.
@@ -185,6 +195,13 @@ pub struct Composer {
     /// Sources left in the reserve because no cell prints them at the floor,
     /// in the order met: the build report says so (1.1-a2).
     pub trop_petites: Vec<String>,
+    /// Un voyage importé n'a que des vignettes de 960 px (P-s2) : aucune photo
+    /// n'y tient seule sur une page à 250 ppi, et la seule façon de les
+    /// imprimer proprement est la mosaïque, dont les cases sont les plus
+    /// petites. Quand une photo ne tient seule nulle part, le Composer essaie
+    /// donc la plus grosse prise qui tienne avant de la laisser à la réserve.
+    /// Faux pour tout autre dossier : leur composition ne bouge pas d'un octet.
+    mosaique_de_secours: bool,
 }
 
 impl Composer {
@@ -200,7 +217,14 @@ impl Composer {
             geom: pdf::geometry(album),
             densite,
             trop_petites: Vec::new(),
+            mosaique_de_secours: false,
         }
+    }
+
+    /// Active la mosaïque de secours (voir le champ).
+    pub fn avec_mosaique_de_secours(mut self) -> Self {
+        self.mosaique_de_secours = true;
+        self
     }
 
     pub fn compose(
@@ -330,6 +354,21 @@ impl Composer {
                     // the reserve, where its alert says so (1.1-a). Measured:
                     // sharing a spread put it in a cell no smaller.
                     if !printable(p, &pdf::slots_for(&solo, 1, &self.geom)[0]) {
+                        if self.mosaique_de_secours {
+                            if let Some((idx, x)) = self.prise_qui_tient(&photos[i..]) {
+                                // Les photos retenues passent en tête, dans
+                                // l'ordre où le voyage les donne.
+                                let mut reste = photos.split_off(i);
+                                let mut tete: Vec<Photo> = Vec::with_capacity(reste.len());
+                                for (k, &j) in idx.iter().enumerate() {
+                                    tete.push(reste.remove(j - k));
+                                }
+                                tete.extend(reste);
+                                photos.extend(tete);
+                                take = idx.len();
+                                break x;
+                            }
+                        }
                         let p = photos.remove(i);
                         self.trop_petites.push(
                             p.path.strip_prefix(root).unwrap_or(&p.path).to_string_lossy().to_string(),
@@ -387,6 +426,213 @@ impl Composer {
             first.caption = Some(c.clone());
         }
         spreads
+    }
+
+    /// La géométrie d'une planche de cet album, pour qui pose du texte à côté
+    /// de ce que le Composer a posé (P-s2).
+    pub fn geometrie(&self) -> &SpreadGeometry {
+        &self.geom
+    }
+
+    /// Combien de photos de ce chapitre `compose` poserait, essai à blanc sur
+    /// un clone : le rythme et la réserve du vrai Composer ne bougent pas.
+    /// Zéro, et l'étape se traite comme une étape sans photo (P-s2).
+    pub fn photos_posables(&self, chapter: &Chapter, root: &std::path::Path) -> usize {
+        let mut essai = self.clone();
+        essai.compose(chapter, None, root).iter().map(|s| s.slots.len()).sum()
+    }
+
+    /// Fait passer en tête la photo qui doit ouvrir le chapitre, comme
+    /// `compose` le fait avant de découper (P-s2).
+    pub fn promouvoir_ouverture(&self, photos: &mut [Photo]) {
+        promote_opening(photos, &|p| self.holds_a_page(p));
+    }
+
+    /// La barre que la première photo d'un chapitre doit tenir pour le
+    /// linter (`ouverture_faible`) : le quartile haut des scores, quand le
+    /// chapitre a de quoi en avoir un.
+    pub fn barre_d_ouverture(photos: &[Photo]) -> Option<f64> {
+        (photos.len() >= OPENING_MIN_PHOTOS).then(|| {
+            quantile(
+                &photos.iter().map(|p| p.analysis.score()).collect::<Vec<_>>(),
+                OPENING_QUANTILE,
+            )
+        })
+    }
+
+    /// Une ouverture dont le **texte est à gauche, les photos à droite**.
+    /// `Tete(mm)` : une bande de `mm` millimètres en tête des deux pages porte
+    /// le texte (que l'appelant pose), les photos sont dessous, à gauche et à
+    /// droite (`g_<grille>_<grille>_t<mm>`). `Page` : le texte prend toute la
+    /// page de gauche, les photos sont à droite (`g_v_<grille>`). Les gabarits
+    /// sont des générés que `gabarit::spec` reconstruit de leur nom, aucun
+    /// n'entre au catalogue. La plus grande prise qui convient, avec les règles
+    /// d'`assign` (orientation, 250 ppi, visages) et la barre du linter pour la
+    /// première case ; `None` quand aucune ne convient.
+    pub fn ouverture_avec_texte(
+        &mut self,
+        photos: &mut Vec<Photo>,
+        barre: Option<f64>,
+        root: &std::path::Path,
+        texte: TexteOuvert,
+    ) -> Option<Spread> {
+        const RATIOS: [char; 6] = ['q', 'l', 'c', 'f', 'e', 'n'];
+        // Une page porte une grille de petites cases (une vignette de 960 px
+        // ne tient à 250 ppi que dans une case de moins de dix centimètres) ;
+        // la page de droite peut rester vide. `(code de dimensions, cases)`.
+        const GRILLES: [(&str, usize); 4] = [("1x1", 1), ("2x1", 2), ("1x2", 2), ("2x2", 4)];
+        let mut meilleur: Option<(f64, String, Vec<usize>, Vec<usize>)> = None;
+        let mut candidats: Vec<(usize, Vec<String>)> = Vec::new();
+        match texte {
+            // Le bloc en tête de la page de gauche, les photos dessous et à
+            // droite.
+            TexteOuvert::Tete(_) => {
+                for (gd, gn) in GRILLES {
+                    for rl in RATIOS {
+                        let gauche = format!("{gd}{rl}");
+                        // Jamais de page de droite vide : le texte et les
+                        // photos remplissent la planche.
+                        for (dd, dn) in GRILLES {
+                            if gn + dn <= 8 {
+                                let droites: Vec<String> = RATIOS
+                                    .iter()
+                                    .map(|rr| format!("g_{gauche}_{dd}{rr}"))
+                                    .collect();
+                                candidats.push((gn + dn, droites));
+                            }
+                        }
+                    }
+                }
+            }
+            // Le texte tient toute la page de gauche : les photos sont à
+            // droite, une page d'une grille de petites cases.
+            TexteOuvert::Page => {
+                for (dd, dn) in GRILLES {
+                    let droites: Vec<String> =
+                        RATIOS.iter().map(|rr| format!("g_v_{dd}{rr}")).collect();
+                    candidats.push((dn, droites));
+                }
+            }
+        }
+        // Quatre photos au plus d'abord, huit en repli : les tailles que le
+        // découpeur sait poser.
+        for n in [4usize, 3, 2, 1, 8, 6] {
+            if n > photos.len() || photos.len() - n == 1 {
+                continue;
+            }
+            // Les n premières photos, puis, quand elles ne tiennent aucune case
+            // (orientations mêlées, résolution), une prise de n photos de même
+            // orientation cherchée dans les seize premières, sans jumeaux.
+            let mut prises: Vec<Vec<usize>> = Vec::new();
+            if dup_prefix(&photos[..n]) >= n {
+                prises.push((0..n).collect());
+            }
+            let paysage = |p: &Photo| p.analysis.aspect() >= 1.0;
+            let mut meme: Vec<usize> = Vec::new();
+            for (j, p) in photos.iter().enumerate().take(16) {
+                if paysage(p) == paysage(&photos[0])
+                    && !meme.iter().any(|&k| spread_twins(p, &photos[k]))
+                {
+                    meme.push(j);
+                    if meme.len() == n {
+                        break;
+                    }
+                }
+            }
+            if meme.len() == n && !prises.contains(&meme) {
+                prises.push(meme);
+            }
+            for idx in prises {
+            let chunk: Vec<Photo> = idx.iter().map(|&j| photos[j].clone()).collect();
+            let chunk = &chunk[..];
+            for (cap, noms) in candidats.iter().filter(|(c, _)| *c == n) {
+                debug_assert_eq!(*cap, n);
+                for base in noms {
+                    let nom = match texte {
+                        TexteOuvert::Tete(mm) => format!("{base}_t{mm}"),
+                        TexteOuvert::Page => base.clone(),
+                    };
+                    let cells = pdf::slots_for(&nom, n, &self.geom);
+                    if cells.len() != n {
+                        continue;
+                    }
+                    let Some((order, score)) = assign(chunk, &cells) else { continue };
+                    if barre.is_some_and(|b| chunk[order[0]].analysis.score() < b) {
+                        continue;
+                    }
+                    if meilleur.as_ref().is_none_or(|m| score < m.0) {
+                        meilleur = Some((score, nom, order, idx.clone()));
+                    }
+                }
+            }
+            if meilleur.is_some() {
+                break;
+            }
+            }
+            if meilleur.is_some() {
+                break;
+            }
+        }
+        let (_, nom, order, idx) = meilleur?;
+        let n = idx.len();
+        let cells = pdf::slots_for(&nom, n, &self.geom);
+        let slots = (0..n)
+            .map(|c| {
+                let p = &photos[idx[order[c]]];
+                Slot::new(
+                    p.path.strip_prefix(root).unwrap_or(&p.path).to_string_lossy().to_string(),
+                    face_safe_focal(p, &cells[c]),
+                )
+            })
+            .collect();
+        let mut pris = idx.clone();
+        pris.sort_unstable_by(|a, b| b.cmp(a));
+        for j in pris {
+            photos.remove(j);
+        }
+        let spread = Spread {
+            template: nom.clone(),
+            slots,
+            caption: None,
+            text: None,
+            edited: false,
+            locked: false,
+            objets: Vec::new(),
+        };
+        let family = nom.trim_end_matches("_verso").to_string();
+        if self.family_run.0 == family {
+            self.family_run.1 += 1;
+        } else {
+            self.family_run = (family, 1);
+        }
+        self.since_break += 1;
+        self.beat += 1;
+        Some(spread)
+    }
+
+    /// Une prise de quatre photos de même orientation, cherchée dans les seize
+    /// suivantes, que `quad` (paysage) ou `quad_portrait` tient à 250 ppi : les
+    /// cases de 94 × 126 mm et de 121 × 90 mm sont les seules assez petites pour
+    /// une vignette de 960 px de côté court. Rend les rangs retenus (le premier
+    /// est la photo de tête) et le gabarit. Sans quasi-doublons, et sans laisser
+    /// une photo seule derrière.
+    fn prise_qui_tient(&self, photos: &[Photo]) -> Option<(Vec<usize>, (String, Vec<usize>))> {
+        let paysage = |p: &Photo| p.analysis.aspect() >= 1.0;
+        let sens = paysage(&photos[0]);
+        let mut idx: Vec<usize> = Vec::new();
+        for (j, p) in photos.iter().enumerate().take(16) {
+            if paysage(p) == sens && !idx.iter().any(|&k| spread_twins(p, &photos[k])) {
+                idx.push(j);
+                if idx.len() == 4 {
+                    break;
+                }
+            }
+        }
+        if idx.len() < 4 || photos.len() - 4 == 1 {
+            return None;
+        }
+        let chunk: Vec<Photo> = idx.iter().map(|&j| photos[j].clone()).collect();
+        self.pick(&chunk).map(|x| (idx, x))
     }
 
     /// Template name for a family, flipped onto the other page on odd beats

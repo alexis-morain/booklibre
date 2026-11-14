@@ -557,6 +557,33 @@ et `mas.sh` refuse un binaire qui porte `api.polarsteps.com` (comme pour les tar
 `--voyage-importer <URL> --voyage-vers <DOSSIER>`, `--voyage-lire <DOSSIER>`. Mesure :
 `docs/mesures/2026-11-12-le-lien-polarsteps.json`.
 
+**Composer un voyage (P-s2, `voyage::composition`, `build::composer`).** Un `voyage.json` valide
+à côté des photos change le découpage, rien d'autre : une étape est un chapitre, ses photos
+suivent l'étape (pas l'EXIF d'une vignette), `dedup`, parasites et `cap_moments` sont coupés
+(`thin_twins` et les rejets certains restent), un seul passage, toutes les photos placées.
+Sans `voyage.json`, le chemin est celui d'avant à l'octet (comparé au binaire de `main`) ;
+un fichier illisible ou trop récent compose en dossier ordinaire et le bilan le dit
+(`BuildReport::voyage`). Le récit est un bloc libre (`Contenu::Texte`, 11 pt, 135 mm).
+Le texte passe par un **flux** (`voyage::composition::Flux`) : le titre de l'étape (18 pt,
+`garde::TITRE_PT`), sa mention (date et lieu, écrite une fois) et son récit, empilés (`empiler`).
+Une étape sans photo posable (aucune, ou aucune que `compose` prenne) n'est qu'un texte : elle
+attend la suivante, et les textes courts se partagent une page ; le chapitre reste une étape dans
+le modèle, seule la mise en page regroupe (`Placement::Groupee`, `Bilan::etapes_groupees`).
+**Aucune planche de texte n'a une page blanche, sauf la dernière du livre** : une page finie
+attend, la planche s'écrit à deux faces (deux pages de texte, ou un texte à gauche et les
+premières photos de l'étape à droite). À l'ouverture d'une étape aux photos, un texte d'au plus
+une demi-page (`lignes_pour_etre_court`) est en tête de la page de gauche, photos dessous sur
+les deux pages (`Composer::ouverture_avec_texte`, `TexteOuvert::Tete`, gabarit généré
+`g_<grille>_<grille>_t<mm>` : `Spec::en_tete`) ; sinon il prend la page de gauche et les photos
+sont à droite (`g_v_<grille>`). Les cases sont petites (960 px ne tiennent à 250 ppi que sous dix
+centimètres de large). Un récit plus long qu'une page court sur la seconde ; au-delà de deux
+pages le bloc dépasse et le bilan nomme l'étape. La mention est celle de l'étape (`jiff`, fuseau
+de l'étape, `legende::mentions_du_voyage`) ; « date + lieu » n'est que le défaut de la
+**première** composition (`BuildOptions::legendes_de_voyage_par_defaut`, faux en recomposition :
+« Rien » reste Rien). Une planche épinglée se replace par l'ordre du voyage, et une étape dont une
+planche gardée porte déjà le titre ne refait ni titre ni page de récit. Le linter ne compte pas
+une page de texte d'un voyage dans `chapitre_orphelin`.
+
 ## Envoi, le dossier préparé et la commande
 
 **Envoi parle à qui fait un album, pas à un imprimeur** (A2, `EnvoiView.tsx`, `envoi.ts`).
