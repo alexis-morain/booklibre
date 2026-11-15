@@ -100,6 +100,9 @@ struct OpenedAlbum {
     /// ones. The sorting view derives "removed by hand" from what is here
     /// but neither in the album nor in curation.json.
     thumb_srcs: Vec<String>,
+    /// Un `voyage.json` lisible à côté des photos : c'est ce qui rend les cases
+    /// « Météo » et « Le voyage en chiffres » (P-s3).
+    voyage: bool,
 }
 
 /// What the composition just did, told in numbers: the front shows it once,
@@ -113,6 +116,9 @@ struct BuildBilan {
     chapters: usize,
     trop_petites: usize,
     chapitres_vides: Vec<String>,
+    /// Ce que la composition d'un voyage a fait de ses étapes (P-s3), absent
+    /// pour un dossier ordinaire.
+    voyage: Option<colophon_core::voyage::composition::Bilan>,
 }
 
 #[derive(Serialize)]
@@ -225,12 +231,17 @@ fn ouvrir(path: String, state: State<'_, AppState>, seance: bool) -> Result<Open
     *state.acces.lock().unwrap() = acces;
     let thumb_srcs = thumbs.keys().cloned().collect();
     *state.open.lock().unwrap() = Some(Opened { dir: dir.clone(), thumbs });
+    let voyage = matches!(
+        colophon_core::voyage::composition::lecture(Path::new(&album.root)),
+        colophon_core::voyage::composition::Lecture::Voyage(_)
+    );
     Ok(OpenedAlbum {
         album,
         dir: dir.to_string_lossy().to_string(),
         root_present,
         dossier_a_revoir,
         thumb_srcs,
+        voyage,
     })
 }
 
@@ -1150,6 +1161,7 @@ async fn build_album_from_folder(
             chapters: report.chapters,
             trop_petites: report.trop_petites,
             chapitres_vides: report.chapitres_vides,
+            voyage: report.voyage,
         },
         variantes: report.variantes,
     })
@@ -1392,6 +1404,122 @@ async fn photos_importer(
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+// ------------------------------------------------------------ le voyage (P-s3)
+//
+// Comme la photothèque : l'import produit un dossier (photos et `voyage.json`)
+// que `build_album_from_folder` compose ensuite. Le lecteur du lien n'existe
+// pas dans la version Mac App Store (règle 5.2.2) : ni la commande, ni l'appel,
+// ni l'adresse de l'API ne sont compilés, et `mas.sh` le prouve sur le binaire.
+
+/// Coche ou décoche la page « Le voyage en chiffres » d'un album déjà
+/// composé, sans rien recomposer (`--page-chiffres`). Rend l'album changé, ou
+/// celui qu'on lui a donné quand aucun `voyage.json` n'est à côté des photos.
+#[tauri::command]
+fn voyage_chiffres(mut album: Album, actif: bool, langue: String) -> Result<Album, String> {
+    let langue = langue_de(&langue)?;
+    colophon_core::voyage::chiffres::regler(&mut album, actif, langue);
+    Ok(album)
+}
+
+/// Pourquoi un import s'arrête, en un genre stable que l'écran traduit en
+/// phrase et en remède, et le message du moteur derrière.
+#[cfg(not(feature = "mas"))]
+#[derive(Serialize, Debug, PartialEq)]
+struct ErreurVoyage {
+    genre: &'static str,
+    detail: String,
+}
+
+#[cfg(not(feature = "mas"))]
+impl From<colophon_core::voyage::lien::Erreur> for ErreurVoyage {
+    fn from(e: colophon_core::voyage::lien::Erreur) -> Self {
+        ErreurVoyage { genre: e.genre(), detail: e.to_string() }
+    }
+}
+
+/// Ce que l'écran sait d'une adresse collée, sans aucun réseau.
+#[cfg(not(feature = "mas"))]
+#[derive(Serialize)]
+struct LienVoyage {
+    id: u64,
+    /// Le dossier proposé, comme pour la photothèque.
+    dossier: String,
+}
+
+#[cfg(not(feature = "mas"))]
+#[derive(Serialize, Debug)]
+struct RapportVoyage {
+    dossier: String,
+    titre: String,
+    bilan: colophon_core::voyage::Bilan,
+}
+
+/// Valide l'adresse localement et propose le dossier. Rien ne part sur le réseau.
+#[cfg(not(feature = "mas"))]
+#[tauri::command]
+fn voyage_analyser(url: String, app: tauri::AppHandle) -> Result<LienVoyage, ErreurVoyage> {
+    let lien = colophon_core::voyage::lien::analyser_url(&url)?;
+    let maison = maison(&app).map_err(|detail| ErreurVoyage { genre: "disque", detail })?;
+    let dossier = photos::dossier_propose(&maison, &format!("Voyage {}", lien.id));
+    Ok(LienVoyage { id: lien.id, dossier: dossier.to_string_lossy().to_string() })
+}
+
+/// L'import, sans Tauri : le dossier est celui que l'app propose, puis le
+/// lecteur du lien.
+#[cfg(not(feature = "mas"))]
+fn importer_un_voyage(
+    url: &str,
+    dossier: &Path,
+    maison: &Path,
+    transport: &dyn colophon_core::voyage::lien::Transport,
+    reglages: &colophon_core::voyage::lien::Reglages,
+    progres: &dyn Fn(usize, usize),
+    annuler: &dyn Fn() -> bool,
+) -> Result<RapportVoyage, ErreurVoyage> {
+    // L'adresse d'abord : un lien invalide ne dit rien du dossier.
+    colophon_core::voyage::lien::analyser_url(url)?;
+    if !dossier_d_import_valide(maison, dossier) {
+        return Err(ErreurVoyage {
+            genre: "dossier",
+            detail: format!("dossier d'import refusé : {} n'est pas un dossier que Booklibre propose", dossier.display()),
+        });
+    }
+    let voyage = colophon_core::voyage::lien::importer_annulable(url, dossier, transport, reglages, progres, annuler)?;
+    Ok(RapportVoyage { dossier: dossier.to_string_lossy().to_string(), titre: voyage.titre.clone(), bilan: voyage.bilan() })
+}
+
+/// Importe un voyage dans `dossier` (celui de `voyage_analyser`). Progression
+/// par `voyage:progres` (faites, total), annulation par `cancel_build` : un
+/// import repris plus tard ne redemande aucune photo déjà là.
+#[cfg(not(feature = "mas"))]
+#[tauri::command]
+async fn voyage_importer(
+    url: String,
+    dossier: String,
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<RapportVoyage, ErreurVoyage> {
+    let maison = maison(&app).map_err(|detail| ErreurVoyage { genre: "disque", detail })?;
+    state.cancel_build.store(false, Ordering::Relaxed);
+    let flag = state.cancel_build.clone();
+    let emitter = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        importer_un_voyage(
+            &url,
+            Path::new(&dossier),
+            &maison,
+            &colophon_core::voyage::lien::Reseau::default(),
+            &colophon_core::voyage::lien::Reglages::default(),
+            &move |fait, total| {
+                let _ = emitter.emit("voyage:progres", (fait, total));
+            },
+            &move || flag.load(Ordering::Relaxed),
+        )
+    })
+    .await
+    .map_err(|e| ErreurVoyage { genre: "disque", detail: e.to_string() })?
 }
 
 /// Abandon the print render in flight. The atomic temp + rename in core
@@ -2804,6 +2932,11 @@ pub fn run() {
             photos_demander,
             photos_dossier_propose,
             photos_importer,
+            voyage_chiffres,
+            #[cfg(not(feature = "mas"))]
+            voyage_analyser,
+            #[cfg(not(feature = "mas"))]
+            voyage_importer,
             reveal_data_dir
 
         ])
@@ -3429,5 +3562,68 @@ mod tests {
         assert_eq!(a_celles_de_la_personne, !cfg!(feature = "mas"), "{dirs:?}");
         #[cfg(not(target_os = "macos"))]
         let _ = a_celles_de_la_personne;
+    }
+
+    // ---- le voyage (P-s3) ---------------------------------------------------
+
+    #[cfg(not(feature = "mas"))]
+    mod voyage {
+        use super::*;
+        use colophon_core::voyage::lien::{Reglages, Reponse, Transport};
+        use std::cell::Cell;
+
+        /// Rend toujours le même statut, et compte les demandes.
+        struct Statut(u16, Cell<usize>);
+        impl Transport for Statut {
+            fn get(&self, _url: &str, _plafond: u64) -> Result<Reponse, String> {
+                self.1.set(self.1.get() + 1);
+                Ok(Reponse { statut: self.0, corps: Vec::new() })
+            }
+        }
+
+        const LIEN: &str = "https://www.polarsteps.com/quelquun/4242-un-voyage";
+
+        fn sans_attente() -> Reglages {
+            Reglages { pause: std::time::Duration::ZERO, attente: std::time::Duration::ZERO, ..Default::default() }
+        }
+
+        fn maison() -> PathBuf {
+            PathBuf::from("/Users/test")
+        }
+
+        fn propose() -> PathBuf {
+            photos::dossier_propose(&maison(), "Voyage 4242")
+        }
+
+        #[test]
+        fn un_lien_invalide_ne_touche_ni_le_reseau_ni_le_disque() {
+            let t = Statut(200, Cell::new(0));
+            let e = importer_un_voyage("https://example.com/x", &propose(), &maison(), &t, &sans_attente(), &|_, _| {}, &|| false).unwrap_err();
+            assert_eq!(e.genre, "url");
+            assert_eq!(t.1.get(), 0);
+        }
+
+        #[test]
+        fn un_dossier_que_l_app_n_a_pas_propose_est_refuse_avant_le_reseau() {
+            let t = Statut(200, Cell::new(0));
+            for d in ["/Users/test/Documents", "/Users/test/Pictures/Colophon/../x", "/etc"] {
+                let e = importer_un_voyage(LIEN, Path::new(d), &maison(), &t, &sans_attente(), &|_, _| {}, &|| false).unwrap_err();
+                assert_eq!(e.genre, "dossier", "{d}");
+            }
+            assert_eq!(t.1.get(), 0);
+        }
+
+        #[test]
+        fn un_voyage_prive_se_dit_sans_nouvelle_tentative_et_un_5xx_se_retente() {
+            let t = Statut(404, Cell::new(0));
+            let e = importer_un_voyage(LIEN, &propose(), &maison(), &t, &sans_attente(), &|_, _| {}, &|| false).unwrap_err();
+            assert_eq!(e.genre, "prive");
+            assert!(e.detail.contains("lien de partage"), "{}", e.detail);
+            assert_eq!(t.1.get(), 1);
+            let t = Statut(503, Cell::new(0));
+            let e = importer_un_voyage(LIEN, &propose(), &maison(), &t, &sans_attente(), &|_, _| {}, &|| false).unwrap_err();
+            assert_eq!(e.genre, "indisponible");
+            assert_eq!(t.1.get(), 3);
+        }
     }
 }
