@@ -64,6 +64,27 @@ pub fn voyage_de(album: &crate::model::Album) -> Option<Voyage> {
     crate::voyage::lire(std::path::Path::new(&album.root)).ok()
 }
 
+/// Le dessin de rendu de chaque carte de l'album, par plage : `"debut-fin"`.
+/// C'est ce que l'écran lit, du même `dessiner` que le PDF, et il n'en dessine
+/// jamais d'autre. Une plage que le voyage ne tient plus est absente : l'écran
+/// la dit vide, comme le prévol.
+pub fn dessins_de_l_album(album: &crate::model::Album) -> std::collections::BTreeMap<String, Dessin> {
+    let mut sortie = std::collections::BTreeMap::new();
+    let Some(voyage) = voyage_de(album) else { return sortie };
+    for o in album.spreads.iter().flat_map(|s| s.objets.iter()) {
+        if let crate::model::Contenu::Carte { debut, fin } = o.contenu {
+            let cle = format!("{debut}-{fin}");
+            if sortie.contains_key(&cle) {
+                continue;
+            }
+            if let Ok(d) = dessiner(&voyage, debut..fin) {
+                sortie.insert(cle, d.pour_le_rendu());
+            }
+        }
+    }
+    sortie
+}
+
 /// L'actif compilé, embarqué.
 pub const ACTIF: &[u8] = include_bytes!("../../assets/carte/carte.bin");
 
@@ -353,9 +374,9 @@ pub fn longitude_mediane(lons: &[f64]) -> f64 {
 }
 
 /// Le centre d'une carte du monde : l'antipode du milieu du plus grand vide de
-/// longitudes entre les points (étapes et tracé). Les points tiennent alors du
-/// même côté de la couture, qui tombe là où le voyage n'est jamais allé ; à
-/// égalité de deux vides, le plus à l'ouest.
+/// longitudes entre les points. Les points tiennent alors du même côté de la
+/// couture, qui tombe là où personne n'a dormi ; à égalité de deux vides, le
+/// plus à l'ouest.
 pub fn centre_du_monde(points: &[P]) -> f64 {
     let mut lons: Vec<f64> = points.iter().map(|&(_, lon)| envelopper(lon)).collect();
     lons.sort_by(|a, b| a.partial_cmp(b).unwrap());
@@ -551,13 +572,16 @@ pub fn dessiner(voyage: &Voyage, plage: Range<usize>) -> Result<Dessin, Erreur> 
         (niveau, lat_mid)
     };
     // Une ville ou une région se centre sur la médiane des étapes. Le monde
-    // place sa couture au milieu du plus grand vide de longitudes entre les
-    // points (P-s5) : la médiane, elle, tombait au milieu des États-Unis sur
-    // le voyage réel, entre deux villes visitées.
+    // place sa couture au milieu du plus grand vide de longitudes **entre les
+    // étapes** (P-s5) : la médiane, elle, tombait au milieu des États-Unis sur
+    // le voyage réel, entre deux villes visitées. Les étapes seules : un tour
+    // du monde a des vols dans tous les vides, et si le tracé comptait, la
+    // couture tomberait n'importe où ; ce qu'elle traverse alors est un
+    // trajet, coupé et ramené de chaque côté, jamais une ville.
     let mut lon0 = longitude_mediane(&lons);
     let (mut niveau, mut lat_mid) = etendue(lon0);
     if niveau == Niveau::Monde {
-        lon0 = centre_du_monde(&geo);
+        lon0 = centre_du_monde(&etapes.iter().map(|e| (e.lieu.lat, e.lieu.lon)).collect::<Vec<P>>());
         (niveau, lat_mid) = etendue(lon0);
     }
     let proj = match niveau {

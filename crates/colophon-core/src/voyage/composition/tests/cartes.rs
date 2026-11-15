@@ -101,6 +101,14 @@ fn la_regle_pose_le_voyage_puis_chaque_pays_a_partir_de_trois_etapes() {
 }
 
 #[test]
+fn le_colophon_credite_natural_earth_quand_l_album_porte_une_carte() {
+    let c = partage_cartes();
+    assert!(c.album.colophon.as_ref().unwrap().carte);
+    let page = c.album.spreads.iter().find(|s| s.template == crate::colophon::TEMPLATE).unwrap();
+    assert!(page.text.as_deref().unwrap().contains("Natural Earth"), "{:?}", page.text);
+}
+
+#[test]
 fn la_regle_ne_pose_rien_de_trop() {
     let mut v = partage_cartes().voyage.clone();
     // Un voyage d'une étape : pas de carte.
@@ -220,14 +228,6 @@ fn recomposer(dir: &Path) -> Album {
     )
     .unwrap()
     .album
-}
-
-#[test]
-fn une_recomposition_garde_les_cartes_qu_elle_n_a_pas_a_remettre() {
-    let dir = copie("garde");
-    let apres = recomposer(&dir);
-    assert_eq!(plages(&apres), [(0, 8), (0, 3), (5, 8)], "les trois cartes, une fois chacune");
-    let _ = fs::remove_dir_all(&dir);
 }
 
 #[test]

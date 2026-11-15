@@ -2102,6 +2102,7 @@ mod tests {
                 lieux: Vec::new(),
                 appareils: Vec::new(),
                 compose_le: chrono::NaiveDate::from_ymd_opt(2026, 8, 17).unwrap(),
+                carte: false,
             },
             avec.trim_mm,
             150.0,
@@ -2124,6 +2125,7 @@ mod tests {
             lieux: Vec::new(),
             appareils: Vec::new(),
             compose_le: chrono::NaiveDate::from_ymd_opt(2026, 8, 17).unwrap(),
+            carte: false,
         };
         garde.spreads.insert(0, crate::garde::spread("Corse", &f, 190.0, crate::langue::Langue::Fr));
         let d = check(&garde, pr, &dims, &FichiersPoses::default())

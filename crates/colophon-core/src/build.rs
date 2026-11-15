@@ -1046,6 +1046,12 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
             lieux.truncate(6);
             f.lieux = lieux;
         }
+        if let Some(f) = album.colophon.as_mut() {
+            f.carte = album
+                .spreads
+                .iter()
+                .any(|s| s.objets.iter().any(|o| plage_de_carte(o).is_some()));
+        }
         if let (true, Some(f)) = (opts.colophon, &album.colophon) {
             album.spreads.push(crate::colophon::spread(
                 f,

@@ -2054,6 +2054,27 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    /// Écrit dans `COLOPHON_CARTE_PDF` le PDF d'une carte du Pacifique (la
+    /// couture du monde tombe sur l'Afrique et l'Europe : la terre y est coupée
+    /// en deux moitiés qui se touchent), pour le lire dans un vrai lecteur :
+    /// `pdftoppm`, pas notre moteur. Les PNG sont l'affaire de l'œil.
+    #[test]
+    #[ignore = "écrit un PDF pour le lecteur : COLOPHON_CARTE_PDF=<dossier>"]
+    fn le_pdf_du_pacifique_pour_le_lecteur() {
+        let Ok(sortie) = std::env::var("COLOPHON_CARTE_PDF") else { return };
+        let dir = dossier_de_voyage("pacifique");
+        let mut v = crate::voyage::lire(&dir).unwrap();
+        for (e, (lat, lon)) in v.etapes.iter_mut().zip([(34.05, -118.24), (-17.80, 177.42), (-36.85, 174.76)]) {
+            e.lieu = crate::voyage::Lieu { lat, lon, localite: None, pays: None, code_pays: None };
+        }
+        crate::voyage::ecrire(&dir, &v).unwrap();
+        let obj = crate::model::Objet { x: 6.0, y: 8.0, w: 400.0, h: 400.0 / 2.0, ..carte_libre(0.0, 3) };
+        let (_, _, octets) = pdf_de_carte(&dir, obj);
+        std::fs::create_dir_all(&sortie).unwrap();
+        std::fs::write(std::path::Path::new(&sortie).join("pacifique.pdf"), octets).unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     /// Une carte tournée pose **la même matrice** qu'un bloc et qu'un ornement
     /// au même angle (`coefficients_rotation`), puis la découpe : la boîte
     /// tourne, et ce qui la déborde est coupé avec elle.

@@ -567,3 +567,37 @@ fn un_seul_point_ou_aucun_vide_ne_fait_pas_n_importe_quoi() {
     let c = centre_du_monde(&[(0.0, 0.0), (0.0, 180.0)]);
     assert!(c.abs() <= 180.0);
 }
+
+/// Le voyage réel de P-s5 en petit : Chicago puis San Francisco, le Pacifique,
+/// l'Asie, l'Afrique, l'Europe, le Pérou — **un tour du monde, des vols dans
+/// tous les vides**. Avec la médiane des étapes, la couture tombait entre les
+/// deux villes des États-Unis (mesuré : centre à 73,4° E sur le vrai voyage).
+/// Le tracé ne doit pas compter : sinon ses vols comblent chaque vide et la
+/// couture n'a plus aucune raison de tomber à l'Atlantique.
+#[test]
+fn un_tour_du_monde_ne_coupe_pas_ses_etapes_entre_deux_villes_voisines() {
+    let v = voyage(
+        vec![
+            ("Chicago", 41.88, -87.63),
+            ("San Francisco", 37.77, -122.42),
+            ("Nadi", -17.80, 177.42),
+            ("Sydney", -33.87, 151.21),
+            ("Colombo", 6.93, 79.86),
+            ("Arusha", -3.39, 36.68),
+            ("Istanbul", 41.01, 28.98),
+            ("Oslo", 59.91, 10.75),
+            ("Lima", -12.05, -77.04),
+        ],
+        vec![],
+        vec![],
+    );
+    let d = dessiner(&v, 0..9).unwrap();
+    assert_eq!(d.niveau, Niveau::Monde);
+    // La couture est dans l'Atlantique : entre Oslo (10,75° E) et Lima (77° O).
+    let couture = geometrie::envelopper(d.projection.lon0() + 180.0);
+    assert!(couture < 10.75 && couture > -77.04, "couture à {couture}° E");
+    // Chicago et San Francisco sont voisines sur la page, pas aux deux bords.
+    let (chicago, sf) = (d.reperes[0], d.reperes[1]);
+    assert!((chicago.x - sf.x).abs() < 0.3 * d.viewbox[2], "{} mm entre les deux villes", (chicago.x - sf.x).abs());
+    dans_le_cadre(&d);
+}
