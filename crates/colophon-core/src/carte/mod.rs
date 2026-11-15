@@ -52,6 +52,18 @@ use serde::Serialize;
 use std::ops::Range;
 use std::sync::OnceLock;
 
+/// Le voyage d'un album : `voyage.json` à côté de ses photos (`album.root`),
+/// lu seulement si une planche porte une carte. `None` quand l'album n'en
+/// porte aucune, ou quand le fichier manque ou ne se lit pas : une carte sans
+/// voyage ne dessine rien, et le prévol le dit.
+pub fn voyage_de(album: &crate::model::Album) -> Option<Voyage> {
+    let porte = album.spreads.iter().any(|s| s.objets.iter().any(|o| matches!(o.contenu, crate::model::Contenu::Carte { .. })));
+    if !porte {
+        return None;
+    }
+    crate::voyage::lire(std::path::Path::new(&album.root)).ok()
+}
+
 /// L'actif compilé, embarqué.
 pub const ACTIF: &[u8] = include_bytes!("../../assets/carte/carte.bin");
 
@@ -90,6 +102,9 @@ pub enum Role {
     Trace,
     /// Le tracé aérien : arcs de grand cercle.
     Vol,
+    /// Les étapes, en petits disques (P-s5) : jamais produit par
+    /// [`dessiner`], ajouté au dessin de rendu par [`Dessin::pour_le_rendu`].
+    Reperes,
 }
 
 /// Comment un calque se pose. Les mesures sont en mm **à la taille du dessin**
@@ -112,6 +127,31 @@ impl Role {
             Role::Cotes => Style::Tracer { epaisseur_mm: 0.15, pointille: None },
             Role::Trace => Style::Tracer { epaisseur_mm: 0.50, pointille: None },
             Role::Vol => Style::Tracer { epaisseur_mm: 0.40, pointille: Some([1.2, 0.9]) },
+            Role::Reperes => Style::Remplir,
+        }
+    }
+
+    /// L'encre du calque, `#rrggbb`. **Elle est ici et nulle part ailleurs** :
+    /// le PDF la lit, et l'écran la lit du dump, comme les chemins.
+    pub fn encre(self) -> &'static str {
+        match self {
+            Role::Terre => "#f1ead8",
+            Role::Lacs => "#cfe3ee",
+            Role::Rivieres => "#8fb4cc",
+            Role::Frontieres => "#b9a98f",
+            Role::Cotes => "#6b7f8c",
+            Role::Trace | Role::Vol | Role::Reperes => "#c0392b",
+        }
+    }
+
+    /// Le contour de même encre qu'un calque rempli porte, en mm à la taille
+    /// du dessin. La terre est coupée à l'antiméridien en deux moitiés qui se
+    /// touchent : un lecteur anti-crénelé laisse entre elles un filet de
+    /// papier, et un contour de la couleur de la terre le recouvre.
+    pub fn contour_mm(self) -> Option<f64> {
+        match self {
+            Role::Terre => Some(0.12),
+            _ => None,
         }
     }
 
@@ -124,7 +164,17 @@ impl Role {
 pub struct Calque {
     pub role: Role,
     pub style: Style,
+    /// `#rrggbb`, celle de [`Role::encre`].
+    pub encre: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contour_mm: Option<f64>,
     pub chemins: Vec<Chemin>,
+}
+
+impl Calque {
+    pub fn de(role: Role, chemins: Vec<Chemin>) -> Self {
+        Calque { role, style: role.style(), encre: role.encre(), contour_mm: role.contour_mm(), chemins }
+    }
 }
 
 /// Une étape posée sur la carte, en mm.
@@ -171,7 +221,48 @@ fn r3(v: f64) -> f64 {
     (v * 1000.0).round() / 1000.0
 }
 
+/// Le rayon d'un repère d'étape, en mm à la taille du dessin.
+pub const REPERE_RAYON_MM: f64 = 0.9;
+
 impl Dessin {
+    /// Le dessin tel que les deux rendus le posent : celui de [`dessiner`],
+    /// plus un dernier calque, les étapes en disques. Les repères restent des
+    /// points dans `dessiner` (et dans ses empreintes d'or) ; ils deviennent
+    /// des chemins ici, **une seule fois**, pour que le PDF et l'écran
+    /// n'aient à interpréter rien d'autre qu'un calque.
+    pub fn pour_le_rendu(mut self) -> Dessin {
+        const K: f64 = 0.552_284_749_8; // le quart de cercle en cubiques
+        let r = REPERE_RAYON_MM;
+        let chemins: Vec<Chemin> = self
+            .reperes
+            .iter()
+            .map(|p| {
+                let (x, y) = (p.x, p.y);
+                let c = K * r;
+                Chemin {
+                    segments: vec![
+                        Segment::Vers { x: x + r, y },
+                        Segment::Courbe { x1: x + r, y1: y + c, x2: x + c, y2: y + r, x, y: y + r },
+                        Segment::Courbe { x1: x - c, y1: y + r, x2: x - r, y2: y + c, x: x - r, y },
+                        Segment::Courbe { x1: x - r, y1: y - c, x2: x - c, y2: y - r, x, y: y - r },
+                        Segment::Courbe { x1: x + c, y1: y - r, x2: x + r, y2: y - c, x: x + r, y },
+                        Segment::Ferme,
+                    ],
+                    evenodd: false,
+                }
+            })
+            .collect();
+        if !chemins.is_empty() {
+            self.calques.push(Calque::de(Role::Reperes, chemins));
+        }
+        self
+    }
+
+    /// Le rapport largeur/hauteur du dessin, que la boîte d'une carte garde.
+    pub fn rapport(&self) -> f64 {
+        self.viewbox[2] / self.viewbox[3]
+    }
+
     /// Tous les points de tous les chemins, et les repères.
     pub fn points(&self) -> impl Iterator<Item = (f64, f64)> + '_ {
         let chemins = self.calques.iter().flat_map(|c| c.chemins.iter()).flat_map(|c| c.segments.iter()).filter_map(|s| match *s {
@@ -259,6 +350,29 @@ pub fn longitude_mediane(lons: &[f64]) -> f64 {
         }
     }
     meilleur.1
+}
+
+/// Le centre d'une carte du monde : l'antipode du milieu du plus grand vide de
+/// longitudes entre les points (étapes et tracé). Les points tiennent alors du
+/// même côté de la couture, qui tombe là où le voyage n'est jamais allé ; à
+/// égalité de deux vides, le plus à l'ouest.
+pub fn centre_du_monde(points: &[P]) -> f64 {
+    let mut lons: Vec<f64> = points.iter().map(|&(_, lon)| envelopper(lon)).collect();
+    lons.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    lons.dedup();
+    let Some(&premier) = lons.first() else { return 0.0 };
+    // Le vide qui suit chaque longitude, en tournant ; le dernier boucle sur le premier.
+    let (mut meilleur, mut debut) = (f64::MIN, premier);
+    for (i, &l) in lons.iter().enumerate() {
+        let suivante = lons.get(i + 1).copied().unwrap_or(premier + 360.0);
+        let vide = suivante - l;
+        if vide > meilleur + 1e-9 {
+            meilleur = vide;
+            debut = l;
+        }
+    }
+    let couture = debut + meilleur / 2.0;
+    envelopper(couture + 180.0)
 }
 
 /// Le cadre : du plan de la projection aux millimètres.
@@ -364,7 +478,7 @@ impl Fond<'_> {
                 }
             }
         }
-        Ok((!chemins.is_empty()).then(|| Calque { role, style: role.style(), chemins }))
+        Ok((!chemins.is_empty()).then(|| Calque::de(role, chemins)))
     }
 }
 
@@ -409,31 +523,43 @@ pub fn dessiner(voyage: &Voyage, plage: Range<usize>) -> Result<Dessin, Erreur> 
 
     // Le centre, puis le tracé en géographie.
     let lons: Vec<f64> = etapes.iter().map(|e| e.lieu.lon).collect();
-    let lon0 = longitude_mediane(&lons);
     let pieces = trace::pieces(voyage, &plage);
-
-    // L'étendue, en kilomètres, sur le monde enroulé autour du centre.
     let mut geo: Vec<P> = etapes.iter().map(|e| (e.lieu.lat, e.lieu.lon)).collect();
     geo.extend(pieces.iter().flat_map(|p| p.points.iter().copied()));
-    let (mut lmin, mut lmax, mut amin, mut amax) = (f64::MAX, f64::MIN, f64::MAX, f64::MIN);
-    for &(lat, lon) in &geo {
-        let rel = envelopper(lon - lon0);
-        lmin = lmin.min(rel);
-        lmax = lmax.max(rel);
-        amin = amin.min(lat);
-        amax = amax.max(lat);
-    }
-    let lat_mid = (amin + amax) / 2.0;
-    let largeur_km = (lmax - lmin) * 111.195 * lat_mid.to_radians().cos();
-    let hauteur_km = (amax - amin) * 111.195;
-    let diagonale = largeur_km.hypot(hauteur_km);
-    let niveau = if diagonale < VILLE_KM {
-        Niveau::Ville
-    } else if diagonale < REGION_KM {
-        Niveau::Region
-    } else {
-        Niveau::Monde
+
+    // L'étendue, en kilomètres, sur le monde enroulé autour d'un centre.
+    let etendue = |lon0: f64| -> (Niveau, f64) {
+        let (mut lmin, mut lmax, mut amin, mut amax) = (f64::MAX, f64::MIN, f64::MAX, f64::MIN);
+        for &(lat, lon) in &geo {
+            let rel = envelopper(lon - lon0);
+            lmin = lmin.min(rel);
+            lmax = lmax.max(rel);
+            amin = amin.min(lat);
+            amax = amax.max(lat);
+        }
+        let lat_mid = (amin + amax) / 2.0;
+        let largeur_km = (lmax - lmin) * 111.195 * lat_mid.to_radians().cos();
+        let hauteur_km = (amax - amin) * 111.195;
+        let diagonale = largeur_km.hypot(hauteur_km);
+        let niveau = if diagonale < VILLE_KM {
+            Niveau::Ville
+        } else if diagonale < REGION_KM {
+            Niveau::Region
+        } else {
+            Niveau::Monde
+        };
+        (niveau, lat_mid)
     };
+    // Une ville ou une région se centre sur la médiane des étapes. Le monde
+    // place sa couture au milieu du plus grand vide de longitudes entre les
+    // points (P-s5) : la médiane, elle, tombait au milieu des États-Unis sur
+    // le voyage réel, entre deux villes visitées.
+    let mut lon0 = longitude_mediane(&lons);
+    let (mut niveau, mut lat_mid) = etendue(lon0);
+    if niveau == Niveau::Monde {
+        lon0 = centre_du_monde(&geo);
+        (niveau, lat_mid) = etendue(lon0);
+    }
     let proj = match niveau {
         Niveau::Ville => Projection::Mercator { lon0 },
         Niveau::Region => Projection::Equirectangulaire { lon0, lat_ref: lat_mid },
@@ -515,7 +641,7 @@ pub fn dessiner(voyage: &Voyage, plage: Range<usize>) -> Result<Dessin, Erreur> 
     for role in [Role::Trace, Role::Vol] {
         let chemins: Vec<Chemin> = simplifie.iter().filter(|(r, _)| *r == role).map(|(_, p)| chemin(p, false)).collect();
         if !chemins.is_empty() {
-            calques.push(Calque { role, style: role.style(), chemins });
+            calques.push(Calque::de(role, chemins));
         }
     }
 

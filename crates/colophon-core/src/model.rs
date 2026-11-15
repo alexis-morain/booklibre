@@ -284,6 +284,15 @@ pub enum Contenu {
     /// `pack` travels beside `id` so a second pack can arrive one day without
     /// identifiers having to be unique across packs.
     Ornement { pack: String, id: String },
+    /// La carte d'un voyage (P-s5) : les étapes `debut..fin` du `voyage.json`
+    /// qui est à côté des photos de l'album. **Le contenu ne porte que la
+    /// plage** : jamais un chemin, jamais une projection. Le dessin se recalcule,
+    /// de façon déterministe, depuis le voyage et l'actif embarqué
+    /// ([`crate::carte::dessiner`]), comme celui d'un ornement se relit du
+    /// pack. La boîte garde le rapport du dessin, pour la même raison.
+    ///
+    /// `fin` est exclue, comme dans une plage Rust.
+    Carte { debut: usize, fin: usize },
 }
 
 /// Where a wrapped line sits inside the box it was wrapped to.
@@ -315,7 +324,7 @@ impl Objet {
     pub fn police_texte(&self) -> Option<&Police> {
         match self.contenu {
             Contenu::Texte { .. } => self.police.as_ref(),
-            Contenu::Ornement { .. } => None,
+            Contenu::Ornement { .. } | Contenu::Carte { .. } => None,
         }
     }
 
@@ -330,7 +339,7 @@ impl Objet {
             // An ornament sets no line. Zero rather than an `Option`: every
             // caller of this asks "how far down is the next baseline", and an
             // ornament's answer is "there is no next baseline".
-            Contenu::Ornement { .. } => 0.0,
+            Contenu::Ornement { .. } | Contenu::Carte { .. } => 0.0,
         }
     }
 }
@@ -475,7 +484,12 @@ pub fn default_zoom() -> f64 {
 /// such a file instead of opening it and dropping them at the next save.
 /// That refusal is [`crate::build::SchemaTropRecent`], and it fires on any
 /// version above this one, not on 3 in particular.
-pub const SCHEMA: u32 = 3;
+///
+/// 4 means **this file may carry a map** ([`Contenu::Carte`]), and it is the
+/// same kind of step as 3: nothing is read differently, the 3 → 4 step is a
+/// stamp, and what the bump buys is the refusal by a build that would
+/// otherwise drop the map at the next save.
+pub const SCHEMA: u32 = 4;
 
 /// One schema-1 `focal`, converted into a schema-2 `focal`.
 ///

@@ -219,7 +219,7 @@ fn deplacer(role: &mut Role, dx: f64) {
         | Role::ChapterCaption { at, .. }
         | Role::Text { at, .. }
         | Role::FreeText { at, .. } => at.x += dx,
-        Role::Photo { .. } | Role::Ornement { .. } => {}
+        Role::Photo { .. } | Role::Ornement { .. } | Role::Carte { .. } => {}
     }
 }
 
