@@ -556,9 +556,19 @@ pub(crate) fn compteurs_avec_face<'f>(
 
     // -- chapitres : délimités par les légendes posées à la composition
     let chapters = chapter_ranges(album);
+    let est_voyage = matches!(
+        crate::voyage::composition::lecture(Path::new(&album.root)),
+        crate::voyage::composition::Lecture::Voyage(_)
+    );
     let orphelins = chapters
         .iter()
-        .filter(|r| r.len() == 1)
+        // Dans un album de voyage (`voyage.json` à côté des photos), la page
+        // de texte d'une étape sans photo est un chapitre d'une planche voulu
+        // (P-s2), pas un chapitre que le Composer a laissé maigre. Partout
+        // ailleurs le compteur reste ce qu'il était, au chiffre près.
+        .filter(|r| {
+            r.len() == 1 && (!album.spreads[r.start].slots.is_empty() || !est_voyage)
+        })
         .map(|r| Finding {
             planche: r.start + 1,
             case_idx: None,
@@ -577,11 +587,20 @@ pub(crate) fn compteurs_avec_face<'f>(
             continue;
         }
         let bar = quantile(&scores, OPENING_QUANTILE);
-        let first = &album.spreads[r.start].slots[0];
+        // La première photo du chapitre : celle de sa première planche, sauf
+        // quand le chapitre s'ouvre sur une page de texte (une étape de
+        // voyage dont le récit a sa page), qui n'en porte aucune.
+        let Some((at, first)) = album.spreads[r.clone()]
+            .iter()
+            .enumerate()
+            .find_map(|(i, s)| s.slots.first().map(|sl| (r.start + i, sl)))
+        else {
+            continue;
+        };
         let got = infos[&first.src].score;
         if got < bar {
             ouverture.push(Finding {
-                planche: r.start + 1,
+                planche: at + 1,
                 case_idx: Some(0),
                 src: Some(first.src.clone()),
                 info: format!("score {got:.2} sous le quartile haut du chapitre ({bar:.2})"),

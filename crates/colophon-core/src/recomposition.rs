@@ -148,6 +148,8 @@ pub fn recomposer(dir: &Path, opts: Recomposition) -> Result<BuildReport> {
         // les planches neuves portent leurs dates et leurs lieux, dans la
         // langue que le réglage a retenue.
         legendes: album.legendes,
+        // « Rien » est un choix : une recomposition ne le défait pas (P-s2).
+        legendes_de_voyage_par_defaut: false,
     };
     build_album(&root, dir, build)
 }

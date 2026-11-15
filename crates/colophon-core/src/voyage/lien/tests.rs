@@ -82,8 +82,8 @@ fn format_attendu<T: std::fmt::Debug>(r: Result<T, Erreur>) -> String {
 
 #[test]
 fn l_adresse_se_lit_avec_et_sans_jeton() {
-    let a = analyser_url("https://www.polarsteps.com/quelquun/11306874-clark-family-2024").unwrap();
-    assert_eq!(a, Lien { id: 11306874, jeton: None });
+    let a = analyser_url("https://www.polarsteps.com/quelquun/1234567-un-voyage-invente").unwrap();
+    assert_eq!(a, Lien { id: 1234567, jeton: None });
     let b = analyser_url("https://polarsteps.com/quelquun/4242-un-voyage?s=ab12-CD_34").unwrap();
     assert_eq!(b, Lien { id: 4242, jeton: Some("ab12-CD_34".into()) });
     let c = analyser_url("  https://www.polarsteps.com/q/4242?utm=x&s=zz9  ").unwrap();
@@ -142,6 +142,7 @@ fn la_conversion_v62_remplit_le_modele() {
     assert_eq!(lyon.meteo.as_ref().unwrap().condition.as_deref(), Some("rain"));
     assert_eq!(lyon.meteo.as_ref().unwrap().temperature, Some(12.5));
     assert_eq!(v.videos_ignorees, 1);
+    assert_eq!(v.couverture.as_deref(), Some("e001-p01-aaaaaaaa.jpg"), "la couverture du voyage chez la source");
 
     // Le nom choisi par la personne l'emporte sur le nom d'affichage.
     assert_eq!(v.etapes[1].nom, "Arrivée à Tunis");
@@ -515,4 +516,16 @@ fn lien_reel() {
     })
     .unwrap();
     println!("{}", v.bilan());
+}
+
+#[test]
+fn sans_cover_photo_la_couverture_est_celle_que_la_premiere_etape_met_en_avant() {
+    let mut j = fixture();
+    j.as_object_mut().unwrap().remove("cover_photo");
+    let v = convertir(&j, 4242, &limites_larges()).unwrap().voyage;
+    assert_eq!(v.couverture.as_deref(), Some("e001-p02-bbbbbbbb.jpg"));
+    // Ni l'un ni l'autre : pas de couverture, la composition choisit.
+    j["steps"][0].as_object_mut().unwrap().remove("cover_media_uuid");
+    let v = convertir(&j, 4242, &limites_larges()).unwrap().voyage;
+    assert_eq!(v.couverture, None);
 }

@@ -349,6 +349,8 @@ fn court(uuid: &str) -> String {
 
 struct EtapeBrute {
     uuid: Option<String>,
+    /// L'uuid du média que la source met en avant pour l'étape.
+    cover: Option<String>,
     etape: Etape,
     /// (ordre, uuid de média, adresse, extension)
     photos: Vec<(i64, String, String, &'static str)>,
@@ -432,6 +434,7 @@ pub fn convertir(json: &Value, id: u64, limites: &Limites) -> Result<Converti, E
         photos.sort_by_key(|p| p.0);
         brutes.push(EtapeBrute {
             uuid: texte_opt(o, "uuid", &chemin)?,
+            cover: texte_opt(o, "cover_media_uuid", &chemin)?,
             etape: Etape {
                 nom,
                 recit: texte_opt(o, "description", &chemin)?,
@@ -452,16 +455,41 @@ pub fn convertir(json: &Value, id: u64, limites: &Limites) -> Result<Converti, E
     let mut a_prendre = Vec::with_capacity(nb_photos);
     let mut rang_par_uuid = std::collections::HashMap::new();
     let mut etapes = Vec::with_capacity(brutes.len());
+    let mut couverture: Option<String> = None;
+    let mut cover_par_etape: Option<String> = None;
+    // La couverture du voyage chez la source : un objet média, qu'on retrouve
+    // par l'adresse de sa vignette (son `uuid` n'est pas celui du média de
+    // l'étape). Mesuré le 13/11 : c'est la première photo de la première étape.
+    let couverture_url: Option<String> = racine
+        .get("cover_photo")
+        .and_then(Value::as_object)
+        .and_then(|c| c.get("large_thumbnail_path"))
+        .and_then(Value::as_str)
+        .map(str::to_string);
     for (i, mut b) in brutes.into_iter().enumerate() {
         if let Some(u) = &b.uuid {
             rang_par_uuid.insert(u.clone(), i);
         }
         for (n, (_, uuid, url, ext)) in b.photos.into_iter().enumerate() {
             let fichier = format!("e{:03}-p{:02}-{}.{ext}", i + 1, n + 1, court(&uuid));
+            // La couverture du voyage : la photo que la source met en avant
+            // pour la première étape qui en nomme une et la porte.
+            if couverture.is_none() && couverture_url.as_deref() == Some(url.as_str()) {
+                couverture = Some(fichier.clone());
+            }
+            if cover_par_etape.is_none() && !uuid.is_empty() && b.cover.as_deref() == Some(uuid.as_str()) {
+                cover_par_etape = Some(fichier.clone());
+            }
             b.etape.photos.push(Photo { fichier: fichier.clone(), largeur: 0, hauteur: 0 });
             a_prendre.push(APrendre { etape: i, photo: n, fichier, url });
         }
         etapes.push(b.etape);
+    }
+
+    // À défaut, la photo que la source met en avant pour la première étape
+    // qui en nomme une (`cover_media_uuid`).
+    if couverture.is_none() {
+        couverture = cover_par_etape;
     }
 
     // Les pays, recomptés (D18) : le compteur de la source vaut 0 sur un tour
@@ -494,6 +522,7 @@ pub fn convertir(json: &Value, id: u64, limites: &Limites) -> Result<Converti, E
         segments,
         trace,
         videos_ignorees: videos,
+        couverture,
         provenance: Provenance {
             source: SOURCE.to_string(),
             reference: Some(id.to_string()),

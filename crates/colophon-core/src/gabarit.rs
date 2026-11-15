@@ -66,6 +66,10 @@ pub struct Spec {
     /// the caption to the free-spot hunt in `pdf::caption_anchor`. One
     /// number, and the linter's two caption counters read its sign.
     pub legende: f64,
+    /// The band declared by `legende` sits at the top of the pages instead of
+    /// under the frame: a text block heads the left page and the cells hang
+    /// beneath it. Named `_t<mm>` where the bottom band is `_b<mm>`.
+    pub en_tete: bool,
 }
 
 impl Spec {
@@ -89,6 +93,7 @@ fn familles() -> Vec<Spec> {
         droite,
         ordre,
         legende: 0.0,
+        en_tete: false,
     };
     use Ordre::*;
     use Page::*;
@@ -183,6 +188,7 @@ pub fn catalogue() -> &'static [Spec] {
                 droite: f.gauche,
                 ordre: f.ordre,
                 legende: f.legende,
+                en_tete: f.en_tete,
             });
             out.push(f);
             out.extend(miroir);
@@ -316,9 +322,12 @@ pub fn parse_genere(nom: &str) -> Option<Spec> {
     }
     let gauche = parse_page(parts.next()?)?;
     let droite = parse_page(parts.next()?)?;
-    let legende = match parts.next() {
-        None => 0.0,
-        Some(b) => f64::from(b.strip_prefix('b')?.parse::<u32>().ok()?),
+    let (legende, en_tete) = match parts.next() {
+        None => (0.0, false),
+        Some(b) => match b.strip_prefix('b') {
+            Some(mm) => (f64::from(mm.parse::<u32>().ok()?), false),
+            None => (f64::from(b.strip_prefix('t')?.parse::<u32>().ok()?), true),
+        },
     };
     if parts.next().is_some() {
         return None;
@@ -344,6 +353,7 @@ pub fn parse_genere(nom: &str) -> Option<Spec> {
         droite,
         ordre: Ordre::ParPage,
         legende,
+        en_tete,
     })
 }
 
@@ -390,6 +400,7 @@ pub fn combinaisons() -> &'static [Spec] {
                         droite,
                         ordre: Ordre::ParPage,
                         legende,
+                        en_tete: false,
                     });
                 }
             }
@@ -614,6 +625,7 @@ pub fn offerts() -> &'static [Spec] {
                 droite: spec.gauche,
                 ordre: spec.ordre,
                 legende: spec.legende,
+                en_tete: spec.en_tete,
             });
             out.push(spec);
             out.extend(miroir);
@@ -643,12 +655,15 @@ pub fn slots(spec: &Spec, n: usize, g: &SpreadGeometry) -> Vec<Rect> {
     // A positive caption height lifts the content off a band under the
     // frame; overlay (negative) and hunt (zero) leave the geometry alone.
     let bande = spec.legende.max(0.0);
+    let en_tete = spec.en_tete;
     let page = |droite: bool, p: &Page| -> Vec<Rect> {
         match p {
             Page::Vide => Vec::new(),
             Page::Pleine => {
                 let mut r = full_page(droite, g);
-                if bande > 0.0 {
+                if bande > 0.0 && en_tete {
+                    r.h -= bande;
+                } else if bande > 0.0 {
                     // What must survive the cut is measured from the cut: a
                     // full-bleed page with a band stops bleeding at the
                     // bottom, `bande` millimetres above the trim line.
@@ -660,7 +675,9 @@ pub fn slots(spec: &Spec, n: usize, g: &SpreadGeometry) -> Vec<Rect> {
             }
             Page::Grille { cols, rangs, ratio } => {
                 let mut b = page_box(droite, g);
-                b.y += bande;
+                if !en_tete {
+                    b.y += bande;
+                }
                 b.h -= bande;
                 let cells = grid(b, *cols, *rangs, g.gutter);
                 match ratio {

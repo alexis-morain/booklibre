@@ -26,6 +26,7 @@ pub struct Rect {
     pub h: f64,
 }
 
+#[derive(Clone, Copy)]
 pub struct SpreadGeometry {
     pub media_w: f64,
     pub media_h: f64,
@@ -832,7 +833,10 @@ pub fn caption_anchor_of(
 ) -> Point {
     let declared = spec.map_or(0.0, |s| s.legende);
     let c = caption_candidates(g);
-    if declared > 0.0 {
+    // A band at the head of the page holds text, not the caption: the
+    // caption hunts a free spot like it does without a band.
+    let en_tete = spec.is_some_and(|s| s.en_tete);
+    if declared > 0.0 && !en_tete {
         // The band under the frame: the interpreter lifted the slots, the
         // baseline drops under the lowest one like a photo caption does.
         let bas = rects.iter().map(|r| r.y).fold(f64::INFINITY, f64::min);
