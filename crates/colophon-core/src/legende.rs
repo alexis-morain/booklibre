@@ -446,7 +446,7 @@ mod tests {
     }
 
     fn reglage(contenu: Mention, date: FormatDate, langue: Langue) -> Legendes {
-        Legendes { contenu, date, langue }
+        Legendes { contenu, date, langue, meteo: false }
     }
 
     /// Les quatre réglages devant les quatre états d'une photo : rien n'est

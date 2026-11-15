@@ -59,6 +59,32 @@ impl Langue {
         }
     }
 
+    /// Le mot d'une condition météo de la source, ou `None` quand la table ne
+    /// la connaît pas (P-s6, D10). La table est **fermée** : une condition
+    /// inconnue n'imprime rien d'elle-même, la température seule reste. Les
+    /// codes sont ceux que la source donne (`rain`, `partly-cloudy-day`,
+    /// `clear-day` sur le voyage réel, plus le reste de sa famille).
+    pub fn condition_meteo(self, code: &str) -> Option<&'static str> {
+        let (fr, en) = match code.trim().to_ascii_lowercase().as_str() {
+            "clear-day" => ("ensoleillé", "sunny"),
+            "clear-night" => ("nuit claire", "clear night"),
+            "partly-cloudy-day" | "partly-cloudy-night" => ("partiellement nuageux", "partly cloudy"),
+            "cloudy" => ("nuageux", "cloudy"),
+            "rain" => ("pluie", "rain"),
+            "thunderstorm" => ("orage", "thunderstorm"),
+            "snow" => ("neige", "snow"),
+            "sleet" => ("neige fondue", "sleet"),
+            "hail" => ("grêle", "hail"),
+            "fog" => ("brouillard", "fog"),
+            "wind" => ("vent", "windy"),
+            _ => return None,
+        };
+        Some(match self {
+            Langue::Fr => fr,
+            Langue::En => en,
+        })
+    }
+
     /// « 27 octobre 2013 », « 27 October 2013 »: day first in both, the way
     /// a book printed in Europe dates itself.
     pub fn date(self, d: NaiveDate, with_year: bool) -> String {

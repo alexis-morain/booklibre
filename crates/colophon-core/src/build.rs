@@ -77,6 +77,10 @@ pub struct BuildOptions {
     /// Les cartes d'un album de voyage (P-s5) : la règle à la première
     /// composition, exactement celles de l'album à la recomposition.
     pub cartes: crate::voyage::composition::Cartes,
+    /// La page « Le voyage en chiffres » en fin de livre (P-s6) : demandée à la
+    /// création, portée par la recomposition (`Album::chiffres`). Sans effet
+    /// hors d'un voyage.
+    pub chiffres: bool,
 }
 
 
@@ -101,6 +105,7 @@ impl Default for BuildOptions {
             legendes: None,
             legendes_de_voyage_par_defaut: true,
             cartes: Default::default(),
+            chiffres: false,
         }
     }
 }
@@ -1060,6 +1065,14 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                 env!("CARGO_PKG_VERSION"),
                 opts.langue,
             ));
+        }
+
+        // La page de chiffres (P-s6), avant le colophon, dans un voyage qui la
+        // demande. Le réglage est celui de l'album, la planche en est dérivée.
+        album.chiffres = false;
+        if let (true, Some(v)) = (opts.chiffres, &voyage) {
+            album.chiffres = true;
+            crate::voyage::chiffres::poser(&mut album, v, opts.langue);
         }
 
         // And the half-title at the other end, from the same facts: the
@@ -3484,6 +3497,7 @@ mod tests {
             contenu: model::Mention::DateLieu,
             date: model::FormatDate::Jour,
             langue: Langue::Fr,
+            meteo: false,
         };
         let opts = BuildOptions { legendes: Some(reglage), ..options_datees() };
         let album = build_album(&photos, &out, opts).unwrap().album;

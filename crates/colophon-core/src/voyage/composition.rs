@@ -78,7 +78,29 @@ pub fn mention(e: &Etape, r: &Legendes) -> Option<String> {
     let lieu = lieu_nomme(e)
         .map(|l| sans_emojis(l).0)
         .filter(|l| !nom.contains(&mots(l)));
-    crate::legende::texte_de_mention(jour_local(e), lieu.as_deref(), r)
+    let base = crate::legende::texte_de_mention(jour_local(e), lieu.as_deref(), r);
+    let meteo = if r.meteo { e.meteo.as_ref().and_then(|m| texte_meteo(m, r.langue)) } else { None };
+    match (base, meteo) {
+        (Some(b), Some(m)) => Some(format!("{b} \u{b7} {m}")),
+        (b, m) => b.or(m),
+    }
+}
+
+/// « 31 °C, pluie » : la température arrondie, puis la condition si la table la
+/// connaît. Une valeur absente ou inconnue n'imprime rien d'elle ; sans l'une ni
+/// l'autre, `None`.
+pub fn texte_meteo(m: &super::Meteo, langue: crate::langue::Langue) -> Option<String> {
+    let temperature = m
+        .temperature
+        .filter(|t| t.is_finite())
+        .map(|t| format!("{} \u{b0}C", t.round() as i64));
+    let condition = m.condition.as_deref().and_then(|c| langue.condition_meteo(c));
+    match (temperature, condition) {
+        (Some(t), Some(c)) => Some(format!("{t}, {c}")),
+        (Some(t), None) => Some(t),
+        (None, Some(c)) => Some(c.to_string()),
+        (None, None) => None,
+    }
 }
 
 /// Le réglage que reçoit un album de voyage qui n'en a pas : la date et le
@@ -88,6 +110,7 @@ pub fn legendes_par_defaut(langue: crate::langue::Langue) -> Legendes {
         contenu: crate::model::Mention::DateLieu,
         date: crate::model::FormatDate::Jour,
         langue,
+        meteo: true,
     }
 }
 

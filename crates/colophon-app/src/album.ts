@@ -174,6 +174,9 @@ export type Legendes = {
   date: "jour" | "court" | "mois";
   /** La langue des mots, celle de l'interface au moment du choix. */
   langue: "fr" | "en";
+  /** La météo de l'étape au bout de la mention, dans un album de voyage
+   *  (P-s6). Absente = fausse. */
+  meteo?: boolean;
 };
 
 /** The chosen face, as `album.json` records it: the file beside it, and who

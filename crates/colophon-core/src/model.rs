@@ -57,6 +57,11 @@ pub struct Album {
     /// [`crate::legende::poser_mentions`] et par rien d'autre.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub legendes: Option<Legendes>,
+    /// La page « Le voyage en chiffres » (P-s6) est demandée, dans un album de
+    /// voyage : une planche `texte` en fin de livre, dérivée du voyage et
+    /// reposée par la composition. Additif, absent quand faux.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub chiffres: bool,
 }
 
 /// Le réglage « sous les photos » d'un album.
@@ -70,6 +75,11 @@ pub struct Legendes {
     /// le colophon, et une photo posée plus tard parle comme ses voisines.
     #[serde(default)]
     pub langue: crate::langue::Langue,
+    /// La météo de l'étape au bout de la mention, dans un album de voyage
+    /// (P-s6) : « 31 °C, pluie ». Une composante qu'on ôte ; absente d'un
+    /// album d'avant, donc fausse, et jamais écrite quand elle l'est.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub meteo: bool,
 }
 
 /// Ce qu'une mention dit d'une photo.
@@ -831,6 +841,7 @@ impl Album {
             reglages: std::collections::BTreeMap::new(),
             police: None,
             legendes: None,
+            chiffres: false,
         }
 
     }

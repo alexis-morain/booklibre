@@ -166,6 +166,8 @@ pub fn recomposer(dir: &Path, opts: Recomposition) -> Result<BuildReport> {
         // Les cartes de l'album, ni plus ni moins : une carte supprimée à la
         // main n'y est plus, et la machine ne la remet pas (P-s5).
         cartes: crate::voyage::composition::Cartes::Seulement(plages_de_cartes(&album)),
+        // La page de chiffres, comme les cartes : celle de l'album, ni plus ni moins.
+        chiffres: album.chiffres,
     };
     build_album(&root, dir, build)
 }
