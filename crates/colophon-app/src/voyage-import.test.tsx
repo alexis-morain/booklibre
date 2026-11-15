@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
 import { setLangue } from "./i18n";
 import { LegendesView } from "./LegendesView";
-import { BilanView } from "./BilanView";
+import { BilanView, toutesDansLAlbum } from "./BilanView";
 import { ETAT_INITIAL, Etat, reduire } from "./voyage";
 import { VoyageImportVue } from "./VoyageImport";
 import type { Album } from "./album";
@@ -108,13 +108,15 @@ describe("les cases du voyage dans les mentions", () => {
 
 describe("le bilan montre le voyage", () => {
   const album = { title: "Vietnam", trim_mm: { w: 210, h: 210 }, spreads: [] } as unknown as Album;
-  const rendreBilan = (voyage: boolean) =>
+  const rendreBilan = (voyage: boolean, importeParLien = true) =>
     renderToStaticMarkup(
       <BilanView
         bilan={{
           photos_scanned: 1546,
-          photos_kept: 1500,
+          photos_kept: 815,
           chapters: 93,
+          trop_petites: 659,
+          chapitres_vides: ["Chicago Airport", "San Francisco Airport"],
           voyage: voyage
             ? { titre: "t", etapes: 93, etapes_groupees: 2, recits_debordants: ["Sapa"], emojis_non_imprimes: 12, refus: null }
             : null,
@@ -123,25 +125,59 @@ describe("le bilan montre le voyage", () => {
         curation={[]}
         variantes={[]}
         choisie={null}
-        voyageImporte={{
-          dossier: "/d",
-          titre: "t",
-          bilan: { etapes: 93, etapes_sans_photo: 0, pays: 12, photos: 1546, videos_ignorees: 5, photos_sous_seuil: 1546, trace_presente: true },
-        }}
+        voyageImporte={
+          importeParLien
+            ? {
+                dossier: "/d",
+                titre: "t",
+                bilan: { etapes: 93, etapes_sans_photo: 0, pays: 12, photos: 1546, videos_ignorees: 5, photos_sous_seuil: 1546, trace_presente: true },
+              }
+            : null
+        }
         onChoisir={() => {}}
         onOpen={() => {}}
         onTri={() => {}}
       />,
     ).replace(/&#x27;/g, "’");
 
-  it("nomme vidéos, émojis, récits et photos sous 250 ppi", () => {
+  it("nomme vidéos, émojis et récits, sans repère en ppi", () => {
     setLangue("fr");
     const h = rendreBilan(true);
     expect(h).toContain("5 vidéos ignorées");
     expect(h).toContain("12 émojis non imprimés");
     expect(h).toContain("Sapa");
-    expect(h).toContain("1546 photos sont trop petites");
-    expect(h).toContain("export de vos données Polarsteps (zip)");
+    expect(h).not.toContain("250 ppi");
+  });
+
+  it("une seule ligne de définition : la réserve, avec la recommandation du lien", () => {
+    setLangue("fr");
+    const h = rendreBilan(true);
+    expect(h).toContain("659 photos trop petites");
+    expect(h).toContain("Le lien ne donne que des vignettes");
+    expect(h).toContain("export de vos données Polarsteps ou par vos photos d’origine");
+    // Hors import par lien, pas de recommandation du lien.
+    expect(rendreBilan(true, false)).not.toContain("Le lien ne donne que des vignettes");
+  });
+
+  it("ne dit « toutes les photos » que si c'est vrai", () => {
+    setLangue("fr");
+    // 815 sur 1 546 et une curation vide (ce que l'écran recevrait si elle n'était pas lue).
+    expect(rendreBilan(true)).not.toContain("Toutes les photos du dossier");
+    expect(toutesDansLAlbum({ photos_scanned: 1546, photos_kept: 815, chapters: 1 })).toBe(false);
+    expect(toutesDansLAlbum({ photos_scanned: 10, photos_kept: 10, chapters: 1, trop_petites: 2 })).toBe(false);
+    expect(toutesDansLAlbum({ photos_scanned: 10, photos_kept: 10, chapters: 1 })).toBe(true);
+  });
+
+  it("un voyage dit ses étapes sans photo en une phrase, pas une par étape", () => {
+    setLangue("fr");
+    const h = rendreBilan(true);
+    expect(h).toContain("2 étapes n’ont gardé aucune photo, trop petites : Chicago Airport, San Francisco Airport.");
+    expect(h).not.toContain("Un chapitre n’a gardé aucune photo");
+  });
+
+  it("un dossier ordinaire garde sa phrase par chapitre", () => {
+    setLangue("fr");
+    expect(rendreBilan(false)).toContain("Un chapitre n’a gardé aucune photo : Chicago Airport.");
   });
 
   it("un dossier ordinaire n'a pas de section voyage", () => {

@@ -203,6 +203,8 @@ export function CommandeView({
   const possible = commandePossible(joignable, preparationNeuve);
   const invendable = formatInvendable(joignable, preparationNeuve);
   const prix = (c: number) => prixDeCentimes(c, langue);
+  const pagesDuFichier = preparationNeuve?.rapport.fiche?.pages_fichier;
+  const phrase = (e: unknown) => phraseErreur(e, pagesDuFichier);
 
   const tenter = async (quoi: string, geste: () => Promise<void>, sinon?: (e: unknown) => void) => {
     setOccupe(quoi);
@@ -210,7 +212,7 @@ export function CommandeView({
     try {
       await geste();
     } catch (e) {
-      setErreur(phraseErreur(e));
+      setErreur(phrase(e));
       sinon?.(e);
     } finally {
       setOccupe(null);
@@ -271,7 +273,7 @@ export function CommandeView({
       // Un second envoi pendant le premier : le moteur l'a refusé sans rien
       // toucher, le premier continue.
       if (ignorable(e)) return;
-      setErreur(phraseErreur(e));
+      setErreur(phrase(e));
       envoyer({ type: "echec" });
     }
   };
@@ -305,7 +307,7 @@ export function CommandeView({
       },
       // Un refus définitif mène à l'étape d'erreur, d'où l'on recommence ;
       // le reste revient au bouton qui rouvre le paiement.
-      (e) => envoyer(refusDefinitif(e) ? { type: "echec", definitif: phraseErreur(e) } : { type: "echec" }),
+      (e) => envoyer(refusDefinitif(e) ? { type: "echec", definitif: phrase(e) } : { type: "echec" }),
     );
   };
 

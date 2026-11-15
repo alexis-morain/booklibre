@@ -118,7 +118,7 @@ describe("le bilan d'un voyage", () => {
     expect(l.map((x) => x.cle)).toEqual(["bilan.voyage.resume"]);
   });
 
-  it("nomme vidéos, émojis, récits débordants, étapes regroupées, photos sous 250 ppi", () => {
+  it("nomme vidéos, émojis, récits débordants, étapes regroupées", () => {
     const l = lignesBilanVoyage(
       compo({ emojis_non_imprimes: 12, recits_debordants: ["Hanoï", "Sapa"], etapes_groupees: 4 }),
       importe({ videos_ignorees: 3, photos_sous_seuil: 1546, trace_presente: false }),
@@ -130,13 +130,13 @@ describe("le bilan d'un voyage", () => {
       "bilan.voyage.emojis",
       "bilan.voyage.debordants",
       "bilan.voyage.groupees",
-      "bilan.voyage.ppi",
       "bilan.voyage.trace",
     ]);
     expect(l.find((x) => x.cle === "bilan.voyage.debordants")!.params).toEqual({ noms: "Hanoï, Sapa" });
-    // La phrase des photos recommande l'export zip ou les originaux.
-    expect(FR["bilan.voyage.ppi"]).toMatch(/export.*zip.*photos d’origine/);
-    expect(EN["bilan.voyage.ppi"]).toMatch(/export.*zip.*original photos/);
+    // Le repère de pixels n'est jamais dit en ppi : seule la réserve parle de définition.
+    expect(cles.join()).not.toContain("ppi");
+    expect(FR["bilan.trop_petites.lien"]).toMatch(/vignettes.*export de vos données Polarsteps.*photos d’origine/);
+    expect(EN["bilan.trop_petites.lien"]).toMatch(/thumbnails.*export of your Polarsteps data.*original photos/);
   });
 
   it("le singulier a sa phrase, et un voyage refusé le dit", () => {
@@ -147,8 +147,19 @@ describe("le bilan d'un voyage", () => {
     const cles = l.map((x) => x.cle);
     expect(cles).toContain("bilan.voyage.videos.un");
     expect(cles).toContain("bilan.voyage.emojis.un");
-    expect(cles).toContain("bilan.voyage.ppi.un");
     expect(cles[0]).toBe("bilan.voyage.refus");
+  });
+
+  it("une étape sans photo posée n'est pas un défaut, sauf si ses photos étaient trop petites : une phrase", () => {
+    expect(lignesBilanVoyage(compo(), importe(), []).map((x) => x.cle)).not.toContain("bilan.voyage.etapes_vides");
+    const l = lignesBilanVoyage(compo(), importe(), ["Chicago Airport", "", "San Francisco Airport"]);
+    expect(l.find((x) => x.cle === "bilan.voyage.etapes_vides")!.params).toEqual({
+      n: 2,
+      noms: "Chicago Airport, San Francisco Airport",
+    });
+    const un = lignesBilanVoyage(compo(), importe(), ["Chicago Airport"]);
+    expect(un.map((x) => x.cle)).toContain("bilan.voyage.etapes_vides.un");
+    expect(FR["bilan.voyage.etapes_vides"]).toBe("{n} étapes n’ont gardé aucune photo, trop petites : {noms}.");
   });
 
   it("sans import dans l'écran, ni vidéos ni ppi inventés", () => {

@@ -178,8 +178,6 @@ export const FR = {
   "bilan.voyage.emojis": "{n} émojis non imprimés : les polices du livre ne les dessinent pas. Ils restent dans le fichier du voyage.",
   "bilan.voyage.debordants": "Récits plus longs que leurs pages : {noms}. Le texte dépasse, rien n’est coupé : relisez ces étapes dans le Livre.",
   "bilan.voyage.groupees": "{n} étapes sans photo sont regroupées sur une même page.",
-  "bilan.voyage.ppi.un": "1 photo est trop petite pour être nette en grand (moins de 250 ppi). Le lien ne donne que des vignettes : pour un livre net, passez par l’export de vos données Polarsteps (zip) ou par vos photos d’origine.",
-  "bilan.voyage.ppi": "{n} photos sont trop petites pour être nettes en grand (moins de 250 ppi). Le lien ne donne que des vignettes : pour un livre net, passez par l’export de vos données Polarsteps (zip) ou par vos photos d’origine.",
   "bilan.voyage.trace": "Polarsteps n’a pas donné le tracé du voyage : les cartes suivent la suite des étapes.",
   "bilan.voyage.refus": "Le fichier du voyage n’a pas pu être lu ({raison}) : l’album est composé comme un dossier ordinaire.",
   "legendes.voyage": "Pour un voyage",
@@ -978,6 +976,8 @@ export const FR = {
   "commande.confirmer.reel":
     "Commander pour {prix}, livraison comprise : vous paierez par carte sur la page de Stripe, qui s’ouvre dans votre navigateur.",
   "commande.erreur": "La commande a échoué : {erreur}",
+  "commande.err.pages": "Ce livre fait {n} pages ; la commande dans Booklibre va jusqu’à {max}. Exportez le PDF, ou réduisez l’album.",
+  "commande.err.pages.sans": "Ce livre a trop de pages : la commande dans Booklibre va jusqu’à {max}. Exportez le PDF, ou réduisez l’album.",
   "commande.annuler.tard": "La production a commencé, l’annulation n’est plus possible.",
   "commande.etat.aucun": "État pas encore relu.",
   "commande.etat.nouvelle": "Reçue par Cloudprinter.",
@@ -1249,6 +1249,9 @@ export const FR = {
   "bilan.trop_petites":
     "{n} photos trop petites pour être bien imprimées sont restées dans la réserve. Vous pouvez les poser quand même.",
   "bilan.chapitre_vide": "Un chapitre n’a gardé aucune photo : {titre}.",
+  "bilan.trop_petites.lien": "Le lien ne donne que des vignettes : pour un livre net, passez par l’export de vos données Polarsteps ou par vos photos d’origine.",
+  "bilan.voyage.etapes_vides.un": "1 étape n’a gardé aucune photo, trop petites : {noms}.",
+  "bilan.voyage.etapes_vides": "{n} étapes n’ont gardé aucune photo, trop petites : {noms}.",
   "bilan.ouvrir": "Ouvrir l’album",
   "bilan.revue": "Passer les {n} écartées en revue",
   "bilan.garde":
@@ -1597,8 +1600,6 @@ export const EN: Record<Cle, string> = {
   "bilan.voyage.emojis": "{n} emoji not printed: the book’s fonts do not draw them. They stay in the trip file.",
   "bilan.voyage.debordants": "Stories longer than their pages: {noms}. The text runs over, nothing is cut: reread these steps in the Book.",
   "bilan.voyage.groupees": "{n} steps without a photo are grouped on one page.",
-  "bilan.voyage.ppi.un": "1 photo is too small to be sharp when large (under 250 ppi). The link only gives thumbnails: for a sharp book, use the export of your Polarsteps data (zip) or your original photos.",
-  "bilan.voyage.ppi": "{n} photos are too small to be sharp when large (under 250 ppi). The link only gives thumbnails: for a sharp book, use the export of your Polarsteps data (zip) or your original photos.",
   "bilan.voyage.trace": "Polarsteps did not give the trip’s track: the maps follow the sequence of steps.",
   "bilan.voyage.refus": "The trip file could not be read ({raison}): the album is composed like an ordinary folder.",
   "legendes.voyage": "For a trip",
@@ -2349,6 +2350,8 @@ export const EN: Record<Cle, string> = {
   "commande.confirmer.reel":
     "Order for {prix}, delivery included: you will pay by card on Stripe’s page, which opens in your browser.",
   "commande.erreur": "The order failed: {erreur}",
+  "commande.err.pages": "This book has {n} pages; ordering in Booklibre goes up to {max}. Export the PDF, or shrink the album.",
+  "commande.err.pages.sans": "This book has too many pages: ordering in Booklibre goes up to {max}. Export the PDF, or shrink the album.",
   "commande.annuler.tard": "Production has started, the order can no longer be cancelled.",
   "commande.etat.aucun": "State not read yet.",
   "commande.etat.nouvelle": "Received by Cloudprinter.",
@@ -2608,6 +2611,9 @@ export const EN: Record<Cle, string> = {
   "bilan.trop_petites":
     "{n} photos too small to print well stayed in the reserve. You can place them anyway.",
   "bilan.chapitre_vide": "A chapter kept no photo: {titre}.",
+  "bilan.trop_petites.lien": "The link only gives thumbnails: for a sharp book, use the export of your Polarsteps data or your original photos.",
+  "bilan.voyage.etapes_vides.un": "1 step kept no photo, too small: {noms}.",
+  "bilan.voyage.etapes_vides": "{n} steps kept no photo, too small: {noms}.",
   "bilan.ouvrir": "Open the album",
   "bilan.revue": "Review the {n} discards",
   "bilan.garde":

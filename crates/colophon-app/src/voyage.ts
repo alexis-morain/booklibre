@@ -199,6 +199,8 @@ export type LigneBilan = { cle: Cle; params?: Record<string, number | string> };
 export function lignesBilanVoyage(
   compo: BilanComposition,
   importe: RapportVoyage | null,
+  /** Les étapes dont les photos, trop petites, sont restées à la réserve. */
+  etapesVides: string[] = [],
 ): LigneBilan[] {
   const out: LigneBilan[] = [];
   if (compo.refus) {
@@ -220,11 +222,19 @@ export function lignesBilanVoyage(
   if (compo.etapes_groupees > 0) {
     out.push({ cle: "bilan.voyage.groupees", params: { n: compo.etapes_groupees } });
   }
-  if (b) {
-    if (b.photos_sous_seuil === 1) out.push({ cle: "bilan.voyage.ppi.un" });
-    else if (b.photos_sous_seuil > 1) out.push({ cle: "bilan.voyage.ppi", params: { n: b.photos_sous_seuil } });
-    if (!b.trace_presente) out.push({ cle: "bilan.voyage.trace" });
+  // Une étape sans photo posée est voulue dans un voyage (page de texte ou
+  // regroupée) : elle ne se dit que si elle a perdu ses photos faute de
+  // définition, en une phrase.
+  const noms = etapesVides.filter((n) => n !== "");
+  if (noms.length === 1) out.push({ cle: "bilan.voyage.etapes_vides.un", params: { noms: noms[0] } });
+  else if (noms.length > 1) {
+    out.push({ cle: "bilan.voyage.etapes_vides", params: { n: noms.length, noms: noms.join(", ") } });
   }
+  // Le repère de 2 126 px de côté court (`BilanImport.photos_sous_seuil`) n'est
+  // pas un ppi : le bilan de l'écran ne le dit pas. La seule ligne vraie est
+  // celle de la réserve (`BuildBilan.trop_petites`), à laquelle `BilanView`
+  // ajoute la recommandation du lien.
+  if (b && !b.trace_presente) out.push({ cle: "bilan.voyage.trace" });
   return out;
 }
 

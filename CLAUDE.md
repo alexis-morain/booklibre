@@ -685,9 +685,14 @@ sur erreur de transport, 5xx et 429 seulement ; `importer_annulable` lit l'annul
 chaque requête et la reprise ne redemande aucune photo déjà là. Au retour, l'écran enchaîne sur
 `createAlbum` (carré 21, légendes de voyage par défaut) puis le **bilan** (`BilanView`,
 `lignesBilanVoyage`) : vidéos ignorées (rapport d'import), émojis non imprimés, récits
-débordants, étapes groupées (`BuildBilan::voyage`), photos sous le repère de 250 ppi (le côté
-court de 2 126 px de l'import, pas un ppi par photo) avec la phrase qui recommande l'export zip
-ou les originaux. `OpenedAlbum::voyage` (un `voyage.json` lisible à côté des photos) montre, dans
+débordants, étapes groupées (`BuildBilan::voyage`). **Une seule ligne de définition** : celle de la
+réserve (`trop_petites`), à laquelle un voyage importé par lien ajoute « le lien ne donne que des
+vignettes : l'export de vos données Polarsteps ou vos photos d'origine » ; le repère de 2 126 px
+(`photos_sous_seuil`) n'est pas un ppi et n'est plus dit à l'écran. Les étapes sans photo posée ne
+sont pas un défaut : une phrase, seulement pour celles dont les photos étaient trop petites.
+« Toutes les photos du dossier sont dans l'album » exige `toutesDansLAlbum` (rien écarté ni en
+réserve). `commande.ts::phraseErreur(e, pages)` traduit le refus `relais : pages (400)` (au-delà de
+`PAGES_MAX_COMMANDE` = 200) ; le bouton Commander n'est pas désactivé, décision d'Alexis. `OpenedAlbum::voyage` (un `voyage.json` lisible à côté des photos) montre, dans
 Planche → Dates et lieux, « Météo de l'étape » (grisée sans mention) et « Le voyage en chiffres »
 (`voyage_chiffres` = `chiffres::regler`, un pas d'annulation). Le guide du zip tient en un
 paragraphe : le lecteur du zip n'est pas codé.

@@ -33,6 +33,7 @@ import {
   payable,
   phraseConfirmation,
   phraseErreur,
+  PAGES_MAX_COMMANDE,
   phraseEtat,
   phraseIntention,
   phraseLivraison,
@@ -317,6 +318,24 @@ describe("les états du relais", () => {
     setLangue("en");
     expect(phraseIntention(intention("abandonnee"))).toMatch(/^Given up/);
     expect(phraseIntention(intention("abandonnee"))).toContain("closed");
+  });
+
+  it("dit le refus du nombre de pages au lieu de la phrase brute du relais", () => {
+    setLangue("fr");
+    const brut = "relais : pages (400)";
+    expect(phraseErreur(brut, 488)).toBe(
+      "Ce livre fait 488 pages ; la commande dans Booklibre va jusqu’à 200. Exportez le PDF, ou réduisez l’album.",
+    );
+    expect(phraseErreur(brut)).not.toContain("relais");
+    expect(phraseErreur(brut)).toContain("jusqu’à 200");
+    setLangue("en");
+    expect(phraseErreur(brut, 488)).toBe(
+      "This book has 488 pages; ordering in Booklibre goes up to 200. Export the PDF, or shrink the album.",
+    );
+    // Un autre refus qui contient le mot « pages » garde sa phrase.
+    setLangue("fr");
+    expect(phraseErreur("201 pages sont sous 250 ppi", 488)).toContain("La commande a échoué");
+    expect(PAGES_MAX_COMMANDE).toBe(200);
   });
 
   it("ne promettent « rien n'a été payé » qu'après la confirmation du relais", () => {

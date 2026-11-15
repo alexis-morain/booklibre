@@ -225,6 +225,10 @@ export function phraseConfirmation(prix: string, mode: Mode): string {
 }
 
 /** Les codes du relais qui ont leur phrase ; le reste voyage tel quel. */
+/** Le plus grand livre que le relais vend (`tarifs::PAGES_MAX`, `PAGES_MAX` du
+ *  Worker). */
+export const PAGES_MAX_COMMANDE = 200;
+
 const ERREURS: [string, Cle][] = [
   ["abandon_envoi_en_cours", "commande.abandon.envoi"],
   ["abandon_en_cours", "commande.abandon.double"],
@@ -267,8 +271,16 @@ export function ignorable(e: unknown): boolean {
 }
 
 /** Une erreur de commande, dite. */
-export function phraseErreur(e: unknown): string {
+export function phraseErreur(e: unknown, pages?: number): string {
   const s = String(e);
+  // « relais : pages (400) » : le relais refuse le nombre de pages. Le code est
+  // cherché en entier : « pages » seul se lit aussi dans « 201 pages sont sous
+  // 250 ppi », un autre refus.
+  if (s.includes("relais : pages (")) {
+    return pages
+      ? t("commande.err.pages", { n: pages, max: PAGES_MAX_COMMANDE })
+      : t("commande.err.pages.sans", { max: PAGES_MAX_COMMANDE });
+  }
   for (const [code, cle] of ERREURS) if (s.includes(code)) return t(cle);
   return t("commande.erreur", { erreur: s.replace(/^Error: /, "") });
 }

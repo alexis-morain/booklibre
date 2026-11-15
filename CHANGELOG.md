@@ -22,9 +22,11 @@ sur la page des releases.
   Every failure says what happened and what to do: bad link, private or missing trip,
   Polarsteps changed its format (use the data export), network down, disk full. When the
   composition ends, the report names the videos ignored, the emoji not printed, the
-  stories longer than their pages, the steps grouped on one page and the photos too
-  small to be sharp at 250 ppi, with the advice to use the Polarsteps data export (zip)
-  or your original photos. Booklibre is not affiliated with Polarsteps. The Mentions
+  stories longer than their pages and the steps grouped on one page; for photos too
+  small to be printed well it advises the Polarsteps data export or your original
+  photos (the link only gives thumbnails). Ordering a book over 200 pages now says so
+  ("This book has 488 pages; ordering in Booklibre goes up to 200") instead of showing
+  the relay's raw code. Booklibre is not affiliated with Polarsteps. The Mentions
   panel of a trip album gets its two boxes: "Weather of the step" and "The trip in
   numbers", which can be ticked and unticked on an existing album.
 - Weather and a numbers page in a trip album. The line under a step now ends with the
