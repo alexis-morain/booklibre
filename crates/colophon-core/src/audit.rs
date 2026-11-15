@@ -1032,6 +1032,7 @@ mod tests {
             lieux: Vec::new(),
             appareils: Vec::new(),
             compose_le: chrono::NaiveDate::from_ymd_opt(2026, 8, 18).unwrap(),
+            carte: false,
         };
         a.spreads = vec![
             crate::garde::spread("Corse", &faits, 190.0, crate::langue::Langue::Fr),

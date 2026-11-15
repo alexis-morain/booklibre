@@ -70,6 +70,7 @@ import {
   avecRecadrage,
   corners,
   gaucheCollee,
+  estLibre,
   hitTest,
   largeurCollee,
   retournerBoite,
@@ -79,6 +80,7 @@ import {
   sceneOf,
 } from "./scene";
 import { Cible } from "./contextuel";
+import { attributsCalque, attributViewBox as viewBoxCarte, carteDe, rapportCarte } from "./carte";
 import { attributD, attributViewBox, ornementDe, rapport } from "./ornement";
 import { cachedThumb, loadThumb } from "./thumbs";
 import { ObjetLibreCalque, PoseObjet } from "./ObjetLibreCalque";
@@ -510,6 +512,7 @@ export function SpreadView({
       // contexte montre son angle. Le basculer ferme la prise, comme sur une
       // case.
       case "ornement":
+      case "carte":
         onObjetSelect?.(objet === o.role.index ? null : o.role.index);
         break;
     }
@@ -569,7 +572,7 @@ export function SpreadView({
     // lui qu'on choisit, et aucun geste de case ne démarre. Le calque prend
     // le relais dès l'image suivante — c'est lui qui porte le glissement.
     const role = at === null ? null : scene.objects[at].role;
-    if ((role?.role === "free_text" || role?.role === "ornement") && onObjetSelect) {
+    if (role && estLibre(role) && onObjetSelect) {
       geste.current = null;
       onSelect?.(null);
       onObjetSelect(role.index);
@@ -849,7 +852,7 @@ export function SpreadView({
             const at = hitTest(scene, p.x, p.y);
             const role = at === null ? null : scene.objects[at].role;
             let sous: Cible;
-            if (role && (role.role === "free_text" || role.role === "ornement")) {
+            if (role && estLibre(role)) {
               sous = { type: "objet", index: role.index };
             } else if (role && (role.role === "photo" || role.role === "photo_caption")) {
               const src = spread.slots[role.cell]?.src;
@@ -1141,6 +1144,66 @@ export function SpreadView({
                 </svg>
               );
             }
+
+            // Une carte : le `<svg>` des calques que le moteur a dessinés, dans
+            // sa boîte, comme un ornement — le `viewBox` met tout à l'échelle,
+            // épaisseurs et tirets compris, et l'`<svg>` découpe à sa boîte
+            // (`overflow: hidden`, comme le `W n` du PDF). Une plage sans
+            // dessin laisse un cadre vide et le dit à voix haute par son
+            // proxy ; jamais un faux fond.
+            case "carte": {
+              const index = role.index;
+              const box = o.rect;
+              const dessin = carteDe(role.debut, role.fin);
+              return (
+                <svg
+                  key={`carte-${index}`}
+                  className={
+                    "objet-libre objet-carte" +
+                    (dessin ? "" : " vide") +
+                    (onObjetSelect ? " saisissable" : "") +
+                    (objet === index ? " choisi" : "")
+                  }
+                  aria-hidden="true"
+                  viewBox={dessin ? viewBoxCarte(dessin) : `0 0 ${box.w} ${box.h}`}
+                  preserveAspectRatio="none"
+                  onClick={
+                    onObjetSelect &&
+                    ((e) => {
+                      e.stopPropagation();
+                      onObjetSelect(objet === index ? null : index);
+                    })
+                  }
+                  style={{
+                    left: `${box.x * mm}px`,
+                    top: `${box.y * mm}px`,
+                    width: `${box.w * mm}px`,
+                    height: `${box.h * mm}px`,
+                    transform:
+                      o.angle === 0
+                        ? undefined
+                        : `rotate(${angleEcran(o.angle)}deg)`,
+                  }}
+                >
+                  {dessin?.calques.map((calque, k) => (
+                    <g
+                      key={k}
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                      {...attributsCalque(calque)}
+                    >
+                      {calque.chemins.map((chemin, i) => (
+                        <path
+                          key={i}
+                          d={attributD(chemin)}
+                          fillRule={chemin.evenodd ? "evenodd" : "nonzero"}
+                        />
+                      ))}
+                    </g>
+                  ))}
+                </svg>
+              );
+            }
           }
         })}
 
@@ -1158,14 +1221,16 @@ export function SpreadView({
             // pas de champ à ouvrir, et sa boîte garde le rapport de son
             // dessin.
             const cible = scene.objects.find(
-              (o) =>
-                (o.role.role === "free_text" || o.role.role === "ornement") &&
-                o.role.index === objet,
+              (o) => estLibre(o.role) && o.role.index === objet,
             );
             if (!cible) return null;
             const bloc = cible.role.role === "free_text" ? cible.role : null;
             const orn =
               cible.role.role === "ornement" ? ornementDe(cible.role.id) : undefined;
+            const carte =
+              cible.role.role === "carte"
+                ? carteDe(cible.role.debut, cible.role.fin)
+                : undefined;
             if (ecrit === objet) return null;
             return (
               <ObjetLibreCalque
@@ -1173,7 +1238,7 @@ export function SpreadView({
                 geom={geom}
                 mm={mm}
                 deborde={bloc?.overflow ?? false}
-                rapport={orn && rapport(orn.dessin)}
+                rapport={(orn && rapport(orn.dessin)) ?? (carte && rapportCarte(carte))}
                 gaucheInterdite={largeurCollee(planche, reliure, geom) > 0}
                 onDraft={setDraftObjet}
                 onCommit={(p) => {
@@ -1372,9 +1437,7 @@ export function SpreadView({
         (() => {
           const stocke = spread.objets?.[objet];
           const cible = scene.objects.find(
-            (o) =>
-              (o.role.role === "free_text" || o.role.role === "ornement") &&
-              o.role.index === objet,
+            (o) => estLibre(o.role) && o.role.index === objet,
           );
           if (!stocke || !cible) return null;
           const emprise = enveloppe(corners(cible.rect, cible.angle));

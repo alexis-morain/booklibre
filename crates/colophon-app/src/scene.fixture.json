@@ -682,6 +682,22 @@
       "pack": "colophon",
       "role": "ornement"
      }
+    },
+    {
+     "angle": 23.0,
+     "reading": 9,
+     "rect": {
+      "h": 50.4,
+      "w": 84.0,
+      "x": 120.0,
+      "y": 40.0
+     },
+     "role": {
+      "debut": 2,
+      "fin": 9,
+      "index": 6,
+      "role": "carte"
+     }
     }
    ]
   }
@@ -1368,6 +1384,22 @@
       "index": 5,
       "pack": "colophon",
       "role": "ornement"
+     }
+    },
+    {
+     "angle": 23.0,
+     "reading": 9,
+     "rect": {
+      "h": 50.4,
+      "w": 84.0,
+      "x": 120.0,
+      "y": 40.0
+     },
+     "role": {
+      "debut": 2,
+      "fin": 9,
+      "index": 6,
+      "role": "carte"
      }
     }
    ]
@@ -2056,6 +2088,22 @@
       "pack": "colophon",
       "role": "ornement"
      }
+    },
+    {
+     "angle": 23.0,
+     "reading": 9,
+     "rect": {
+      "h": 50.4,
+      "w": 84.0,
+      "x": 120.0,
+      "y": 40.0
+     },
+     "role": {
+      "debut": 2,
+      "fin": 9,
+      "index": 6,
+      "role": "carte"
+     }
     }
    ]
   }
@@ -2742,6 +2790,22 @@
       "index": 5,
       "pack": "colophon",
       "role": "ornement"
+     }
+    },
+    {
+     "angle": 23.0,
+     "reading": 9,
+     "rect": {
+      "h": 50.4,
+      "w": 84.0,
+      "x": 120.0,
+      "y": 40.0
+     },
+     "role": {
+      "debut": 2,
+      "fin": 9,
+      "index": 6,
+      "role": "carte"
      }
     }
    ]
@@ -3430,6 +3494,22 @@
       "pack": "colophon",
       "role": "ornement"
      }
+    },
+    {
+     "angle": 23.0,
+     "reading": 9,
+     "rect": {
+      "h": 50.4,
+      "w": 84.0,
+      "x": 120.0,
+      "y": 40.0
+     },
+     "role": {
+      "debut": 2,
+      "fin": 9,
+      "index": 6,
+      "role": "carte"
+     }
     }
    ]
   }
@@ -4116,6 +4196,22 @@
       "index": 5,
       "pack": "colophon",
       "role": "ornement"
+     }
+    },
+    {
+     "angle": 23.0,
+     "reading": 9,
+     "rect": {
+      "h": 50.4,
+      "w": 84.0,
+      "x": 120.0,
+      "y": 40.0
+     },
+     "role": {
+      "debut": 2,
+      "fin": 9,
+      "index": 6,
+      "role": "carte"
      }
     }
    ]

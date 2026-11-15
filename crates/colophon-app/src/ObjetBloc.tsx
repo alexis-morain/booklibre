@@ -393,7 +393,9 @@ export function ObjetBloc({
         </>
       ) : (
         <div className="objet-popover-rangee">
-          {couleur}
+          {/* Une carte a ses encres, posées par le moteur : aucune couleur à
+              choisir, seulement l'angle. */}
+          {objet.type !== "carte" && couleur}
           {nombre("angle", t("objet.angle"), -180, 180, 1)}
         </div>
       )}

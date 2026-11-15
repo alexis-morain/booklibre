@@ -217,6 +217,7 @@ mod tests {
             lieux: vec!["Porto-Vecchio".into(), "Bonifacio".into()],
             appareils: vec!["Canon EOS 550D".into()],
             compose_le: chrono::NaiveDate::from_ymd_opt(2026, 8, 17).unwrap(),
+            carte: false,
         }
     }
 

@@ -506,6 +506,21 @@ function objetProblems(
       }
       break;
     }
+    // L'identité d'un ornement et d'une carte : la scène ne connaît pas leurs
+    // chemins, donc c'est ici, et seulement ici, que l'accord se lit — avec la
+    // boîte et l'angle comparés plus haut pour tout objet.
+    case "ornement": {
+      egal("index", want.role.index, got.role.index);
+      egal("pack", want.role.pack, got.role.pack);
+      egal("identifiant", want.role.id, got.role.id);
+      break;
+    }
+    case "carte": {
+      egal("index", want.role.index, got.role.index);
+      egal("première étape", want.role.debut, got.role.debut);
+      egal("fin de plage", want.role.fin, got.role.fin);
+      break;
+    }
   }
   return p;
 }

@@ -208,6 +208,22 @@ function albumDevServer(dir: string): Plugin {
           res.end(String(e));
         }
       });
+      // Les dessins des cartes de l'album, tels que le moteur les calcule : le
+      // harnais tire du même endroit que la fenêtre.
+      server.middlewares.use("/__dev/cartes", (_req, res) => {
+        try {
+          res.setHeader("Content-Type", "application/json");
+          res.end(
+            execFileSync(engineBinary, ["--dump-cartes", "-o", dir], {
+              encoding: "utf8",
+              maxBuffer: 64 * 1024 * 1024,
+            }),
+          );
+        } catch (e) {
+          res.statusCode = 500;
+          res.end(String(e));
+        }
+      });
       // The raw geometry dump the editor draws from: the album's own by
       // default, any bare format via ?format=WxH&bleed=N (the creation
       // screen previews formats before an album exists).

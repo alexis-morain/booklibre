@@ -25,6 +25,10 @@ const ACTIFS: [string, () => string, Cle][] = [
     () => "Creative Commons Attribution 4.0",
     "apropos.geonames.quoi",
   ],
+  // Le fond des cartes d'un voyage est toujours dans le moteur (l'actif
+  // embarqué) : la courtoisie « Made with Natural Earth » qu'il demande sans
+  // l'exiger.
+  ["Natural Earth", () => t("apropos.carte.licence"), "apropos.carte.quoi"],
 ];
 
 /** Where the software lives and who answers. Written out, not linked: the

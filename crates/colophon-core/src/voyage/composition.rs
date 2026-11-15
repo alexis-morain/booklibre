@@ -336,6 +336,77 @@ impl Resume {
     }
 }
 
+// --- les cartes ---------------------------------------------------------------------
+
+/// Quelles cartes une composition pose (P-s5).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum Cartes {
+    /// La première composition d'un voyage : la règle de [`plages_de_cartes`].
+    #[default]
+    ParDefaut,
+    /// Exactement celles-ci, et aucune autre : une recomposition repose les
+    /// cartes que l'album portait, ni plus ni moins. Une carte que
+    /// l'utilisateur a supprimée n'y est plus, et la machine ne la remet pas.
+    Seulement(Vec<(usize, usize)>),
+}
+
+/// Le code de pays d'une étape, quand il nomme un pays : jamais vide, jamais
+/// le `00` de la source pour « aucun pays ».
+fn pays_de(e: &Etape) -> Option<&str> {
+    e.lieu.code_pays.as_deref().filter(|c| !c.is_empty() && *c != "00")
+}
+
+/// Les cartes d'un voyage à sa première composition, dans l'ordre où elles
+/// s'ouvrent : **le voyage entier** d'abord, puis **une carte par pays à
+/// partir de trois étapes de suite** dans ce pays (une plage d'étapes est
+/// contiguë : un pays visité en deux fois a une carte par séjour qui compte
+/// trois étapes). Un voyage qui tient en un seul séjour n'a pas de seconde
+/// carte, ce serait la première. Un voyage d'une étape n'en a aucune.
+/// `fin` est exclue.
+pub fn plages_de_cartes(v: &Voyage) -> Vec<(usize, usize)> {
+    let n = v.etapes.len();
+    if n < 2 {
+        return Vec::new();
+    }
+    let mut plages = vec![(0, n)];
+    let mut i = 0;
+    while i < n {
+        let pays = pays_de(&v.etapes[i]);
+        let mut j = i + 1;
+        while pays.is_some() && j < n && pays_de(&v.etapes[j]) == pays {
+            j += 1;
+        }
+        if pays.is_some() && j - i >= 3 && (i, j) != (0, n) {
+            plages.push((i, j));
+        }
+        i = j;
+    }
+    plages
+}
+
+/// Les pages de carte à poser : les plages demandées, gardées si elles
+/// tiennent dans le voyage et qu'une main ne tient pas déjà (`deja`, les
+/// planches épinglées), avec le rapport de leur dessin. Une plage que le
+/// dessin refuse ne se pose pas.
+pub fn pages_de_cartes(
+    v: &Voyage,
+    cartes: &Cartes,
+    deja: &std::collections::HashSet<(usize, usize)>,
+) -> Vec<PageDeCarte> {
+    let plages = match cartes {
+        Cartes::ParDefaut => plages_de_cartes(v),
+        Cartes::Seulement(l) => l.clone(),
+    };
+    plages
+        .into_iter()
+        .filter(|p| !deja.contains(p))
+        .filter_map(|(debut, fin)| {
+            let d = crate::carte::dessiner(v, debut..fin).ok()?;
+            (fin <= v.etapes.len() && debut < fin).then(|| PageDeCarte { debut, fin, rapport: d.rapport() })
+        })
+        .collect()
+}
+
 // --- le flux du texte ---------------------------------------------------------------
 
 /// Un texte qui attend sa page, avec le rang de son résumé.
@@ -345,6 +416,20 @@ pub struct Texte {
     pub rang: usize,
     /// L'étape n'a aucune photo posable : son texte n'est qu'un texte.
     pub sans_photo: bool,
+    /// Une carte (P-s5) : cette « page de texte » en est une, sans texte. Elle
+    /// occupe sa page entière et n'en partage aucune (`Flux::carte` la ferme
+    /// aussitôt), donc elle attend, comme une page de texte, sa voisine.
+    pub carte: Option<PageDeCarte>,
+}
+
+/// Ce qu'une page de carte sait d'elle-même : la plage d'étapes qu'elle
+/// dessine (`fin` exclue) et le rapport largeur/hauteur de son dessin, dont la
+/// boîte garde la forme.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PageDeCarte {
+    pub debut: usize,
+    pub fin: usize,
+    pub rapport: f64,
 }
 
 /// Ce qu'une page de texte porte de lignes de récit au plus.
@@ -369,6 +454,45 @@ fn blocs_de(p: &[Texte]) -> Vec<Bloc> {
     p.iter().map(|t| t.bloc.clone()).collect()
 }
 
+fn est_carte(p: &[Texte]) -> Option<PageDeCarte> {
+    p.iter().find_map(|t| t.carte)
+}
+
+/// L'objet qui porte une carte sur une page : la boîte de la page, rétrécie
+/// au rapport du dessin et centrée. **La boîte est l'encre**, comme celle d'un
+/// ornement : jamais plus large que la page, jamais plus haute.
+pub fn objet_de_carte(g: &SpreadGeometry, c: &PageDeCarte, droite: bool) -> Objet {
+    let pb = pdf::page_box(droite, g);
+    let w = pb.w.min(pb.h * c.rapport);
+    let h = w / c.rapport;
+    Objet {
+        x: pb.x + (pb.w - w) / 2.0,
+        y: pb.y + (pb.h - h) / 2.0,
+        w,
+        h,
+        angle: 0.0,
+        contenu: Contenu::Carte { debut: c.debut, fin: c.fin },
+        couleur: None,
+        police: None,
+    }
+}
+
+/// Les objets d'une page du flux : sa carte, ou ses blocs de texte empilés.
+fn objets_de_page(
+    g: &SpreadGeometry,
+    mesure: &dyn Fn(&str, f64) -> f64,
+    page: &[Texte],
+    droite: bool,
+    x: f64,
+    w: f64,
+    haut: f64,
+) -> Vec<Objet> {
+    match est_carte(page) {
+        Some(c) => vec![objet_de_carte(g, &c, droite)],
+        None => empiler(mesure, &blocs_de(page), x, w, haut).0,
+    }
+}
+
 /// Une planche de texte : la page de gauche, et la page de droite quand il y
 /// en a une.
 fn planche_de_texte(
@@ -381,9 +505,9 @@ fn planche_de_texte(
     let pb = pdf::page_box(false, g);
     let haut = pb.y + pb.h - HAUT_MM;
     let mut s = Spread::vide();
-    s.objets = empiler(mesure, &blocs_de(gauche), xg, w, haut).0;
+    s.objets = objets_de_page(g, mesure, gauche, false, xg, w, haut);
     if let Some(d) = droite {
-        s.objets.extend(empiler(mesure, &blocs_de(d), xd, w, haut).0);
+        s.objets.extend(objets_de_page(g, mesure, d, true, xd, w, haut));
     }
     s.caption = gauche
         .iter()
@@ -397,7 +521,8 @@ fn planche_de_texte(
 /// page est « groupée », seule elle a sa page de texte. Les étapes aux photos
 /// gardent leur placement.
 fn marquer(pages: &[&[Texte]], resumes: &mut [Resume], partage: bool) {
-    let mut rangs: Vec<usize> = pages.iter().flat_map(|p| p.iter().map(|t| t.rang)).collect();
+    let mut rangs: Vec<usize> =
+        pages.iter().flat_map(|p| p.iter().filter(|t| t.carte.is_none()).map(|t| t.rang)).collect();
     rangs.sort_unstable();
     rangs.dedup();
     for t in pages.iter().flat_map(|p| p.iter()).filter(|t| t.sans_photo) {
@@ -440,6 +565,24 @@ impl Flux {
         }
     }
 
+    /// Pose une carte (P-s5) : une page à elle, qui ferme la page en cours,
+    /// puis se ferme aussitôt. Elle attend comme une page de texte : sa
+    /// voisine est le texte suivant, ou les premières photos de l'étape
+    /// (`ouvrir`), jamais une page blanche.
+    pub fn carte(
+        &mut self,
+        g: &SpreadGeometry,
+        mesure: &dyn Fn(&str, f64) -> f64,
+        page: PageDeCarte,
+        resumes: &mut [Resume],
+        sp: &mut Vec<Spread>,
+    ) {
+        self.fermer(g, mesure, resumes, sp);
+        let vide = Bloc { titre: String::new(), mention: None, recit: None };
+        self.courante.push(Texte { bloc: vide, rang: 0, sans_photo: false, carte: Some(page) });
+        self.fermer(g, mesure, resumes, sp);
+    }
+
     /// Ajoute le texte d'une étape. Il rejoint la page en cours s'il y tient,
     /// sinon il en ouvre une ; un récit plus long qu'une page se coupe en
     /// lignes entières sur deux pages, et ce qui dépasse la seconde se **dit**
@@ -457,7 +600,7 @@ impl Flux {
     ) {
         let cap = capacite(g);
         let w = poids(&bloc, mesure);
-        let texte = |bloc: Bloc| Texte { bloc, rang, sans_photo };
+        let texte = |bloc: Bloc| Texte { bloc, rang, sans_photo, carte: None };
         if w <= cap {
             if w + poids_page(&self.courante, mesure) > cap {
                 self.fermer(g, mesure, resumes, sp);
@@ -543,7 +686,9 @@ impl Flux {
         composer.promouvoir_ouverture(&mut photos);
         let barre = Composer::barre_d_ouverture(&photos);
         let mut essais = Vec::new();
-        if poids_page(&textes, mesure) <= lignes_pour_etre_court(&g) {
+        // Une carte prend sa page entière : les photos sont à droite, jamais
+        // dessous.
+        if est_carte(&textes).is_none() && poids_page(&textes, mesure) <= lignes_pour_etre_court(&g) {
             let (_, h, _) = empiler(mesure, &blocs, xg, w, 0.0);
             essais.push(TexteOuvert::Tete((h + 8.0).ceil() as u32));
         }
@@ -567,7 +712,7 @@ impl Flux {
                 TexteOuvert::Tete(_) => pb.y + pb.h,
                 TexteOuvert::Page => pb.y + pb.h - HAUT_MM,
             };
-            ouverture.objets = empiler(mesure, &blocs, xg, w, haut).0;
+            ouverture.objets = objets_de_page(&g, mesure, &textes, false, xg, w, haut);
             ouverture.caption = legende;
             marquer(&[&textes], resumes, true);
             sp.push(ouverture);
@@ -581,7 +726,7 @@ impl Flux {
         // orientation) : la page de texte seule, et la page de droite reste
         // blanche. Le bilan ne le cache pas : l'étape passe en « page de
         // récit faute de place ».
-        for t in textes.iter().filter(|t| !t.sans_photo) {
+        for t in textes.iter().filter(|t| !t.sans_photo && t.carte.is_none()) {
             resumes[t.rang].placement = Placement::EnPageFauteDePlace;
         }
         marquer(&[&textes], resumes, true);
@@ -620,6 +765,8 @@ pub struct Bilan {
     pub photos_hors_etapes: usize,
     /// Une photo de couverture venait de la source.
     pub couverture_de_la_source: bool,
+    /// Combien de cartes la composition a posées.
+    pub cartes: usize,
     /// `voyage.json` existait mais ne se lisait pas : le dossier s'est composé
     /// comme un dossier ordinaire, et c'est la phrase.
     pub refus: Option<String>,
@@ -660,6 +807,9 @@ impl Bilan {
             "voyage « {} » : {} étapes, une par chapitre ; {} récits à côté des photos, {} en page de récit, {} pages de texte",
             self.titre, self.etapes, self.recits_a_cote, self.recits_en_page, self.pages_de_texte
         ));
+        if self.cartes > 0 {
+            p.push(format!("{} cartes posées (le voyage, puis un pays à partir de trois étapes de suite)", self.cartes));
+        }
         if self.etapes_vides > 0 {
             p.push(format!("{} étapes sans photo ni récit n'ont rien donné au livre", self.etapes_vides));
         }

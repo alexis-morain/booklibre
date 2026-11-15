@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 #[command(after_help = FORMAT_HELP.as_str())]
 struct Cli {
     /// Folder of photos to build the album from
-    #[arg(required_unless_present_any = ["formats", "profils", "profils_json", "dump_geometry", "dump_ornements", "dump_lut", "dump_scene", "print", "cover", "audit", "reprise", "prevol", "preparer", "sheets", "bascule", "proposition", "gabarits", "reserve", "remplir", "devis", "fiche", "releve_album", "survol", "dates", "banc_gabarits", "depuis_fiches", "recomposer", "voyage_importer", "voyage_lire"])]
+    #[arg(required_unless_present_any = ["formats", "profils", "profils_json", "dump_geometry", "dump_ornements", "dump_cartes", "dump_lut", "dump_scene", "print", "cover", "audit", "reprise", "prevol", "preparer", "sheets", "bascule", "proposition", "gabarits", "reserve", "remplir", "devis", "fiche", "releve_album", "survol", "dates", "banc_gabarits", "depuis_fiches", "recomposer", "voyage_importer", "voyage_lire"])]
     photos: Option<PathBuf>,
 
     /// Output directory (album.json, album.pdf, thumbnail cache)
@@ -89,6 +89,12 @@ struct Cli {
     /// pack has one source and adding an ornament stays a data contribution.
     #[arg(long)]
     dump_ornements: bool,
+
+    /// Print the map drawings of the album in --out as JSON and exit, one per
+    /// range of steps (`"debut-fin"`): what the editor draws, from the same
+    /// `carte::dessiner` as the PDF.
+    #[arg(long)]
+    dump_cartes: bool,
 
     /// Print the adjustment LUTs over a fixed grid of settings as JSON and
     /// exit. Feeds the parity check like --dump-geometry: the committed
@@ -379,6 +385,17 @@ fn main() -> Result<()> {
         println!(
             "{}",
             serde_json::to_string_pretty(&colophon_core::ornement::pack())?
+        );
+        return Ok(());
+    }
+
+    if cli.dump_cartes {
+        let json = std::fs::read_to_string(cli.out.join("album.json"))
+            .with_context(|| format!("lecture de {}", cli.out.join("album.json").display()))?;
+        let album: Album = serde_json::from_str(&json).context("album.json illisible")?;
+        println!(
+            "{}",
+            serde_json::to_string(&colophon_core::carte::dessins_de_l_album(&album))?
         );
         return Ok(());
     }

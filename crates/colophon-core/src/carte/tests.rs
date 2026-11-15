@@ -78,6 +78,17 @@ fn tour_du_monde() -> Voyage {
     )
 }
 
+/// Plus d'un tour du monde : le tracé, déroulé, couvre toutes les longitudes,
+/// la couture le traverse forcément. (Un tour qui s'arrête au point de
+/// départ laisse un vide, et la couture s'y pose sans rien couper.)
+fn tour_du_monde_boucle() -> Voyage {
+    voyage(
+        vec![("Paris", 48.857, 2.352), ("Tokyo", 35.68, 139.69), ("Nadi", -17.80, 177.42), ("Los Angeles", 34.05, -118.24), ("New York", 40.71, -74.0), ("Paris, retour", 48.857, 2.352), ("Tokyo, encore", 35.68, 139.69)],
+        vec![],
+        vec![],
+    )
+}
+
 fn dans_le_cadre(d: &Dessin) {
     let (w, h) = (d.viewbox[2], d.viewbox[3]);
     for (x, y) in d.points() {
@@ -105,13 +116,20 @@ fn plus_long_segment_de(d: &Dessin, role: Role) -> f64 {
     plus
 }
 
+/// L'empreinte d'or du Pacifique. Elle a changé en P-s5 (`6bf935774a4ec8b3`
+/// avant) : le centre du monde n'est plus la médiane des étapes mais
+/// l'antipode du milieu du plus grand vide de longitudes.
+const EMPREINTE_PACIFIQUE: &str = "374a24a69155df8f";
+
 #[test]
 fn le_monde_qui_traverse_l_antimeridien() {
     let v = pacifique();
     let d = dessiner(&v, 0..3).unwrap();
     assert_eq!(d.niveau, Niveau::Monde);
     assert!(matches!(d.projection, Projection::EqualEarth { .. }));
-    // Centré sur le Pacifique, pas sur Greenwich : la couture est dans l'Atlantique.
+    // Centré sur le Pacifique, pas sur Greenwich : la couture est dans le
+    // plus grand vide de longitudes entre les points, de l'Atlantique à
+    // l'Asie (P-s5 : milieu de ce vide, pas médiane des étapes).
     let lon0 = d.projection.lon0();
     assert!(lon0 > 170.0 || lon0 < -110.0, "centre {lon0}");
     dans_le_cadre(&d);
@@ -125,10 +143,13 @@ fn le_monde_qui_traverse_l_antimeridien() {
         _ => None,
     }).collect();
     assert!(xs.len() > 3);
-    assert!(xs.windows(2).all(|w| w[1] <= w[0] + 0.01), "le tracé revient en arrière : {xs:?}");
+    // Equal Earth rétrécit un parallèle en s'éloignant de l'équateur : de Nadi
+    // à Auckland, `x` peut regagner une fraction de millimètre sans que le
+    // trait revienne. Un tour de carte, lui, se compterait en dizaines.
+    assert!(xs.windows(2).all(|w| w[1] <= w[0] + 0.5), "le tracé revient en arrière : {xs:?}");
     assert_eq!(d.reperes.len(), 3);
     assert_eq!(d.empreinte(), dessiner(&v, 0..3).unwrap().empreinte());
-    assert_eq!(d.empreinte(), "6bf935774a4ec8b3");
+    assert_eq!(d.empreinte(), EMPREINTE_PACIFIQUE);
 }
 
 #[test]
@@ -213,14 +234,14 @@ fn sans_mode_la_vitesse_fait_l_avion() {
 
 #[test]
 fn une_couture_qui_traverse_le_trace_le_coupe_et_le_ramene() {
-    let v = tour_du_monde();
-    let d = dessiner(&v, 0..5).unwrap();
+    let v = tour_du_monde_boucle();
+    let d = dessiner(&v, 0..7).unwrap();
     assert_eq!(d.niveau, Niveau::Monde);
-    // Le centre est Los Angeles : la couture passe par 62° E, sur la route Paris-Tokyo.
-    assert!((d.projection.lon0() - -118.24).abs() < 1e-9, "{}", d.projection.lon0());
+    // Plus d'un tour : aucun vide ne le laisse intact, la couture le traverse
+    // quelque part et ce qu'elle traverse est coupé et ramené.
     dans_le_cadre(&d);
     assert!(plus_long_segment_de(&d, Role::Vol) < 0.2 * d.viewbox[2], "un trait a traversé la couture : {}", plus_long_segment_de(&d, Role::Vol));
-    assert_eq!(d.calque(Role::Vol).unwrap().chemins.len(), 2, "Paris-couture, puis couture-Tokyo-Nadi-Los Angeles");
+    assert!(d.calque(Role::Vol).unwrap().chemins.len() >= 2, "le tracé est coupé à la couture");
 }
 
 #[test]
@@ -506,4 +527,77 @@ fn le_voyage_reel() {
         }
         debut = fin;
     }
+}
+
+
+/// Les longitudes d'un voyage d'un an, en gros : beaucoup d'Europe et d'Asie,
+/// l'Océanie, et deux villes des États-Unis. Leur médiane est à 73° E.
+const LONGITUDES_DU_REEL: [f64; 15] = [
+    -122.4, -87.6, 28.9, 35.2, 55.3, 72.8, 73.4, 77.2, 77.6, 100.5, 103.8, 106.7, 139.7, 151.2, 174.8,
+];
+
+#[test]
+fn la_couture_du_monde_tombe_dans_le_plus_grand_vide_pas_entre_deux_etapes() {
+    let points: Vec<P> = LONGITUDES_DU_REEL.iter().map(|&l| (0.0, l)).collect();
+    // Le défaut de la médiane, tel qu'il a été mesuré sur le voyage réel : la
+    // couture, à son antipode, tombe entre San Francisco et Chicago.
+    let mediane = longitude_mediane(&LONGITUDES_DU_REEL);
+    let ancienne = geometrie::envelopper(mediane + 180.0);
+    assert!(ancienne > -122.4 && ancienne < -87.6, "précondition : la couture de la médiane était à {ancienne}");
+    // Le plus grand vide est celui de Chicago (-87,6°) à 28,9° E : 116,5°. C'est
+    // lui qui reçoit la couture, en son milieu.
+    let centre = centre_du_monde(&points);
+    let couture = geometrie::envelopper(centre + 180.0);
+    assert!((couture - (-87.6 + 116.5 / 2.0)).abs() < 1e-9, "couture {couture}");
+    // Aucune étape n'est de l'autre côté de la couture : toutes tiennent dans
+    // le tour moins le vide.
+    let rel: Vec<f64> = LONGITUDES_DU_REEL.iter().map(|&l| geometrie::envelopper(l - centre)).collect();
+    let (mn, mx) = rel.iter().fold((f64::MAX, f64::MIN), |(a, b), &r| (a.min(r), b.max(r)));
+    assert!((mx - mn) < 360.0 - 116.5 + 1e-9, "les étapes occupent {}° du tour", mx - mn);
+    // San Francisco et Chicago sont voisines sur la carte, à 34,8° l'une de l'autre.
+    let (sf, chi) = (geometrie::envelopper(-122.4 - centre), geometrie::envelopper(-87.6 - centre));
+    assert!((chi - sf - 34.8).abs() < 1e-9, "{sf} {chi}");
+}
+
+#[test]
+fn un_seul_point_ou_aucun_vide_ne_fait_pas_n_importe_quoi() {
+    assert_eq!(centre_du_monde(&[]), 0.0);
+    assert!((centre_du_monde(&[(10.0, 33.0)]) - 33.0).abs() < 1e-9);
+    // Deux antipodes : deux vides de 180°, le plus à l'ouest reçoit la couture.
+    let c = centre_du_monde(&[(0.0, 0.0), (0.0, 180.0)]);
+    assert!(c.abs() <= 180.0);
+}
+
+/// Le voyage réel de P-s5 en petit : Chicago puis San Francisco, le Pacifique,
+/// l'Asie, l'Afrique, l'Europe, le Pérou — **un tour du monde, des vols dans
+/// tous les vides**. Avec la médiane des étapes, la couture tombait entre les
+/// deux villes des États-Unis (mesuré : centre à 73,4° E sur le vrai voyage).
+/// Le tracé ne doit pas compter : sinon ses vols comblent chaque vide et la
+/// couture n'a plus aucune raison de tomber à l'Atlantique.
+#[test]
+fn un_tour_du_monde_ne_coupe_pas_ses_etapes_entre_deux_villes_voisines() {
+    let v = voyage(
+        vec![
+            ("Chicago", 41.88, -87.63),
+            ("San Francisco", 37.77, -122.42),
+            ("Nadi", -17.80, 177.42),
+            ("Sydney", -33.87, 151.21),
+            ("Colombo", 6.93, 79.86),
+            ("Arusha", -3.39, 36.68),
+            ("Istanbul", 41.01, 28.98),
+            ("Oslo", 59.91, 10.75),
+            ("Lima", -12.05, -77.04),
+        ],
+        vec![],
+        vec![],
+    );
+    let d = dessiner(&v, 0..9).unwrap();
+    assert_eq!(d.niveau, Niveau::Monde);
+    // La couture est dans l'Atlantique : entre Oslo (10,75° E) et Lima (77° O).
+    let couture = geometrie::envelopper(d.projection.lon0() + 180.0);
+    assert!(couture < 10.75 && couture > -77.04, "couture à {couture}° E");
+    // Chicago et San Francisco sont voisines sur la page, pas aux deux bords.
+    let (chicago, sf) = (d.reperes[0], d.reperes[1]);
+    assert!((chicago.x - sf.x).abs() < 0.3 * d.viewbox[2], "{} mm entre les deux villes", (chicago.x - sf.x).abs());
+    dans_le_cadre(&d);
 }

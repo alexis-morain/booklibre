@@ -27,6 +27,7 @@
 import { useEffect, useRef } from "react";
 import { Rect } from "./album";
 import { t } from "./i18n";
+import { carteDe } from "./carte";
 import { ornementDe, titre } from "./ornement";
 import { Alerte, nomDAlerte } from "./photos";
 import { angleEcran, Scene, SceneObject } from "./scene";
@@ -105,6 +106,12 @@ export function nomDObjet(
       const o = ornementDe(role.id);
       return o ? t("scene.ornement", { titre: titre(o) }) : t("scene.ornement.inconnu");
     }
+    // Une carte se nomme par ses étapes (« Carte des étapes 1 à 4 ») ; une
+    // plage sans dessin se dit quand même : un objet muet est pire.
+    case "carte":
+      return carteDe(role.debut, role.fin)
+        ? t("scene.carte", { de: role.debut + 1, a: role.fin })
+        : t("scene.carte.vide", { de: role.debut + 1, a: role.fin });
   }
 }
 

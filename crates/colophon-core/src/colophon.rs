@@ -59,6 +59,11 @@ pub struct Faits {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub appareils: Vec<String>,
     pub compose_le: chrono::NaiveDate,
+    /// L'album porte une carte (P-s5) : la page crédite alors son fond,
+    /// Natural Earth. Une courtoisie, pas une obligation (domaine public), et
+    /// absente d'un album sans carte : sa page reste celle d'avant, à l'octet.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub carte: bool,
 }
 
 /// Gather the facts from a finished composition. Called once, at build time,
@@ -113,6 +118,7 @@ pub fn faits(
             .map(|(m, _)| m)
             .collect(),
         compose_le: aujourdhui,
+        carte: false,
     }
 }
 
@@ -185,6 +191,12 @@ pub fn texte(f: &Faits, trim: Size, grammage: f64, version: &str, langue: Langue
         Langue::Fr => format!("{w} × {h} mm, papier {g} g/m\u{b2}."),
         Langue::En => format!("{w} × {h} mm, {g} g/m\u{b2} paper."),
     });
+    if f.carte {
+        l.push(match langue {
+            Langue::Fr => "Cartes réalisées avec Natural Earth.".into(),
+            Langue::En => "Maps made with Natural Earth.".into(),
+        });
+    }
     l.join("\n")
 }
 
@@ -240,6 +252,7 @@ mod tests {
             lieux: vec!["Porto-Vecchio".into(), "Bonifacio".into()],
             appareils: vec!["Canon EOS 550D".into()],
             compose_le: chrono::NaiveDate::from_ymd_opt(2026, 8, 17).unwrap(),
+            carte: false,
         }
     }
 
@@ -260,6 +273,22 @@ mod tests {
 
     /// Same forbidden list as the report channel. A page that leaked a path
     /// would leak it to a printer, on paper, forever.
+    /// La courtoisie de Natural Earth (P-s5) : dans les deux langues, et
+    /// seulement quand l'album porte une carte — sans, la page est celle d'avant.
+    #[test]
+    fn la_page_credite_natural_earth_seulement_avec_une_carte() {
+        let mut f = faits_test();
+        let sans_fr = texte(&f, trim(), 150.0, "0.9.0", Langue::Fr);
+        let sans_en = texte(&f, trim(), 150.0, "0.9.0", Langue::En);
+        assert!(!sans_fr.contains("Natural Earth") && !sans_en.contains("Natural Earth"));
+        f.carte = true;
+        let fr = texte(&f, trim(), 150.0, "0.9.0", Langue::Fr);
+        let en = texte(&f, trim(), 150.0, "0.9.0", Langue::En);
+        assert!(fr.ends_with("Cartes réalisées avec Natural Earth."), "{fr}");
+        assert!(en.ends_with("Maps made with Natural Earth."), "{en}");
+        assert_eq!(fr.replace("\nCartes réalisées avec Natural Earth.", ""), sans_fr);
+    }
+
     #[test]
     fn the_page_never_carries_a_path_a_coordinate_or_a_caption() {
         let mut f = faits_test();
@@ -301,6 +330,7 @@ mod tests {
             lieux: vec!["Bonifacio".into()],
             appareils: vec!["iPhone 5".into()],
             compose_le: chrono::NaiveDate::from_ymd_opt(2026, 8, 17).unwrap(),
+            carte: false,
         };
         let t = texte(&f, trim(), 150.0, "0.9.0", Langue::Fr);
         assert!(t.contains("1 photographie retenue sur 1, prises le 21 octobre 2013."));
@@ -364,6 +394,7 @@ mod tests {
                 "iPhone 15 Pro Max".into(),
             ],
             compose_le: chrono::NaiveDate::from_ymd_opt(2026, 12, 28).unwrap(),
+            carte: false,
         };
         for (nom, w, h, _) in crate::format::FORMATS {
             for langue in [Langue::Fr, Langue::En] {

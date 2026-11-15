@@ -339,6 +339,102 @@ pub(crate) fn ornement_op(
     content.push_str("Q\n");
 }
 
+/// Un chemin d'ornement ou de carte, en opérateurs de construction : `m`, `l`,
+/// `c`, `h`. Le remplissage ou le trait que l'appelant pose ensuite n'est pas
+/// d'ici.
+fn chemin_op(content: &mut String, chemin: &crate::ornement::Chemin) {
+    use crate::ornement::Segment;
+    for seg in &chemin.segments {
+        match seg {
+            Segment::Vers { x, y } => content.push_str(&format!("{x:.4} {y:.4} m\n")),
+            Segment::Ligne { x, y } => content.push_str(&format!("{x:.4} {y:.4} l\n")),
+            Segment::Courbe { x1, y1, x2, y2, x, y } => {
+                content.push_str(&format!("{x1:.4} {y1:.4} {x2:.4} {y2:.4} {x:.4} {y:.4} c\n"))
+            }
+            Segment::Ferme => content.push_str("h\n"),
+        }
+    }
+}
+
+/// Draw one map: the layers of a [`crate::carte::Dessin`], mapped from its
+/// own millimetres into the box the reader drew, turned once around that
+/// box's centre and **clipped to it**.
+///
+/// The ornament's emitter only fills. A map also strokes (coasts, borders,
+/// the route), dashes (the flights) and clips, so this is the one place that
+/// writes `S`, `d` and `W n`. Stroke widths and dashes are the drawing's
+/// millimetres, and the placement matrix scales them with the box: a map
+/// drawn at half its size has half-width lines, which is what "the box is the
+/// ink" asks for.
+///
+/// Colours are `r g b rg` and `r g b RG`, like an ornament's: this document
+/// declares one colour space and an OutputIntent, and DeviceGray would be a
+/// second one in front of veraPDF.
+pub(crate) fn carte_op(
+    content: &mut String,
+    dessin: &crate::carte::Dessin,
+    rect: &Rect,
+    angle_deg: f64,
+) {
+    use crate::carte::Style;
+    let [minx, miny, vw, vh] = dessin.viewbox;
+    let (x0, y0) = (rect.x * MM_TO_PT, rect.y * MM_TO_PT);
+    let (w, h) = (rect.w * MM_TO_PT, rect.h * MM_TO_PT);
+    let (sx, sy) = (w / vw, h / vh);
+
+    content.push_str("q\n");
+    if angle_deg != 0.0 {
+        let c = crate::scene::centre(rect);
+        let (cx, cy) = (c.x * MM_TO_PT, c.y * MM_TO_PT);
+        let (sin, cos) = angle_deg.to_radians().sin_cos();
+        let (e, f) = (cx - cos * cx + sin * cy, cy - sin * cx - cos * cy);
+        content.push_str(&format!("{} {e:.2} {f:.2} cm\n", coefficients_rotation(angle_deg)));
+    }
+    content.push_str(&format!(
+        "{sx:.5} 0 0 {msy:.5} {e:.3} {f:.3} cm\n",
+        msy = -sy,
+        e = x0 - minx * sx,
+        f = y0 + h + miny * sy,
+    ));
+    // Everything below is cut at the box: a stroke at the edge of the map
+    // must not spill past the ink the box promised.
+    content.push_str(&format!("{minx:.3} {miny:.3} {vw:.3} {vh:.3} re W n\n1 J 1 j\n"));
+    for calque in &dessin.calques {
+        let [r, g, b] = crate::couleur::parse(calque.encre).unwrap_or(ORNEMENT_INK);
+        match calque.style {
+            Style::Remplir => {
+                content.push_str(&format!("{r} {g} {b} rg\n"));
+                if let Some(c) = calque.contour_mm {
+                    content.push_str(&format!("{r} {g} {b} RG\n{c:.4} w\n"));
+                }
+                for chemin in &calque.chemins {
+                    chemin_op(content, chemin);
+                    let op = match (calque.contour_mm.is_some(), chemin.evenodd) {
+                        (true, false) => "B",
+                        (true, true) => "B*",
+                        (false, false) => "f",
+                        (false, true) => "f*",
+                    };
+                    content.push_str(op);
+                    content.push('\n');
+                }
+            }
+            Style::Tracer { epaisseur_mm, pointille } => {
+                content.push_str(&format!("{r} {g} {b} RG\n{epaisseur_mm:.4} w\n"));
+                match pointille {
+                    Some([plein, vide]) => content.push_str(&format!("[{plein:.4} {vide:.4}] 0 d\n")),
+                    None => content.push_str("[] 0 d\n"),
+                }
+                for chemin in &calque.chemins {
+                    chemin_op(content, chemin);
+                    content.push_str("S\n");
+                }
+            }
+        }
+    }
+    content.push_str("Q\n");
+}
+
 /// A resolved image ready to embed: raw JPEG bytes plus pixel size.
 pub struct JpegAsset {
     pub data: Vec<u8>,
@@ -1053,6 +1149,12 @@ pub struct PdfWriter {
     /// `None`. Carried rather than logged: the screen has to say it.
     police_defaut: Option<&'static str>,
     geom: SpreadGeometry,
+    /// Le voyage de l'album, lu une fois et seulement si une planche porte une
+    /// carte : un album sans carte ne touche pas le disque ici.
+    voyage: Option<crate::voyage::Voyage>,
+    /// Les dessins déjà calculés, par plage : une carte posée sur deux
+    /// planches ne se dessine qu'une fois.
+    cartes: std::collections::HashMap<(usize, usize), Option<std::sync::Arc<crate::carte::Dessin>>>,
 
     bleed_mm: f64,
     /// Goes into `/Info`, into `dc:title`, and nowhere else.
@@ -1244,10 +1346,26 @@ impl PdfWriter {
             ecrivain: Ecrivain::depuis(choix.face, Some(dir)),
             police_defaut: choix.defaut,
             geom: geometry(album),
+            voyage: crate::carte::voyage_de(album),
+            cartes: std::collections::HashMap::new(),
             bleed_mm: album.bleed_mm,
             title: album.title.clone(),
             stamp,
         }
+    }
+
+    /// Le dessin de rendu de la plage `debut..fin`, ou `None` quand l'album n'a
+    /// pas de voyage lisible ou que la plage n'y tient pas.
+    fn dessin_de_carte(&mut self, debut: usize, fin: usize) -> Option<std::sync::Arc<crate::carte::Dessin>> {
+        let voyage = self.voyage.as_ref()?;
+        self.cartes
+            .entry((debut, fin))
+            .or_insert_with(|| {
+                crate::carte::dessiner(voyage, debut..fin)
+                    .ok()
+                    .map(|d| std::sync::Arc::new(d.pour_le_rendu()))
+            })
+            .clone()
     }
 
     /// `Some(code)` when the album named a face this document could not use
@@ -1396,6 +1514,15 @@ impl PdfWriter {
                     if let Some(o) = crate::ornement::par_id(id) {
                         let rgb = libres.get(*index).and_then(|o| o.rgb()).unwrap_or(ORNEMENT_INK);
                         ornement_op(&mut content, &o.dessin, &object.rect, object.angle, rgb);
+                    }
+                }
+                // A map: its layers, redrawn from the voyage next to the
+                // photographs. A voyage that cannot be read, or a range it
+                // does not hold, draws nothing and fails nothing — the file is
+                // repairable by hand, and the preflight is where it is said.
+                Role::Carte { debut, fin, .. } => {
+                    if let Some(d) = self.dessin_de_carte(*debut, *fin) {
+                        carte_op(&mut content, &d, &object.rect, object.angle);
                     }
                 }
             }
@@ -1768,6 +1895,211 @@ mod tests {
             .as_reference()
             .unwrap();
         String::from_utf8_lossy(&flux(&doc, contents)).into_owned()
+    }
+
+    // --- la carte (P-s5) ---------------------------------------------------------
+
+    /// Un voyage de trois étapes, écrit dans un dossier neuf : `voyage.json`
+    /// à côté de photos que personne n'a besoin de voir.
+    fn dossier_de_voyage(nom: &str) -> std::path::PathBuf {
+        use crate::voyage::{Etape, Lieu, Provenance, Voyage, VERSION};
+        let dir = std::env::temp_dir().join(format!("booklibre-pdf-carte-{nom}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let etapes = [("Paris", 48.86, 2.35), ("Lyon", 45.76, 4.84), ("Marseille", 43.30, 5.37)]
+            .into_iter()
+            .enumerate()
+            .map(|(i, (n, lat, lon))| Etape {
+                nom: n.into(),
+                recit: None,
+                debut: chrono::DateTime::parse_from_rfc3339(&format!("2025-06-{:02}T12:00:00Z", i + 1))
+                    .unwrap()
+                    .with_timezone(&chrono::Utc),
+                fin: None,
+                fuseau: "UTC".into(),
+                lieu: Lieu { lat, lon, localite: None, pays: None, code_pays: Some("FR".into()) },
+                meteo: None,
+                photos: vec![],
+            })
+            .collect();
+        let v = Voyage {
+            version: VERSION,
+            titre: "t".into(),
+            resume: None,
+            debut: None,
+            fin: None,
+            fuseau: None,
+            distance_km: None,
+            pays: vec![],
+            etapes,
+            segments: vec![],
+            trace: vec![],
+            videos_ignorees: 0,
+            couverture: None,
+            provenance: Provenance { source: "test".into(), reference: None, format: None },
+        };
+        crate::voyage::ecrire(&dir, &v).unwrap();
+        dir
+    }
+
+    fn carte_libre(angle: f64, fin: usize) -> crate::model::Objet {
+        crate::model::Objet {
+            couleur: None,
+            police: None,
+            x: 20.0,
+            y: 40.0,
+            w: 120.0,
+            h: 80.0,
+            angle,
+            contenu: crate::model::Contenu::Carte { debut: 0, fin },
+        }
+    }
+
+    /// La planche d'une carte seule, écrite en PDF depuis `racine` : le flux du
+    /// contenu, la MediaBox, et le PDF lui-même.
+    fn pdf_de_carte(racine: &std::path::Path, objet: crate::model::Objet) -> (String, Vec<f64>, Vec<u8>) {
+        let mut album = Album::new("t", racine, Size { w: 210.0, h: 210.0 });
+        album.spreads.push(Spread {
+            template: "vide".into(),
+            slots: vec![],
+            caption: None,
+            text: None,
+            edited: false,
+            locked: false,
+            objets: vec![objet],
+        });
+        let stamp = chrono::TimeZone::with_ymd_and_hms(&chrono::Local, 2026, 11, 14, 12, 0, 0).unwrap();
+        let mut w = PdfWriter::with_stamp(&album, std::path::Path::new("."), stamp);
+        w.add_spread(&album.spreads[0], &[]).unwrap();
+        let path = std::env::temp_dir()
+            .join(format!("colophon-carte-{}-{:?}.pdf", std::process::id(), std::thread::current().id()));
+        w.save(&path).unwrap();
+        let octets = std::fs::read(&path).unwrap();
+        let doc = Document::load(&path).unwrap();
+        let _ = std::fs::remove_file(&path);
+        let page = doc.get_pages().values().copied().next().unwrap();
+        let media: Vec<f64> = doc
+            .get_dictionary(page)
+            .unwrap()
+            .get(b"MediaBox")
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_float().map(f64::from).or_else(|_| v.as_i64().map(|i| i as f64)).unwrap())
+            .collect();
+        let contents = doc.get_dictionary(page).unwrap().get(b"Contents").unwrap().as_reference().unwrap();
+        (String::from_utf8_lossy(&flux(&doc, contents)).into_owned(), media, octets)
+    }
+
+    /// Les opérateurs qui déposent de l'encre : un remplissage, un trait, les
+    /// deux. C'est la mesure que ce test peut faire sans rasteriser ; la
+    /// rasterisation est `scripts/carte-encre.py`, dans le gate.
+    fn operateurs_d_encre(flux: &str) -> usize {
+        flux.lines().filter(|l| matches!(l.trim(), "f" | "f*" | "S" | "B" | "B*")).count()
+    }
+
+    /// **L'encre se mesure, et distingue une carte d'une carte vide.** Le même
+    /// objet, les mêmes cotes : avec son voyage à côté, des centaines de
+    /// remplissages et de traits ; sans voyage, la page est blanche et la
+    /// MediaBox identique. Un test qui ne regarderait que les cotes passerait
+    /// sur les deux, c'est la leçon de la planche blanche du 21/09.
+    #[test]
+    fn une_carte_depose_de_l_encre_et_une_carte_vide_aucune_aux_memes_cotes() {
+        let dir = dossier_de_voyage("encre");
+        let (avec, media_avec, _) = pdf_de_carte(&dir, carte_libre(0.0, 3));
+        let (sans, media_sans, _) = pdf_de_carte(&dir.join("absent"), carte_libre(0.0, 3));
+        assert_eq!(media_avec, media_sans, "les cotes sont les mêmes");
+        assert!(operateurs_d_encre(&avec) > 10, "une carte peint :\n{}", &avec[..avec.len().min(600)]);
+        assert_eq!(operateurs_d_encre(&sans), 0, "une carte vide ne peint rien :\n{sans}");
+        // Une plage que le voyage n'a pas : vide aussi.
+        let (hors, _, _) = pdf_de_carte(&dir, carte_libre(0.0, 0));
+        assert_eq!(operateurs_d_encre(&hors), 0);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Le trait, le pointillé et la découpe sont dans le flux : épaisseur et
+    /// tiret du dessin, mis à l'échelle de la boîte par la matrice de pose, et
+    /// un cadre de découpe `W n` avant la première forme. Le pointillé ne sert
+    /// qu'au vol : sans vol, aucun `d` à tirets.
+    #[test]
+    fn la_carte_trace_pointille_et_decoupe() {
+        let dir = dossier_de_voyage("trait");
+        let (flux, _, _) = pdf_de_carte(&dir, carte_libre(0.0, 3));
+        let decoupe = flux.find("re W n").expect("la carte est découpée à sa boîte");
+        assert!(flux.find(" m\n").unwrap() > decoupe, "la découpe précède la première forme");
+        assert!(flux.contains(" RG\n") && flux.contains(" w\n"), "des traits colorés, d'une épaisseur");
+        assert!(flux.contains("[] 0 d"), "les traits pleins le disent");
+        assert!(flux.contains(" rg\n"), "des remplissages");
+        // Paris-Lyon-Marseille, un jour chacun : du sol, aucun vol, aucun tiret.
+        assert!(!flux.lines().any(|l| l.starts_with('[') && !l.starts_with("[]")), "pas de pointillé sans vol");
+        // Le contour de la terre : `B`, pas `f`, c'est ce qui recolle les moitiés.
+        assert!(flux.lines().any(|l| l == "B"), "la terre se remplit et se contourne");
+        let (q, qq) = (flux.lines().filter(|l| *l == "q").count(), flux.lines().filter(|l| *l == "Q").count());
+        assert_eq!(q, qq, "q/Q équilibrés");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Un vol se pointille : le tiret est celui du calque, en millimètres du
+    /// dessin.
+    #[test]
+    fn un_vol_porte_son_pointille() {
+        let dir = dossier_de_voyage("vol");
+        // Même voyage, mais Marseille devient Tokyo : un jour pour 9 700 km.
+        let mut v = crate::voyage::lire(&dir).unwrap();
+        v.etapes[2].lieu = crate::voyage::Lieu { lat: 35.68, lon: 139.69, localite: None, pays: None, code_pays: None };
+        crate::voyage::ecrire(&dir, &v).unwrap();
+        let (flux, _, _) = pdf_de_carte(&dir, carte_libre(0.0, 3));
+        assert!(flux.lines().any(|l| l.starts_with("[1.2000 0.9000] 0 d")), "le vol est pointillé :\n{}", flux.lines().filter(|l| l.ends_with(" d")).collect::<Vec<_>>().join("\n"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Écrit dans `COLOPHON_CARTE_PDF` le PDF d'une carte du Pacifique (la
+    /// couture du monde tombe sur l'Afrique et l'Europe : la terre y est coupée
+    /// en deux moitiés qui se touchent), pour le lire dans un vrai lecteur :
+    /// `pdftoppm`, pas notre moteur. Les PNG sont l'affaire de l'œil.
+    #[test]
+    #[ignore = "écrit un PDF pour le lecteur : COLOPHON_CARTE_PDF=<dossier>"]
+    fn le_pdf_du_pacifique_pour_le_lecteur() {
+        let Ok(sortie) = std::env::var("COLOPHON_CARTE_PDF") else { return };
+        let dir = dossier_de_voyage("pacifique");
+        let mut v = crate::voyage::lire(&dir).unwrap();
+        for (e, (lat, lon)) in v.etapes.iter_mut().zip([(34.05, -118.24), (-17.80, 177.42), (-36.85, 174.76)]) {
+            e.lieu = crate::voyage::Lieu { lat, lon, localite: None, pays: None, code_pays: None };
+        }
+        crate::voyage::ecrire(&dir, &v).unwrap();
+        let obj = crate::model::Objet { x: 6.0, y: 8.0, w: 400.0, h: 400.0 / 2.0, ..carte_libre(0.0, 3) };
+        let (_, _, octets) = pdf_de_carte(&dir, obj);
+        std::fs::create_dir_all(&sortie).unwrap();
+        std::fs::write(std::path::Path::new(&sortie).join("pacifique.pdf"), octets).unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Une carte tournée pose **la même matrice** qu'un bloc et qu'un ornement
+    /// au même angle (`coefficients_rotation`), puis la découpe : la boîte
+    /// tourne, et ce qui la déborde est coupé avec elle.
+    #[test]
+    fn une_carte_tournee_pose_la_meme_matrice_qu_un_ornement() {
+        const ANGLE: f64 = 23.0;
+        let dir = dossier_de_voyage("tourne");
+        let (flux, _, _) = pdf_de_carte(&dir, carte_libre(ANGLE, 3));
+        let coef = coefficients_rotation(ANGLE);
+        let rot = flux.find(&format!("{coef} ")).expect("la carte tourne");
+        assert!(rot < flux.find("re W n").unwrap(), "elle tourne avant de se découper");
+        // Droite, aucune matrice de rotation.
+        let (droite, _, _) = pdf_de_carte(&dir, carte_libre(0.0, 3));
+        assert!(!droite.contains(&coef));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Le même album, deux écritures : le même fichier, octet pour octet.
+    #[test]
+    fn une_carte_s_exporte_deterministe() {
+        let dir = dossier_de_voyage("determinisme");
+        let a = pdf_de_carte(&dir, carte_libre(11.0, 3)).2;
+        let b = pdf_de_carte(&dir, carte_libre(11.0, 3)).2;
+        assert_eq!(a, b);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     fn bloc_libre(angle: f64) -> crate::model::Objet {

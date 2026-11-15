@@ -940,6 +940,19 @@ textarea {
   overflow: visible;
 }
 
+/* Une carte : le SVG des calques du moteur, à l'échelle de sa boîte et
+   **découpé à elle**, comme le `W n` du flux PDF. Sa boîte garde le rapport de
+   son dessin, donc rien de visible ne devrait la déborder ; un trait au bord
+   ne doit pas le faire. Une plage sans dessin n'est qu'un cadre pointillé. */
+.objet-carte {
+  overflow: hidden;
+}
+
+.objet-carte.vide {
+  outline: 1px dashed rgb(var(--ink-rgb) / 0.35);
+  outline-offset: -1px;
+}
+
 /* Un bloc qu'on peut prendre. Le curseur dit qu'il se déplace ; le cadre
    n'apparaît qu'au survol, pour que la planche au repos reste une planche. */
 .objet-libre.saisissable {

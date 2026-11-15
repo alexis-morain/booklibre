@@ -252,6 +252,12 @@ pub enum Role {
     /// parity therefore bears on the box, the angle and the identity, not on
     /// thousands of coordinates the two sides would each recompute.
     Ornement { index: usize, pack: String, id: String },
+    /// La carte d'un voyage, indexée dans `spread.objets` comme un ornement
+    /// et pour la même raison : **la scène ne connaît pas les chemins**. Elle
+    /// nomme la plage d'étapes (`debut..fin`) et s'arrête là ; le dessin se
+    /// recalcule de chaque côté depuis `voyage.json` et l'actif, et la parité
+    /// Rust/TypeScript porte sur la boîte, l'angle et l'identité.
+    Carte { index: usize, debut: usize, fin: usize },
 }
 
 impl Role {
@@ -263,7 +269,9 @@ impl Role {
     /// compiling while it quietly stopped measuring.
     pub fn index_libre(&self) -> Option<usize> {
         match self {
-            Role::FreeText { index, .. } | Role::Ornement { index, .. } => Some(*index),
+            Role::FreeText { index, .. } | Role::Ornement { index, .. } | Role::Carte { index, .. } => {
+                Some(*index)
+            }
             _ => None,
         }
     }
@@ -643,6 +651,16 @@ fn objet_libre(
                 role: Role::Ornement { index, pack: pack.clone(), id: id.clone() },
             };
         }
+        // A map is laid out by nothing either: its box keeps the drawing's
+        // aspect ratio, so the box is the ink.
+        crate::model::Contenu::Carte { debut, fin } => {
+            return Object {
+                rect,
+                angle: objet.angle,
+                reading,
+                role: Role::Carte { index, debut: *debut, fin: *fin },
+            };
+        }
     };
     let taille_pt = *taille_pt;
     let interligne = objet.interligne();
@@ -820,6 +838,7 @@ mod tests {
                 Role::Text { .. } => "texte",
                 Role::FreeText { .. } => "libre",
                 Role::Ornement { .. } => "ornement",
+                Role::Carte { .. } => "carte",
             })
             .collect();
         assert_eq!(roles, ["photo", "photo", "legende_photo", "legende_chapitre"]);
@@ -1179,6 +1198,7 @@ mod tests {
                 Role::Text { .. } => "texte",
                 Role::FreeText { .. } => "libre",
                 Role::Ornement { .. } => "ornement",
+                Role::Carte { .. } => "carte",
             })
             .collect();
         assert_eq!(roles, ["photo", "photo", "legende_chapitre", "libre", "libre"]);

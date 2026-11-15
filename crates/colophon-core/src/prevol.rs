@@ -87,6 +87,8 @@ pub const PHRASES: &[(&str, &[&str])] = &[
     ("objet_coupe.deplacer", &[]),
     ("objet_pli", &["n"]),
     ("objet_pli.glisser", &[]),
+    ("carte_vide", &["n"]),
+    ("carte_vide.supprimer", &[]),
     ("couverture_resolution", &["src", "ppi", "w_mm", "h_mm", "imprimeur", "min_ppi"]),
     ("couverture_resolution.choisir", &[]),
     ("couverture_vide.titre", &[]),
@@ -118,6 +120,7 @@ pub const PHRASES: &[(&str, &[&str])] = &[
 /// destination à l'écran par règle (`envoi.ts::DESTINATIONS`).
 pub const REGLES: &[&str] = &[
     "conformite",
+    "carte_vide",
     "couverture_resolution",
     "couverture_vide",
     "dos",
@@ -953,6 +956,41 @@ pub fn check_mesure(
                     remede: "glissez l'objet d'un seul côté du pli : l'éditeur y bute tout seul".into(),
                     phrase: phrase("objet_pli", "objet_pli.glisser", vec![("n", (index + 1).to_string())]),
                 });
+            }
+        }
+    }
+
+    // 6 ter. Une carte qui ne dessine rien (P-s5). Sa boîte est mesurée comme
+    // celle de n'importe quel objet libre au-dessus (la coupe, le pli) ; ce
+    // qui reste à dire est qu'elle est vide : `voyage.json` a disparu ou ne se
+    // lit plus, ou la plage d'étapes n'y tient plus. L'export ne casse pas, la
+    // page porterait un rectangle de papier, et le dire est le travail d'ici.
+    // Un avertissement : l'auteur peut vouloir la page blanche, la supprimer
+    // est un geste, la garder aussi.
+    {
+        let voyage = crate::carte::voyage_de(album);
+        for (si, spread) in album.spreads.iter().enumerate() {
+            for (index, objet) in spread.objets.iter().enumerate() {
+                let crate::model::Contenu::Carte { debut, fin } = &objet.contenu else { continue };
+                let vide = voyage
+                    .as_ref()
+                    .is_none_or(|v| crate::carte::dessiner(v, *debut..*fin).is_err());
+                if vide {
+                    defauts.push(Defaut {
+                        regle: "carte_vide",
+                        bloquant: false,
+                        planche: Some(si + 1),
+                        case_idx: None,
+                        src: None,
+                        cause: format!(
+                            "la carte n° {} ne dessine rien : le voyage est introuvable \
+                             ou n'a plus ces étapes",
+                            index + 1
+                        ),
+                        remede: "supprimez la carte, ou rétablissez voyage.json à côté des photos".into(),
+                        phrase: phrase("carte_vide", "carte_vide.supprimer", vec![("n", (index + 1).to_string())]),
+                    });
+                }
             }
         }
     }
@@ -2064,6 +2102,7 @@ mod tests {
                 lieux: Vec::new(),
                 appareils: Vec::new(),
                 compose_le: chrono::NaiveDate::from_ymd_opt(2026, 8, 17).unwrap(),
+                carte: false,
             },
             avec.trim_mm,
             150.0,
@@ -2086,6 +2125,7 @@ mod tests {
             lieux: Vec::new(),
             appareils: Vec::new(),
             compose_le: chrono::NaiveDate::from_ymd_opt(2026, 8, 17).unwrap(),
+            carte: false,
         };
         garde.spreads.insert(0, crate::garde::spread("Corse", &f, 190.0, crate::langue::Langue::Fr));
         let d = check(&garde, pr, &dims, &FichiersPoses::default())

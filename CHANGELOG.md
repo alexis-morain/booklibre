@@ -11,7 +11,20 @@ sur la page des releases.
 
 ### Added
 
-- The map behind a trip (not on a page yet): `carte::dessiner(voyage, steps)` draws
+- Maps in a trip album. A map is an object like a block or an ornament: it moves,
+  resizes (keeping its proportions), turns and deletes the same way, and its drawing
+  is the one the PDF prints, recomputed from the trip, never stored. A trip album
+  opens on a map of the whole trip, then gets one map for each stay of three steps
+  or more in a country, each on a page of its own (never beside a blank page). A
+  recomposition puts back the maps the album had and nothing else: one you
+  deleted stays deleted, one you moved stays where you left it. The preflight
+  warns about a map that draws nothing (the trip file is gone). The album file
+  moves to schema 4 (an older Booklibre refuses it instead of dropping the maps);
+  an album of schema 3 opens unchanged. The colophon page and About credit
+  Natural Earth ("Made with Natural Earth"). The world map now puts its seam in
+  the widest gap between the steps' longitudes instead of on their median, so a
+  trip around the world is no longer cut between two neighbouring cities.
+- The map behind a trip: `carte::dessiner(voyage, steps)` draws
   the land, borders, coasts, lakes and rivers of the area a trip covers, with the
   route on top (ground in a line, flights as great-circle arcs) and the steps as
   points. A city, a region or the whole world picks its own projection, all

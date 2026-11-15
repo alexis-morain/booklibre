@@ -57,6 +57,19 @@ pub fn planches_gardees(album: &Album) -> usize {
     album.spreads.iter().filter(|s| s.pinned()).count()
 }
 
+/// Les plages de carte de l'album, dans l'ordre du livre, sans doublon.
+fn plages_de_cartes(album: &Album) -> Vec<(usize, usize)> {
+    let mut plages: Vec<(usize, usize)> = Vec::new();
+    for o in album.spreads.iter().flat_map(|s| s.objets.iter()) {
+        if let crate::model::Contenu::Carte { debut, fin } = o.contenu {
+            if !plages.contains(&(debut, fin)) {
+                plages.push((debut, fin));
+            }
+        }
+    }
+    plages
+}
+
 /// Recompose l'album de `dir` depuis son dossier de photos, et l'écrit.
 ///
 /// `album.origin.json` ne bouge pas (la composition ne l'écrit qu'une fois),
@@ -150,6 +163,9 @@ pub fn recomposer(dir: &Path, opts: Recomposition) -> Result<BuildReport> {
         legendes: album.legendes,
         // « Rien » est un choix : une recomposition ne le défait pas (P-s2).
         legendes_de_voyage_par_defaut: false,
+        // Les cartes de l'album, ni plus ni moins : une carte supprimée à la
+        // main n'y est plus, et la machine ne la remet pas (P-s5).
+        cartes: crate::voyage::composition::Cartes::Seulement(plages_de_cartes(&album)),
     };
     build_album(&root, dir, build)
 }

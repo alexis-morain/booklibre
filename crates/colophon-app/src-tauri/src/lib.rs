@@ -561,6 +561,24 @@ fn ornements() -> &'static [colophon_core::ornement::Ornement] {
     colophon_core::ornement::pack()
 }
 
+/// The map drawings of the open album, one per range of steps. The screen
+/// draws a map from the **same** `carte::dessiner` the PDF does, so a map has
+/// one geometry and the preview cannot show a coastline the print does not.
+#[tauri::command]
+fn cartes(
+    state: State<'_, AppState>,
+) -> Result<std::collections::BTreeMap<String, colophon_core::carte::Dessin>, String> {
+    let dir = {
+        let guard = state.open.lock().unwrap();
+        guard.as_ref().ok_or("aucun album ouvert")?.dir.clone()
+    };
+    let text = std::fs::read_to_string(dir.join("album.json"))
+        .map_err(|e| format!("lecture de album.json : {e}"))?;
+    let album: Album =
+        serde_json::from_str(&text).map_err(|e| format!("album.json illisible : {e}"))?;
+    Ok(colophon_core::carte::dessins_de_l_album(&album))
+}
+
 /// The photos curation set aside, with reasons, from curation.json.
 /// Empty when the album predates the export: the sorting view just shows
 /// the hand-removed photos then.
@@ -2741,6 +2759,7 @@ pub fn run() {
             remplir_cases_vides,
             geometrie,
             ornements,
+            cartes,
             geometrie_format,
             detected_focal,
             curation,
