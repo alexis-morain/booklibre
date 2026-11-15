@@ -6763,3 +6763,18 @@ button.envoi-defaut-ou:focus-visible {
 .bilan-voyage-lignes li + li {
   margin-top: 6px;
 }
+
+.voyage-import .setup-folder {
+  display: block;
+  margin: 14px 0 0;
+}
+
+.voyage-import .setup-folder code {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.voyage-import .lede[role="status"] {
+  margin-top: 16px;
+}

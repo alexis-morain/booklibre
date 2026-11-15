@@ -183,7 +183,9 @@ export function cleProgres(e: Etat): { cle: Cle; params?: Record<string, number 
 
 /** Un entier à la française ou à l'anglaise : « 1 546 » / « 1,546 ». */
 export function entier(n: number, langue: "fr" | "en"): string {
-  return new Intl.NumberFormat(langue === "fr" ? "fr-FR" : "en-US").format(n);
+  // L'espace fine insécable du français ne se dessine pas dans toutes les
+  // polices (« 1546 » à l'écran) : l'espace insécable ordinaire, toujours.
+  return new Intl.NumberFormat(langue === "fr" ? "fr-FR" : "en-US").format(n).replace(/\u202f/g, "\u00a0");
 }
 
 // ---- le bilan ----------------------------------------------------------------
