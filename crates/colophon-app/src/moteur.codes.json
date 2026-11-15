@@ -21,6 +21,10 @@
     "dossier de photos introuvable : la résolution effective n'a pas pu être vérifiée"
   ],
   "phrases": {
+    "carte_vide": [
+      "n"
+    ],
+    "carte_vide.supprimer": [],
     "conformite": [
       "imprimeur"
     ],
@@ -183,6 +187,7 @@
   ],
   "regles": [
     "conformite",
+    "carte_vide",
     "couverture_resolution",
     "couverture_vide",
     "dos",

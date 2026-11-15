@@ -177,8 +177,11 @@ fn copie_de_l_album(nom: &str) -> PathBuf {
     vers
 }
 
+/// Les tests de P-s2 composent **sans carte** : ils mesurent la mise en page
+/// du texte et des photos, et une carte à l'ouverture déplacerait chaque
+/// indice. Les cartes ont leurs tests plus bas (P-s5).
 fn options() -> BuildOptions {
-    BuildOptions { aujourdhui: Some(jour()), ..Default::default() }
+    BuildOptions { aujourdhui: Some(jour()), cartes: Cartes::Seulement(Vec::new()), ..Default::default() }
 }
 
 fn noms_de_chapitres(album: &Album) -> Vec<String> {
@@ -791,3 +794,5 @@ fn une_recomposition_garde_ce_que_l_utilisateur_a_fait() {
     // Les étapes se retrouvent dans l'ordre, une fois chacune.
     assert_eq!(noms_de_chapitres(&apres).iter().filter(|c| *c == "Marseille").count(), 1);
 }
+
+mod cartes;

@@ -74,6 +74,9 @@ pub struct BuildOptions {
     /// recomposition le met à `false` : `legendes: None` y veut dire « Rien »,
     /// et un choix de l'utilisateur n'est jamais remis par la machine.
     pub legendes_de_voyage_par_defaut: bool,
+    /// Les cartes d'un album de voyage (P-s5) : la règle à la première
+    /// composition, exactement celles de l'album à la recomposition.
+    pub cartes: crate::voyage::composition::Cartes,
 }
 
 
@@ -97,6 +100,7 @@ impl Default for BuildOptions {
             langue: crate::langue::Langue::Fr,
             legendes: None,
             legendes_de_voyage_par_defaut: true,
+            cartes: Default::default(),
         }
     }
 }
@@ -783,6 +787,24 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                 .collect()
         })
         .unwrap_or_default();
+    // Les cartes que cette composition pose : celles de la règle ou de l'album
+    // d'avant, moins celles qu'une planche gardée porte déjà (P-s5).
+    let plage_de_carte = |o: &model::Objet| match o.contenu {
+        model::Contenu::Carte { debut, fin } => Some((debut, fin)),
+        _ => None,
+    };
+    let cartes_a_poser: Vec<crate::voyage::composition::PageDeCarte> = voyage
+        .as_ref()
+        .map(|v| {
+            let deja: std::collections::HashSet<(usize, usize)> = opts
+                .pinned
+                .iter()
+                .flat_map(|(sp, _)| sp.objets.iter())
+                .filter_map(plage_de_carte)
+                .collect();
+            crate::voyage::composition::pages_de_cartes(v, &opts.cartes, &deja)
+        })
+        .unwrap_or_default();
     let rang_de = |s: &model::Spread| -> Option<(usize, usize)> {
         let v = voyage.as_ref()?;
         // Une planche qui porte le titre d'une étape en est l'ouverture : rang 0
@@ -794,7 +816,11 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                 .position(|e| crate::voyage::composition::sans_emojis(&e.nom).0 == c)
                 .map(|i| (i, 0))
         });
-        de_titre.or_else(|| s.slots.first().and_then(|sl| ordre_voyage.get(sl.src.as_str()).copied()))
+        de_titre
+            .or_else(|| s.slots.first().and_then(|sl| ordre_voyage.get(sl.src.as_str()).copied()))
+            // Une planche qui ne porte qu'une carte s'ouvre devant l'étape où
+            // la carte commence.
+            .or_else(|| s.objets.iter().find_map(plage_de_carte).map(|(debut, _)| (debut, 0)))
     };
 
     let compose_une = |densite: layout::Densite,
@@ -868,6 +894,10 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                     let legende = Some(nom.clone()).filter(|n| !n.is_empty());
                     let rang = resumes.len();
                     let mut sp = Vec::new();
+                    // Les cartes qui s'ouvrent à cette étape, avant elle.
+                    for page in cartes_a_poser.iter().filter(|p| p.debut == etape_de_chapitre[k]) {
+                        flux.carte(&g, &mesure_face, *page, &mut resumes, &mut sp);
+                    }
                     let neuf = |placement| {
                         vc::Resume::neuf(&nom, recit.as_deref(), n1 + n2, placement, &mesure_face)
                     };
@@ -958,10 +988,17 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                     // la date d'un fichier téléchargé ne dit rien du livre.
                     _ if rang_de(spread).is_some() => {
                         let r = rang_de(spread);
+                        // Une carte seule passe devant les planches de son étape,
+                        // pas derrière.
+                        let carte_seule = spread.caption.is_none()
+                            && spread.slots.is_empty()
+                            && spread.objets.iter().any(|o| plage_de_carte(o).is_some());
                         album
                             .spreads
                             .iter()
-                            .position(|s| rang_de(s).zip(r).is_some_and(|(a, b)| a > b))
+                            .position(|s| {
+                                rang_de(s).zip(r).is_some_and(|(a, b)| if carte_seule { a >= b } else { a > b })
+                            })
                             .unwrap_or(album.spreads.len())
                     }
                     Some(t) => album
@@ -1177,6 +1214,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                 rs.first().map_or(&[][..], |r| &r[..]),
             );
             b.photos_absentes = photos_absentes;
+            b.cartes = cartes_a_poser.len();
             b.photos_hors_etapes = hors_etapes.len();
             b.couverture_de_la_source = v.couverture.as_deref().is_some_and(|f| {
                 composees[0].1.cover.as_ref().and_then(|c| c.photo.as_ref()).is_some_and(|p| p.src == f)
@@ -2385,7 +2423,7 @@ mod tests {
     /// sont là exprès, sans quoi le test passerait tout seul — la conversion
     /// non étagée n'aurait rien eu à convertir et se serait tue.
     #[test]
-    fn un_album_de_schema_2_monte_en_3_sans_toucher_a_rien() {
+    fn un_album_de_schema_2_monte_au_schema_courant_sans_toucher_a_rien() {
         let (_photos, out) = dossier_test("migration-2-vers-3");
         let thumbs = out.join(".cache").join("thumbs");
         fs::create_dir_all(&thumbs).unwrap();
@@ -2437,14 +2475,14 @@ mod tests {
 
         let m = migrate_album_folder(&out).unwrap().expect("il y avait à estampiller");
         assert_eq!(m.depuis, 2);
-        assert_eq!((m.slots, m.irresolus), (0, 0), "l'étape 2 → 3 ne convertit rien");
+        assert_eq!((m.slots, m.irresolus), (0, 0), "les étapes 2 → 3 et 3 → 4 ne convertissent rien");
 
         // Le fichier entier, à l'estampille près.
-        album.version = 3;
+        album.version = model::SCHEMA;
         assert_eq!(
             fs::read_to_string(&json).unwrap(),
             serde_json::to_string_pretty(&album).unwrap(),
-            "l'étape 2 → 3 a touché autre chose que la version"
+            "les étapes 2 → 3 et 3 → 4 ont touché autre chose que la version"
         );
 
         // Et les `focal` au bit, dit séparément : c'est l'assertion que le
@@ -2461,6 +2499,79 @@ mod tests {
             );
         }
         assert_eq!(relu.spreads[0].objets, album.spreads[0].objets, "objets intacts");
+        assert!(migrate_album_folder(&out).unwrap().is_none(), "ne re-migre pas");
+    }
+
+    /// 3 → 4 (P-s5) : le schéma 4 veut dire « ce fichier peut porter une
+    /// carte », et l'étape n'estampille que cela. Même discipline que la
+    /// précédente : le fichier **entier** est comparé, à l'estampille près, avec
+    /// des vignettes présentes exprès — une migration non étagée qui refaisait
+    /// tourner la conversion des `focal` aurait quelque chose à convertir et se
+    /// verrait. Une carte et un bloc tourné y sont, intacts.
+    #[test]
+    fn un_album_de_schema_3_monte_en_4_sans_toucher_a_rien() {
+        let (_photos, out) = dossier_test("migration-3-vers-4");
+        let thumbs = out.join(".cache").join("thumbs");
+        fs::create_dir_all(&thumbs).unwrap();
+        image::RgbImage::from_fn(120, 80, |_, _| image::Rgb([120, 40, 200]))
+            .save(thumbs.join("ta.jpg"))
+            .unwrap();
+        fs::write(out.join("thumbs.json"), r#"{"a.jpg":"ta.jpg"}"#).unwrap();
+
+        let mut album = model::Album::new("t", Path::new("."), model::Size { w: 210.0, h: 210.0 });
+        album.version = 3;
+        album.root = ".".into();
+        album.spreads.push(model::Spread {
+            template: "solo".into(),
+            slots: vec![model::Slot::new("a.jpg".into(), [0.2, 0.8])],
+            caption: None,
+            text: None,
+            edited: true,
+            locked: false,
+            objets: vec![
+                model::Objet {
+                    couleur: None,
+                    police: None,
+                    x: 20.0,
+                    y: 30.0,
+                    w: 100.0,
+                    h: 60.0,
+                    angle: -17.5,
+                    contenu: model::Contenu::Carte { debut: 2, fin: 9 },
+                },
+                model::Objet {
+                    couleur: Some("#336699".into()),
+                    police: None,
+                    x: 30.0,
+                    y: 30.0,
+                    w: 40.0,
+                    h: 20.0,
+                    angle: 12.5,
+                    contenu: model::Contenu::Texte {
+                        texte: "Calvi".into(),
+                        taille_pt: 11.0,
+                        interligne_mm: None,
+                        alignement: model::Alignement::Centre,
+                    },
+                },
+            ],
+        });
+        let json = out.join("album.json");
+        fs::write(&json, serde_json::to_string_pretty(&album).unwrap()).unwrap();
+
+        let m = migrate_album_folder(&out).unwrap().expect("il y avait à estampiller");
+        assert_eq!(m.depuis, 3);
+        assert_eq!((m.slots, m.irresolus), (0, 0), "l'étape 3 → 4 ne convertit rien");
+        album.version = 4;
+        assert_eq!(
+            fs::read_to_string(&json).unwrap(),
+            serde_json::to_string_pretty(&album).unwrap(),
+            "l'étape 3 → 4 a touché autre chose que la version"
+        );
+        let relu: model::Album = serde_json::from_str(&fs::read_to_string(&json).unwrap()).unwrap();
+        assert_eq!(relu.spreads[0].slots[0].focal, [0.2, 0.8], "focal re-converti");
+        assert_eq!(relu.spreads[0].objets, album.spreads[0].objets, "objets intacts");
+        assert!(matches!(relu.spreads[0].objets[0].contenu, model::Contenu::Carte { debut: 2, fin: 9 }));
         assert!(migrate_album_folder(&out).unwrap().is_none(), "ne re-migre pas");
     }
 
