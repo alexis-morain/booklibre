@@ -35,3 +35,18 @@ jiff = { version = "0.2", default-features = false, features = ["std", "tzdb-bun
 
 [profile.release]
 opt-level = 3
+
+# Le gate tourne en debug (`cargo test`), et la composition d'un album décode,
+# redimensionne et réencode des images, puis écrit du PDF : sans optimisation,
+# la suite de colophon-core prenait 31 min sous Windows (1 856 s, #141) et le
+# job frôlait son délai de 45 min. Les dépendances (image, zune-jpeg, lopdf,
+# flate2…) sont compilées en opt-level 2 ; colophon-core en opt-level 1.
+# `debug-assertions` et `overflow-checks` restent actifs pour nos crates : seul
+# le niveau d'optimisation change, pas ce que les tests vérifient.
+# `tauri dev` fixe déjà CARGO_PROFILE_DEV_OPT_LEVEL=3 par l'environnement, qui
+# l'emporte sur ce qui suit pour le profil dev du paquet racine.
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.dev.package.colophon-core]
+opt-level = 1
