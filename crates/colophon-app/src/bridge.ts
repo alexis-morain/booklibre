@@ -4,6 +4,7 @@
 // the book view gets checked without rebuilding the Rust side.
 
 import { invoke } from "@tauri-apps/api/core";
+import { DessinCarte, setCartes } from "./carte";
 import { Ornement, setOrnements } from "./ornement";
 import { Album, Discard, Legendes, OpenedAlbum, Police, Spread } from "./album";
 
@@ -334,11 +335,34 @@ export async function chargeOrnements(): Promise<void> {
 async function chargeGeometrie(): Promise<void> {
   if (inTauri) {
     setGeometrie(await invoke<Dump>("geometrie"));
+    await chargeCartes();
     return;
   }
   const res = await fetch("/__dev/geometrie");
   if (!res.ok) throw new Error(await res.text());
   setGeometrie(await res.json());
+  await chargeCartes();
+}
+
+/**
+ * Les dessins des cartes de l'album qui vient de s'ouvrir, par plage d'étapes.
+ *
+ * Comme le pack d'ornements, **ils ne bloquent rien** : sans eux l'album reste
+ * lisible, ses cartes sont des cadres vides que le panneau d'avertissement dit
+ * déjà (`carte_vide`). Mais, contrairement au pack, ils changent avec l'album :
+ * on les recharge chaque fois que la géométrie l'est.
+ */
+async function chargeCartes(): Promise<void> {
+  try {
+    if (inTauri) {
+      setCartes(await invoke<Record<string, DessinCarte>>("cartes"));
+      return;
+    }
+    const res = await fetch("/__dev/cartes");
+    setCartes(res.ok ? ((await res.json()) as Record<string, DessinCarte>) : {});
+  } catch {
+    setCartes({});
+  }
 }
 
 /** The dump for a bare page format (creation screen previews). */

@@ -27,6 +27,7 @@ import {
 } from "./album";
 import { pile } from "./font";
 import { angleEcran, centre, Point, Scene } from "./scene";
+import { carteDe, peindreCarte } from "./carte";
 import { ornementDe, peindre as peindreOrnement } from "./ornement";
 import { imageDe, imageRegleeDe, surImage } from "./photos";
 import { filtreDe, reglagePose, surReglage } from "./reglages";
@@ -263,6 +264,24 @@ export function peindre(
           ctx.translate(-ctr.x, -ctr.y);
         }
         peindreOrnement(ctx, orn.dessin, o.rect, role.couleur);
+        ctx.restore();
+        break;
+      }
+      // Une carte : les calques du dessin que le moteur a calculé, à l'échelle
+      // de sa boîte, tournés et découpés avec elle. Le même tracé que le DOM,
+      // à la chaîne près ; une plage sans dessin ne peint rien, le moteur non
+      // plus.
+      case "carte": {
+        const dessin = carteDe(role.debut, role.fin);
+        if (!dessin) break;
+        ctx.save();
+        if (o.angle !== 0) {
+          const ctr = centre(o.rect);
+          ctx.translate(ctr.x, ctr.y);
+          ctx.rotate((angleEcran(o.angle) * Math.PI) / 180);
+          ctx.translate(-ctr.x, -ctr.y);
+        }
+        peindreCarte(ctx, dessin, o.rect);
         ctx.restore();
         break;
       }

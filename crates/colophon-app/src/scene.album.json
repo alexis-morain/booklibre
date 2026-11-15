@@ -224,6 +224,16 @@
      "type": "ornement",
      "pack": "colophon",
      "id": "filet-flare"
+    },
+    {
+     "x": 120.0,
+     "y": 40.0,
+     "w": 84.0,
+     "h": 50.4,
+     "angle": 23.0,
+     "type": "carte",
+     "debut": 2,
+     "fin": 9
     }
    ]
   }

@@ -173,6 +173,9 @@ export const FR = {
   "apropos.icc.quoi": "Le profil couleur que le PDF embarque comme OutputIntent.",
   "apropos.geonames.quoi":
     "Les noms de villes qui titrent les chapitres, depuis le GPS des photos.",
+  "apropos.carte.licence": "Domaine public",
+  "apropos.carte.quoi":
+    "Le fond des cartes d’un voyage : côtes, frontières, lacs et rivières. Fait avec Natural Earth.",
   "apropos.ornements.licence": "CC0 1.0 et domaine public",
   "apropos.ornements.quoi":
     "Les fleurons, filets et séparateurs que l’on pose sur une planche. Le détail par ornement vit dans assets/ornements/LICENCES.md.",
@@ -665,6 +668,8 @@ export const FR = {
     "Un objet posé à la main dépasse la coupe : rentrez-le dans la page, ou réduisez-le.",
   "envoi.simple.objet_pli":
     "Un objet posé à la main est à cheval sur le pli : glissez-le d’un seul côté.",
+  "envoi.simple.carte_vide":
+    "Une carte ne dessine rien : le voyage est introuvable à côté des photos. Supprimez-la, ou rétablissez voyage.json.",
   "envoi.simple.pagination":
     "Le nombre de pages ne convient pas à cet imprimeur : ajoutez ou retirez des planches.",
   "envoi.simple.pagination.ajouter":
@@ -1117,10 +1122,13 @@ export const FR = {
   "ornement.famille.separateur": "Séparateurs",
   "contexte.objet": "Glissez pour déplacer, les coins pour la taille, la poignée du haut pour tourner. Double-clic pour écrire.",
   "contexte.ornement": "Glissez pour déplacer, les coins pour la taille : elle garde ses proportions. La poignée du haut pour tourner.",
+  "contexte.carte": "Glissez pour déplacer, les coins pour la taille : la carte garde ses proportions. La poignée du haut pour tourner, Suppr pour la retirer.",
   "scene.texte.libre": "Texte libre : {texte}",
   "scene.texte.libre.vide": "Texte libre, vide",
   "scene.ornement": "Ornement : {titre}",
   "scene.ornement.inconnu": "Ornement absent du pack",
+  "scene.carte": "Carte des étapes {de} à {a}",
+  "scene.carte.vide": "Carte vide, étapes {de} à {a} : le voyage est introuvable",
   "planche.recadrer":
     "Glisser pour recadrer · molette pour zoomer · double-clic recentre · ⌥ affine",
   "planche.recadrer.pleine":
@@ -1520,6 +1528,9 @@ export const EN: Record<Cle, string> = {
   "apropos.icc.quoi": "The colour profile the PDF carries as its OutputIntent.",
   "apropos.geonames.quoi":
     "The town names that title the chapters, from the GPS your cameras wrote.",
+  "apropos.carte.licence": "Public domain",
+  "apropos.carte.quoi":
+    "The base of a voyage’s maps: coasts, borders, lakes and rivers. Made with Natural Earth.",
   "apropos.ornements.licence": "CC0 1.0 and public domain",
   "apropos.ornements.quoi":
     "The fleurons, rules and dividers one places on a spread. The detail, ornament by ornament, lives in assets/ornements/LICENCES.md.",
@@ -1972,6 +1983,8 @@ export const EN: Record<Cle, string> = {
     "The first left page is pasted inside the cover and is not printed, and it holds something: move it, or tick the half-title below.",
   "envoi.simple.objet_coupe": "An object placed by hand runs past the trim: bring it inside the page, or make it smaller.",
   "envoi.simple.objet_pli": "An object placed by hand straddles the fold: slide it to one side.",
+  "envoi.simple.carte_vide":
+    "A map draws nothing: the voyage cannot be found beside the photos. Delete it, or put voyage.json back.",
   "envoi.simple.pagination":
     "The page count does not suit this printer: add or remove spreads.",
   "envoi.simple.pagination.ajouter":
@@ -2410,10 +2423,13 @@ export const EN: Record<Cle, string> = {
   "ornement.famille.separateur": "Dividers",
   "contexte.objet": "Drag to move, corners to resize, the top handle to turn. Double-click to write.",
   "contexte.ornement": "Drag to move, corners to resize: it keeps its proportions. The top handle to turn.",
+  "contexte.carte": "Drag to move, corners to resize: the map keeps its proportions. The top handle to turn, Delete to remove it.",
   "scene.texte.libre": "Free text: {texte}",
   "scene.texte.libre.vide": "Free text, empty",
   "scene.ornement": "Ornament: {titre}",
   "scene.ornement.inconnu": "Ornament missing from the pack",
+  "scene.carte": "Map of steps {de} to {a}",
+  "scene.carte.vide": "Empty map, steps {de} to {a}: the voyage cannot be found",
   "planche.recadrer":
     "Drag to crop · wheel to zoom · double-click recentres · ⌥ refines",
   "planche.recadrer.pleine":

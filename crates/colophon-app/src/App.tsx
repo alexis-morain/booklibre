@@ -3797,7 +3797,9 @@ function ContextLine({
                 // phrase doit apprendre.
                 spread.objets?.[objet]?.type === "ornement"
                 ? t("contexte.ornement")
-                : t("contexte.objet")
+                : spread.objets?.[objet]?.type === "carte"
+                  ? t("contexte.carte")
+                  : t("contexte.objet")
               : selected !== null
                 ? t("contexte.recadrage")
                 : "";

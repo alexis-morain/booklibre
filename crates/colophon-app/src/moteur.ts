@@ -102,6 +102,9 @@ export const PHRASES_EN: Record<string, string> = {
   objet_pli: "free object no. {n} straddles the fold: the binding will cut it in two",
   "objet_pli.glisser":
     "slide the object to one side of the fold: the editor stops it there on its own",
+  carte_vide:
+    "map no. {n} draws nothing: the voyage cannot be found, or no longer has these steps",
+  "carte_vide.supprimer": "delete the map, or put voyage.json back beside the photos",
   couverture_resolution:
     "{src} would print at {ppi} ppi on the {w_mm} × {h_mm} mm cover, {imprimeur} requires {min_ppi}",
   "couverture_resolution.choisir":

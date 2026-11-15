@@ -153,6 +153,7 @@ export type Destination = "planche" | "couverture" | "format" | "preparer" | "ic
  *  règle qui n'aurait nulle part où mener. Les règles qui nomment toujours
  *  leur planche y mènent ; la table dit où va le reste. */
 export const DESTINATIONS: Record<string, Destination> = {
+  carte_vide: "planche",
   conformite: "preparer",
   couverture_resolution: "couverture",
   couverture_vide: "couverture",

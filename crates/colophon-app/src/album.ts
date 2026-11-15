@@ -77,7 +77,12 @@ export type ObjetContenu =
    *  a file path, never with a drawing or a scale of its own. The box already
    *  carries the size and the angle, the pack carries the paths. La couleur
    *  est celle de l'objet. Mirror of `model.rs::Contenu::Ornement`. */
-  | { type: "ornement"; pack: string; id: string };
+  | { type: "ornement"; pack: string; id: string }
+  /** The map of a voyage (P-s5): the steps `debut..fin` of the `voyage.json`
+   *  beside the photographs, `fin` excluded. **Only the range**: the drawing
+   *  is recomputed by the engine, from the voyage and the embedded asset, and
+   *  the screen reads it from `carte.ts`. Mirror of `model.rs::Contenu::Carte`. */
+  | { type: "carte"; debut: number; fin: number };
 
 export type Alignement = "gauche" | "centre" | "droite";
 

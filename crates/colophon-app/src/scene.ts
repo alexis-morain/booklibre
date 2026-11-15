@@ -117,7 +117,20 @@ export type Role =
    *  parity with the engine therefore bears on the box, the angle and the
    *  identity — not on thousands of coordinates the two sides would each
    *  recompute. */
-  | { role: "ornement"; index: number; pack: string; id: string; couleur: string };
+  | { role: "ornement"; index: number; pack: string; id: string; couleur: string }
+  /** The map of a voyage, indexed into `spread.objets` like an ornament, and
+   *  for the same reason: **the scene does not know the paths**. It names the
+   *  range of steps and stops; `carte.ts` holds the drawing the engine
+   *  computed, and both renderers read it from there. */
+  | { role: "carte"; index: number; debut: number; fin: number };
+
+/** What a hand placed on a spread: a block, an ornament, a map. One test for
+ *  the three, so a fourth content cannot be left out of a selection by a
+ *  condition someone forgot to widen. */
+export type RoleLibre = Extract<Role, { role: "free_text" | "ornement" | "carte" }>;
+export function estLibre(role: Role): role is RoleLibre {
+  return role.role === "free_text" || role.role === "ornement" || role.role === "carte";
+}
 
 /** One visible element: where it is, how it is turned, when it is read, and
  *  what it is.
@@ -662,6 +675,15 @@ function objetLibre(
         id: objet.id,
         couleur: couleurDe(objet),
       },
+    };
+  }
+  // A map is laid out by nothing either: its box is its ink.
+  if (objet.type === "carte") {
+    return {
+      rect,
+      angle: objet.angle ?? 0,
+      reading,
+      role: { role: "carte", index, debut: objet.debut, fin: objet.fin },
     };
   }
   const tailleMm = objet.taille_pt * PT_MM;

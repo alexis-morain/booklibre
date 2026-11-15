@@ -622,6 +622,32 @@ carte:: -- --include-ignored le_rendu_des_cas` (SVG, `rsvg-convert` pour les PNG
 rogne). Sur ce Mac, la licence Xcode n'est pas signée : `DEVELOPER_DIR=/Library/Developer/CommandLineTools`
 suffit à lier.
 
+**La carte dans l'album (P-s5).** `Contenu::Carte { debut, fin }` : un objet libre de plus
+(boîte, angle, origine, rien d'autre ; `fin` exclue), **schéma 4**, migration 3 → 4 qui
+estampille (test sur le fichier entier). `Role::Carte` côté scène et miroir TS
+(`scene.ts`, `estLibre`) ; la parité compare la boîte, l'angle et l'identité (`parity.ts`
+lit désormais l'identité d'un ornement et d'une carte). **Un seul dessin** : `carte::dessiner`
+puis `Dessin::pour_le_rendu` (les repères deviennent un calque), lu par l'émetteur
+(`pdf::carte_op` : trait `S`, pointillé `d`, découpe `re W n`, terre en `B` avec contour de
+même encre, qui masque le filet des moitiés coupées ; `ornement_op` n'a pas bougé, PDF
+d'ornements identique à `main` à l'octet) et par l'écran (`--dump-cartes`, commande `cartes`,
+`/__dev/cartes`, `carte.ts` ; DOM `<svg>` et canvas `Path2D` sur la même chaîne). L'encre de
+chaque calque vit dans `carte::Role::encre`, nulle part ailleurs. Le PDF lit `voyage.json` à
+`album.root` seulement si une planche porte une carte ; sans voyage, une carte ne peint rien et
+n'échoue pas, le prévol dit `carte_vide` (avertissement). **Couture du monde** : au milieu du
+plus grand vide de longitudes **entre les étapes** (`centre_du_monde`), pas la médiane : sur un
+tour du monde les vols comblent tous les vides, donc le tracé ne compte pas ; un trajet qui
+traverse la couture est coupé et ramené. **Placement** (`voyage::composition::{plages_de_cartes,
+Flux::carte}`) : à la première composition, le voyage entier puis chaque séjour de trois étapes
+de suite dans un pays (plage contiguë, jamais celle du voyage entier) ; une carte est une page
+entière dans le flux du texte (sa voisine : le texte suivant ou les premières photos, jamais une
+page blanche) ; deux cartes devant la même étape se font face. `BuildOptions::cartes` :
+`ParDefaut` à la création, `Seulement(plages de l'album)` à la recomposition, qui ne remet
+donc jamais une carte supprimée, et une carte déplacée épingle sa planche. Pas d'édition du
+tracé, pas de bouton « ajouter une carte » en V1. Le colophon porte « Cartes réalisées avec
+Natural Earth » (`Faits::carte`). Tests de composition : un voyage de huit étapes, composé une
+fois (`OnceLock`), 31 s en debug sur un seul fil.
+
 ## Envoi, le dossier préparé et la commande
 
 **Envoi parle à qui fait un album, pas à un imprimeur** (A2, `EnvoiView.tsx`, `envoi.ts`).
