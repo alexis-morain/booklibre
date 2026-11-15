@@ -25,6 +25,17 @@ fi
 cargo build --release
 cargo test --workspace
 
+# L'actif de carte (P-s4) se recompile à l'octet près à partir de Natural Earth.
+# Les fichiers bruts (40 Mo) ne sont pas dans le dépôt : sans eux, le test
+# `l_actif_correspond_a_sa_provenance` (dans cargo test) tient l'empreinte écrite
+# dans assets/carte/SOURCE.md, et ce pas-ci le dit au lieu de se taire.
+NE="${COLOPHON_NATURAL_EARTH:-$HOME/Documents/08_IA/02_Outputs/colophon/travail/natural-earth}"
+if [ -d "$NE/ne_10m_coastline" ]; then
+  ./scripts/carte.sh verifier "$NE"
+else
+  echo "carte : recompilation sautée (Natural Earth absent de $NE), l'empreinte de SOURCE.md a été vérifiée par cargo test"
+fi
+
 # Album linter as a non-regression gate: recompose the reference sets with
 # today's code, then audit. A Composer change that raises a counter fails
 # here before it ships. It never skips: with the photos it composes from

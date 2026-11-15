@@ -584,6 +584,44 @@ de l'étape, `legende::mentions_du_voyage`, sans le lieu que le nom de l'étape 
 planche gardée porte déjà le titre ne refait ni titre ni page de récit. Le linter ne compte pas
 une page de texte d'un voyage dans `chapitre_orphelin`.
 
+**La carte (P-s4, `core::carte`), sans objet dans la scène.** `carte::dessiner(&voyage, plage)`
+rend un `Dessin` (viewbox en mm, plus grand côté `COTE_MM` = 180, y vers le bas) : des **calques**
+(`Terre`, `Lacs`, `Rivieres`, `Frontieres`, `Cotes`, `Trace`, `Vol`), chacun avec son `Style`
+(remplir, ou tracer : épaisseur et pointillé en mm à cette taille) et des chemins qui **sont**
+ceux des ornements (`ornement::Chemin`, droites seulement), plus les repères des étapes. P-s5 le
+pose ; rien ici n'est dans la scène, le schéma ou le PDF. **Le fond est Natural Earth**
+(domaine public), compilé par `scripts/carte.sh compiler` (`carte/compilation.rs`, lecteur de
+`.shp` écrit à la main, `example carte_compiler`) en **un seul actif de 5,07 Mo**
+(`assets/carte/carte.bin`, format dans `carte/actif.rs`, provenance et empreinte dans
+`assets/carte/SOURCE.md`, relue par un test). `scripts/carte.sh verifier` le recompile et compare
+à l'octet ; `check.sh` le lance quand Natural Earth est là (hors dépôt, 40 Mo) et dit qu'il saute
+sinon. Simplifié par Douglas-Peucker : 0,01° pour le 1:50m, **0,001° (110 m) pour le 1:10m** (0,2 mm
+à 100 km de large). Les frontières sont les arêtes que **deux pays se partagent**, reliées en
+chaînes puis simplifiées une fois (deux voisins ne se contredisent pas) ; les arêtes posées sur
+l'antiméridien ou un pôle sont des coupures du fichier, jamais un trait. Les villes n'y sont pas
+(la carte n'écrit aucun nom).
+
+**Ce que `dessiner` décide.** Le centre est la *longitude médiane circulaire* des étapes ; la
+couture du monde est à son antipode, et `geometrie::decouper_fuseau` coupe tout ce qu'elle traverse
+(polygones bruts en `[-180, 180]`, tracés déroulés) et le ramène de chaque côté. **La coupe d'un
+polygone est subdivisée** (un point par degré) : la couture est une courbe dans Equal Earth, et la
+corde entre deux intersections mangeait 3,7 mm de terre (vu sur le voyage réel). Le niveau suit la
+diagonale des points : moins de 60 km, ville (Mercator, 1:10m) ; moins de 2 500 km, région
+(équirectangulaire, cos de la latitude du milieu, 1:10m) ; au-delà, monde (Equal Earth, 1:50m).
+L'emprise est la boîte des étapes et du tracé plus 10 %, au moins 30 km (au-delà le 1:10m ne sait plus
+rien dessiner), au plus 2,1 : 1 ; **tout est rogné à ses bords**. Le tracé : les trajets de la source
+dont les deux bouts sont dans la plage, avec leur mode (`flight` : arc de grand cercle, pointillé) ;
+sans mode, la **vitesse** (au-delà de 250 km/h, un vol) ; sans aucun trajet, la trace du tracker
+sur la fenêtre de la plage, coupée aux sauts de vitesse ; sans trace, la suite des étapes. Douglas-Peucker
+à 0,2 mm, au plus 500 sommets (la tolérance grandit jusqu'à y tenir). **Une empreinte se lit sur
+une grille** : chaque coordonnée est arrondie au micromètre avant toute simplification, parce que
+`sin`, `ln` et `atan2` ne rendent pas le même dernier bit sur les trois systèmes ; les empreintes
+d'or de `carte/tests.rs` (monde, pays, ville) en dépendent. Le voyage réel entier se dessine en
+16 ms. Rendu pour les yeux : `COLOPHON_CARTE_RENDU=<dossier> cargo test -p colophon-core --lib
+carte:: -- --include-ignored le_rendu_des_cas` (SVG, `rsvg-convert` pour les PNG ; `qlmanage`
+rogne). Sur ce Mac, la licence Xcode n'est pas signée : `DEVELOPER_DIR=/Library/Developer/CommandLineTools`
+suffit à lier.
+
 ## Envoi, le dossier préparé et la commande
 
 **Envoi parle à qui fait un album, pas à un imprimeur** (A2, `EnvoiView.tsx`, `envoi.ts`).
@@ -1698,7 +1736,7 @@ Workspace Cargo. **`colophon-core`** : `scan` → `meta` → `thumb` → `analyz
 l'empreinte d'un album, le dossier préparé, MD5 et SHA-256), `colophon` (la page),
 `fiche` (la fiche d'une photo), `qualite` (la mesure de l'alerte), `legende` (la
 proposition et les dates), `reserve`, `commande` (CloudCore), `depot` (le seau S3), `relais` (le client du relais
-marchand), `voyage` (le voyage neutre et le lecteur du lien).
+marchand), `voyage` (le voyage neutre et le lecteur du lien), `carte` (le fond de carte d'un voyage).
 **`colophon-cli`** : clap. **`colophon-app`** : React et Vite (`bridge.ts` seule porte,
 `album.ts` géométries, `scene.ts` la scène et `hitTest`, `SceneCanvas.tsx` le peintre,
 `SceneProxies.tsx` le clavier, `rendu.ts` l'interrupteur, `feuille.ts` le modèle de la
