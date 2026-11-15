@@ -14,6 +14,7 @@
 //! Le lecteur du lien public est à part ([`lien`]) : lui seul porte une
 //! adresse réseau, et la version Mac App Store ne l'appelle jamais.
 
+pub mod chiffres;
 pub mod composition;
 pub mod lien;
 

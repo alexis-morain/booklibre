@@ -14,7 +14,7 @@ import { legendeImprimee } from "./scene";
 export type TableMentions = { cle: string; textes: Record<string, string> };
 
 export function cleDe(l: Legendes): string {
-  return `${l.contenu}/${l.date}/${l.langue}`;
+  return `${l.contenu}/${l.date}/${l.langue}/${l.meteo ? "meteo" : ""}`;
 }
 
 /** Les mentions de la table sur chaque case, ou aucune sans table. Rend

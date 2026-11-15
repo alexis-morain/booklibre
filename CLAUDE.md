@@ -648,6 +648,26 @@ tracé, pas de bouton « ajouter une carte » en V1. Le colophon porte « Cartes
 Natural Earth » (`Faits::carte`). Tests de composition : un voyage de huit étapes, composé une
 fois (`OnceLock`), 31 s en debug sur un seul fil.
 
+**La météo et les chiffres (P-s6).** *Météo* : `Legendes::meteo` (additif, faux et absent
+par défaut ; vrai dans `legendes_par_defaut`, donc à la première composition d'un voyage),
+ajoutée par `voyage::composition::mention` **au bout** du patron d'avant (« Lieu, date · 31 °C,
+pluie » : le patron existant garde sa forme, « lieu, date »). `texte_meteo` : température
+arrondie en °C, condition par `Langue::condition_meteo`, **table fermée** (`rain`,
+`partly-cloudy-day`, `clear-day` sont celles du voyage réel ; plus `clear-night`, `partly-cloudy-night`,
+`cloudy`, `thunderstorm`, `snow`, `sleet`, `hail`, `fog`, `wind`) ; inconnue, la température seule
+reste ; rien, rien. Elle suit la mention : dans le bloc de titre d'une ouverture quand il y en a
+un (tout le voyage réel), sinon sous la première photo ; « Rien » reste Rien. *Chiffres* :
+`Album::chiffres` (additif) et `voyage::chiffres` : une planche `texte` posée **avant le
+colophon** (qui reste la dernière), reconnue à son titre (`est_la_page`), reposée par la
+composition (`BuildOptions::chiffres`, portée par `recomposer`). Étapes et jours : ceux des
+étapes dans leur fuseau ; **pays recomptés** sur les codes des étapes (`00` exclu, jamais le compteur
+de la source) ; **distance : le `total_km` de la source** (73 451 km sur le réel : le trajet
+mesuré), sinon la somme haversine des étapes, écrite « au moins » (60 728 km sur le réel, un
+plancher) ; températures min et max. CLI : `--chiffres` à la composition,
+`--page-chiffres oui|non` sur l'album de `--out` (`chiffres::regler`), `--meteo` avec
+`--legendes`. L'app n'a pas encore de case (écran : P-s3) ; elle conserve seulement `meteo`
+quand on change la mention. Pas de pictos (V2).
+
 ## Envoi, le dossier préparé et la commande
 
 **Envoi parle à qui fait un album, pas à un imprimeur** (A2, `EnvoiView.tsx`, `envoi.ts`).

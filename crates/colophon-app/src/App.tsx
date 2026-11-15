@@ -1471,7 +1471,7 @@ export default function App() {
       setStatus(t("legendes.retirees"));
       return;
     }
-    const l: Legendes = { contenu, date, langue: langue() };
+    const l: Legendes = { contenu, date, langue: langue(), ...(courant.legendes?.meteo ? { meteo: true } : {}) };
     let table: TableMentions;
     setLectureMentions(true);
     try {

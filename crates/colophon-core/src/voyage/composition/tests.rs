@@ -333,7 +333,7 @@ fn une_etape_sans_photo_est_une_page_de_texte_ou_rien() {
             _ => None,
         })
         .collect();
-    assert!(textes.iter().any(|t| t == "5 juin 2025"), "{textes:?}");
+    assert!(textes.iter().any(|t| t == "5 juin 2025 · 18 °C, pluie"), "{textes:?}");
     assert!(textes.iter().any(|t| t.contains("Dix heures de rails")));
     // Ni photo ni récit : rien, et le bilan le compte.
     assert!(!noms_de_chapitres(&r.album).contains(&"Une étape vide".to_string()));
@@ -348,10 +348,10 @@ fn la_mention_est_la_date_locale_et_le_lieu_de_l_etape() {
     // « Lyon » : sa date, dans son fuseau, et son lieu, dans le texte de
     // l'ouverture (récit court) : rien ne se superpose sous les photos.
     let lyon = r.album.spreads.iter().find(|s| s.caption.as_deref() == Some("Lyon")).unwrap();
-    assert!(textes(lyon).iter().any(|(t, _)| t == "1 juin 2025"), "{:?}", textes(lyon));
+    assert!(textes(lyon).iter().any(|(t, _)| t == "1 juin 2025 · 18 °C, pluie"), "{:?}", textes(lyon));
     assert!(lyon.slots.iter().all(|sl| sl.mention.is_none()));
     // « Turin » n'a pas de récit : sa mention est sous sa première photo.
-    let turin = r.album.spreads.iter().flat_map(|s| &s.slots).find(|sl| sl.mention.as_deref() == Some("2 juin 2025"));
+    let turin = r.album.spreads.iter().flat_map(|s| &s.slots).find(|sl| sl.mention.as_deref() == Some("2 juin 2025 · 18 °C, pluie"));
     assert!(turin.is_some());
     // Une seule mention par étape.
     let n = r.album.spreads.iter().flat_map(|s| &s.slots).filter(|sl| sl.mention.is_some()).count();
@@ -681,7 +681,7 @@ fn le_lieu_deja_dans_le_nom_de_l_etape_ne_se_repete_pas() {
     let mut e = ecrire_voyage_etape();
     e.nom = "Bloomington".into();
     e.lieu.localite = Some("Bloomington".into());
-    assert_eq!(mention(&e, &r).as_deref(), Some("1 juin 2025"));
+    assert_eq!(mention(&e, &r).as_deref(), Some("1 juin 2025"), "sans météo, rien de plus");
     // Un lieu qui n'est qu'un bout de mot du nom reste écrit.
     e.nom = "Diving - Day 3 of 5".into();
     e.lieu.localite = Some("Ra".into());
@@ -767,7 +767,10 @@ fn une_recomposition_garde_ce_que_l_utilisateur_a_fait() {
     )
     .unwrap()
     .album;
+    // La page de chiffres est décochée par défaut, et le reste décoché.
+    assert!(!apres_page(&r.album) && !r.album.chiffres);
     // « Rien » reste Rien : la machine ne remet ni le réglage ni les mentions.
+    assert!(!apres_page(&apres) && !apres.chiffres, "la page décochée ne revient pas");
     assert!(apres.legendes.is_none(), "la machine a remis un réglage que l'utilisateur avait ôté");
     assert!(apres.spreads.iter().flat_map(|s| &s.slots).all(|sl| sl.mention.is_none()));
     // La planche touchée est là, telle quelle, une seule fois.
@@ -793,6 +796,101 @@ fn une_recomposition_garde_ce_que_l_utilisateur_a_fait() {
     assert!(marseille < trouvees[0] && trouvees[0] < arles, "{marseille} < {} < {arles}", trouvees[0]);
     // Les étapes se retrouvent dans l'ordre, une fois chacune.
     assert_eq!(noms_de_chapitres(&apres).iter().filter(|c| *c == "Marseille").count(), 1);
+}
+
+fn apres_page(a: &Album) -> bool {
+    a.spreads.iter().any(crate::voyage::chiffres::est_la_page)
+}
+
+/// Une étape de la météo donnée, pour les tests de la mention.
+fn avec_meteo(condition: Option<&str>, temperature: Option<f64>) -> Etape {
+    let mut e = ecrire_voyage_etape();
+    e.meteo = Some(Meteo { condition: condition.map(String::from), temperature });
+    e
+}
+
+#[test]
+fn la_meteo_s_ecrit_au_bout_de_la_mention_dans_les_deux_langues() {
+    use crate::langue::Langue::{En, Fr};
+    let e = avec_meteo(Some("rain"), Some(31.4));
+    assert_eq!(mention(&e, &legendes_par_defaut(Fr)).as_deref(), Some("1 juin 2025 · 31 °C, pluie"));
+    assert_eq!(mention(&e, &legendes_par_defaut(En)).as_deref(), Some("1 June 2025 · 31 °C, rain"));
+    // Une composante qu'on ôte : sans elle, la mention d'avant, au mot près.
+    let sans = Legendes { meteo: false, ..legendes_par_defaut(Fr) };
+    assert_eq!(mention(&e, &sans).as_deref(), Some("1 juin 2025"));
+    // Avec un lieu : le patron « lieu, date » reste, la météo vient après.
+    let mut e = e;
+    e.lieu.localite = Some("Bloomington".into());
+    assert_eq!(mention(&e, &legendes_par_defaut(Fr)).as_deref(), Some("Bloomington, 1 juin 2025 · 31 °C, pluie"));
+}
+
+#[test]
+fn une_meteo_absente_ou_inconnue_n_imprime_rien_d_elle() {
+    use crate::langue::Langue::Fr;
+    let r = legendes_par_defaut(Fr);
+    // Pas de météo du tout : la mention d'avant.
+    assert_eq!(mention(&ecrire_voyage_etape(), &r).as_deref(), Some("1 juin 2025"));
+    // Ni condition ni température.
+    assert_eq!(mention(&avec_meteo(None, None), &r).as_deref(), Some("1 juin 2025"));
+    // Condition inconnue : la température seule reste, la condition ne s'écrit pas.
+    assert_eq!(mention(&avec_meteo(Some("raining-frogs"), Some(-3.0)), &r).as_deref(), Some("1 juin 2025 · -3 °C"));
+    // Température absente : la condition connue seule.
+    assert_eq!(mention(&avec_meteo(Some("partly-cloudy-day"), None), &r).as_deref(), Some("1 juin 2025 · partiellement nuageux"));
+    // Inconnue et sans température : rien.
+    assert_eq!(mention(&avec_meteo(Some("raining-frogs"), None), &r).as_deref(), Some("1 juin 2025"));
+}
+
+#[test]
+fn la_table_couvre_les_conditions_du_voyage_reel_et_reste_fermee() {
+    use crate::langue::Langue::{En, Fr};
+    // Les trois du voyage réel (84 étapes), dans les deux langues.
+    for (code, fr, en) in [("rain", "pluie", "rain"), ("partly-cloudy-day", "partiellement nuageux", "partly cloudy"), ("clear-day", "ensoleillé", "sunny")] {
+        assert_eq!(Fr.condition_meteo(code), Some(fr));
+        assert_eq!(En.condition_meteo(code), Some(en));
+    }
+    for inconnu in ["", "meteor-shower", "Rain "] {
+        // « Rain » avec sa casse et son espace est la même condition ; le reste, non.
+        let attendu = (inconnu.trim().to_ascii_lowercase() == "rain").then_some("pluie");
+        assert_eq!(Fr.condition_meteo(inconnu), attendu, "{inconnu:?}");
+    }
+}
+
+/// La météo sous la première photo de l'étape, sur le voyage partagé : la
+/// mention que l'éditeur et le PDF impriment est la même, et elle est dérivée.
+#[test]
+fn la_meteo_sort_sous_la_premiere_photo_de_l_etape() {
+    let r = partage().rapport.clone();
+    let table = crate::legende::mentions(&r.album, &r.album.legendes.unwrap(), &[]);
+    let n = table.values().filter(|m| m.ends_with(" · 18 °C, pluie")).count();
+    assert!(n > 0 && n == table.len(), "{n} sur {} : {table:?}", table.len());
+}
+
+/// La page de chiffres se coche à la création, survit à une recomposition,
+/// reste avant le colophon, et ne se double pas.
+#[test]
+fn la_page_de_chiffres_survit_a_une_recomposition() {
+    let (photos, out) = dossier("chiffres");
+    ecrire_voyage_mini(&photos);
+    let r = build_album(&photos, &out, BuildOptions { chiffres: true, ..options() }).unwrap();
+    let rang = |a: &Album| {
+        let p: Vec<usize> = a.spreads.iter().enumerate().filter(|(_, s)| crate::voyage::chiffres::est_la_page(s)).map(|(i, _)| i).collect();
+        assert_eq!(p.len(), 1, "une seule page de chiffres");
+        assert_eq!(a.spreads.last().unwrap().template, crate::colophon::TEMPLATE);
+        assert_eq!(p[0], a.spreads.len() - 2, "juste avant le colophon");
+        a.spreads[p[0]].text.clone().unwrap()
+    };
+    assert!(r.album.chiffres);
+    let avant = rang(&r.album);
+    assert!(avant.contains("3 étapes") && avant.contains("1 pays") && avant.contains("3 jours"), "{avant}");
+
+    let apres = crate::recomposition::recomposer(
+        &out,
+        crate::recomposition::Recomposition { aujourdhui: Some(jour()), ..Default::default() },
+    )
+    .unwrap()
+    .album;
+    assert!(apres.chiffres);
+    assert_eq!(rang(&apres), avant);
 }
 
 mod cartes;

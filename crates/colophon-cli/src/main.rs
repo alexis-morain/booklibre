@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 #[command(after_help = FORMAT_HELP.as_str())]
 struct Cli {
     /// Folder of photos to build the album from
-    #[arg(required_unless_present_any = ["formats", "profils", "profils_json", "dump_geometry", "dump_ornements", "dump_cartes", "dump_lut", "dump_scene", "print", "cover", "audit", "reprise", "prevol", "preparer", "sheets", "bascule", "proposition", "gabarits", "reserve", "remplir", "devis", "fiche", "releve_album", "survol", "dates", "banc_gabarits", "depuis_fiches", "recomposer", "voyage_importer", "voyage_lire"])]
+    #[arg(required_unless_present_any = ["formats", "profils", "profils_json", "dump_geometry", "dump_ornements", "dump_cartes", "dump_lut", "dump_scene", "print", "cover", "audit", "reprise", "prevol", "preparer", "sheets", "bascule", "proposition", "gabarits", "reserve", "remplir", "devis", "fiche", "releve_album", "survol", "dates", "banc_gabarits", "depuis_fiches", "recomposer", "voyage_importer", "voyage_lire", "page_chiffres"])]
     photos: Option<PathBuf>,
 
     /// Output directory (album.json, album.pdf, thumbnail cache)
@@ -47,6 +47,22 @@ struct Cli {
     /// photo knows: a trusted capture date, a town the gazetteer names.
     #[arg(long, value_name = "CONTENT")]
     legendes: Option<String>,
+
+    /// Avec --legendes, dans un voyage : ajoute la météo de l'étape (« 31 °C,
+    /// pluie ») à la mention. Sans --legendes, un voyage a déjà date, lieu et
+    /// météo à sa première composition.
+    #[arg(long)]
+    meteo: bool,
+
+    /// Dans un voyage : ajoute la page « Le voyage en chiffres » en fin de
+    /// livre. Décochée par défaut ; sans voyage.json, sans effet.
+    #[arg(long)]
+    chiffres: bool,
+
+    /// Coche (`oui`) ou décoche (`non`) la page « Le voyage en chiffres » de
+    /// l'album de --out, sans le recomposer.
+    #[arg(long, value_name = "OUI|NON")]
+    page_chiffres: Option<String>,
 
     /// Compose the two alternative proposals beside the album, the way the
     /// app does. They land next to it as `album.<id>.json`; the audit gate
@@ -397,6 +413,23 @@ fn main() -> Result<()> {
             "{}",
             serde_json::to_string(&colophon_core::carte::dessins_de_l_album(&album))?
         );
+        return Ok(());
+    }
+
+    if let Some(choix) = &cli.page_chiffres {
+        let actif = match choix.as_str() {
+            "oui" => true,
+            "non" => false,
+            _ => anyhow::bail!("--page-chiffres : oui ou non"),
+        };
+        let json = std::fs::read_to_string(cli.out.join("album.json"))
+            .with_context(|| format!("lecture de {}", cli.out.join("album.json").display()))?;
+        let mut album: Album = serde_json::from_str(&json).context("album.json illisible")?;
+        if !colophon_core::voyage::chiffres::regler(&mut album, actif, langue) {
+            anyhow::bail!("pas de voyage.json à côté des photos de cet album : pas de page de chiffres");
+        }
+        colophon_core::build::write_album_json(&cli.out, &album)?;
+        eprintln!("page « Le voyage en chiffres » : {}", if actif { "ajoutée" } else { "retirée" });
         return Ok(());
     }
 
@@ -762,6 +795,7 @@ fn main() -> Result<()> {
                 contenu,
                 date: colophon_core::model::FormatDate::Jour,
                 langue,
+                meteo: cli.meteo,
             })
         }
     };
@@ -826,6 +860,7 @@ fn main() -> Result<()> {
                     Vec::new()
                 },
                 garde: cli.garde,
+                chiffres: cli.chiffres,
                 ..Default::default()
             },
         )?;
@@ -853,6 +888,7 @@ fn main() -> Result<()> {
                 Vec::new()
             },
             garde: cli.garde,
+            chiffres: cli.chiffres,
             ..Default::default()
         },
     )?;
