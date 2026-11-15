@@ -11,6 +11,13 @@ sur la page des releases.
 
 ### Added
 
+- Weather and a numbers page in a trip album. The line under a step now ends with the
+  step's weather ("Bloomington, 25 May 2024 · 31 °C, rain"), in French or English; the
+  temperature stays when the condition is not one Booklibre knows, nothing is printed
+  when the step has no weather, and it is a part of the line you can remove. An optional
+  page "The trip in numbers" (dates and number of days, steps, countries, distance,
+  lowest and highest temperature) closes the book before the colophon; it is off by
+  default, and a recomposition keeps it as it was.
 - Maps in a trip album. A map is an object like a block or an ornament: it moves,
   resizes (keeping its proportions), turns and deletes the same way, and its drawing
   is the one the PDF prints, recomputed from the trip, never stored. A trip album
