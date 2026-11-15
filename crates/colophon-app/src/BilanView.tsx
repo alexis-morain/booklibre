@@ -16,6 +16,7 @@ import { aboutProposition, nomProposition } from "./moteur";
 import { REASON_KEYS, reasonLabel } from "./reasons";
 import { filtreDe, useReglages } from "./reglages";
 import { cachedThumb, loadThumb } from "./thumbs";
+import { lignesBilanVoyage, RapportVoyage } from "./voyage";
 
 export function BilanView({
   bilan,
@@ -23,6 +24,7 @@ export function BilanView({
   curation,
   variantes,
   choisie,
+  voyageImporte = null,
   onChoisir,
   onOpen,
   onTri,
@@ -35,6 +37,8 @@ export function BilanView({
   variantes: VarianteResume[];
   /** Which one is on screen right now, by id, or null for the one asked for. */
   choisie: string | null;
+  /** Le rapport de l'import du voyage que ce bilan compose, s'il y en a un. */
+  voyageImporte?: RapportVoyage | null;
   onChoisir: (id: string | null) => void;
   onOpen: () => void;
   onTri: () => void;
@@ -100,6 +104,17 @@ export function BilanView({
                   <span key={titre}> {t("bilan.chapitre_vide", { titre })}</span>
                 ))}
             </p>
+          )}
+
+          {bilan.voyage && (
+            <section className="bilan-voyage" aria-label={t("bilan.voyage.titre")}>
+              <h2 className="bilan-choix-titre">{t("bilan.voyage.titre")}</h2>
+              <ul className="bilan-voyage-lignes">
+                {lignesBilanVoyage(bilan.voyage, voyageImporte).map((l) => (
+                  <li key={l.cle}>{t(l.cle, l.params)}</li>
+                ))}
+              </ul>
+            </section>
           )}
 
           {setAside > 0 && (

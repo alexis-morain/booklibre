@@ -6719,3 +6719,47 @@ button.envoi-defaut-ou:focus-visible {
 .warn.fault {
   background: var(--error-tint);
 }
+
+/* ---- importer un voyage Polarsteps (P-s3) ---- */
+.voyage-import .setup-field {
+  margin: 18px 0 6px;
+}
+
+.voyage-import .setup-input {
+  width: 100%;
+}
+
+.voyage-import .setup-input[aria-invalid="true"] {
+  border-color: var(--ink);
+}
+
+.voyage-phrase {
+  margin: 10px 0 4px;
+  font-size: var(--fs-14);
+  color: var(--ink);
+}
+
+.voyage-erreur {
+  margin: 14px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--ink);
+}
+
+.voyage-zip {
+  margin-top: 26px;
+}
+
+.bilan-voyage {
+  margin: 18px 0 0;
+}
+
+.bilan-voyage-lignes {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: var(--fs-14);
+  line-height: 1.5;
+}
+
+.bilan-voyage-lignes li + li {
+  margin-top: 6px;
+}

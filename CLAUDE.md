@@ -665,8 +665,32 @@ de la source) ; **distance : le `total_km` de la source** (73 451 km sur le rée
 mesuré), sinon la somme haversine des étapes, écrite « au moins » (60 728 km sur le réel, un
 plancher) ; températures min et max. CLI : `--chiffres` à la composition,
 `--page-chiffres oui|non` sur l'album de `--out` (`chiffres::regler`), `--meteo` avec
-`--legendes`. L'app n'a pas encore de case (écran : P-s3) ; elle conserve seulement `meteo`
-quand on change la mention. Pas de pictos (V2).
+`--legendes`. Pas de pictos (V2). Les deux cases sont dans l'app depuis P-s3 (ci-dessous).
+
+**L'écran d'import (P-s3, `voyage.ts`, `VoyageImport.tsx`).** Accueil → « Importer un voyage
+Polarsteps » (texte, « non affilié », FR/EN), **hors édition App Store** : le bouton
+(`voyageOffert()` = Tauri et pas `saveurMas()`), les commandes `voyage_analyser` et
+`voyage_importer` (`#[cfg(not(feature = "mas"))]`, y compris dans `generate_handler!`) et
+l'appel au lecteur n'existent pas là ; `mas.sh prouver` refuse `api.polarsteps.com` dans le
+binaire. `voyage_analyser` valide l'adresse **sans réseau** (`analyser_url`) et propose le
+dossier `~/Pictures/Colophon/Voyage <id>` (même patron que la photothèque, validé par
+`dossier_d_import_valide`, pas de sélecteur). `voyage_importer` : progression par l'événement
+`voyage:progres` (faites, total), **annulation par `cancel_build`** (le bouton Annuler des autres
+imports), erreur sérialisée `{genre, detail}` (`Erreur::genre()` : `url`, `prive`, `format`,
+`reseau`, `indisponible`, `disque_plein`, `disque`, `trop_gros`, `photo`, `statut`, `annule`)
+que `voyage.ts::phrasesDe` met en phrase et remède. L'écran est une machine d'états pure
+(`reduire`), rendue par `VoyageImportVue` (testée sans fenêtre). **Nouvelle tentative** dans
+`lien.rs::Demandeur::prendre` : `ESSAIS` = 3, attente `Reglages::attente` doublée (2 s, 4 s),
+sur erreur de transport, 5xx et 429 seulement ; `importer_annulable` lit l'annulation avant
+chaque requête et la reprise ne redemande aucune photo déjà là. Au retour, l'écran enchaîne sur
+`createAlbum` (carré 21, légendes de voyage par défaut) puis le **bilan** (`BilanView`,
+`lignesBilanVoyage`) : vidéos ignorées (rapport d'import), émojis non imprimés, récits
+débordants, étapes groupées (`BuildBilan::voyage`), photos sous le repère de 250 ppi (le côté
+court de 2 126 px de l'import, pas un ppi par photo) avec la phrase qui recommande l'export zip
+ou les originaux. `OpenedAlbum::voyage` (un `voyage.json` lisible à côté des photos) montre, dans
+Planche → Dates et lieux, « Météo de l'étape » (grisée sans mention) et « Le voyage en chiffres »
+(`voyage_chiffres` = `chiffres::regler`, un pas d'annulation). Le guide du zip tient en un
+paragraphe : le lecteur du zip n'est pas codé.
 
 ## Envoi, le dossier préparé et la commande
 

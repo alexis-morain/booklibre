@@ -166,6 +166,8 @@ export type Album = {
   /** Ce que la machine écrit sous chaque photo (1.2-b). Absent = rien.
    *  Miroir de `model.rs::Legendes`. */
   legendes?: Legendes;
+  /** La page « Le voyage en chiffres » est posée (P-s6). */
+  chiffres?: boolean;
 };
 
 /** Le réglage « sous les photos ». */
@@ -197,6 +199,9 @@ export type OpenedAlbum = {
   dossier_a_revoir: boolean;
   /** Every source with a cached thumbnail: shown photos plus discarded. */
   thumb_srcs: string[];
+  /** Un `voyage.json` est à côté des photos : les cases « Météo » et « Le
+   *  voyage en chiffres » se montrent (P-s3). */
+  voyage?: boolean;
 };
 
 /** One photo curation set aside, as written in curation.json. */

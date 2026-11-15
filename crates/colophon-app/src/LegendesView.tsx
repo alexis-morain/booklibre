@@ -26,6 +26,10 @@ export function LegendesView({
   reglage,
   enCours,
   onChoisir,
+  voyage = false,
+  chiffres = false,
+  onMeteo,
+  onChiffres,
   onClose,
 }: {
   /** Le réglage de l'album, `null` pour rien. */
@@ -34,6 +38,12 @@ export function LegendesView({
   enCours: boolean;
   /** Le contenu et la forme voulus ; `null` = rien. */
   onChoisir: (contenu: Contenu, date: Legendes["date"]) => void;
+  /** L'album vient d'un voyage : les deux cases du voyage se montrent (P-s3). */
+  voyage?: boolean;
+  /** La page « Le voyage en chiffres » est posée. */
+  chiffres?: boolean;
+  onMeteo?: (meteo: boolean) => void;
+  onChiffres?: (actif: boolean) => void;
   onClose: () => void;
 }) {
   const contenu = reglage?.contenu ?? null;
@@ -73,6 +83,34 @@ export function LegendesView({
               </button>
             ))}
           </div>
+        </>
+      )}
+      {voyage && (
+        <>
+          <h3>{t("legendes.voyage")}</h3>
+          <label className="setup-case">
+            <input
+              type="checkbox"
+              checked={!!reglage?.meteo}
+              disabled={enCours || contenu === null}
+              onChange={(e) => onMeteo?.(e.target.checked)}
+            />
+            <span>
+              <span className="setup-case-nom">{t("legendes.meteo")}</span>
+              <span className="setup-case-note">{t("legendes.meteo.note")}</span>
+            </span>
+          </label>
+          <label className="setup-case">
+            <input
+              type="checkbox"
+              checked={chiffres}
+              onChange={(e) => onChiffres?.(e.target.checked)}
+            />
+            <span>
+              <span className="setup-case-nom">{t("legendes.chiffres")}</span>
+              <span className="setup-case-note">{t("legendes.chiffres.note")}</span>
+            </span>
+          </label>
         </>
       )}
       <p className="signaler-note" role="status">
