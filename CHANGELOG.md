@@ -11,6 +11,13 @@ sur la page des releases.
 
 ### Added
 
+- The map behind a trip (not on a page yet): `carte::dessiner(voyage, steps)` draws
+  the land, borders, coasts, lakes and rivers of the area a trip covers, with the
+  route on top (ground in a line, flights as great-circle arcs) and the steps as
+  points. A city, a region or the whole world picks its own projection, all
+  written by hand, and the whole world is cut cleanly at the antimeridian. The
+  background is Natural Earth (public domain), compiled by `scripts/carte.sh`
+  into one 5.1 MB file. Nothing in the album uses it yet.
 - `booklibre --voyage-importer <link> --voyage-vers <folder>` reads a trip from
   its public link (one trip, pasted by hand) into a folder: the photos and a
   `voyage.json`, then a summary of what came across (steps, photos, videos left
