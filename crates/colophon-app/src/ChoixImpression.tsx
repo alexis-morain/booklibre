@@ -15,8 +15,8 @@
 import { useEffect, useState } from "react";
 import type { Album } from "./album";
 import { listFormats, type FormatPreset } from "./bridge";
-import { prixDeCentimes } from "./commande";
-import { t, useLangue } from "./i18n";
+import { pagesInvendables, prixDeCentimes } from "./commande";
+import { t, useLangue, type Lang } from "./i18n";
 import {
   chargerOffre,
   formatDe,
@@ -144,6 +144,27 @@ export function PrixLivre({ album }: { album: Album }) {
   if (tarifs.etat !== "lus" || choix?.choix !== "booklibre" || presets === null) return null;
   const pages = pagesDuLivre(album);
   const prix = prixPour(tarifs.tarifs, formatDe(presets, album.trim_mm), choix.pays, pages);
+  return <LignePrix pages={pages} prix={prix} limite={tarifs.tarifs.pages_max} langue={langue} />;
+}
+
+/** La ligne du pied : le prix « à partir de », ou, au-delà de ce que le relais
+ *  vend, la raison pour laquelle Commander est grisé (la limite vient de la
+ *  table). Rien sans prix et sans dépassement. */
+export function LignePrix({
+  pages,
+  prix,
+  limite,
+  langue,
+}: {
+  pages: number;
+  prix: number | null;
+  limite: number;
+  langue: Lang;
+}) {
+  const trop = pagesInvendables(pages, limite);
+  if (trop !== null) {
+    return <span className="foot-prix foot-prix-trop">{t("commande.trop.pages", { n: trop, max: limite })}</span>;
+  }
   if (prix === null) return null;
   return (
     <span className="foot-prix" title={t("prix.a.partir.titre", { pages })}>

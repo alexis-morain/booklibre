@@ -16,6 +16,7 @@ import { aboutProposition, nomProposition } from "./moteur";
 import { REASON_KEYS, reasonLabel } from "./reasons";
 import { filtreDe, useReglages } from "./reglages";
 import { cachedThumb, loadThumb } from "./thumbs";
+import { lignesBilanVoyage, RapportVoyage } from "./voyage";
 
 export function BilanView({
   bilan,
@@ -23,6 +24,7 @@ export function BilanView({
   curation,
   variantes,
   choisie,
+  voyageImporte = null,
   onChoisir,
   onOpen,
   onTri,
@@ -35,6 +37,8 @@ export function BilanView({
   variantes: VarianteResume[];
   /** Which one is on screen right now, by id, or null for the one asked for. */
   choisie: string | null;
+  /** Le rapport de l'import du voyage que ce bilan compose, s'il y en a un. */
+  voyageImporte?: RapportVoyage | null;
   onChoisir: (id: string | null) => void;
   onOpen: () => void;
   onTri: () => void;
@@ -94,12 +98,27 @@ export function BilanView({
               {bilan.trop_petites === 1
                 ? t("bilan.trop_petites.un")
                 : t("bilan.trop_petites", { n: bilan.trop_petites ?? 0 })}
-              {(bilan.chapitres_vides ?? [])
-                .filter((titre) => titre !== "")
-                .map((titre) => (
-                  <span key={titre}> {t("bilan.chapitre_vide", { titre })}</span>
-                ))}
+              {/* Un voyage importé par son lien n'a que des vignettes. */}
+              {voyageImporte && <> {t("bilan.trop_petites.lien")}</>}
+              {/* Un voyage dit ses étapes sans photo en une phrase, plus bas. */}
+              {!bilan.voyage &&
+                (bilan.chapitres_vides ?? [])
+                  .filter((titre) => titre !== "")
+                  .map((titre) => (
+                    <span key={titre}> {t("bilan.chapitre_vide", { titre })}</span>
+                  ))}
             </p>
+          )}
+
+          {bilan.voyage && (
+            <section className="bilan-voyage" aria-label={t("bilan.voyage.titre")}>
+              <h2 className="bilan-choix-titre">{t("bilan.voyage.titre")}</h2>
+              <ul className="bilan-voyage-lignes">
+                {lignesBilanVoyage(bilan.voyage, voyageImporte, bilan.chapitres_vides ?? []).map((l) => (
+                  <li key={l.cle}>{t(l.cle, l.params)}</li>
+                ))}
+              </ul>
+            </section>
           )}
 
           {setAside > 0 && (
@@ -148,7 +167,9 @@ export function BilanView({
           )}
 
           <p className="setup-hint">
-            {setAside > 0 ? t("bilan.hint.ecartees") : t("bilan.hint.toutes")}
+            {setAside > 0 || !toutesDansLAlbum(bilan)
+              ? t("bilan.hint.ecartees")
+              : t("bilan.hint.toutes")}
           </p>
 
           <p className="setup-actions">
@@ -168,6 +189,13 @@ export function BilanView({
       </div>
     </div>
   );
+}
+
+/** « Toutes les photos du dossier sont dans l'album » ne se dit que si c'est
+ *  vrai : aucune photo n'est restée à la réserve ni n'a été écartée. La
+ *  curation seule ne le dit pas (celle d'un voyage a pu ne pas être lue). */
+export function toutesDansLAlbum(b: BuildBilan): boolean {
+  return b.photos_kept >= b.photos_scanned && (b.trop_petites ?? 0) === 0;
 }
 
 /** Same rule as the engine's: a quarter, a half and three quarters in, so the

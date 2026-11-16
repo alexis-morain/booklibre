@@ -665,8 +665,44 @@ de la source) ; **distance : le `total_km` de la source** (73 451 km sur le rée
 mesuré), sinon la somme haversine des étapes, écrite « au moins » (60 728 km sur le réel, un
 plancher) ; températures min et max. CLI : `--chiffres` à la composition,
 `--page-chiffres oui|non` sur l'album de `--out` (`chiffres::regler`), `--meteo` avec
-`--legendes`. L'app n'a pas encore de case (écran : P-s3) ; elle conserve seulement `meteo`
-quand on change la mention. Pas de pictos (V2).
+`--legendes`. Pas de pictos (V2). Les deux cases sont dans l'app depuis P-s3 (ci-dessous).
+
+**L'écran d'import (P-s3, `voyage.ts`, `VoyageImport.tsx`).** Accueil → « Importer un voyage
+Polarsteps » (texte, « non affilié », FR/EN), **hors édition App Store** : le bouton
+(`voyageOffert()` = Tauri et pas `saveurMas()`), les commandes `voyage_analyser` et
+`voyage_importer` (`#[cfg(not(feature = "mas"))]`, y compris dans `generate_handler!`) et
+l'appel au lecteur n'existent pas là ; `mas.sh prouver` refuse `api.polarsteps.com` dans le
+binaire. `voyage_analyser` valide l'adresse **sans réseau** (`analyser_url`) et propose le
+dossier `~/Pictures/Colophon/Voyage <id>` (même patron que la photothèque, validé par
+`dossier_d_import_valide`, pas de sélecteur). `voyage_importer` : progression par l'événement
+`voyage:progres` (faites, total), **annulation par `cancel_build`** (le bouton Annuler des autres
+imports), erreur sérialisée `{genre, detail}` (`Erreur::genre()` : `url`, `prive`, `format`,
+`reseau`, `indisponible`, `disque_plein`, `disque`, `trop_gros`, `photo`, `statut`, `annule`)
+que `voyage.ts::phrasesDe` met en phrase et remède. L'écran est une machine d'états pure
+(`reduire`), rendue par `VoyageImportVue` (testée sans fenêtre). **Nouvelle tentative** dans
+`lien.rs::Demandeur::prendre` : `ESSAIS` = 3, attente `Reglages::attente` doublée (2 s, 4 s),
+sur erreur de transport, 5xx et 429 seulement ; `importer_annulable` lit l'annulation avant
+chaque requête et la reprise ne redemande aucune photo déjà là. Au retour, l'écran enchaîne sur
+`createAlbum` (carré 21, légendes de voyage par défaut) puis le **bilan** (`BilanView`,
+`lignesBilanVoyage`) : vidéos ignorées (rapport d'import), émojis non imprimés, récits
+débordants, étapes groupées (`BuildBilan::voyage`). **Une seule ligne de définition** : celle de la
+réserve (`trop_petites`), à laquelle un voyage importé par lien ajoute « le lien ne donne que des
+vignettes : l'export de vos données Polarsteps ou vos photos d'origine » ; le repère de 2 126 px
+(`photos_sous_seuil`) n'est pas un ppi et n'est plus dit à l'écran. Les étapes sans photo posée ne
+sont pas un défaut : une phrase, seulement pour celles dont les photos étaient trop petites.
+« Toutes les photos du dossier sont dans l'album » exige `toutesDansLAlbum` (rien écarté ni en
+réserve). **Commander se grise au-delà de la limite du relais** (décision d'Alexis, 15/11) : la limite est
+`tarifs::PAGES_MAX`, ajoutée à `Tarifs` à la sérialisation (`pages_max`, jamais lue dans le JSON du
+Worker) et lue par `useLimitePages()` ; aucune constante côté TS. Le compte est celui des pages
+intérieures (`pagesDuLivre`, `fiche.pages_interieur`), `pagesInvendables(pages, max)` ferme à
+`max + 1`. Trois endroits : le bouton de la barre (`BoutonCommander`, `aria-describedby`), « Faire
+imprimer » (`EnvoiPage`) et « Commander » (`CommandeView`), plus la raison dans le pied
+(`LignePrix`). **Limite : la table ne se lit qu'avec le choix « Par Booklibre »** ; sans elle rien ne
+se grise et `phraseErreur(e, pages, max)` traduit le refus `relais : pages (400)` en filet. L'export
+du PDF n'a aucune limite. `OpenedAlbum::voyage` (un `voyage.json` lisible à côté des photos) montre, dans
+Planche → Dates et lieux, « Météo de l'étape » (grisée sans mention) et « Le voyage en chiffres »
+(`voyage_chiffres` = `chiffres::regler`, un pas d'annulation). Le guide du zip tient en un
+paragraphe : le lecteur du zip n'est pas codé.
 
 ## Envoi, le dossier préparé et la commande
 

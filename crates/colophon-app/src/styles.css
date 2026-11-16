@@ -6719,3 +6719,89 @@ button.envoi-defaut-ou:focus-visible {
 .warn.fault {
   background: var(--error-tint);
 }
+
+/* ---- importer un voyage Polarsteps (P-s3) ---- */
+.voyage-import .setup-field {
+  margin: 18px 0 6px;
+}
+
+.voyage-import .setup-input {
+  width: 100%;
+}
+
+.voyage-import .setup-input[aria-invalid="true"] {
+  border-color: var(--ink);
+}
+
+.voyage-phrase {
+  margin: 10px 0 4px;
+  font-size: var(--fs-14);
+  color: var(--ink);
+}
+
+.voyage-erreur {
+  margin: 14px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--ink);
+}
+
+.voyage-zip {
+  margin-top: 26px;
+}
+
+.bilan-voyage {
+  margin: 18px 0 0;
+}
+
+.bilan-voyage-lignes {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: var(--fs-14);
+  line-height: 1.5;
+}
+
+.bilan-voyage-lignes li + li {
+  margin-top: 6px;
+}
+
+.voyage-import .setup-folder {
+  display: block;
+  margin: 14px 0 0;
+}
+
+.voyage-import .setup-folder code {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.voyage-import .lede[role="status"] {
+  margin-top: 16px;
+}
+
+/* Lu par les lecteurs d'écran, jamais dessiné : le message qui relie un bouton
+   grisé à sa raison (`aria-describedby`). */
+.sr-seul {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.foot-prix-trop {
+  white-space: normal;
+}
+
+.commande-ouvrir .commande-format {
+  margin-bottom: 12px;
+}
+
+.commande-ouvrir .envoi-exporter:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

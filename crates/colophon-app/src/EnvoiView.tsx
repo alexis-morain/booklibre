@@ -62,8 +62,18 @@ import {
   portesOffertes,
   ppiDe,
 } from "./envoi";
-import { Niveau, Relais, clePrix, livreEnFrance, prixConnu, prixDeCentimes, retenirPrix } from "./commande";
+import {
+  Niveau,
+  Relais,
+  clePrix,
+  livreEnFrance,
+  pagesInvendables,
+  prixConnu,
+  prixDeCentimes,
+  retenirPrix,
+} from "./commande";
 import { t, useLangue } from "./i18n";
+import { useLimitePages } from "./impression";
 import { Livre3D } from "./Livre3D";
 import { PaletteFond } from "./PaletteFond";
 import { LazyThumb } from "./TriView";
@@ -133,6 +143,7 @@ export type EnvoiViewProps = {
 
 export function EnvoiView(props: EnvoiViewProps) {
   const { album, profil, dirty, preparation } = props;
+  const limitePages = useLimitePages();
   const [report, setReport] = useState<PrevolReport | null>(null);
   // The folder prepared before this opening of the screen is not offered to
   // Commander: the screen unmounts when left, so what it found on arrival
@@ -178,6 +189,7 @@ export function EnvoiView(props: EnvoiViewProps) {
   return (
     <EnvoiPage
       {...props}
+      limitePages={limitePages}
       report={report}
       running={running}
       error={error}
@@ -198,6 +210,8 @@ export function EnvoiView(props: EnvoiViewProps) {
 }
 
 export type EnvoiPageProps = EnvoiViewProps & {
+  /** La limite de pages du relais (`Tarifs.pages_max`), `null` tant que la table n'est pas lue. */
+  limitePages?: number | null;
   report: PrevolReport | null;
   running: boolean;
   error: string | null;
@@ -290,6 +304,10 @@ export function EnvoiPage(props: EnvoiPageProps) {
     commande: action?.commande === true,
     acquitte,
   });
+  // Plus de pages que le relais n'en vend : « Faire imprimer » se grise et
+  // dit pourquoi avant le clic. La porte PDF n'a pas de limite.
+  const tropDePages =
+    action?.commande === true ? pagesInvendables(report?.fiche?.pages_interieur, props.limitePages) : null;
   const lancer = () => (action?.prepare ? onPrepare(action.commande) : onExport());
   // Un défaut dont le geste est une case de « Pages de début et de fin »
   // ouvre ce repli : on ne cache pas ce qu'une ligne demande de décocher.
@@ -417,17 +435,25 @@ export function EnvoiPage(props: EnvoiPageProps) {
                   {libelleAcquittement(pagesSous)}
                 </label>
               )}
+              {!parcoursOuvert && tropDePages !== null && (
+                <p id="envoi-trop-de-pages" className="commande-format" role="status">
+                  {t("commande.trop.pages", { n: tropDePages, max: props.limitePages ?? 0 })}
+                </p>
+              )}
               {!parcoursOuvert && (
                 <button
                   className="envoi-exporter"
                   onClick={bouton.confirmer ? () => onConfirmation(true) : lancer}
-                  disabled={exporting || !bouton.actif || !action}
+                  disabled={exporting || !bouton.actif || !action || tropDePages !== null}
+                  aria-describedby={tropDePages !== null ? "envoi-trop-de-pages" : undefined}
                   title={
-                    !report?.ok
-                      ? t("envoi.exporter.bloque")
-                      : bouton.actif
-                        ? action?.titre
-                        : t("envoi.acquittement.requis")
+                    tropDePages !== null
+                      ? undefined
+                      : !report?.ok
+                        ? t("envoi.exporter.bloque")
+                        : bouton.actif
+                          ? action?.titre
+                          : t("envoi.acquittement.requis")
                   }
                 >
                   {exporting ? t("envoi.exporter.rendu") : (action?.texte ?? t("envoi.telecharger"))}

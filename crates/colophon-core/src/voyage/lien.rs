@@ -93,13 +93,21 @@ pub struct Reglages {
     pub limites: Limites,
     /// L'attente entre deux requêtes.
     pub pause: Duration,
+    /// L'attente avant une nouvelle tentative, doublée à chaque échec
+    /// ([`ESSAIS`] essais au plus).
+    pub attente: Duration,
 }
 
 impl Default for Reglages {
     fn default() -> Self {
-        Reglages { limites: Limites::default(), pause: Duration::from_millis(120) }
+        Reglages { limites: Limites::default(), pause: Duration::from_millis(120), attente: Duration::from_secs(2) }
     }
 }
+
+/// Les essais d'une requête : le premier et deux nouvelles tentatives. Sur
+/// une erreur de réseau, un 5xx ou un 429 seulement : un 4xx ou une réponse
+/// qu'on ne sait pas lire ne s'arrange pas en la redemandant.
+pub const ESSAIS: u32 = 3;
 
 /// Le plafond de photos d'une seule étape : le rang s'écrit sur deux chiffres.
 const PHOTOS_PAR_ETAPE: usize = 99;
@@ -123,6 +131,40 @@ pub enum Erreur {
     Photo(String),
     /// Le dossier de sortie.
     Disque(String),
+    /// Le disque est plein.
+    DisquePlein,
+    /// La personne a annulé : ce qui est déjà là sert à la reprise.
+    Annule,
+}
+
+impl Erreur {
+    /// Le genre de l'erreur, un mot stable pour l'écran (qui dit la phrase et
+    /// le remède dans sa langue).
+    pub fn genre(&self) -> &'static str {
+        match self {
+            Erreur::Url(_) => "url",
+            Erreur::Reseau(_) => "reseau",
+            Erreur::Statut { statut, quoi: "voyage" } if matches!(statut, 401 | 403 | 404) => "prive",
+            Erreur::Statut { statut, .. } if *statut == 429 || *statut >= 500 => "indisponible",
+            Erreur::Statut { .. } => "statut",
+            Erreur::TropGros(_) => "trop_gros",
+            Erreur::Format(_) => "format",
+            Erreur::Photo(_) => "photo",
+            Erreur::Disque(_) => "disque",
+            Erreur::DisquePlein => "disque_plein",
+            Erreur::Annule => "annule",
+        }
+    }
+}
+
+/// Une erreur d'écriture, le disque plein nommé à part (`ENOSPC` sous Unix,
+/// `ERROR_DISK_FULL` et `ERROR_HANDLE_DISK_FULL` sous Windows).
+fn disque(e: &std::io::Error) -> Erreur {
+    if e.kind() == std::io::ErrorKind::StorageFull || matches!(e.raw_os_error(), Some(28 | 112 | 39)) {
+        Erreur::DisquePlein
+    } else {
+        Erreur::Disque(e.to_string())
+    }
 }
 
 impl fmt::Display for Erreur {
@@ -139,6 +181,8 @@ impl fmt::Display for Erreur {
             Erreur::Format(m) => write!(f, "Polarsteps a changé son format ({m}) : passe par l'export de tes données"),
             Erreur::Photo(m) => write!(f, "une photo reçue n'est pas lisible : {m}"),
             Erreur::Disque(m) => write!(f, "écriture impossible : {m}"),
+            Erreur::DisquePlein => write!(f, "le disque est plein : libère de la place, puis relance l'import, il reprend où il s'est arrêté"),
+            Erreur::Annule => write!(f, "import annulé : il reprendra où il s'est arrêté"),
         }
     }
 }
@@ -642,21 +686,51 @@ fn decoder_polyligne(s: &str) -> Option<Vec<Point>> {
 struct Demandeur<'a> {
     transport: &'a dyn Transport,
     pause: Duration,
+    attente: Duration,
     deja: Cell<bool>,
     jeton: Option<&'a str>,
+    annuler: &'a dyn Fn() -> bool,
 }
 
 impl Demandeur<'_> {
+    /// Une requête, jusqu'à [`ESSAIS`] fois sur une erreur de réseau, un 5xx
+    /// ou un 429, avec une attente qui double. Jamais sur un 4xx.
     fn prendre(&self, url: &str, plafond: u64, quoi: &'static str, depasse: &'static str) -> Result<Vec<u8>, Erreur> {
         if self.deja.replace(true) {
             std::thread::sleep(self.pause);
         }
-        let r = self.transport.get(url, plafond).map_err(|m| {
-            Erreur::Reseau(match self.jeton {
-                Some(j) => m.replace(j, "***"),
-                None => m,
-            })
-        })?;
+        let mut attente = self.attente;
+        let mut essai = 1;
+        let r = loop {
+            if (self.annuler)() {
+                return Err(Erreur::Annule);
+            }
+            let issue = self
+                .transport
+                .get(url, plafond)
+                .map_err(|m| {
+                    Erreur::Reseau(match self.jeton {
+                        Some(j) => m.replace(j, "***"),
+                        None => m,
+                    })
+                })
+                .and_then(|r| {
+                    if r.statut == 429 || r.statut >= 500 {
+                        Err(Erreur::Statut { statut: r.statut, quoi })
+                    } else {
+                        Ok(r)
+                    }
+                });
+            match issue {
+                Ok(r) => break r,
+                Err(e) if essai >= ESSAIS => return Err(e),
+                Err(_) => {
+                    std::thread::sleep(attente);
+                    attente *= 2;
+                    essai += 1;
+                }
+            }
+        };
         if r.statut != 200 {
             return Err(Erreur::Statut { statut: r.statut, quoi });
         }
@@ -686,9 +760,30 @@ pub fn importer(
     reglages: &Reglages,
     progression: &dyn Fn(usize, usize),
 ) -> Result<Voyage, Erreur> {
+    importer_annulable(url, vers, transport, reglages, progression, &|| false)
+}
+
+/// Comme [`importer`], et `annuler` se lit avant chaque requête : vrai, l'import
+/// s'arrête (`Erreur::Annule`), ce qui est déjà écrit reste et la reprise s'en
+/// sert.
+pub fn importer_annulable(
+    url: &str,
+    vers: &Path,
+    transport: &dyn Transport,
+    reglages: &Reglages,
+    progression: &dyn Fn(usize, usize),
+    annuler: &dyn Fn() -> bool,
+) -> Result<Voyage, Erreur> {
     let lien = analyser_url(url)?;
     let limites = &reglages.limites;
-    let demandeur = Demandeur { transport, pause: reglages.pause, deja: Cell::new(false), jeton: lien.jeton.as_deref() };
+    let demandeur = Demandeur {
+        transport,
+        pause: reglages.pause,
+        attente: reglages.attente,
+        deja: Cell::new(false),
+        jeton: lien.jeton.as_deref(),
+        annuler,
+    };
 
     let mut api = format!("{API}/trips/{}?polarsteps_api_version={VERSION_API}", lien.id);
     if let Some(j) = &lien.jeton {
@@ -701,7 +796,7 @@ pub fn importer(
     let Converti { mut voyage, a_prendre } = convertir(&json, lien.id, limites)?;
     drop(json);
 
-    std::fs::create_dir_all(vers).map_err(|e| Erreur::Disque(e.to_string()))?;
+    std::fs::create_dir_all(vers).map_err(|e| disque(&e))?;
     let total = a_prendre.len();
     let mut recu = 0u64;
     for (n, p) in a_prendre.iter().enumerate() {
@@ -716,8 +811,8 @@ pub fn importer(
                 }
                 let d = dimensions(&octets)?;
                 let part = vers.join(format!("{}.part", p.fichier));
-                std::fs::write(&part, &octets).map_err(|e| Erreur::Disque(e.to_string()))?;
-                std::fs::rename(&part, &chemin).map_err(|e| Erreur::Disque(e.to_string()))?;
+                std::fs::write(&part, &octets).map_err(|e| disque(&e))?;
+                std::fs::rename(&part, &chemin).map_err(|e| disque(&e))?;
                 d
             }
         };

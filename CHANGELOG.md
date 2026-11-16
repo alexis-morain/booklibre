@@ -11,6 +11,26 @@ sur la page des releases.
 
 ### Added
 
+- Import a Polarsteps trip from its link (not in the Mac App Store edition). On the
+  start screen, "Import a Polarsteps trip": paste the link of your trip (a public one,
+  or a share link with its "?s="), and Booklibre downloads it into a folder of its own,
+  then composes and opens the album. The address is checked on your machine before
+  anything goes over the network, the progress reads "Photos: 412 / 1,546", and
+  Cancel stops cleanly: run it again and the import resumes where it stopped, without
+  asking again for the photos already received. A network failure, a 5xx or a 429 is
+  tried up to three times with a growing wait, never a 4xx or a format it does not know.
+  Every failure says what happened and what to do: bad link, private or missing trip,
+  Polarsteps changed its format (use the data export), network down, disk full. When the
+  composition ends, the report names the videos ignored, the emoji not printed, the
+  stories longer than their pages and the steps grouped on one page; for photos too
+  small to be printed well it advises the Polarsteps data export or your original
+  photos (the link only gives thumbnails). A book longer than the relay sells
+  (200 pages, read from the app's own limit) can no longer be ordered from Booklibre:
+  the Order buttons are greyed out and say why before the click ("This book has 488
+  pages. Ordering in Booklibre goes up to 200 pages: remove some spreads, or export the
+  PDF to have it printed elsewhere"). The PDF export has no limit and stays available. Booklibre is not affiliated with Polarsteps. The Mentions
+  panel of a trip album gets its two boxes: "Weather of the step" and "The trip in
+  numbers", which can be ticked and unticked on an existing album.
 - Weather and a numbers page in a trip album. The line under a step now ends with the
   step's weather ("Bloomington, 25 May 2024 · 31 °C, rain"), in French or English; the
   temperature stays when the condition is not one Booklibre knows, nothing is printed

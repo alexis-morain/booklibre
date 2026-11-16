@@ -267,6 +267,27 @@ describe("à vous de voir", () => {
     expect(rendu("fr", FRANCE, "pdf", "cloudprinter", { report: AVEC })).not.toContain("envoi-acquittement-case");
   });
 
+  it("grise « Faire imprimer » au-delà de 200 pages et dit pourquoi, la porte PDF reste ouverte", () => {
+    const long = (pages: number): PrevolReport => ({ ...REPORT, fiche: { ...REPORT.fiche, pages_interieur: pages } });
+    for (const [pages, grise] of [[488, true], [201, true], [200, false], [198, false]] as const) {
+      const html = rendu("fr", FRANCE, "colophon", "cloudprinter", { report: long(pages), limitePages: 200 });
+      expect(bouton(html).includes("disabled"), `${pages} pages`).toBe(grise);
+      expect(html.includes('aria-describedby="envoi-trop-de-pages"'), `${pages} pages`).toBe(grise);
+      expect(visible(html).includes("La commande dans Booklibre va jusqu’à 200 pages"), `${pages} pages`).toBe(grise);
+    }
+    expect(visible(rendu("en", FRANCE, "colophon", "cloudprinter", { report: long(488), limitePages: 200 }))).toContain(
+      "This book has 488 pages. Ordering in Booklibre goes up to 200 pages",
+    );
+    const pdf = rendu("fr", FRANCE, "pdf", "cloudprinter", { report: long(488), limitePages: 200 });
+    expect(bouton(pdf)).not.toContain("disabled");
+    expect(pdf).not.toContain("envoi-trop-de-pages");
+    // Sans limite lue, rien ne se grise.
+    expect(bouton(rendu("fr", FRANCE, "colophon", "cloudprinter", { report: long(488) }))).not.toContain("disabled");
+    // 202 puis 198 : le même écran se réactive, sans rechargement.
+    expect(bouton(rendu("fr", FRANCE, "colophon", "cloudprinter", { report: long(202), limitePages: 200 }))).toContain("disabled");
+    expect(bouton(rendu("fr", FRANCE, "colophon", "cloudprinter", { report: long(198), limitePages: 200 }))).not.toContain("disabled");
+  });
+
   it("grise toujours sur ce que l'imprimeur refuse", () => {
     const refus: Defaut = { regle: "format_sans_produit", bloquant: true, cause: "x", remede: "y" };
     const html = rendu("fr", FRANCE, "pdf", "cloudprinter", {

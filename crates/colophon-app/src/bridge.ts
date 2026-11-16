@@ -7,6 +7,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { DessinCarte, setCartes } from "./carte";
 import { Ornement, setOrnements } from "./ornement";
 import { Album, Discard, Legendes, OpenedAlbum, Police, Spread } from "./album";
+import type { BilanComposition } from "./voyage";
 
 import { Dump, setGeometrie, setGeometrieFormat } from "./geometrie";
 import { Lang, langue, t } from "./i18n";
@@ -136,6 +137,9 @@ export type BuildBilan = {
   trop_petites?: number;
   /** Titles of the chapters those photos emptied, empty when untitled. */
   chapitres_vides?: string[];
+  /** Ce que la composition d'un voyage a fait de ses étapes (P-s3). Absent
+   *  pour un dossier ordinaire. */
+  voyage?: BilanComposition | null;
 };
 
 /** One proposal composed beside the album, as the creation screen shows it. */
@@ -1510,6 +1514,9 @@ export type Tarifs = {
   devise: string;
   pays: string[];
   formats: Record<string, Record<string, LigneTarifs>>;
+  /** Le plus grand livre que le relais vend (`tarifs::PAGES_MAX`) : le moteur
+   *  l'ajoute à la table, l'écran n'en recopie aucune. */
+  pages_max: number;
 };
 
 /** Ce build a-t-il un Worker de tarifs ? Sans réseau. Faux dans la version

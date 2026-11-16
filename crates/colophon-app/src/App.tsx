@@ -186,6 +186,8 @@ import { StockageView } from "./StockageView";
 import { AProposView } from "./AProposView";
 import { PrefsView } from "./PrefsView";
 import { LegendesView } from "./LegendesView";
+import { VoyageImport } from "./VoyageImport";
+import { RapportVoyage, reglerChiffres, voyageOffert } from "./voyage";
 import { avecMentions, bilanMentions, cleDe, poserMentions, TableMentions } from "./mentions";
 import { ApercuFidele } from "./pdfview";
 import { forgetPdfs } from "./raster";
@@ -193,7 +195,8 @@ import { Tourneur } from "./Feuilletage";
 import { chargerReleve } from "./photos";
 import { LegendeQualite } from "./LegendeQualite";
 import { PrixLivre, QuestionAccueil } from "./ChoixImpression";
-import { chargerTarifs } from "./impression";
+import { chargerTarifs, pagesDuLivre, useLimitePages } from "./impression";
+import { BoutonCommander } from "./BoutonCommander";
 import { loadThumb, resetThumbs } from "./thumbs";
 import "./styles.css";
 
@@ -339,6 +342,10 @@ export default function App() {
   const [building, setBuilding] = useState<string[] | null>(null);
   // The end-of-build report; the book opens behind it, it dismisses once.
   const [bilan, setBilan] = useState<BuildBilan | null>(null);
+  // Le rapport de l'import d'un voyage, tant que le bilan de sa composition
+  // est à l'écran (P-s3). Il ne vaut que pour le dossier qu'il a écrit.
+  const [voyageImporte, setVoyageImporte] = useState<RapportVoyage | null>(null);
+  const voyageImporteRef = useRef<RapportVoyage | null>(null);
   // The proposals composed beside the album, and which one is on screen.
   // Both die with the report screen: past it there is one album.
   const [variantes, setVariantes] = useState<VarianteResume[]>([]);
@@ -1112,6 +1119,7 @@ export default function App() {
       adopt(result.opened);
       setCuration(await fetchCuration().catch(() => []));
       setBilan(result.bilan);
+      setVoyageImporte(voyageImporteRef.current?.dossier === dir ? voyageImporteRef.current : null);
       bilanRef.current = result.bilan;
       setVariantes(result.variantes ?? []);
       setVariante(null);
@@ -1463,6 +1471,7 @@ export default function App() {
   const choisirLegendes = async (
     contenu: Legendes["contenu"] | null,
     date: Legendes["date"],
+    meteo: boolean = !!histRef.current?.album.legendes?.meteo,
   ) => {
     const courant = histRef.current?.album;
     if (!courant) return;
@@ -1471,7 +1480,7 @@ export default function App() {
       setStatus(t("legendes.retirees"));
       return;
     }
-    const l: Legendes = { contenu, date, langue: langue(), ...(courant.legendes?.meteo ? { meteo: true } : {}) };
+    const l: Legendes = { contenu, date, langue: langue(), ...(meteo ? { meteo: true } : {}) };
     let table: TableMentions;
     setLectureMentions(true);
     try {
@@ -1489,6 +1498,20 @@ export default function App() {
     apply((a) => poserMentions(a, l, table));
     const b = bilanMentions(apres, spreadGeometry(apres));
     setStatus(t("legendes.bilan", { n: b.posees, m: b.sansRien, p: b.sansPlace }));
+  };
+
+  /** Coche ou décoche « Le voyage en chiffres » : le moteur pose ou retire
+   *  la page sur l'album tel qu'il est, un seul pas d'annulation. */
+  const poserChiffres = async (actif: boolean) => {
+    const courant = histRef.current?.album;
+    if (!courant) return;
+    try {
+      const nouveau = await reglerChiffres(courant, actif, langue());
+      apply(() => nouveau);
+      setStatus(t(actif ? "legendes.chiffres.posee" : "legendes.chiffres.retiree"));
+    } catch (e) {
+      setError(fault(t("erreur.chiffres"), e));
+    }
   };
 
   /** Planche → « Dater toutes les légendes » (ou les retirer) : les dates
@@ -2610,6 +2633,9 @@ export default function App() {
           error={error}
           onDismissError={() => setError(null)}
           onCancelBuild={() => void cancelBuild()}
+          onVoyageImporte={(r) => {
+            voyageImporteRef.current = r;
+          }}
           recents={inTauri ? recents : []}
           onOpenRecent={(dir) => void openRecent(dir)}
         />
@@ -2696,6 +2722,7 @@ export default function App() {
         curation={curation}
         variantes={variantes}
         choisie={variante}
+        voyageImporte={voyageImporte}
         onChoisir={(id) => void basculerVariante(id)}
         onOpen={() => setBilan(null)}
         onTri={() => {
@@ -2967,6 +2994,7 @@ export default function App() {
   const listeChapitres = chapitres(album);
   const chapitreCourant = chapitreDe(listeChapitres, index);
   const commanderOffert = relais !== null && relais.etat !== "absent";
+  const limitePages = useLimitePages();
   /** Un chapitre se rejoint par sa première planche : en Planches on y reste,
    *  partout ailleurs on ouvre le Livre. */
   const allerAuChapitre = (debut: number) => {
@@ -3015,6 +3043,7 @@ export default function App() {
         onRecompose={() => void ouvrirRecomposer()}
         onExporter={() => gotoView("envoi")}
         onCommander={commanderOffert ? () => gotoView("envoi") : undefined}
+        limitePages={limitePages}
       />
       {view === "tri" ? (
         <TriView
@@ -3445,6 +3474,13 @@ export default function App() {
           reglage={album.legendes ?? null}
           enCours={lectureMentions}
           onChoisir={(c, d) => void choisirLegendes(c, d)}
+          voyage={!!opened?.voyage}
+          chiffres={!!album.chiffres}
+          onMeteo={(m) => {
+            const l = album.legendes;
+            if (l) void choisirLegendes(l.contenu, l.date, m);
+          }}
+          onChiffres={(actif) => void poserChiffres(actif)}
           onClose={() => setLegendesOuvert(false)}
         />
       )}
@@ -3609,6 +3645,7 @@ function Bar({
   onRecompose,
   onExporter,
   onCommander,
+  limitePages,
 }: {
   album: Album;
   canUndo: boolean;
@@ -3626,6 +3663,8 @@ function Bar({
   onExporter: () => void;
   /** Absent quand aucun relais n'est compilé : rien n'annonce la commande. */
   onCommander?: () => void;
+  /** La limite de pages du relais, `null` tant que la table n'est pas lue. */
+  limitePages: number | null;
 }) {
   const fil: string[] =
     view === "livre"
@@ -3685,9 +3724,11 @@ function Bar({
       {view !== "envoi" && (
         <>
           {onCommander && (
-            <button className="btn-second" onClick={onCommander} title={t("bar.commander.titre")}>
-              {t("bar.commander")}
-            </button>
+            <BoutonCommander
+              pages={pagesDuLivre(album)}
+              limite={limitePages}
+              onCommander={onCommander}
+            />
           )}
           <button className="cta small" onClick={onExporter} title={t("bar.exporter.titre")}>
             {t("bar.exporter")}
@@ -4035,6 +4076,7 @@ function Empty({
   error,
   onDismissError,
   onCancelBuild,
+  onVoyageImporte,
   recents,
   onOpenRecent,
 }: {
@@ -4052,6 +4094,8 @@ function Empty({
   error: Fault | null;
   onDismissError: () => void;
   onCancelBuild: () => void;
+  /** Le rapport d'un voyage importé, avant que sa composition ne commence. */
+  onVoyageImporte: (r: RapportVoyage) => void;
   recents: RecentAlbum[];
   onOpenRecent: (dir: string) => void;
 }) {
@@ -4130,6 +4174,15 @@ function Empty({
   }, []);
   const photosPossible = etatPhotos !== null && etatPhotos.etat !== "indisponible";
 
+  // Importer un voyage Polarsteps : hors version App Store. Le dossier écrit,
+  // la composition suit d'elle-même et le bilan dit ce qui a été laissé.
+  const [voyageOuvert, setVoyageOuvert] = useState(false);
+  const voyageImporte = (r: RapportVoyage) => {
+    setVoyageOuvert(false);
+    onVoyageImporte(r);
+    onCreate(r.dossier, "carre-21", 48, RYTHME_DE_CREATION, r.titre, false);
+  };
+
   const ouvrirPhotos = async () => {
     setPhotosOuvert(true);
     setRapport(null);
@@ -4188,7 +4241,7 @@ function Empty({
           Booklibre
         </p>
 
-        {!dir && !building && !photosOuvert && (
+        {!dir && !building && !photosOuvert && !voyageOuvert && (
           <>
             <h1>
               {t("accueil.titre")
@@ -4203,6 +4256,11 @@ function Empty({
               {photosPossible && (
                 <button className="btn-second accueil-photos" onClick={() => void ouvrirPhotos()}>
                   {t("photos.titre")}
+                </button>
+              )}
+              {voyageOffert() && (
+                <button className="btn-second accueil-photos" onClick={() => setVoyageOuvert(true)}>
+                  {t("voyage.entree")}
                 </button>
               )}
             </div>
@@ -4233,6 +4291,10 @@ function Empty({
               </div>
             )}
           </>
+        )}
+
+        {!dir && !building && voyageOuvert && (
+          <VoyageImport onImporte={voyageImporte} onRetour={() => setVoyageOuvert(false)} />
         )}
 
         {!dir && !building && photosOuvert && etatPhotos && (

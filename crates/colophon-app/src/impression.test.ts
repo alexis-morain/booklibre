@@ -39,6 +39,7 @@ const TABLE: Tarifs = {
   genere_le: "2026-10-20T04:00:00.000Z",
   devise: "EUR",
   pays: ["FR"],
+  pages_max: 200,
   formats: {
     "carre-21": { FR: { de: 24, pas: 2, ttc_centimes: [4600, 4650, 4700, null] } },
   },

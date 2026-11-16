@@ -74,9 +74,11 @@ import {
   referenceCourte,
   relaisDe,
   relaisIndisponible,
+  tropDePages,
   visibles,
 } from "./commande";
 import { t, useLangue } from "./i18n";
+import { useLimitePages } from "./impression";
 
 /** Cinq secondes entre deux relectures d'un paiement qui attend. */
 const RELECTURE_MS = 5000;
@@ -202,7 +204,11 @@ export function CommandeView({
   const indisponible = relais !== null && relaisIndisponible(relais, preparationNeuve);
   const possible = commandePossible(joignable, preparationNeuve);
   const invendable = formatInvendable(joignable, preparationNeuve);
+  const limite = useLimitePages();
+  const trop = tropDePages(preparationNeuve, limite);
   const prix = (c: number) => prixDeCentimes(c, langue);
+  const pagesDuFichier = preparationNeuve?.rapport.fiche?.pages_interieur;
+  const phrase = (e: unknown) => phraseErreur(e, pagesDuFichier, limite);
 
   const tenter = async (quoi: string, geste: () => Promise<void>, sinon?: (e: unknown) => void) => {
     setOccupe(quoi);
@@ -210,7 +216,7 @@ export function CommandeView({
     try {
       await geste();
     } catch (e) {
-      setErreur(phraseErreur(e));
+      setErreur(phrase(e));
       sinon?.(e);
     } finally {
       setOccupe(null);
@@ -233,7 +239,7 @@ export function CommandeView({
 
   // « Faire imprimer » a préparé ce dossier : le parcours s'ouvre seul, une
   // fois par préparation. Revenu au repos, « Commander » le rouvre.
-  const direct = commandeDirecte(joignable, preparationNeuve);
+  const direct = commandeDirecte(joignable, preparationNeuve, limite);
   const [ouvertPour, setOuvertPour] = useState<Preparation | null>(null);
   useEffect(() => {
     if (!direct || !pays || parcours.etape !== "repos" || ouvertPour === preparationNeuve) return;
@@ -271,7 +277,7 @@ export function CommandeView({
       // Un second envoi pendant le premier : le moteur l'a refusé sans rien
       // toucher, le premier continue.
       if (ignorable(e)) return;
-      setErreur(phraseErreur(e));
+      setErreur(phrase(e));
       envoyer({ type: "echec" });
     }
   };
@@ -305,7 +311,7 @@ export function CommandeView({
       },
       // Un refus définitif mène à l'étape d'erreur, d'où l'on recommence ;
       // le reste revient au bouton qui rouvre le paiement.
-      (e) => envoyer(refusDefinitif(e) ? { type: "echec", definitif: phraseErreur(e) } : { type: "echec" }),
+      (e) => envoyer(refusDefinitif(e) ? { type: "echec", definitif: phrase(e) } : { type: "echec" }),
     );
   };
 
@@ -377,11 +383,18 @@ export function CommandeView({
 
       {possible && parcours.etape === "repos" && suivi === null && (!direct || ouvertPour === preparationNeuve) && (
         <div className="commande-ouvrir">
+          {trop !== null && (
+            <p id="commande-trop-de-pages" className="commande-format" role="status">
+              {t("commande.trop.pages", { n: trop, max: limite ?? 0 })}
+            </p>
+          )}
           <button
             className="envoi-exporter"
-            title={t("commande.commander.titre")}
+            title={trop === null ? t("commande.commander.titre") : undefined}
+            disabled={trop !== null}
+            aria-describedby={trop !== null ? "commande-trop-de-pages" : undefined}
             onClick={() => {
-              if (!pays) return;
+              if (!pays || trop !== null) return;
               setSuivi(null);
               envoyer({ type: "commander", pays });
             }}

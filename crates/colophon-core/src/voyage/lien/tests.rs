@@ -68,7 +68,7 @@ fn dossier(nom: &str) -> std::path::PathBuf {
 }
 
 fn reglages() -> Reglages {
-    Reglages { limites: Limites { reponse: 1 << 20, etapes: 100, photos: 100, photo: 1 << 20, total: 1 << 24, trace: 1000 }, pause: Duration::ZERO }
+    Reglages { limites: Limites { reponse: 1 << 20, etapes: 100, photos: 100, photo: 1 << 20, total: 1 << 24, trace: 1000 }, pause: Duration::ZERO, attente: Duration::ZERO }
 }
 
 fn format_attendu<T: std::fmt::Debug>(r: Result<T, Erreur>) -> String {
@@ -528,4 +528,166 @@ fn sans_cover_photo_la_couverture_est_celle_que_la_premiere_etape_met_en_avant()
     j["steps"][0].as_object_mut().unwrap().remove("cover_media_uuid");
     let v = convertir(&j, 4242, &limites_larges()).unwrap().voyage;
     assert_eq!(v.couverture, None);
+}
+
+// ---- la nouvelle tentative et l'annulation (P-s3) ----------------------------
+
+/// Un transport qui joue d'abord des échecs scénarisés pour une adresse, puis
+/// laisse le faux répondre. `Err` est une panne de réseau, `Ok(statut)` un
+/// statut sans corps.
+struct Capricieux {
+    faux: Faux,
+    avant: RefCell<HashMap<String, Vec<Result<u16, String>>>>,
+}
+
+impl Capricieux {
+    fn new(faux: Faux) -> Self {
+        Capricieux { faux, avant: RefCell::new(HashMap::new()) }
+    }
+    fn d_abord(self, url: &str, issues: Vec<Result<u16, String>>) -> Self {
+        self.avant.borrow_mut().insert(url.to_string(), issues);
+        self
+    }
+    fn appels_de(&self, url: &str) -> usize {
+        self.faux.appels.borrow().iter().filter(|a| *a == url).count()
+    }
+}
+
+impl Transport for Capricieux {
+    fn get(&self, url: &str, plafond: u64) -> Result<Reponse, String> {
+        let prochaine = {
+            let mut avant = self.avant.borrow_mut();
+            avant.get_mut(url).filter(|v| !v.is_empty()).map(|v| v.remove(0))
+        };
+        match prochaine {
+            Some(issue) => {
+                self.faux.appels.borrow_mut().push(url.to_string());
+                issue.map(|statut| Reponse { statut, corps: Vec::new() })
+            }
+            None => self.faux.get(url, plafond),
+        }
+    }
+}
+
+const ADRESSE: &str = "https://www.polarsteps.com/q/4242-v";
+
+fn voyage_en_ligne() -> Faux {
+    Faux::avec_voyage(&fixture()).api(4242, None, 200, V62.as_bytes().to_vec())
+}
+
+#[test]
+fn un_5xx_ou_un_429_ou_une_panne_se_retente_puis_passe() {
+    let dir = dossier("retente");
+    let api = url_api(4242, None);
+    let t = Capricieux::new(voyage_en_ligne()).d_abord(&api, vec![Ok(503), Ok(429)]);
+    importer(ADRESSE, &dir, &t, &reglages(), &|_, _| {}).unwrap();
+    assert_eq!(t.appels_de(&api), 3, "deux échecs puis la bonne réponse");
+    let _ = std::fs::remove_dir_all(&dir);
+
+    let dir = dossier("retente-reseau");
+    let t = Capricieux::new(voyage_en_ligne()).d_abord(&api, vec![Err("connexion coupée".into()), Ok(500)]);
+    importer(ADRESSE, &dir, &t, &reglages(), &|_, _| {}).unwrap();
+    assert_eq!(t.appels_de(&api), 3);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn une_photo_se_retente_comme_le_voyage() {
+    let dir = dossier("retente-photo");
+    let faux = voyage_en_ligne();
+    let photo = fixture()["steps"][0]["media"][0]["large_thumbnail_path"].as_str().unwrap().to_string();
+    let t = Capricieux::new(faux).d_abord(&photo, vec![Ok(502)]);
+    importer(ADRESSE, &dir, &t, &reglages(), &|_, _| {}).unwrap();
+    assert_eq!(t.appels_de(&photo), 2);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn trois_essais_au_plus_puis_l_erreur_du_dernier() {
+    let dir = dossier("trois-essais");
+    let api = url_api(4242, None);
+    let t = Capricieux::new(voyage_en_ligne()).d_abord(&api, vec![Ok(503), Ok(503), Ok(503), Ok(503)]);
+    let e = importer(ADRESSE, &dir, &t, &reglages(), &|_, _| {}).unwrap_err();
+    assert_eq!(e, Erreur::Statut { statut: 503, quoi: "voyage" });
+    assert_eq!(e.genre(), "indisponible");
+    assert_eq!(t.appels_de(&api), ESSAIS as usize);
+
+    let t = Capricieux::new(voyage_en_ligne()).d_abord(&api, vec![Err("réseau".into()); 5]);
+    let e = importer(ADRESSE, &dir, &t, &reglages(), &|_, _| {}).unwrap_err();
+    assert_eq!(e.genre(), "reseau");
+    assert_eq!(t.appels_de(&api), ESSAIS as usize);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn jamais_de_nouvelle_tentative_sur_un_4xx_ni_un_format_inconnu() {
+    let dir = dossier("pas-de-retente");
+    let api = url_api(4242, None);
+    for statut in [400u16, 401, 403, 404, 410] {
+        let t = Capricieux::new(voyage_en_ligne()).d_abord(&api, vec![Ok(statut), Ok(200)]);
+        let e = importer(ADRESSE, &dir, &t, &reglages(), &|_, _| {}).unwrap_err();
+        assert_eq!(e, Erreur::Statut { statut, quoi: "voyage" });
+        assert_eq!(t.appels_de(&api), 1, "{statut} ne se redemande pas");
+    }
+    // Un format inconnu : une seule demande, l'échec franc.
+    let faux = Faux::avec_voyage(&fixture()).api(4242, None, 200, b"<html>maintenance</html>".to_vec());
+    let e = importer(ADRESSE, &dir, &faux, &reglages(), &|_, _| {}).unwrap_err();
+    assert_eq!(e.genre(), "format");
+    assert_eq!(faux.appels.borrow().len(), 1);
+    // Une photo refusée en 403 : une seule demande pour elle.
+    let photo = fixture()["steps"][0]["media"][0]["large_thumbnail_path"].as_str().unwrap().to_string();
+    let t = Capricieux::new(voyage_en_ligne()).d_abord(&photo, vec![Ok(403)]);
+    importer(ADRESSE, &dir, &t, &reglages(), &|_, _| {}).unwrap_err();
+    assert_eq!(t.appels_de(&photo), 1);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn l_attente_double_a_chaque_echec() {
+    let dir = dossier("attente");
+    let api = url_api(4242, None);
+    let t = Capricieux::new(voyage_en_ligne()).d_abord(&api, vec![Ok(503), Ok(503)]);
+    let mut r = reglages();
+    r.attente = Duration::from_millis(30);
+    let t0 = std::time::Instant::now();
+    importer(ADRESSE, &dir, &t, &r, &|_, _| {}).unwrap();
+    // 30 ms puis 60 ms avant les deux nouvelles tentatives.
+    assert!(t0.elapsed() >= Duration::from_millis(90), "{:?}", t0.elapsed());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn annuler_arrete_net_et_la_reprise_ne_redemande_rien() {
+    let dir = dossier("annule");
+    let faux = voyage_en_ligne();
+    let demandes = std::cell::Cell::new(0);
+    // On annule à la quatrième requête : le voyage et deux photos sont passés.
+    let e = importer_annulable(ADRESSE, &dir, &faux, &reglages(), &|_, _| {}, &|| {
+        demandes.set(demandes.get() + 1);
+        demandes.get() > 3
+    })
+    .unwrap_err();
+    assert_eq!(e, Erreur::Annule);
+    assert_eq!(e.genre(), "annule");
+    assert!(!dir.join("voyage.json").exists(), "pas de voyage à moitié écrit");
+    let prises = faux.appels.borrow().len();
+    assert_eq!(prises, 3);
+    // La reprise : seules les photos manquantes sont demandées.
+    faux.appels.borrow_mut().clear();
+    let v = importer(ADRESSE, &dir, &faux, &reglages(), &|_, _| {}).unwrap();
+    let total = v.etapes.iter().map(|e| e.photos.len()).sum::<usize>();
+    assert_eq!(faux.appels.borrow().len(), 1 + total - (prises - 1));
+    assert!(dir.join("voyage.json").exists());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn le_disque_plein_se_nomme() {
+    let plein = std::io::Error::from(std::io::ErrorKind::StorageFull);
+    assert_eq!(disque(&plein), Erreur::DisquePlein);
+    assert_eq!(disque(&std::io::Error::from_raw_os_error(28)), Erreur::DisquePlein);
+    assert_eq!(disque(&std::io::Error::from(std::io::ErrorKind::PermissionDenied)).genre(), "disque");
+    assert_eq!(Erreur::Url("x".into()).genre(), "url");
+    assert_eq!(Erreur::Statut { statut: 404, quoi: "voyage" }.genre(), "prive");
+    assert_eq!(Erreur::Statut { statut: 404, quoi: "une photo" }.genre(), "statut");
 }
