@@ -31,9 +31,16 @@
 //! n'est pas touché. La vignette n'est pas effacée : elle part dans un
 //! dossier voisin (`<dossier>-vignettes`), et `originaux.json` écrit à côté
 //! de `voyage.json` dit qui est devenu quoi, de quel fichier, à quelle
-//! distance : [`retablir`] rend les vignettes. Seuls les originaux JPEG
-//! remplacent (le nom garde son extension) ; un HEIC ou un PNG apparié est
-//! nommé au bilan, il ne remplace rien.
+//! distance : [`retablir`] rend les vignettes.
+//!
+//! **Les originaux qui ne sont pas des JPEG** (HEIC d'un iPhone, PNG)
+//! remplacent aussi, sous le même nom : décodés par le chemin du reste de
+//! l'app (le décodeur système pour un HEIC, jamais une crate), redressés par
+//! leur EXIF, réécrits en JPEG pleine définition ([`QUALITE_JPEG`]) avec la
+//! date de prise de vue (et son décalage) quand ils la donnaient. Un JPEG est
+//! copié à l'octet, EXIF compris. Un RAW apparié est nommé au bilan, il ne
+//! remplace rien ; un HEIC qu'aucun décodeur du système ne lit (Windows,
+//! Linux) est compté et dit au bilan, avec la même formule.
 
 use super::Voyage;
 use crate::{heic, meta, scan, thumb};
@@ -72,6 +79,10 @@ pub const MARGE_HORAIRE_S: i64 = 6 * 3600;
 /// Une étape sans fin dure au moins un jour pour la fenêtre : la photo posée
 /// dans une étape est souvent prise plus tard dans la journée.
 pub const DUREE_ETAPE_MIN_S: i64 = 24 * 3600;
+/// La qualité du JPEG écrit pour un original HEIC ou PNG : celle de
+/// l'éditeur (`reglage.rs`) en plus haut, pour que le remplacement ne perde
+/// rien de visible.
+pub const QUALITE_JPEG: u8 = 95;
 
 // ---------------------------------------------------------------- l'empreinte
 
@@ -167,15 +178,19 @@ fn lire_original(chemin: &Path) -> Result<Original> {
 
 /// Lit tout le dossier d'originaux (récursif, formats de l'album) sauf ce qui
 /// est dans `exclus` : le dossier du voyage et ses vignettes ne sont pas des
-/// originaux. Rend aussi le nombre de fichiers illisibles.
+/// originaux. Rend aussi le nombre de fichiers illisibles et celui des HEIC
+/// que le système ne sait pas lire (le scan les écarte, ils ne sont jamais
+/// des originaux possibles).
 pub fn indexer(
     dossier: &Path,
     exclus: &[PathBuf],
     progres: &(dyn Fn(usize, usize) + Sync),
     annuler: &(dyn Fn() -> bool + Sync),
-) -> Result<(Vec<Original>, usize)> {
+) -> Result<(Vec<Original>, usize, usize)> {
     let exclus: Vec<PathBuf> = exclus.iter().filter_map(|e| e.canonicalize().ok()).collect();
-    let fichiers: Vec<PathBuf> = scan::scan(dossier)
+    let balayage = scan::scan(dossier);
+    let heic_illisibles = balayage.skipped_heic;
+    let fichiers: Vec<PathBuf> = balayage
         .images
         .into_iter()
         .filter(|p| match p.canonicalize() {
@@ -205,7 +220,7 @@ pub fn indexer(
     let illisibles = lus.iter().filter(|o| o.is_none()).count();
     let mut originaux: Vec<Original> = lus.into_iter().flatten().collect();
     originaux.sort_by(|a, b| a.chemin.cmp(&b.chemin));
-    Ok((originaux, illisibles))
+    Ok((originaux, illisibles, heic_illisibles))
 }
 
 // ----------------------------------------------------------- l'appariement
@@ -278,8 +293,9 @@ pub enum Raison {
     Conflit,
     /// L'original n'est pas plus grand que la vignette : rien à gagner.
     PasPlusGrand,
-    /// L'original est sûr mais n'est pas un JPEG (HEIC, PNG, RAW) : le nom
-    /// de la photo dans l'album ne peut pas changer d'extension.
+    /// L'original est sûr mais c'est un RAW : le nom de la photo dans l'album
+    /// ne peut pas changer d'extension, et un RAW ne se réécrit pas en JPEG
+    /// sans un développement que la personne n'a pas choisi.
     Format,
     /// La vignette elle-même ne se lit pas.
     Illisible,
@@ -303,6 +319,12 @@ pub enum Verdict {
 
 fn est_jpeg(p: &Path) -> bool {
     matches!(p.extension().map(|e| e.to_string_lossy().to_lowercase()).as_deref(), Some("jpg" | "jpeg"))
+}
+
+/// Ce qui remplace : un JPEG (copié) ou un format qu'on réécrit en JPEG
+/// (HEIC, PNG). Un RAW, non.
+fn remplacable(p: &Path) -> bool {
+    !heic::is_raw(p)
 }
 
 /// Meilleur et suivant parmi des candidats (index, distance).
@@ -356,7 +378,7 @@ pub fn apparier_une(v: &Vignette, originaux: &[Original]) -> Verdict {
 }
 
 /// Tous les verdicts : l'appariement, puis les garde-fous qui ne dépendent
-/// que d'un original (JPEG, plus grand) et celui qui dépend des autres
+/// que d'un original (remplaçable, plus grand) et celui qui dépend des autres
 /// vignettes (deux vignettes, un même original : aucune des deux).
 pub fn apparier(vignettes: &[Vignette], originaux: &[Original]) -> Vec<Verdict> {
     let mut verdicts: Vec<Verdict> = vignettes.par_iter().map(|v| apparier_une(v, originaux)).collect();
@@ -365,7 +387,7 @@ pub fn apparier(vignettes: &[Vignette], originaux: &[Original]) -> Vec<Verdict> 
             let o = &originaux[a.original];
             if o.largeur.min(o.hauteur) <= v.largeur.min(v.hauteur) {
                 *verdict = Verdict::Refus(Raison::PasPlusGrand);
-            } else if !est_jpeg(&o.chemin) {
+            } else if !remplacable(&o.chemin) {
                 *verdict = Verdict::Refus(Raison::Format);
             }
         }
@@ -451,6 +473,11 @@ pub struct Rapport {
     pub refus: Vec<Refus>,
     /// Les photos du dossier d'originaux qu'on n'a pas pu lire.
     pub illisibles: usize,
+    /// Les HEIC du dossier que ce système ne sait pas lire : ils ne peuvent
+    /// remplacer personne, et le bilan le dit.
+    pub heic_illisibles: usize,
+    /// Parmi les remplacées, celles qu'on a réécrites en JPEG (HEIC, PNG).
+    pub reecrites: usize,
     /// Photos sous le repère de 2 126 px, avant puis après.
     pub sous_seuil_avant: usize,
     pub sous_seuil_apres: usize,
@@ -536,6 +563,75 @@ fn ecartees_pour_la_taille(album: Option<&Path>) -> Vec<String> {
         .unwrap_or_default()
 }
 
+/// Le segment APP1 d'un EXIF minimal : la date de prise de vue
+/// (`DateTimeOriginal`, heure locale sans fuseau) et, si le boîtier l'avait
+/// écrit, son décalage (`OffsetTimeOriginal`). Rien d'autre : l'orientation
+/// est déjà appliquée aux pixels.
+fn segment_exif(heure: NaiveDateTime, decalage_s: Option<i32>) -> Vec<u8> {
+    let mut champs: Vec<(u16, Vec<u8>)> = Vec::new();
+    let mut h = heure.format("%Y:%m:%d %H:%M:%S").to_string().into_bytes();
+    h.push(0);
+    champs.push((0x9003, h));
+    if let Some(s) = decalage_s {
+        let (signe, a) = if s < 0 { ('-', -s) } else { ('+', s) };
+        let mut o = format!("{signe}{:02}:{:02}", a / 3600, a % 3600 / 60).into_bytes();
+        o.push(0);
+        champs.push((0x9011, o));
+    }
+    // TIFF petit-boutiste : IFD0 (un pointeur vers l'IFD Exif), puis l'IFD Exif.
+    let exif_ifd = 8 + 2 + 12 + 4;
+    let mut donnees_debut = exif_ifd + 2 + champs.len() as u32 * 12 + 4;
+    let mut tiff = b"II*\0".to_vec();
+    tiff.extend(8u32.to_le_bytes());
+    tiff.extend(1u16.to_le_bytes());
+    for v in [0x8769u16.to_le_bytes().as_slice(), &4u16.to_le_bytes(), &1u32.to_le_bytes(), &exif_ifd.to_le_bytes()] {
+        tiff.extend(v);
+    }
+    tiff.extend(0u32.to_le_bytes());
+    tiff.extend((champs.len() as u16).to_le_bytes());
+    let mut donnees: Vec<u8> = Vec::new();
+    for (tag, octets) in &champs {
+        tiff.extend(tag.to_le_bytes());
+        tiff.extend(2u16.to_le_bytes());
+        tiff.extend((octets.len() as u32).to_le_bytes());
+        tiff.extend(donnees_debut.to_le_bytes());
+        donnees_debut += octets.len() as u32;
+        donnees.extend(octets.iter());
+    }
+    tiff.extend(0u32.to_le_bytes());
+    tiff.extend(donnees);
+    let mut seg = vec![0xFF, 0xE1];
+    seg.extend(((2 + 6 + tiff.len()) as u16).to_be_bytes());
+    seg.extend(b"Exif\0\0");
+    seg.extend(tiff);
+    seg
+}
+
+/// Écrit l'original (HEIC, PNG…) en JPEG pleine définition à `vers` : décodé
+/// comme partout dans l'app, redressé par son EXIF, un PNG transparent posé sur
+/// du blanc. Aucun profil n'est écrit : les pixels sont ceux que le décodeur
+/// rend, lus comme du sRGB par le reste de la chaîne, comme pour tout HEIC.
+fn ecrire_jpeg(o: &Original, vers: &Path) -> Result<()> {
+    let m = meta::read(&o.chemin);
+    let img = thumb::apply_orientation(heic::open(&o.chemin)?, m.orientation);
+    let rgba = img.to_rgba8();
+    let (l, h) = rgba.dimensions();
+    let mut rgb = image::RgbImage::new(l, h);
+    for (x, y, p) in rgba.enumerate_pixels() {
+        let a = u32::from(p.0[3]);
+        let sur_blanc = |c: u8| ((u32::from(c) * a + 255 * (255 - a) + 127) / 255) as u8;
+        rgb.put_pixel(x, y, image::Rgb([sur_blanc(p.0[0]), sur_blanc(p.0[1]), sur_blanc(p.0[2])]));
+    }
+    let mut jpeg = Vec::new();
+    image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jpeg, QUALITE_JPEG).encode_image(&rgb)?;
+    let mut out = vec![0xFF, 0xD8];
+    if let Some(h) = o.heure {
+        out.extend(segment_exif(h, o.decalage_s));
+    }
+    out.extend(&jpeg[2..]);
+    std::fs::write(vers, out).with_context(|| format!("écrire {}", vers.display()))
+}
+
 /// Apparie les vignettes de `dossier` aux photos de `originaux` et remplace,
 /// sur place et sans rien effacer, celles dont l'original est sûr.
 /// `album` : le dossier de l'album, pour rafraîchir ses vignettes en cache et
@@ -559,14 +655,14 @@ pub fn remplacer(
     let deja: Vec<String> = corr.remplacements.iter().map(|r| r.fichier.clone()).collect();
     let sous_seuil_avant = voyage.bilan().photos_sous_seuil;
 
-    let (index, illisibles) = indexer(originaux, &[dossier.to_path_buf(), archive.clone()], progres, annuler)?;
+    let (index, illisibles, heic_illisibles) = indexer(originaux, &[dossier.to_path_buf(), archive.clone()], progres, annuler)?;
     let vignettes = vignettes_du_voyage(dossier, &voyage, &deja);
     let seules: Vec<Vignette> = vignettes.iter().map(|(v, _)| v.clone()).collect();
     let verdicts = apparier(&seules, &index);
 
     std::fs::create_dir_all(&archive).with_context(|| format!("créer {}", archive.display()))?;
     let ecartees = ecartees_pour_la_taille(album);
-    let mut rapport = Rapport { deja: deja.len(), illisibles, sous_seuil_avant, ..Rapport::default() };
+    let mut rapport = Rapport { deja: deja.len(), illisibles, heic_illisibles, sous_seuil_avant, ..Rapport::default() };
     let mut refus = Vec::new();
     let mut changes = Vec::new();
     for ((v, etape), verdict) in vignettes.iter().zip(&verdicts) {
@@ -582,7 +678,15 @@ pub fn remplacer(
                 let cible = dossier.join(&v.fichier);
                 let part = dossier.join(format!("{}.part", v.fichier));
                 let rangee = archive.join(&v.fichier);
-                std::fs::copy(&o.chemin, &part).with_context(|| format!("copier {}", o.chemin.display()))?;
+                if est_jpeg(&o.chemin) {
+                    std::fs::copy(&o.chemin, &part).with_context(|| format!("copier {}", o.chemin.display()))?;
+                } else {
+                    if let Err(e) = ecrire_jpeg(o, &part) {
+                        let _ = std::fs::remove_file(&part);
+                        return Err(e.context(format!("réécrire {}", o.chemin.display())));
+                    }
+                    rapport.reecrites += 1;
+                }
                 deplacer(&cible, &rangee).with_context(|| format!("ranger {}", cible.display()))?;
                 std::fs::rename(&part, &cible)?;
                 corr.remplacements.push(Remplacement {

@@ -399,6 +399,8 @@ fn main() -> Result<()> {
         println!("{} sans original sûr", r.refus.len());
         println!("sous le repère après : {}", r.sous_seuil_apres);
         println!("{} fichiers illisibles dans le dossier d'originaux", r.illisibles);
+        println!("{} photos réécrites en JPEG (originaux HEIC, PNG)", r.reecrites);
+        println!("{} HEIC non lisibles sur ce système", r.heic_illisibles);
         println!("{} photos de la réserve ont maintenant leur original : une recomposition peut en ramener", r.revenues_possibles);
         return Ok(());
     }

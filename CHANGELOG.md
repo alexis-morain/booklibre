@@ -23,7 +23,10 @@ sur la page des releases.
   folder beside the trip (`<folder>-vignettes`), `originaux.json` says what became what, and
   "Put the thumbnails back" restores them. The summary reads "1,412 photos replaced by
   their original; 134 without a sure original", with the list and the reason for each.
-  Only JPEG originals replace for now (a HEIC or a PNG is named, not used). Command line:
+  HEIC (an iPhone folder) and PNG originals replace too: they are decoded by the system, turned
+  upright by their EXIF, and written under the thumbnail's name as a high-quality JPEG (quality 95,
+  shooting date kept); a RAW is named, not used, and where the system cannot read HEIC the summary says
+  so. Command line:
   `--originaux <FOLDER> --originaux-voyage <TRIP> [--originaux-album <ALBUM>]`, and
   `--originaux-retablir <TRIP>`.
 
@@ -109,6 +112,12 @@ sur la page des releases.
 - The linter measures a chapter's opening on the chapter's first photo, and in a
   trip a text-only chapter is not counted by `chapitre_orphelin`; ordinary
   albums are counted as before.
+
+### Fixed
+
+- After replacing a trip's thumbnails, the import summary no longer says "N photos too small
+  are left in the reserve" for photos that now have their original: it counts the ones still
+  too small, and the line about the reserve names the button in quotes ("Recomposer l'album").
 
 ## [1.2.0] - 2026-10-31
 

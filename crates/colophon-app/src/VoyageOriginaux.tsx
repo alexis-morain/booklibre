@@ -119,13 +119,20 @@ export function OriginauxVue({
 export function Originaux({
   onChange,
   onAnnuler,
+  onRevenues,
 }: {
   /** Les photos du dossier ont changé : l'écran qui les montre se rafraîchit. */
   onChange: () => Promise<void> | void;
   onAnnuler: () => void;
+  /** Combien de photos de la réserve ont maintenant leur original, depuis
+   *  l'ouverture de l'écran : le bilan qui les dit au-dessus s'en sert. */
+  onRevenues?: (n: number) => void;
 }) {
   const [etat, envoyer] = useReducer(reduire, ETAT_INITIAL);
   const vivant = useRef(true);
+  useEffect(() => {
+    onRevenues?.(etat.revenues);
+  }, [etat.revenues]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     vivant.current = true;
     void etatOriginaux().then((e) => {

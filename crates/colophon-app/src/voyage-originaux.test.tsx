@@ -11,6 +11,7 @@ import {
   ETAT_INITIAL,
   LIGNES_VISIBLES,
   lignesOriginaux,
+  petitesRestantes,
   RapportOriginaux,
   RaisonRefus,
   reduire,
@@ -27,6 +28,8 @@ const rapport = (p: Partial<RapportOriginaux> = {}): RapportOriginaux => ({
   deja: 0,
   refus: refus(134),
   illisibles: 0,
+  heic_illisibles: 0,
+  reecrites: 0,
   sous_seuil_avant: 1546,
   sous_seuil_apres: 134,
   revenues_possibles: 0,
@@ -88,8 +91,38 @@ describe("les lignes du bilan", () => {
   it("annonce les photos de la réserve qui peuvent revenir, et les fichiers illisibles", () => {
     setLangue("fr");
     const l = lignesOriginaux(termine(rapport({ revenues_possibles: 659, illisibles: 2 })), "fr").map((x) => t(x.cle, x.params));
-    expect(l.some((x) => x.startsWith("659 photos de la réserve") && x.includes("Recomposer"))).toBe(true);
+    // Le nom du bouton entre guillemets, jamais une majuscule au milieu d'une phrase.
+    expect(l.some((x) => x.startsWith("659 photos de la réserve") && x.includes(" : « Recomposer l’album » peut"))).toBe(true);
     expect(l).toContain("2 fichiers du dossier n’ont pas pu être lus.");
+    setLangue("en");
+    const en = lignesOriginaux(termine(rapport({ revenues_possibles: 1 })), "en").map((x) => t(x.cle, x.params));
+    expect(en.join(" ")).toContain("original: “Recompose the album” can bring it back");
+  });
+
+  it("dit les HEIC qu'aucun décodeur du système ne lit", () => {
+    setLangue("fr");
+    const fr = (n: number) => lignesOriginaux(termine(rapport({ heic_illisibles: n })), "fr").map((x) => t(x.cle, x.params));
+    expect(fr(3)).toContain("HEIC non lisible sur ce système : 3 fichiers du dossier sont ignorés.");
+    expect(fr(1)).toContain("HEIC non lisible sur ce système : 1 fichier du dossier est ignoré.");
+    expect(fr(0).join(" ")).not.toContain("HEIC");
+  });
+
+  it("le compte de la réserve s'additionne d'un passage à l'autre et se vide quand on rend les vignettes", () => {
+    const e = termine(rapport({ revenues_possibles: 659 }));
+    expect(e.revenues).toBe(659);
+    expect(termine(rapport({ revenues_possibles: 10 }), 1412).revenues).toBe(10);
+    const deux = reduire(reduire(e, { type: "lancer" }), { type: "fait", rapport: rapport({ revenues_possibles: 10 }), dossier: "/x" });
+    expect(deux.revenues).toBe(669);
+    expect(reduire(deux, { type: "rendues" }).revenues).toBe(0);
+  });
+
+  it("le bilan de l'import ne garde pas, dans la réserve, les photos qui ont leur original", () => {
+    // 659 trop petites au bilan, 659 qui ont maintenant leur original : plus aucune phrase « trop petites ».
+    expect(petitesRestantes(659, 659)).toBe(0);
+    expect(petitesRestantes(659, 600)).toBe(59);
+    expect(petitesRestantes(659, 0)).toBe(659);
+    // Un compte de réserve plus large que le bilan ne passe pas sous zéro.
+    expect(petitesRestantes(10, 12)).toBe(0);
   });
 
   it("n'écrit rien d'un album sans remplacement ni passage", () => {

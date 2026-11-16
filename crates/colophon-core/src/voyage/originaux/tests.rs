@@ -188,7 +188,7 @@ fn banc_du_cas_fabrique() {
     let cas = PathBuf::from(cas);
     let verite: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(cas.join("verite.json")).unwrap()).unwrap();
     let voyage = crate::voyage::lire(&cas.join("voyage")).unwrap();
-    let (index, _) = indexer(&cas.join("originaux"), &[], &|_, _| {}, &|| false).unwrap();
+    let (index, _, _) = indexer(&cas.join("originaux"), &[], &|_, _| {}, &|| false).unwrap();
     let vignettes = vignettes_du_voyage(&cas.join("voyage"), &voyage, &[]);
     let mut lignes = Vec::new();
     for (v, _) in &vignettes {
@@ -341,13 +341,19 @@ fn deux_vignettes_pour_un_meme_original_ne_remplacent_ni_l_une_ni_l_autre() {
 }
 
 #[test]
-fn un_original_pas_plus_grand_ou_pas_jpeg_ne_remplace_rien() {
+fn un_original_pas_plus_grand_ou_raw_ne_remplace_rien() {
     let a = scene(14, GRAND.0, GRAND.1);
     let v = vignette_en_memoire("e001.jpg", &a, "2024-06-10T09:00:00Z", "UTC");
     let petit = en_memoire("a.jpg", &image::imageops::resize(&a, v.largeur, v.hauteur, FilterType::Triangle), Some("2024-06-10 10:00:00"));
     assert_eq!(apparier(std::slice::from_ref(&v), &[petit]), vec![Verdict::Refus(Raison::PasPlusGrand)]);
-    let heic = en_memoire("a.heic", &a, Some("2024-06-10 10:00:00"));
-    assert_eq!(apparier(std::slice::from_ref(&v), &[heic]), vec![Verdict::Refus(Raison::Format)]);
+    // Un RAW sûr n'est pas réécrit : il est nommé.
+    let raw = en_memoire("a.dng", &a, Some("2024-06-10 10:00:00"));
+    assert_eq!(apparier(std::slice::from_ref(&v), &[raw]), vec![Verdict::Refus(Raison::Format)]);
+    // Un HEIC et un PNG sûrs remplacent.
+    for nom in ["a.heic", "a.png"] {
+        let o = en_memoire(nom, &a, Some("2024-06-10 10:00:00"));
+        assert!(matches!(apparier(std::slice::from_ref(&v), &[o])[0], Verdict::Sur(_)), "{nom}");
+    }
 }
 
 #[test]
@@ -489,8 +495,8 @@ fn un_nom_de_correspondance_qui_sort_du_dossier_est_refuse() {
 fn le_dossier_du_voyage_n_est_pas_un_original() {
     let c = cas("exclusion");
     let (p, a) = pas_de_progres();
-    let (tous, _) = indexer(&c.racine, &[], &p, &a).unwrap();
-    let (sans, _) = indexer(&c.racine, &[c.racine.join("voyage")], &p, &a).unwrap();
+    let (tous, _, _) = indexer(&c.racine, &[], &p, &a).unwrap();
+    let (sans, _, _) = indexer(&c.racine, &[c.racine.join("voyage")], &p, &a).unwrap();
     assert!(tous.len() > sans.len() && sans.len() == 4);
     assert!(sans.iter().all(|o| o.chemin.starts_with(c.racine.join("originaux"))));
 }
@@ -550,26 +556,169 @@ fn un_jumeau_ecarte_ne_compte_pas_parmi_ceux_qui_peuvent_revenir() {
     assert_eq!((r.remplacees, r.revenues_possibles), (1, 0));
 }
 
+/// Le CRC-32 d'un chunk PNG.
+fn crc32(octets: &[u8]) -> u32 {
+    let mut c = 0xFFFF_FFFFu32;
+    for b in octets {
+        c ^= u32::from(*b);
+        for _ in 0..8 {
+            c = if c & 1 == 1 { 0xEDB8_8320 ^ (c >> 1) } else { c >> 1 };
+        }
+    }
+    !c
+}
+
+/// Un PNG « d'appareil » : l'image, et un chunk `eXIf` qui porte l'heure et
+/// l'orientation (le contenu TIFF de `exif()`, sans l'en-tête APP1).
+fn original_png(img: &RgbImage, heure: &str, orientation: u16) -> Vec<u8> {
+    let mut o = std::io::Cursor::new(Vec::new());
+    img.write_to(&mut o, image::ImageFormat::Png).unwrap();
+    let png = o.into_inner();
+    let seg = exif(Some(heure), orientation, None);
+    let tiff = &seg[4 + 6..];
+    let mut chunk = (tiff.len() as u32).to_be_bytes().to_vec();
+    let mut corps = b"eXIf".to_vec();
+    corps.extend(tiff);
+    chunk.extend(&corps);
+    chunk.extend(crc32(&corps).to_be_bytes());
+    // Après IHDR (8 de signature + 25) : avant les données, comme l'exige la spec.
+    let mut out = png[..33].to_vec();
+    out.extend(chunk);
+    out.extend(&png[33..]);
+    out
+}
+
+/// Distance moyenne par canal entre deux images de même taille.
+fn ecart(a: &RgbImage, b: &RgbImage) -> f32 {
+    assert_eq!(a.dimensions(), b.dimensions());
+    let s: u64 = a.as_raw().iter().zip(b.as_raw()).map(|(x, y)| (*x as i32 - *y as i32).unsigned_abs() as u64).sum();
+    s as f32 / a.as_raw().len() as f32
+}
+
+/// Vérifie qu'un fichier remplacé est un JPEG de haute qualité, debout, daté.
+fn verifie_jpeg_remplace(chemin: &Path, debout: &RgbImage) {
+    let octets = std::fs::read(chemin).unwrap();
+    assert_eq!(image::guess_format(&octets).unwrap(), image::ImageFormat::Jpeg);
+    let lu = image::load_from_memory(&octets).unwrap().to_rgb8();
+    assert_eq!(lu.dimensions(), debout.dimensions(), "dimensions redressées");
+    assert!(ecart(&lu, debout) < 1.0, "image debout et fidèle (qualité haute) : {}", ecart(&lu, debout));
+    let m = crate::meta::read(chemin);
+    assert!(m.taken_reliable);
+    assert_eq!(m.taken.to_string(), "2024-06-10 10:00:00");
+    assert_eq!(m.orientation, 1, "l'orientation est dans les pixels, pas dans le tag");
+}
+
 #[test]
-fn un_original_png_sur_est_nomme_pas_remplace() {
+fn un_original_png_sur_remplace_sous_le_meme_nom_debout_et_date() {
     let c = cas("png");
     let v = c.racine.join("voyage");
-    // A n'existe plus qu'en PNG.
+    // A n'existe plus qu'en PNG, couché avec le tag 6.
     std::fs::remove_file(c.racine.join("originaux/IMG_A.jpg")).unwrap();
     let a = scene(21, GRAND.0, GRAND.1);
-    std::fs::write(c.racine.join("originaux/IMG_A.png"), {
-        let mut o = std::io::Cursor::new(Vec::new());
-        a.write_to(&mut o, image::ImageFormat::Png).unwrap();
-        o.into_inner()
-    })
-    .unwrap();
-    let avant = std::fs::read(v.join("e001-p01-aaaa.jpg")).unwrap();
+    let png = original_png(&image::imageops::rotate270(&a), "2024:06:10 10:00:00", 6);
+    std::fs::write(c.racine.join("originaux/IMG_A.png"), &png).unwrap();
+    let vignette = std::fs::read(v.join("e001-p01-aaaa.jpg")).unwrap();
     let (p, an) = pas_de_progres();
     let r = remplacer(&v, &c.racine.join("originaux"), None, &p, &an).unwrap();
-    // Sans EXIF le PNG est hors fenêtre : c'est l'image seule qui le trouve, puis le format qui le refuse.
-    assert_eq!(r.remplacees, 0);
-    assert!(r.refus.iter().any(|x| x.fichier == "e001-p01-aaaa.jpg" && x.raison == Raison::Format), "{r:?}");
-    assert_eq!(std::fs::read(v.join("e001-p01-aaaa.jpg")).unwrap(), avant);
+    assert_eq!((r.remplacees, r.reecrites), (1, 1), "{r:?}");
+    assert!(!r.refus.iter().any(|x| x.fichier == "e001-p01-aaaa.jpg"), "{r:?}");
+
+    verifie_jpeg_remplace(&v.join("e001-p01-aaaa.jpg"), &a);
+    // Le nom ne change pas, l'original réel est dit, l'original n'est pas touché.
+    let corr = lire_correspondance(&v).unwrap();
+    assert!(corr.remplacements[0].original.ends_with("IMG_A.png"));
+    assert_eq!(corr.remplacements[0].apres, [240, 320]);
+    assert_eq!(std::fs::read(c.racine.join("originaux/IMG_A.png")).unwrap(), png);
+    // Réversible : la vignette revient à l'octet, la correspondance disparaît.
+    retablir(&v, None).unwrap();
+    assert_eq!(std::fs::read(v.join("e001-p01-aaaa.jpg")).unwrap(), vignette);
+    assert!(lire_correspondance(&v).is_none());
+}
+
+#[test]
+fn un_png_transparent_est_pose_sur_du_blanc() {
+    let c = cas("png-alpha");
+    let o = c.racine.join("originaux/IMG_A.jpg");
+    std::fs::remove_file(&o).unwrap();
+    let a = scene(21, GRAND.0, GRAND.1);
+    let mut rgba = image::RgbaImage::from_fn(a.width(), a.height(), |x, y| {
+        let p = a.get_pixel(x, y).0;
+        image::Rgba([p[0], p[1], p[2], 255])
+    });
+    // Un coin entièrement transparent, noir dans les canaux.
+    for y in 0..10 {
+        for x in 0..10 {
+            rgba.put_pixel(x, y, image::Rgba([0, 0, 0, 0]));
+        }
+    }
+    let cible = c.racine.join("originaux/IMG_A.png");
+    rgba.save(&cible).unwrap();
+    let ecrit = c.racine.join("sortie.jpg");
+    let (l, h) = (a.width(), a.height());
+    let original = Original {
+        chemin: cible,
+        largeur: l,
+        hauteur: h,
+        heure: None,
+        decalage_s: None,
+        empreinte: empreinte(&image::DynamicImage::ImageRgb8(a)),
+    };
+    ecrire_jpeg(&original, &ecrit).unwrap();
+    let lu = image::open(&ecrit).unwrap().to_rgb8();
+    assert!(lu.get_pixel(3, 3).0.iter().all(|c| *c > 240), "{:?}", lu.get_pixel(3, 3));
+}
+
+/// Un HEIC par le convertisseur du système, comme n'importe quel iPhone en
+/// fait : seul un Mac sait en écrire et en lire un.
+#[cfg(target_os = "macos")]
+#[test]
+fn un_original_heic_sur_remplace_sous_le_meme_nom_debout_et_date() {
+    let c = cas("heic");
+    let v = c.racine.join("voyage");
+    let o = c.racine.join("originaux");
+    // A, couchée avec le tag 6 : on la passe au système, qui garde l'EXIF.
+    let a = scene(21, GRAND.0, GRAND.1);
+    let source = c.racine.join("source.jpg");
+    std::fs::write(&source, original_jpeg(&image::imageops::rotate270(&a), Some("2024:06:10 10:00:00"), 6, None)).unwrap();
+    std::fs::remove_file(o.join("IMG_A.jpg")).unwrap();
+    let ok = std::process::Command::new("sips")
+        .args(["-s", "format", "heic", "-s", "formatOptions", "95"])
+        .arg(&source)
+        .arg("--out")
+        .arg(o.join("IMG_A.heic"))
+        .output()
+        .expect("sips");
+    assert!(ok.status.success(), "{}", String::from_utf8_lossy(&ok.stderr));
+    let vignette = std::fs::read(v.join("e001-p01-aaaa.jpg")).unwrap();
+    let (p, an) = pas_de_progres();
+    let r = remplacer(&v, &o, None, &p, &an).unwrap();
+    assert_eq!((r.remplacees, r.reecrites, r.heic_illisibles), (1, 1, 0), "{r:?}");
+    let nom = v.join("e001-p01-aaaa.jpg");
+    let octets = std::fs::read(&nom).unwrap();
+    assert_eq!(image::guess_format(&octets).unwrap(), image::ImageFormat::Jpeg);
+    // Debout (240 × 320) : que sips ait écrit le tag ou redressé les pixels.
+    let lu = image::load_from_memory(&octets).unwrap().to_rgb8();
+    assert_eq!(lu.dimensions(), (240, 320));
+    assert!(ecart(&lu, &a) < 8.0, "{}", ecart(&lu, &a));
+    assert_eq!(crate::meta::read(&nom).taken.to_string(), "2024-06-10 10:00:00");
+    assert!(lire_correspondance(&v).unwrap().remplacements[0].original.ends_with("IMG_A.heic"));
+    retablir(&v, None).unwrap();
+    assert_eq!(std::fs::read(&nom).unwrap(), vignette);
+}
+
+#[test]
+fn le_segment_exif_ecrit_se_relit_avec_son_decalage() {
+    let h = NaiveDateTime::parse_from_str("2024-06-10 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+    for (s, attendu) in [(Some(7200), Some(7200)), (Some(-12600), Some(-12600)), (None, None)] {
+        let mut jpg = vec![0xFF, 0xD8];
+        jpg.extend(segment_exif(h, s));
+        jpg.extend(&jpeg(&scene(1, 16, 16), 90)[2..]);
+        let f = std::env::temp_dir().join(format!("booklibre-exif-{}-{:?}.jpg", std::process::id(), s));
+        std::fs::write(&f, jpg).unwrap();
+        assert_eq!(decalage_exif(&f), attendu);
+        assert_eq!(crate::meta::read(&f).taken, h);
+        let _ = std::fs::remove_file(&f);
+    }
 }
 
 #[test]

@@ -18,6 +18,7 @@ import { filtreDe, useReglages } from "./reglages";
 import { cachedThumb, loadThumb } from "./thumbs";
 import { cancelBuild } from "./bridge";
 import { Originaux } from "./VoyageOriginaux";
+import { petitesRestantes } from "./voyage-originaux";
 import { lignesBilanVoyage, RapportVoyage } from "./voyage";
 
 export function BilanView({
@@ -50,6 +51,9 @@ export function BilanView({
   onTri: () => void;
 }) {
   const spreads = album.spreads.length;
+  // Les photos de la réserve que des originaux viennent de rendre assez grandes.
+  const [revenues, setRevenues] = useState(0);
+  const tropPetites = petitesRestantes(bilan.trop_petites ?? 0, revenues);
   const counts = new Map<string, number>();
   for (const d of curation) {
     counts.set(d.reason, (counts.get(d.reason) ?? 0) + 1);
@@ -99,11 +103,11 @@ export function BilanView({
               : t("bilan.gardees.chapitre.un", { pct, planches: spreads })}
           </p>
 
-          {(bilan.trop_petites ?? 0) > 0 && (
+          {tropPetites > 0 && (
             <p className="bilan-lead">
-              {bilan.trop_petites === 1
+              {tropPetites === 1
                 ? t("bilan.trop_petites.un")
-                : t("bilan.trop_petites", { n: bilan.trop_petites ?? 0 })}
+                : t("bilan.trop_petites", { n: tropPetites })}
               {/* Un voyage importé par son lien n'a que des vignettes. */}
               {voyageImporte && <> {t("bilan.trop_petites.lien")}</>}
               {/* Un voyage dit ses étapes sans photo en une phrase, plus bas. */}
@@ -128,7 +132,7 @@ export function BilanView({
           )}
 
           {bilan.voyage && onOriginaux && (
-            <Originaux onChange={onOriginaux} onAnnuler={() => void cancelBuild()} />
+            <Originaux onChange={onOriginaux} onAnnuler={() => void cancelBuild()} onRevenues={setRevenues} />
           )}
 
           {setAside > 0 && (
