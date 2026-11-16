@@ -704,6 +704,35 @@ Planche → Dates et lieux, « Météo de l'étape » (grisée sans mention) et 
 (`voyage_chiffres` = `chiffres::regler`, un pas d'annulation). Le guide du zip tient en un
 paragraphe : le lecteur du zip n'est pas codé.
 
+**Remplacer les vignettes par les originaux (P-s8, `voyage::originaux`).** La personne désigne
+un dossier de ses originaux (bilan de l'import, ou Planche → Dates et lieux d'un album de voyage ;
+`VoyageOriginaux.tsx`, `voyage-originaux.ts`, commandes `originaux_etat|remplacer|retablir`, **dans
+l'édition App Store aussi** : aucune adresse réseau, le dossier se lit seulement). **Une vignette n'a
+aucune date de prise de vue** (la source retire l'EXIF, 0 sur 1 546) : seule son étape en a une. L'heure
+**borne** donc le choix (fenêtre de l'étape, début − 6 h à max(fin, début + 24 h) + 6 h ; l'EXIF est une
+heure locale sans fuseau, lue dans le fuseau de l'étape, ou dans `OffsetTimeOriginal` quand il existe :
+`instant_de`), et **l'image tranche** : luminance 24 × 24 centrée-réduite, écart quadratique, ratio
+d'aspect à 2,5 %. Sûr = un candidat sous `SEUIL_HEURE` (0,12) avec `MARGE_HEURE` (0,10) sur le suivant ;
+sinon tout le dossier concourt, plus sévère (`SEUIL_IMAGE` 0,08, `MARGE_IMAGE` 0,15) : une photo posée
+dans une autre étape que sa prise de vue passe par là. Mesures et justification des seuils :
+`docs/mesures/2026-11-15-les-originaux.json` (vrais appariés ≤ 0,019, meilleur faux candidat ≥ 0,175,
+rafale 0,006). Refus nommés (`Raison`) : `sans_original`, `ambigu` (une rafale), `conflit` (deux
+vignettes, un original), `pas_plus_grand`, `format` (original sûr mais pas JPEG), `illisible`.
+**Le remplacement garde le nom** : `e001-p01-….jpg` reçoit les octets de l'original, donc
+`album.json`, la curation, les réglages et `voyage.json` ne changent pas d'une lettre (mesuré : même
+empreinte avant et après), et aucune photo ne change de planche. D'où **JPEG seulement** : un HEIC
+ou un PNG changerait l'extension, donc le nom, donc tous les endroits qui désignent la photo.
+Rien n'est effacé : la vignette part dans `<dossier>-vignettes` (voisin du dossier, hors du balayage de
+`scan.rs`), `originaux.json` (à côté de `voyage.json`) dit qui est devenu quoi, d'où, à quelle distance ;
+`retablir` rend tout (`--originaux-retablir`). `thumbs.json` et le cache de l'album sont refaits pour les
+photos changées (sinon l'éditeur montrerait la vignette). **La recomposition n'est jamais faite
+d'office** : elle redistribue les planches non retouchées. Sur le cas fabriqué, 297 photos de la réserve
+ont leur original, et recomposer fait passer l'album de 153 à 450 photos placées ; le bilan le dit
+(`Rapport::revenues_possibles`, curation `definition` ou `hors_budget`), la personne tranche. CLI :
+`--originaux <DOSSIER> --originaux-voyage <VOYAGE> [--originaux-album <ALBUM>]`. Banc hors dépôt :
+`COLOPHON_ORIGINAUX_CAS=<cas> cargo test -p colophon-core --release banc_du_cas -- --ignored --nocapture`.
+**Non vérifié sur un vrai voyage** : les originaux du voyage réel n'existent pas.
+
 ## Envoi, le dossier préparé et la commande
 
 **Envoi parle à qui fait un album, pas à un imprimeur** (A2, `EnvoiView.tsx`, `envoi.ts`).

@@ -16,6 +16,8 @@ import { aboutProposition, nomProposition } from "./moteur";
 import { REASON_KEYS, reasonLabel } from "./reasons";
 import { filtreDe, useReglages } from "./reglages";
 import { cachedThumb, loadThumb } from "./thumbs";
+import { cancelBuild } from "./bridge";
+import { Originaux } from "./VoyageOriginaux";
 import { lignesBilanVoyage, RapportVoyage } from "./voyage";
 
 export function BilanView({
@@ -25,6 +27,7 @@ export function BilanView({
   variantes,
   choisie,
   voyageImporte = null,
+  onOriginaux,
   onChoisir,
   onOpen,
   onTri,
@@ -39,6 +42,9 @@ export function BilanView({
   choisie: string | null;
   /** Le rapport de l'import du voyage que ce bilan compose, s'il y en a un. */
   voyageImporte?: RapportVoyage | null;
+  /** Les photos du voyage ont changé (P-s8) : l'album se relit. Absent hors de
+   *  l'app, et le bloc « Photos d'origine » ne se dessine pas. */
+  onOriginaux?: () => Promise<void>;
   onChoisir: (id: string | null) => void;
   onOpen: () => void;
   onTri: () => void;
@@ -119,6 +125,10 @@ export function BilanView({
                 ))}
               </ul>
             </section>
+          )}
+
+          {bilan.voyage && onOriginaux && (
+            <Originaux onChange={onOriginaux} onAnnuler={() => void cancelBuild()} />
           )}
 
           {setAside > 0 && (

@@ -17,6 +17,7 @@
 pub mod chiffres;
 pub mod composition;
 pub mod lien;
+pub mod originaux;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

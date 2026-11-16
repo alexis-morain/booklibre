@@ -1522,6 +1522,107 @@ async fn voyage_importer(
     .map_err(|e| ErreurVoyage { genre: "disque", detail: e.to_string() })?
 }
 
+// ------------------------------------------------------ les originaux (P-s8)
+//
+// Après l'import d'un voyage, les photos sont des vignettes. La personne désigne
+// le dossier de ses originaux ; le moteur n'en remplace que ce dont il est sûr
+// (`voyage::originaux`), sur place, sans rien effacer. Pas d'adresse réseau ici :
+// la commande existe aussi dans la version Mac App Store.
+
+/// Le dossier de photos de l'album ouvert (`album.root`) et celui de l'album.
+fn voyage_ouvert(state: &State<'_, AppState>) -> Result<(PathBuf, PathBuf), String> {
+    let dir = {
+        let guard = state.open.lock().unwrap();
+        guard.as_ref().ok_or("aucun album ouvert")?.dir.clone()
+    };
+    let texte = std::fs::read_to_string(dir.join("album.json")).map_err(|e| e.to_string())?;
+    let v: serde_json::Value = serde_json::from_str(&texte).map_err(|e| e.to_string())?;
+    let root = v.get("root").and_then(|r| r.as_str()).ok_or("album.json sans dossier de photos")?;
+    Ok((PathBuf::from(root), dir))
+}
+
+#[derive(Serialize, Debug)]
+struct EtatOriginaux {
+    /// Un `voyage.json` est à côté des photos de l'album.
+    voyage: bool,
+    remplacees: usize,
+    refus: Vec<colophon_core::voyage::originaux::Refus>,
+    /// Le dernier dossier d'originaux désigné.
+    dossier: String,
+}
+
+/// Ce qu'un album de voyage sait déjà de ses originaux (`originaux.json`).
+#[tauri::command]
+fn originaux_etat(state: State<'_, AppState>) -> Result<EtatOriginaux, String> {
+    let (root, _) = voyage_ouvert(&state)?;
+    let voyage = colophon_core::voyage::lire(&root).is_ok();
+    let c = colophon_core::voyage::originaux::lire_correspondance(&root);
+    Ok(EtatOriginaux {
+        voyage,
+        remplacees: c.as_ref().map_or(0, |c| c.remplacements.len()),
+        dossier: c.as_ref().map(|c| c.dossier.clone()).unwrap_or_default(),
+        refus: c.map(|c| c.refus).unwrap_or_default(),
+    })
+}
+
+/// Relit `thumbs.json` dans l'état : les vignettes en cache ont changé.
+fn relire_thumbs(state: &State<'_, AppState>, dir: &Path) {
+    let thumbs: ThumbIndex = std::fs::read_to_string(dir.join("thumbs.json"))
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or_default();
+    if let Some(o) = state.open.lock().unwrap().as_mut() {
+        o.thumbs = thumbs;
+    }
+}
+
+/// Remplace les vignettes de l'album ouvert par les photos de `originaux`.
+/// Progression par `originaux:progres` (lues, total) ; annulation par
+/// `cancel_build`. Le dossier d'originaux est lu, jamais écrit.
+#[tauri::command]
+async fn originaux_remplacer(
+    originaux: String,
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<colophon_core::voyage::originaux::Rapport, String> {
+    let (root, dir) = voyage_ouvert(&state)?;
+    state.cancel_build.store(false, Ordering::Relaxed);
+    let flag = state.cancel_build.clone();
+    let emitter = app.clone();
+    let dir_de_l_album = dir.clone();
+    let rapport = tauri::async_runtime::spawn_blocking(move || {
+        colophon_core::voyage::originaux::remplacer(
+            &root,
+            Path::new(&originaux),
+            Some(&dir_de_l_album),
+            &move |faits, total| {
+                let _ = emitter.emit("originaux:progres", (faits, total));
+            },
+            &move || flag.load(Ordering::Relaxed),
+        )
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| format!("{e:#}"))?;
+    relire_thumbs(&state, &dir);
+    Ok(rapport)
+}
+
+/// Rend les vignettes de l'album ouvert (annule `originaux_remplacer`).
+#[tauri::command]
+async fn originaux_retablir(state: State<'_, AppState>) -> Result<usize, String> {
+    let (root, dir) = voyage_ouvert(&state)?;
+    let dir2 = dir.clone();
+    let n = tauri::async_runtime::spawn_blocking(move || {
+        colophon_core::voyage::originaux::retablir(&root, Some(&dir2))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| format!("{e:#}"))?;
+    relire_thumbs(&state, &dir);
+    Ok(n.vignettes_rendues)
+}
+
 /// Abandon the print render in flight. The atomic temp + rename in core
 /// means no half-written PDF can survive this.
 #[tauri::command]
@@ -2933,6 +3034,9 @@ pub fn run() {
             photos_dossier_propose,
             photos_importer,
             voyage_chiffres,
+            originaux_etat,
+            originaux_remplacer,
+            originaux_retablir,
             #[cfg(not(feature = "mas"))]
             voyage_analyser,
             #[cfg(not(feature = "mas"))]
