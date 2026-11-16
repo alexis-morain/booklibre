@@ -6805,3 +6805,15 @@ button.envoi-defaut-ou:focus-visible {
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+/* P-s8 : la liste des photos sans original sûr se défile dans sa boîte, elle ne
+   rallonge pas le bilan de plusieurs centaines de lignes. */
+.originaux-liste ul {
+  max-height: 16rem;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+.originaux-liste summary {
+  cursor: pointer;
+  margin: 0.5rem 0;
+}
