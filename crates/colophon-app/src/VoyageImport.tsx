@@ -13,6 +13,7 @@ import { langue, t } from "./i18n";
 import {
   analyserLien,
   cleProgres,
+  cleReste,
   entier,
   Etat,
   ETAT_INITIAL,
@@ -83,6 +84,15 @@ export function VoyageImportVue({
         <>
           <p className="lede" role="status">
             {t(progres.cle, parts ?? progres.params)}
+            {etat.reste !== null && (
+              <>
+                {" · "}
+                {(() => {
+                  const r = cleReste(etat.reste);
+                  return t(r.cle, r.params);
+                })()}
+              </>
+            )}
           </p>
           <p className="setup-hint">{t("voyage.reprise")}</p>
           <p className="setup-actions">
@@ -152,6 +162,14 @@ export function VoyageImport({
     };
   }, []);
 
+  // Le temps passe sans photo : l'estimation s'éteint d'elle-même.
+  const enCours = etat.phase === "cours";
+  useEffect(() => {
+    if (!enCours) return;
+    const id = setInterval(() => envoyer({ type: "tic", a: Date.now() }), 1000);
+    return () => clearInterval(id);
+  }, [enCours]);
+
   const changerUrl = (url: string) => {
     derniere.current = url;
     envoyer({ type: "url", url, lien: null });
@@ -166,7 +184,7 @@ export function VoyageImport({
     envoyer({ type: "lancer" });
     try {
       const rapport = await importerVoyage(url, lien.dossier, (fait, total) => {
-        if (vivant.current) envoyer({ type: "progres", fait, total });
+        if (vivant.current) envoyer({ type: "progres", fait, total, a: Date.now() });
       });
       if (vivant.current) onImporte(rapport);
     } catch (e) {
