@@ -541,14 +541,14 @@ le ppi réel viendra à la composition) et dit si la trace est là.
 **`core::voyage::lien`** lit le lien public d'un voyage Polarsteps (`api.polarsteps.com`, API
 **figée en 62**, jeton `?s=` transmis tel quel) : `ureq` comme le relais, par un `Transport`
 qu'un faux remplace en test (aucun test ne touche le réseau, fixture synthétique dans
-`voyage/fixtures/`). Garde-fous : une requête à la fois, `User-Agent` Booklibre, 120 ms de pause,
+`voyage/fixtures/`). Garde-fous : **4 photos en parallèle** (décision d'Alexis du 15/11, `Reglages::simultanes`, pool de fils borné ; la lecture du voyage reste seule ; un 429 ramène le pool à 1 pour la fin de l'import ; mesuré le 15/11 sur 1 546 photos : ~3,5 → ~14 photos/s, aucun 429), `User-Agent` Booklibre, 120 ms de pause par fil,
 plafonds de réponse, d'étapes, de photos, de trace et d'octets (`Limites`), hôtes de photos en
 liste fermée, jamais d'énumération, de cookie ni de redirection suivie. **La conversion cueille
 ses champs un à un** : `user`, `trip_buddies`, `users` ne sont jamais lus. Un champ obligatoire
 manquant ou changé de type donne `Erreur::Format` (« passe par l'export »), jamais un voyage à
 moitié rempli. Les pays se **recomptent** depuis les codes des étapes (le compteur de la source
 vaut 0 sur un tour du monde, et `00` n'est pas un pays). Une photo déjà là n'est pas redemandée
-(reprise d'un import interrompu : environ 1,1 s par photo, 28 minutes pour 1 546). Pièges :
+(reprise d'un import interrompu ; 1 546 photos en ~110 s à 4 en parallèle, 28 minutes à une seule). L'écran dit le temps restant (`voyage.ts`, `suivre` : débit sur 30 s glissantes, lissé, arrondi à la minute avec marge, tu après 8 s sans photo). Pièges :
 `order` des médias n'est pas l'ordre de la réponse ; `route` préfixée `off_` ne se lit pas ;
 le trajet prévu (`future_directions`) n'est pas un trajet fait.
 **Absent de l'édition Mac App Store** : le module est dans le moteur, mais l'app ne l'appellera

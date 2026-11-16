@@ -57,6 +57,19 @@ describe("l'écran d'import d'un voyage", () => {
     expect(h).not.toContain("Importer et composer");
   });
 
+  it("en cours : le temps restant à côté des photos, arrondi, dans la langue", () => {
+    const en = reduire(colle, { type: "lancer" });
+    let p = en;
+    for (let k = 1; k <= 12; k++) p = reduire(p, { type: "progres", fait: k, total: 635, a: k * 1000 });
+    setLangue("fr");
+    expect(rendre(p)).toMatch(/Photos : 12 \/ 635 · environ 10 min restantes/);
+    setLangue("en");
+    expect(rendre(p)).toMatch(/Photos: 12 \/ 635 · about 10 min left/);
+    // Avant quelques photos, rien qu'un compte.
+    const tot = reduire(en, { type: "progres", fait: 2, total: 635, a: 2000 });
+    expect(rendre(tot)).not.toContain("left");
+  });
+
   it("annulé : dit que ça reprend, propose de relancer", () => {
     setLangue("fr");
     const a = reduire(reduire(colle, { type: "lancer" }), { type: "echec", erreur: { genre: "annule", detail: "" } });

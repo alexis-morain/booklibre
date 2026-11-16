@@ -3,8 +3,10 @@
 
 use super::*;
 use serde_json::json;
-use std::cell::RefCell;
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::cell::RefCell;
+use std::sync::Mutex;
 
 const V62: &str = include_str!("../fixtures/synthetique-v62.json");
 
@@ -22,12 +24,12 @@ fn jpeg(l: u32, h: u32) -> Vec<u8> {
 /// Un transport qui rend ce qu'on lui a posé et note chaque appel.
 struct Faux {
     reponses: HashMap<String, (u16, Vec<u8>)>,
-    appels: RefCell<Vec<String>>,
+    appels: Mutex<Vec<String>>,
 }
 
 impl Faux {
     fn avec_voyage(json: &Value) -> Self {
-        let mut f = Faux { reponses: HashMap::new(), appels: RefCell::new(Vec::new()) };
+        let mut f = Faux { reponses: HashMap::new(), appels: Mutex::new(Vec::new()) };
         for s in json["steps"].as_array().into_iter().flatten() {
             for m in s["media"].as_array().into_iter().flatten() {
                 if m["type"] == 0 {
@@ -53,7 +55,7 @@ fn url_api(id: u64, jeton: Option<&str>) -> String {
 
 impl Transport for Faux {
     fn get(&self, url: &str, _plafond: u64) -> Result<Reponse, String> {
-        self.appels.borrow_mut().push(url.to_string());
+        self.appels.lock().unwrap().push(url.to_string());
         match self.reponses.get(url) {
             Some((statut, corps)) => Ok(Reponse { statut: *statut, corps: corps.clone() }),
             None => Err("pas de route".into()),
@@ -68,7 +70,7 @@ fn dossier(nom: &str) -> std::path::PathBuf {
 }
 
 fn reglages() -> Reglages {
-    Reglages { limites: Limites { reponse: 1 << 20, etapes: 100, photos: 100, photo: 1 << 20, total: 1 << 24, trace: 1000 }, pause: Duration::ZERO, attente: Duration::ZERO }
+    Reglages { limites: Limites { reponse: 1 << 20, etapes: 100, photos: 100, photo: 1 << 20, total: 1 << 24, trace: 1000 }, pause: Duration::ZERO, attente: Duration::ZERO, simultanes: SIMULTANES }
 }
 
 fn format_attendu<T: std::fmt::Debug>(r: Result<T, Erreur>) -> String {
@@ -338,7 +340,7 @@ fn un_format_inconnu_n_ecrit_rien() {
     let r = importer("https://www.polarsteps.com/q/4242-v", &dir, &faux, &reglages(), &|_, _| {});
     format_attendu(r);
     // Ni photo téléchargée, ni voyage.json.
-    assert_eq!(faux.appels.borrow().len(), 1, "seule la demande du voyage est partie");
+    assert_eq!(faux.appels.lock().unwrap().len(), 1, "seule la demande du voyage est partie");
     assert!(!dir.join("voyage.json").exists());
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -413,9 +415,9 @@ fn le_jeton_part_tel_quel_et_ne_reste_nulle_part() {
     let jeton = "Zx-9_secretJETON";
     let faux = Faux::avec_voyage(&fixture()).api(4242, Some(jeton), 200, V62.as_bytes().to_vec());
     let v = importer(&format!("https://www.polarsteps.com/q/4242-v?s={jeton}"), &dir, &faux, &reglages(), &|_, _| {}).unwrap();
-    assert_eq!(faux.appels.borrow()[0], url_api(4242, Some(jeton)));
+    assert_eq!(faux.appels.lock().unwrap()[0], url_api(4242, Some(jeton)));
     // Les photos sont publiques : aucun jeton ne les accompagne.
-    assert!(faux.appels.borrow()[1..].iter().all(|u| !u.contains(jeton)));
+    assert!(faux.appels.lock().unwrap()[1..].iter().all(|u| !u.contains(jeton)));
     let ecrit = std::fs::read_to_string(dir.join("voyage.json")).unwrap();
     assert!(!ecrit.contains(jeton) && !serde_json::to_string(&v).unwrap().contains(jeton));
     let _ = std::fs::remove_dir_all(&dir);
@@ -454,7 +456,9 @@ fn l_import_ecrit_les_photos_et_un_voyage_json_qui_se_relit() {
     let dir = dossier("complet");
     let faux = Faux::avec_voyage(&fixture()).api(4242, None, 200, V62.as_bytes().to_vec());
     let progres = RefCell::new(Vec::new());
-    let v = importer("https://www.polarsteps.com/q/4242-v", &dir, &faux, &reglages(), &|f, t| progres.borrow_mut().push((f, t))).unwrap();
+    // Un seul fil : l'ordre des appels est celui de la liste.
+    let un_fil = Reglages { simultanes: 1, ..reglages() };
+    let v = importer("https://www.polarsteps.com/q/4242-v", &dir, &faux, &un_fil, &|f, t| progres.borrow_mut().push((f, t))).unwrap();
     assert_eq!(*progres.borrow(), [(1, 3), (2, 3), (3, 3)]);
     for p in v.etapes.iter().flat_map(|e| &e.photos) {
         assert!(dir.join(&p.fichier).is_file(), "{}", p.fichier);
@@ -462,8 +466,8 @@ fn l_import_ecrit_les_photos_et_un_voyage_json_qui_se_relit() {
     assert!(!std::fs::read_dir(&dir).unwrap().any(|e| e.unwrap().file_name().to_string_lossy().ends_with(".part")));
     // L'aller-retour : ce qui est écrit, relu, est le voyage rendu.
     assert_eq!(crate::voyage::lire(&dir).unwrap(), v);
-    // Une requête à la fois : la demande du voyage, puis les trois photos, dans l'ordre.
-    let appels = faux.appels.borrow();
+    // La demande du voyage, puis les trois photos, dans l'ordre.
+    let appels = faux.appels.lock().unwrap();
     assert_eq!(appels.len(), 4);
     assert_eq!(appels[0], url_api(4242, None));
     assert!(appels[1].ends_with("/a1.jpg") && appels[2].ends_with("/b2.jpg") && appels[3].ends_with("/d4.jpg"));
@@ -478,7 +482,7 @@ fn reprendre_un_import_ne_retelecharge_pas_les_photos_deja_la() {
     let faux2 = Faux::avec_voyage(&fixture()).api(4242, None, 200, V62.as_bytes().to_vec());
     let deux = importer("https://www.polarsteps.com/q/4242-v", &dir, &faux2, &reglages(), &|_, _| {}).unwrap();
     assert_eq!(un, deux);
-    assert_eq!(faux2.appels.borrow().len(), 1, "seule la demande du voyage repart");
+    assert_eq!(faux2.appels.lock().unwrap().len(), 1, "seule la demande du voyage repart");
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -487,10 +491,11 @@ fn la_pause_separe_les_requetes() {
     let dir = dossier("pause");
     let faux = Faux::avec_voyage(&fixture()).api(4242, None, 200, V62.as_bytes().to_vec());
     let mut r = reglages();
+    r.simultanes = 1;
     r.pause = Duration::from_millis(40);
     let t0 = std::time::Instant::now();
     importer("https://www.polarsteps.com/q/4242-v", &dir, &faux, &r, &|_, _| {}).unwrap();
-    // 4 requêtes, 3 pauses entre elles.
+    // 4 requêtes sur un fil, 3 pauses entre elles.
     assert!(t0.elapsed() >= Duration::from_millis(120), "{:?}", t0.elapsed());
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -537,31 +542,31 @@ fn sans_cover_photo_la_couverture_est_celle_que_la_premiere_etape_met_en_avant()
 /// statut sans corps.
 struct Capricieux {
     faux: Faux,
-    avant: RefCell<HashMap<String, Vec<Result<u16, String>>>>,
+    avant: Mutex<HashMap<String, Vec<Result<u16, String>>>>,
 }
 
 impl Capricieux {
     fn new(faux: Faux) -> Self {
-        Capricieux { faux, avant: RefCell::new(HashMap::new()) }
+        Capricieux { faux, avant: Mutex::new(HashMap::new()) }
     }
     fn d_abord(self, url: &str, issues: Vec<Result<u16, String>>) -> Self {
-        self.avant.borrow_mut().insert(url.to_string(), issues);
+        self.avant.lock().unwrap().insert(url.to_string(), issues);
         self
     }
     fn appels_de(&self, url: &str) -> usize {
-        self.faux.appels.borrow().iter().filter(|a| *a == url).count()
+        self.faux.appels.lock().unwrap().iter().filter(|a| *a == url).count()
     }
 }
 
 impl Transport for Capricieux {
     fn get(&self, url: &str, plafond: u64) -> Result<Reponse, String> {
         let prochaine = {
-            let mut avant = self.avant.borrow_mut();
+            let mut avant = self.avant.lock().unwrap();
             avant.get_mut(url).filter(|v| !v.is_empty()).map(|v| v.remove(0))
         };
         match prochaine {
             Some(issue) => {
-                self.faux.appels.borrow_mut().push(url.to_string());
+                self.faux.appels.lock().unwrap().push(url.to_string());
                 issue.map(|statut| Reponse { statut, corps: Vec::new() })
             }
             None => self.faux.get(url, plafond),
@@ -633,7 +638,7 @@ fn jamais_de_nouvelle_tentative_sur_un_4xx_ni_un_format_inconnu() {
     let faux = Faux::avec_voyage(&fixture()).api(4242, None, 200, b"<html>maintenance</html>".to_vec());
     let e = importer(ADRESSE, &dir, &faux, &reglages(), &|_, _| {}).unwrap_err();
     assert_eq!(e.genre(), "format");
-    assert_eq!(faux.appels.borrow().len(), 1);
+    assert_eq!(faux.appels.lock().unwrap().len(), 1);
     // Une photo refusée en 403 : une seule demande pour elle.
     let photo = fixture()["steps"][0]["media"][0]["large_thumbnail_path"].as_str().unwrap().to_string();
     let t = Capricieux::new(voyage_en_ligne()).d_abord(&photo, vec![Ok(403)]);
@@ -656,28 +661,223 @@ fn l_attente_double_a_chaque_echec() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+// ---- les photos en parallèle (décision d'Alexis du 15/11) ---------------------
+
+/// La fixture, et `n` photos dans sa première étape (noms `m<k>.jpg`).
+fn voyage_de(n: usize) -> Value {
+    let mut j = fixture();
+    let medias: Vec<Value> = (0..n)
+        .map(|k| {
+            json!({
+                "uuid": format!("{:08x}-0000-4000-8000-000000000000", k + 1),
+                "type": 0,
+                "order": k,
+                "large_thumbnail_path": format!("https://media.prod.polarsteps.com/user_images/steps/large_thumb/u_777/m{k}.jpg"),
+            })
+        })
+        .collect();
+    j["steps"][0]["media"] = Value::Array(medias);
+    j
+}
+
+fn url_photo(k: usize) -> String {
+    format!("https://media.prod.polarsteps.com/user_images/steps/large_thumb/u_777/m{k}.jpg")
+}
+
+/// Un transport qui mesure : requêtes de photos en vol (au départ de chacune),
+/// maximum observé, et réponses scénarisées par adresse. Chaque photo dure un
+/// peu, et pas la même durée : elles finissent dans le désordre.
+struct Mesure {
+    faux: Faux,
+    delai_ms: u64,
+    en_vol: AtomicUsize,
+    max: AtomicUsize,
+    departs: AtomicUsize,
+    /// (rang de départ, requêtes en vol dont elle, au départ)
+    journal: Mutex<Vec<(usize, usize)>>,
+    /// Les statuts à rendre d'abord pour une adresse.
+    scenario: Mutex<HashMap<String, Vec<u16>>>,
+    /// Un délai de plus pour une adresse.
+    lent: Mutex<HashMap<String, u64>>,
+    /// Le nombre de départs au moment du premier 429 rendu.
+    departs_au_429: AtomicUsize,
+}
+
+impl Mesure {
+    fn new(json: &Value, delai_ms: u64) -> Self {
+        Mesure {
+            faux: Faux::avec_voyage(json).api(4242, None, 200, serde_json::to_vec(json).unwrap()),
+            delai_ms,
+            en_vol: AtomicUsize::new(0),
+            max: AtomicUsize::new(0),
+            departs: AtomicUsize::new(0),
+            journal: Mutex::new(Vec::new()),
+            scenario: Mutex::new(HashMap::new()),
+            lent: Mutex::new(HashMap::new()),
+            departs_au_429: AtomicUsize::new(usize::MAX),
+        }
+    }
+    fn avec(self, url: String, statuts: Vec<u16>) -> Self {
+        self.scenario.lock().unwrap().insert(url, statuts);
+        self
+    }
+    fn lent(self, url: String, ms: u64) -> Self {
+        self.lent.lock().unwrap().insert(url, ms);
+        self
+    }
+    fn max(&self) -> usize {
+        self.max.load(Ordering::SeqCst)
+    }
+}
+
+impl Transport for Mesure {
+    fn get(&self, url: &str, plafond: u64) -> Result<Reponse, String> {
+        if url.starts_with(API) {
+            return self.faux.get(url, plafond);
+        }
+        let vol = self.en_vol.fetch_add(1, Ordering::SeqCst) + 1;
+        self.max.fetch_max(vol, Ordering::SeqCst);
+        let rang = self.departs.fetch_add(1, Ordering::SeqCst);
+        self.journal.lock().unwrap().push((rang, vol));
+        let k: u64 = url.rsplit('/').next().and_then(|n| n.trim_start_matches('m').trim_end_matches(".jpg").parse().ok()).unwrap_or(0);
+        let en_plus = self.lent.lock().unwrap().get(url).copied().unwrap_or(0);
+        std::thread::sleep(Duration::from_millis(self.delai_ms + (k * 7) % 5 + en_plus));
+        let scenarise = {
+            let mut sc = self.scenario.lock().unwrap();
+            sc.get_mut(url).filter(|v| !v.is_empty()).map(|v| v.remove(0))
+        };
+        let r = match scenarise {
+            Some(statut) => {
+                if statut == 429 {
+                    let _ = self.departs_au_429.compare_exchange(usize::MAX, self.departs.load(Ordering::SeqCst), Ordering::SeqCst, Ordering::SeqCst);
+                }
+                self.faux.appels.lock().unwrap().push(url.to_string());
+                Ok(Reponse { statut, corps: Vec::new() })
+            }
+            None => self.faux.get(url, plafond),
+        };
+        self.en_vol.fetch_sub(1, Ordering::SeqCst);
+        r
+    }
+}
+
+fn lire_dossier(dir: &std::path::Path) -> Vec<(String, Vec<u8>)> {
+    let mut v: Vec<_> = std::fs::read_dir(dir)
+        .unwrap()
+        .map(|e| {
+            let e = e.unwrap();
+            (e.file_name().to_string_lossy().to_string(), std::fs::read(e.path()).unwrap())
+        })
+        .collect();
+    v.sort();
+    v
+}
+
 #[test]
-fn annuler_arrete_net_et_la_reprise_ne_redemande_rien() {
-    let dir = dossier("annule");
-    let faux = voyage_en_ligne();
-    let demandes = std::cell::Cell::new(0);
-    // On annule à la quatrième requête : le voyage et deux photos sont passés.
-    let e = importer_annulable(ADRESSE, &dir, &faux, &reglages(), &|_, _| {}, &|| {
-        demandes.set(demandes.get() + 1);
-        demandes.get() > 3
-    })
-    .unwrap_err();
+fn quatre_photos_en_vol_au_plus_jamais_cinq() {
+    let j = voyage_de(24);
+    let dir = dossier("vol-4");
+    let t = Mesure::new(&j, 10);
+    importer(ADRESSE, &dir, &t, &reglages(), &|_, _| {}).unwrap();
+    assert_eq!(t.max(), 4, "quatre en parallèle, pas plus, pas moins");
+    let _ = std::fs::remove_dir_all(&dir);
+
+    // Le nombre vient des réglages.
+    let dir = dossier("vol-2");
+    let t = Mesure::new(&j, 10);
+    importer(ADRESSE, &dir, &t, &Reglages { simultanes: 2, ..reglages() }, &|_, _| {}).unwrap();
+    assert_eq!(t.max(), 2);
+    let _ = std::fs::remove_dir_all(&dir);
+
+    // Zéro n'arrête rien : au moins un fil.
+    let dir = dossier("vol-0");
+    let t = Mesure::new(&j, 1);
+    importer(ADRESSE, &dir, &t, &Reglages { simultanes: 0, ..reglages() }, &|_, _| {}).unwrap();
+    assert_eq!(t.max(), 1);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn le_parallele_rend_le_meme_dossier_octet_pour_octet_et_une_progression_qui_ne_recule_pas() {
+    let j = voyage_de(24);
+    let total = convertir(&j, 4242, &limites_larges()).unwrap().a_prendre.len();
+
+    let seq = dossier("meme-seq");
+    let v1 = importer(ADRESSE, &seq, &Mesure::new(&j, 0), &Reglages { simultanes: 1, ..reglages() }, &|_, _| {}).unwrap();
+
+    let par = dossier("meme-par");
+    let progres = RefCell::new(Vec::new());
+    let v2 = importer(ADRESSE, &par, &Mesure::new(&j, 6), &reglages(), &|f, t| progres.borrow_mut().push((f, t))).unwrap();
+
+    assert_eq!(v1, v2);
+    let (a, b) = (lire_dossier(&seq), lire_dossier(&par));
+    assert!(a.iter().any(|(n, _)| n == "voyage.json") && a.len() == total + 1);
+    assert_eq!(a, b, "mêmes noms, mêmes octets, voyage.json compris");
+    let attendu: Vec<_> = (1..=total).map(|n| (n, total)).collect();
+    assert_eq!(*progres.borrow(), attendu, "n monte de un en un jusqu'à N");
+    let _ = std::fs::remove_dir_all(&seq);
+    let _ = std::fs::remove_dir_all(&par);
+}
+
+#[test]
+fn annuler_en_plein_vol_ne_laisse_aucun_fichier_partiel_et_la_reprise_finit() {
+    let j = voyage_de(40);
+    let total = convertir(&j, 4242, &limites_larges()).unwrap().a_prendre.len();
+    let dir = dossier("annule-vol");
+    let t = Mesure::new(&j, 8);
+    let faites = std::cell::Cell::new(0usize);
+    let e = importer_annulable(ADRESSE, &dir, &t, &reglages(), &|f, _| faites.set(f), &|| faites.get() >= 3).unwrap_err();
     assert_eq!(e, Erreur::Annule);
-    assert_eq!(e.genre(), "annule");
     assert!(!dir.join("voyage.json").exists(), "pas de voyage à moitié écrit");
-    let prises = faux.appels.borrow().len();
-    assert_eq!(prises, 3);
-    // La reprise : seules les photos manquantes sont demandées.
-    faux.appels.borrow_mut().clear();
-    let v = importer(ADRESSE, &dir, &faux, &reglages(), &|_, _| {}).unwrap();
-    let total = v.etapes.iter().map(|e| e.photos.len()).sum::<usize>();
-    assert_eq!(faux.appels.borrow().len(), 1 + total - (prises - 1));
-    assert!(dir.join("voyage.json").exists());
+    let depart = t.departs.load(Ordering::SeqCst);
+    assert!(depart < total, "{depart} départs sur {total} : l'annulation doit arrêter les départs");
+    let restes = lire_dossier(&dir);
+    assert!(!restes.iter().any(|(n, _)| n.ends_with(".part")), "aucun .part");
+    for (n, _) in &restes {
+        assert!(image::image_dimensions(dir.join(n)).is_ok(), "{n} est un fichier entier");
+    }
+    // La reprise ne redemande que ce qui manque, et rend le dossier du séquentiel.
+    let la = restes.len();
+    let t2 = Mesure::new(&j, 0);
+    let v = importer(ADRESSE, &dir, &t2, &reglages(), &|_, _| {}).unwrap();
+    assert_eq!(t2.departs.load(Ordering::SeqCst), total - la);
+    let ref_dir = dossier("annule-ref");
+    let vref = importer(ADRESSE, &ref_dir, &Mesure::new(&j, 0), &Reglages { simultanes: 1, ..reglages() }, &|_, _| {}).unwrap();
+    assert_eq!(v, vref);
+    assert_eq!(lire_dossier(&dir), lire_dossier(&ref_dir));
+    let _ = std::fs::remove_dir_all(&dir);
+    let _ = std::fs::remove_dir_all(&ref_dir);
+}
+
+#[test]
+fn une_erreur_definitive_est_celle_de_la_premiere_photo_de_la_liste_comme_au_sequentiel() {
+    let j = voyage_de(24);
+    // Deux photos refusées : la 9e échoue la première à l'arrivée, la 5e (lente) est la première de la liste.
+    for fils in [1, 4] {
+        let dir = dossier("erreur-def");
+        let t = Mesure::new(&j, 6).avec(url_photo(5), vec![404]).lent(url_photo(5), 60).avec(url_photo(9), vec![403]);
+        let e = importer(ADRESSE, &dir, &t, &Reglages { simultanes: fils, ..reglages() }, &|_, _| {}).unwrap_err();
+        assert_eq!(e, Erreur::Statut { statut: 404, quoi: "une photo" }, "{fils} fil(s)");
+        assert_eq!(e.genre(), "statut");
+        assert!(!dir.join("voyage.json").exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[test]
+fn un_429_ralentit_tout_le_monde_une_requete_en_vol_au_plus() {
+    let j = voyage_de(30);
+    let dir = dossier("429");
+    // La 4e photo : un 429, puis la bonne réponse à la nouvelle tentative.
+    let t = Mesure::new(&j, 8).avec(url_photo(3), vec![429]);
+    importer(ADRESSE, &dir, &t, &reglages(), &|_, _| {}).unwrap();
+    let au_429 = t.departs_au_429.load(Ordering::SeqCst);
+    assert!(au_429 < usize::MAX, "le 429 a bien été rendu");
+    assert!(t.max() >= 3, "avant le 429, le parallèle tourne");
+    // Passé un court délai de latence du signal, plus qu'une requête en vol.
+    let tard: Vec<_> = t.journal.lock().unwrap().iter().filter(|(rang, _)| *rang >= au_429 + 8).copied().collect();
+    assert!(tard.len() >= 10, "assez de départs après le 429 pour juger : {}", tard.len());
+    assert!(tard.iter().all(|(_, vol)| *vol == 1), "après un 429, une requête à la fois : {tard:?}");
     let _ = std::fs::remove_dir_all(&dir);
 }
 

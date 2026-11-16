@@ -128,6 +128,11 @@ export type Etat = {
   invalide: boolean;
   fait: number;
   total: number;
+  /** Le débit glissant des photos, d'où vient `reste`. */
+  suivi: Suivi | null;
+  /** Le temps restant à dire, en minutes (0 : moins d'une minute), ou `null`
+   *  tant qu'il n'est pas sûr. */
+  reste: number | null;
   erreur: ErreurVoyage | null;
 };
 
@@ -138,13 +143,18 @@ export const ETAT_INITIAL: Etat = {
   invalide: false,
   fait: 0,
   total: 0,
+  suivi: null,
+  reste: null,
   erreur: null,
 };
 
 export type Evenement =
   | { type: "url"; url: string; lien: LienVoyage | null }
   | { type: "lancer" }
-  | { type: "progres"; fait: number; total: number }
+  /** `a` : l'instant de la mesure, en ms. Sans lui, pas d'estimation. */
+  | { type: "progres"; fait: number; total: number; a?: number }
+  /** Le temps passe sans photo : l'estimation s'éteint si rien n'arrive. */
+  | { type: "tic"; a: number }
   | { type: "echec"; erreur: ErreurVoyage };
 
 export function reduire(e: Etat, ev: Evenement): Etat {
@@ -162,13 +172,21 @@ export function reduire(e: Etat, ev: Evenement): Etat {
       // Sans lien compris, rien ne part : la validation est locale et passe
       // avant tout réseau.
       if (e.lien === null || e.phase === "cours") return e;
-      return { ...e, phase: "cours", fait: 0, total: 0, erreur: null };
-    case "progres":
-      return e.phase === "cours" ? { ...e, fait: ev.fait, total: ev.total } : e;
+      return { ...e, phase: "cours", fait: 0, total: 0, suivi: null, reste: null, erreur: null };
+    case "progres": {
+      if (e.phase !== "cours") return e;
+      if (ev.a === undefined) return { ...e, fait: ev.fait, total: ev.total };
+      const suivi = suivre(e.suivi, ev.a, ev.fait, ev.total);
+      return { ...e, fait: ev.fait, total: ev.total, suivi, reste: resteAffiche(suivi, ev.a) };
+    }
+    case "tic":
+      return e.phase === "cours" && e.suivi ? { ...e, reste: resteAffiche(e.suivi, ev.a) } : e;
     case "echec":
       return {
         ...e,
         phase: ev.erreur.genre === "annule" ? "annule" : "echec",
+        suivi: null,
+        reste: null,
         erreur: ev.erreur,
       };
   }
@@ -179,6 +197,83 @@ export function reduire(e: Etat, ev: Evenement): Etat {
 export function cleProgres(e: Etat): { cle: Cle; params?: Record<string, number | string> } {
   if (e.total === 0) return { cle: "voyage.lecture" };
   return { cle: "voyage.encours", params: { fait: e.fait, total: e.total } };
+}
+
+
+// ---- le temps restant ---------------------------------------------------------
+//
+// Le débit se lit sur une fenêtre glissante (les 30 dernières secondes), pas
+// depuis le début : la lecture du voyage et, à la reprise, les photos déjà là
+// (qui défilent d'un coup) ne comptent pas longtemps. L'estimation brute est
+// lissée, puis arrondie à la minute avec une marge : un chiffre ne change que
+// si l'estimation sort franchement de sa minute. Elle ne se dit qu'après
+// quelques photos, et s'éteint quand plus rien n'arrive (nouvelle tentative
+// en attente, réseau coupé).
+
+/** La largeur de la fenêtre du débit. */
+export const FENETRE_MS = 30_000;
+/** Photos et durée minimales dans la fenêtre avant de rien dire. */
+export const MIN_PHOTOS = 5;
+export const MIN_MS = 3_000;
+/** Sans photo depuis si longtemps, on se tait. */
+export const STAGNE_MS = 8_000;
+/** Le poids de la nouvelle mesure dans l'estimation lissée. */
+const POIDS = 0.3;
+/** De combien (secondes) l'estimation doit déborder sa minute pour que le
+ *  chiffre change. */
+const MARGE_S = 15;
+
+export type Suivi = {
+  points: { a: number; fait: number }[];
+  /** Secondes restantes, lissées, à l'instant `a_lisse`. */
+  lisse: number | null;
+  a_lisse: number;
+  /** La minute dite (0 : moins d'une minute). */
+  affiche: number | null;
+  /** L'instant de la dernière photo finie. */
+  derniere: number;
+};
+
+function minuteDe(secondes: number): number {
+  return secondes < 60 ? 0 : Math.max(1, Math.round(secondes / 60));
+}
+
+function dansLaMinute(m: number, s: number): boolean {
+  if (m === 0) return s < 60 + MARGE_S;
+  return s >= (m - 0.5) * 60 - MARGE_S && s < (m + 0.5) * 60 + MARGE_S;
+}
+
+/** Prend une mesure : `fait` photos finies sur `total` à l'instant `a` (ms). */
+export function suivre(prec: Suivi | null, a: number, fait: number, total: number): Suivi {
+  const avant = prec ?? { points: [], lisse: null, a_lisse: a, affiche: null, derniere: a };
+  const points = [...avant.points.filter((p) => a - p.a <= FENETRE_MS && p.fait <= fait), { a, fait }];
+  const premier = points[0];
+  const duree = a - premier.a;
+  const photos = fait - premier.fait;
+  let { lisse, a_lisse, affiche } = avant;
+  if (photos >= MIN_PHOTOS && duree >= MIN_MS) {
+    const brut = ((total - fait) * duree) / photos / 1000;
+    const prevu = lisse === null ? brut : Math.max(0, lisse - (a - a_lisse) / 1000);
+    lisse = lisse === null ? brut : (1 - POIDS) * prevu + POIDS * brut;
+    a_lisse = a;
+    if (affiche === null || !dansLaMinute(affiche, lisse)) affiche = minuteDe(lisse);
+  }
+  return { points, lisse, a_lisse, affiche, derniere: a };
+}
+
+/** La minute à dire à l'instant `maintenant`, ou `null`. */
+export function resteAffiche(s: Suivi, maintenant: number): number | null {
+  if (s.affiche === null || maintenant - s.derniere > STAGNE_MS) return null;
+  return s.affiche;
+}
+
+/** La clé du libellé : « moins d'une minute », « environ 3 min », « environ
+ *  2 h » (au-delà d'une heure et demie). */
+export function cleReste(minutes: number): { cle: Cle; params?: Record<string, number | string> } {
+  if (minutes === 0) return { cle: "voyage.reste.moins" };
+  if (minutes === 1) return { cle: "voyage.reste.un" };
+  if (minutes < 90) return { cle: "voyage.reste.min", params: { n: minutes } };
+  return { cle: "voyage.reste.h", params: { n: Math.round(minutes / 60) } };
 }
 
 /** Un entier à la française ou à l'anglaise : « 1 546 » / « 1,546 ». */
