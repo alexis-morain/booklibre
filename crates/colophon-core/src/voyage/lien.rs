@@ -7,8 +7,9 @@
 //!
 //! **Ce que ce module est, et n'est pas.** Il lit un voyage que la personne a
 //! sous les yeux, collé à la main. Jamais d'énumération, jamais de parcours
-//! d'un profil, aucun cookie, aucun jeton d'API, une requête à la fois, un
-//! `User-Agent` qui dit Booklibre, une pause entre deux requêtes, des plafonds
+//! d'un profil, aucun cookie, aucun jeton d'API, quatre photos à la fois au
+//! plus (la lecture du voyage, elle, est seule ; décision d'Alexis du 15/11), un
+//! `User-Agent` qui dit Booklibre, une pause entre deux requêtes d'un fil, des plafonds
 //! de taille partout. **Le seul jeton qui part est celui que la personne a
 //! collé dans son lien**, tel quel, vers l'API et vers elle seule : il n'entre
 //! ni dans `voyage.json`, ni dans un message d'erreur, ni dans une adresse de
@@ -37,7 +38,9 @@ use std::cell::Cell;
 use std::fmt;
 use std::io::Read;
 use std::path::Path;
-use std::time::Duration;
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use std::sync::{mpsc, Condvar, Mutex};
+use std::time::{Duration, Instant};
 
 /// L'API que le site public interroge. Seule adresse réseau du module.
 pub const API: &str = "https://api.polarsteps.com";
@@ -91,16 +94,18 @@ impl Default for Limites {
 #[derive(Debug, Clone)]
 pub struct Reglages {
     pub limites: Limites,
-    /// L'attente entre deux requêtes.
+    /// L'attente entre deux requêtes d'un même fil.
     pub pause: Duration,
     /// L'attente avant une nouvelle tentative, doublée à chaque échec
     /// ([`ESSAIS`] essais au plus).
     pub attente: Duration,
+    /// Les photos téléchargées en même temps ([`SIMULTANES`] par défaut).
+    pub simultanes: usize,
 }
 
 impl Default for Reglages {
     fn default() -> Self {
-        Reglages { limites: Limites::default(), pause: Duration::from_millis(120), attente: Duration::from_secs(2) }
+        Reglages { limites: Limites::default(), pause: Duration::from_millis(120), attente: Duration::from_secs(2), simultanes: SIMULTANES }
     }
 }
 
@@ -255,7 +260,7 @@ pub struct Reponse {
 
 /// La seule porte vers le réseau. Un faux la remplace en test : aucun test du
 /// gate ne touche le réseau.
-pub trait Transport {
+pub trait Transport: Sync {
     fn get(&self, url: &str, plafond: u64) -> Result<Reponse, String>;
 }
 
@@ -681,51 +686,125 @@ fn decoder_polyligne(s: &str) -> Option<Vec<Point>> {
 
 // ---- l'import ----------------------------------------------------------------
 
+/// Le nombre de photos téléchargées en même temps, sauf décision contraire
+/// des réglages (décision d'Alexis du 15/11 : quatre, la lecture du voyage
+/// restant seule et séquentielle).
+pub const SIMULTANES: usize = 4;
+
+/// Combien de requêtes de photos peuvent être en vol. Au premier 429, la
+/// limite tombe à 1 pour le reste de l'import : tout le monde ralentit, et
+/// les nouvelles tentatives ne partent plus en tempête.
+struct Feu {
+    /// (requêtes en vol, limite)
+    etat: Mutex<(usize, usize)>,
+    libre: Condvar,
+}
+
+/// Une place prise dans le [`Feu`], rendue à la chute.
+struct Passage<'a>(&'a Feu);
+
+impl Drop for Passage<'_> {
+    fn drop(&mut self) {
+        self.0.etat.lock().unwrap().0 -= 1;
+        self.0.libre.notify_all();
+    }
+}
+
+impl Feu {
+    fn new(limite: usize) -> Self {
+        Feu { etat: Mutex::new((0, limite)), libre: Condvar::new() }
+    }
+
+    /// Attend une place ; `None` si `arret` devient vrai pendant l'attente.
+    fn entrer(&self, arret: &dyn Fn() -> bool) -> Option<Passage<'_>> {
+        let mut e = self.etat.lock().unwrap();
+        loop {
+            if arret() {
+                return None;
+            }
+            if e.0 < e.1 {
+                e.0 += 1;
+                return Some(Passage(self));
+            }
+            e = self.libre.wait_timeout(e, Duration::from_millis(20)).unwrap().0;
+        }
+    }
+
+    fn ralentir(&self) {
+        let mut e = self.etat.lock().unwrap();
+        e.1 = 1;
+        self.libre.notify_all();
+    }
+}
+
 /// Une requête, ses garde-fous : la pause avant toute requête sauf la
-/// première, le statut 200, le plafond, le jeton masqué dans l'erreur.
+/// première, le statut 200, le plafond, le jeton masqué dans l'erreur. Un
+/// demandeur par fil : la pause est celle de son fil.
 struct Demandeur<'a> {
     transport: &'a dyn Transport,
     pause: Duration,
     attente: Duration,
     deja: Cell<bool>,
     jeton: Option<&'a str>,
-    annuler: &'a dyn Fn() -> bool,
+    /// Lu avant chaque tentative et pendant chaque attente.
+    arret: &'a dyn Fn() -> bool,
+    /// Les photos passent par le feu ; la demande du voyage, seule, non.
+    feu: Option<&'a Feu>,
 }
 
 impl Demandeur<'_> {
+    /// Dort `d`, par petites tranches : l'arrêt est vu en 20 ms au plus.
+    fn dormir(&self, d: Duration) {
+        let fin = Instant::now() + d;
+        while !(self.arret)() {
+            let reste = fin.saturating_duration_since(Instant::now());
+            if reste.is_zero() {
+                return;
+            }
+            std::thread::sleep(reste.min(Duration::from_millis(20)));
+        }
+    }
+
     /// Une requête, jusqu'à [`ESSAIS`] fois sur une erreur de réseau, un 5xx
     /// ou un 429, avec une attente qui double. Jamais sur un 4xx.
     fn prendre(&self, url: &str, plafond: u64, quoi: &'static str, depasse: &'static str) -> Result<Vec<u8>, Erreur> {
         if self.deja.replace(true) {
-            std::thread::sleep(self.pause);
+            self.dormir(self.pause);
         }
         let mut attente = self.attente;
         let mut essai = 1;
         let r = loop {
-            if (self.annuler)() {
+            if (self.arret)() {
                 return Err(Erreur::Annule);
             }
-            let issue = self
-                .transport
-                .get(url, plafond)
-                .map_err(|m| {
-                    Erreur::Reseau(match self.jeton {
-                        Some(j) => m.replace(j, "***"),
-                        None => m,
-                    })
+            let issue = {
+                let _place = match self.feu {
+                    Some(f) => Some(f.entrer(self.arret).ok_or(Erreur::Annule)?),
+                    None => None,
+                };
+                self.transport.get(url, plafond)
+            }
+            .map_err(|m| {
+                Erreur::Reseau(match self.jeton {
+                    Some(j) => m.replace(j, "***"),
+                    None => m,
                 })
-                .and_then(|r| {
-                    if r.statut == 429 || r.statut >= 500 {
-                        Err(Erreur::Statut { statut: r.statut, quoi })
-                    } else {
-                        Ok(r)
-                    }
-                });
+            })
+            .and_then(|r| {
+                if r.statut == 429 || r.statut >= 500 {
+                    Err(Erreur::Statut { statut: r.statut, quoi })
+                } else {
+                    Ok(r)
+                }
+            });
+            if let (Some(f), Err(Erreur::Statut { statut: 429, .. })) = (self.feu, &issue) {
+                f.ralentir();
+            }
             match issue {
                 Ok(r) => break r,
                 Err(e) if essai >= ESSAIS => return Err(e),
                 Err(_) => {
-                    std::thread::sleep(attente);
+                    self.dormir(attente);
                     attente *= 2;
                     essai += 1;
                 }
@@ -749,6 +828,26 @@ fn dimensions(octets: &[u8]) -> Result<(u32, u32), Erreur> {
         .map_err(|e| Erreur::Photo(e.to_string()))
 }
 
+/// Une photo : déjà là et lisible, elle n'est pas redemandée ; sinon reçue,
+/// écrite sous un nom temporaire puis renommée (jamais de fichier partiel sous
+/// son nom final). Rend ses dimensions.
+fn une_photo(d: &Demandeur, p: &APrendre, vers: &Path, limites: &Limites, recu: &AtomicU64) -> Result<(u32, u32), Erreur> {
+    let chemin = vers.join(&p.fichier);
+    if let Ok(dim) = image::image_dimensions(&chemin) {
+        return Ok(dim);
+    }
+    let octets = d.prendre(&p.url, limites.photo, "une photo", "une photo")?;
+    let n = octets.len() as u64;
+    if recu.fetch_add(n, Ordering::Relaxed) + n > limites.total {
+        return Err(Erreur::TropGros("le total des photos"));
+    }
+    let dim = dimensions(&octets)?;
+    let part = vers.join(format!("{}.part", p.fichier));
+    std::fs::write(&part, &octets).map_err(|e| disque(&e))?;
+    std::fs::rename(&part, &chemin).map_err(|e| disque(&e))?;
+    Ok(dim)
+}
+
 /// Importe le voyage de `url` dans `vers` : les photos, puis `voyage.json`
 /// en dernier. Une photo déjà là (même nom, lisible) n'est pas redemandée :
 /// reprendre un import interrompu ne coûte rien à Polarsteps.
@@ -763,9 +862,18 @@ pub fn importer(
     importer_annulable(url, vers, transport, reglages, progression, &|| false)
 }
 
-/// Comme [`importer`], et `annuler` se lit avant chaque requête : vrai, l'import
-/// s'arrête (`Erreur::Annule`), ce qui est déjà écrit reste et la reprise s'en
-/// sert.
+/// Comme [`importer`], et `annuler` se lit avant la demande du voyage, puis
+/// pendant le téléchargement des photos (par le fil qui appelle, au moins
+/// toutes les 25 ms) : vrai, plus aucune requête ne part, les fils s'arrêtent
+/// et l'import rend `Erreur::Annule`. Ce qui est déjà écrit reste, et la
+/// reprise s'en sert.
+///
+/// Les photos viennent [`Reglages::simultanes`] à la fois. Le résultat ne
+/// dépend pas de l'ordre d'arrivée : noms, dimensions et ordre dans le voyage
+/// viennent de la liste, la progression compte les photos finies (jamais un
+/// nombre qui recule). À la première erreur les fils s'arrêtent (ce qui est
+/// en vol finit) ; si plusieurs photos ont échoué, l'erreur rendue est celle
+/// de la première de la liste, comme en séquentiel.
 pub fn importer_annulable(
     url: &str,
     vers: &Path,
@@ -782,7 +890,8 @@ pub fn importer_annulable(
         attente: reglages.attente,
         deja: Cell::new(false),
         jeton: lien.jeton.as_deref(),
-        annuler,
+        arret: annuler,
+        feu: None,
     };
 
     let mut api = format!("{API}/trips/{}?polarsteps_api_version={VERSION_API}", lien.id);
@@ -798,28 +907,66 @@ pub fn importer_annulable(
 
     std::fs::create_dir_all(vers).map_err(|e| disque(&e))?;
     let total = a_prendre.len();
-    let mut recu = 0u64;
-    for (n, p) in a_prendre.iter().enumerate() {
-        let chemin = vers.join(&p.fichier);
-        let (l, h) = match image::image_dimensions(&chemin) {
-            Ok(d) => d,
-            Err(_) => {
-                let octets = demandeur.prendre(&p.url, limites.photo, "une photo", "une photo")?;
-                recu += octets.len() as u64;
-                if recu > limites.total {
-                    return Err(Erreur::TropGros("le total des photos"));
+    let fils = reglages.simultanes.clamp(1, total.max(1));
+    let feu = Feu::new(fils);
+    let arret = AtomicBool::new(false);
+    let suivante = AtomicUsize::new(0);
+    let recu = AtomicU64::new(0);
+    let (tx, rx) = mpsc::channel::<(usize, Result<(u32, u32), Erreur>)>();
+    let mut faites = 0usize;
+    let mut erreurs: Vec<(usize, Erreur)> = Vec::new();
+
+    std::thread::scope(|s| {
+        for _ in 0..fils {
+            let tx = tx.clone();
+            let (a_prendre, feu, arret, suivante, recu) = (&a_prendre, &feu, &arret, &suivante, &recu);
+            let (pause, attente, jeton) = (reglages.pause, reglages.attente, lien.jeton.as_deref());
+            s.spawn(move || {
+                let stop = || arret.load(Ordering::Relaxed);
+                // `deja` à vrai : la pause précède chaque requête de ce fil.
+                let d = Demandeur { transport, pause, attente, deja: Cell::new(true), jeton, arret: &stop, feu: Some(feu) };
+                while !stop() {
+                    let i = suivante.fetch_add(1, Ordering::Relaxed);
+                    let Some(p) = a_prendre.get(i) else { break };
+                    let r = une_photo(&d, p, vers, limites, recu);
+                    if r.is_err() {
+                        arret.store(true, Ordering::Relaxed);
+                    }
+                    if tx.send((i, r)).is_err() {
+                        break;
+                    }
                 }
-                let d = dimensions(&octets)?;
-                let part = vers.join(format!("{}.part", p.fichier));
-                std::fs::write(&part, &octets).map_err(|e| disque(&e))?;
-                std::fs::rename(&part, &chemin).map_err(|e| disque(&e))?;
-                d
+            });
+        }
+        drop(tx);
+        loop {
+            match rx.recv_timeout(Duration::from_millis(25)) {
+                Ok((i, Ok((l, h)))) => {
+                    let p = &a_prendre[i];
+                    let photo = &mut voyage.etapes[p.etape].photos[p.photo];
+                    photo.largeur = l;
+                    photo.hauteur = h;
+                    faites += 1;
+                    progression(faites, total);
+                }
+                // Un fil qui s'arrête parce qu'un autre a échoué ou parce
+                // qu'on a annulé : ce n'est pas une erreur de sa photo.
+                Ok((_, Err(Erreur::Annule))) => {}
+                Ok((i, Err(e))) => erreurs.push((i, e)),
+                Err(mpsc::RecvTimeoutError::Timeout) => {}
+                Err(mpsc::RecvTimeoutError::Disconnected) => break,
             }
-        };
-        let photo = &mut voyage.etapes[p.etape].photos[p.photo];
-        photo.largeur = l;
-        photo.hauteur = h;
-        progression(n + 1, total);
+            if !arret.load(Ordering::Relaxed) && annuler() {
+                arret.store(true, Ordering::Relaxed);
+            }
+        }
+    });
+
+    if let Some((_, e)) = erreurs.into_iter().min_by_key(|(i, _)| *i) {
+        return Err(e);
+    }
+    if faites < total {
+        return Err(Erreur::Annule);
     }
     super::ecrire(vers, &voyage).map_err(|e| Erreur::Disque(e.to_string()))?;
     Ok(voyage)

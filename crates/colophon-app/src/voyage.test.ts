@@ -7,7 +7,13 @@ import { EN, FR } from "./i18n";
 import {
   BilanComposition,
   cleProgres,
+  cleReste,
   ETAT_INITIAL,
+  Etat,
+  resteAffiche,
+  STAGNE_MS,
+  suivre,
+  Suivi,
 
   GenreErreur,
   lignesBilanVoyage,
@@ -180,5 +186,112 @@ describe("le point d'entrée", () => {
   it("n'existe pas dans le navigateur", async () => {
     vi.resetModules();
     expect((await import("./voyage")).voyageOffert()).toBe(false);
+  });
+});
+
+// ---- le temps restant ---------------------------------------------------------
+
+/** Rejoue des photos qui finissent à `cadence` photos/s depuis `debut` (ms). */
+function rejouer(total: number, fin_ms: number, cadence: (s: number) => number, debut = 0, depart: Suivi | null = null) {
+  let suivi = depart;
+  let fait = depart ? depart.points[depart.points.length - 1].fait : 0;
+  const dits: (number | null)[] = [];
+  for (let a = debut + 1000; a <= debut + fin_ms; a += 1000) {
+    fait = Math.min(total, fait + cadence((a - debut) / 1000));
+    suivi = suivre(suivi, a, fait, total);
+    dits.push(resteAffiche(suivi, a));
+  }
+  return { suivi: suivi as Suivi, dits };
+}
+
+describe("le temps restant", () => {
+  it("ne dit rien avant quelques photos ni avant quelques secondes", () => {
+    let s = suivre(null, 0, 1, 635);
+    s = suivre(s, 1000, 2, 635);
+    s = suivre(s, 2000, 3, 635);
+    s = suivre(s, 3000, 4, 635);
+    expect(resteAffiche(s, 3000)).toBeNull(); // 3 photos en 3 s : trop peu
+    s = suivre(s, 4000, 5, 635);
+    s = suivre(s, 5000, 6, 635);
+    expect(resteAffiche(s, 5000)).not.toBeNull();
+    // Beaucoup de photos, mais en moins de 3 s : pas encore.
+    const vite = suivre(suivre(null, 0, 1, 635), 2000, 30, 635);
+    expect(resteAffiche(vite, 2000)).toBeNull();
+  });
+
+  it("estime d'après le débit récent : 1 photo/s, 635 photos, environ 10 min", () => {
+    const { dits } = rejouer(635, 12_000, () => 1);
+    expect(dits[dits.length - 1]).toBe(10);
+  });
+
+  it("le temps de lecture du voyage ne compte pas : l'estimation vient des photos", () => {
+    // La première photo ne finit qu'à 60 s ; ensuite 2 photos/s sur 600.
+    const { dits } = rejouer(600, 20_000, () => 2, 60_000, suivre(null, 60_000, 0, 600));
+    expect(dits[dits.length - 1]).toBe(5); // ~560 restantes à 2/s = 280 s, et non 10+ min
+  });
+
+  it("une reprise qui saute des photos d'un coup ne fausse pas longtemps", () => {
+    // 300 photos déjà là défilent en 5 s, puis 1 photo/s : au bout de 45 s, la fenêtre ne voit plus la rafale.
+    const rafale = rejouer(635, 5000, () => 60);
+    const { dits } = rejouer(635, 45_000, () => 1, 5000, rafale.suivi);
+    expect(dits[dits.length - 1]).toBe(5); // 335 restantes à 1/s ≈ 5,6 min
+  });
+
+  it("le chiffre ne saute pas à chaque photo : un débit irrégulier garde un compte à rebours calme", () => {
+    // 1 photo/s en moyenne, mais 0 ou 2 en alternance, puis des à-coups.
+    const { dits } = rejouer(635, 200_000, (s) => (Math.floor(s) % 7 === 0 ? 3 : Math.floor(s) % 2 === 0 ? 0 : 1));
+    const dites = dits.filter((d): d is number => d !== null);
+    let changements = 0;
+    for (let i = 1; i < dites.length; i++) {
+      if (dites[i] !== dites[i - 1]) changements++;
+      expect(dites[i] - dites[i - 1]).toBeLessThanOrEqual(1); // jamais un grand bond
+    }
+    // Environ 195 s de décompte : une dizaine de minutes au plus, jamais un changement par photo.
+    expect(changements).toBeLessThan(dites.length / 6);
+  });
+
+  it("la minute dite ne change que si l'estimation sort franchement de sa minute", () => {
+    const points = Array.from({ length: 10 }, (_, k) => ({ a: 100_000 + k * 1000, fait: 100 + k }));
+    const prec: Suivi = { points, lisse: 270, a_lisse: 109_000, affiche: 5, derniere: 109_000 };
+    // 268 s restantes (4,47 min) : on dit encore 5 ; à 200 s (3,3 min), on passe à 3.
+    const proche = suivre(prec, 110_000, 110, 110 + 268);
+    expect(proche.affiche).toBe(5);
+    const loin = suivre({ ...prec, lisse: 200 }, 110_000, 110, 110 + 199);
+    expect(loin.affiche).toBe(3);
+  });
+
+  it("se tait quand plus rien n'arrive (attente de nouvelle tentative), reparle ensuite", () => {
+    const { suivi } = rejouer(635, 12_000, () => 1);
+    const t = 12_000;
+    expect(resteAffiche(suivi, t + STAGNE_MS - 100)).not.toBeNull();
+    expect(resteAffiche(suivi, t + STAGNE_MS + 100)).toBeNull();
+    const repart = suivre(suivi, t + 20_000, 13, 635);
+    expect(resteAffiche(repart, t + 20_000)).not.toBeNull();
+  });
+
+  it("se dit en minutes arrondies, FR et EN", () => {
+    expect(cleReste(0)).toEqual({ cle: "voyage.reste.moins" });
+    expect(cleReste(1)).toEqual({ cle: "voyage.reste.un" });
+    expect(cleReste(3)).toEqual({ cle: "voyage.reste.min", params: { n: 3 } });
+    expect(cleReste(89)).toEqual({ cle: "voyage.reste.min", params: { n: 89 } });
+    expect(cleReste(90)).toEqual({ cle: "voyage.reste.h", params: { n: 2 } });
+    expect(FR["voyage.reste.moins"]).toBe("moins d’une minute restante");
+    expect(FR["voyage.reste.min"].replace("{n}", "3")).toBe("environ 3 min restantes");
+    expect(EN["voyage.reste.moins"]).toBe("less than a minute left");
+    expect(EN["voyage.reste.min"].replace("{n}", "3")).toBe("about 3 min left");
+  });
+
+  it("l'état : l'estimation vient avec l'instant, s'éteint au tic, repart avec la photo, et se remet à zéro", () => {
+    const base: Etat = reduire(COLLE, { type: "lancer" });
+    let e = base;
+    for (let k = 1; k <= 12; k++) e = reduire(e, { type: "progres", fait: k, total: 635, a: k * 1000 });
+    expect(e.reste).toBe(10);
+    expect(reduire(e, { type: "tic", a: 12_000 + STAGNE_MS + 500 }).reste).toBeNull();
+    expect(reduire(e, { type: "tic", a: 13_000 }).reste).toBe(10);
+    // Sans instant, jamais d'estimation.
+    expect(reduire(base, { type: "progres", fait: 9, total: 635 }).reste).toBeNull();
+    // Un nouvel essai repart de zéro, une annulation éteint.
+    expect(reduire(e, { type: "echec", erreur: { genre: "annule", detail: "" } }).reste).toBeNull();
+    expect(reduire(reduire(e, { type: "echec", erreur: { genre: "annule", detail: "" } }), { type: "lancer" }).suivi).toBeNull();
   });
 });
