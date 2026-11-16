@@ -717,11 +717,23 @@ sinon tout le dossier concourt, plus sévère (`SEUIL_IMAGE` 0,08, `MARGE_IMAGE`
 dans une autre étape que sa prise de vue passe par là. Mesures et justification des seuils :
 `docs/mesures/2026-11-15-les-originaux.json` (vrais appariés ≤ 0,019, meilleur faux candidat ≥ 0,175,
 rafale 0,006). Refus nommés (`Raison`) : `sans_original`, `ambigu` (une rafale), `conflit` (deux
-vignettes, un original), `pas_plus_grand`, `format` (original sûr mais pas JPEG), `illisible`.
+vignettes, un original), `pas_plus_grand`, `format` (original sûr mais RAW), `illisible`.
 **Le remplacement garde le nom** : `e001-p01-….jpg` reçoit les octets de l'original, donc
 `album.json`, la curation, les réglages et `voyage.json` ne changent pas d'une lettre (mesuré : même
-empreinte avant et après), et aucune photo ne change de planche. D'où **JPEG seulement** : un HEIC
-ou un PNG changerait l'extension, donc le nom, donc tous les endroits qui désignent la photo.
+empreinte avant et après), et aucune photo ne change de planche. Un original **JPEG** est copié à
+l'octet. Un original **HEIC ou PNG** (un dossier d'iPhone est presque tout HEIC) est **réécrit en JPEG sous
+le nom de la vignette** (`ecrire_jpeg`) : décodé par `heic::open` (décodeur système, jamais une crate),
+redressé par son EXIF (les pixels sont droits, aucun tag d'orientation), PNG transparent posé sur du blanc,
+JPEG à `QUALITE_JPEG` (95), avec un segment EXIF minimal (`DateTimeOriginal` et `OffsetTimeOriginal`, ce
+que `meta::read` relit). **Aucun profil ICC n'est écrit** : les pixels sont ceux que le décodeur rend (RGB
+d'appareil pour ImageIO, comme pour tout HEIC de l'app), lus comme du sRGB par le reste ; l'import Photos
+ne ré-encode rien (copie d'octets), il n'y avait pas de réglage à reprendre. `originaux.json` garde le
+chemin de l'original réel (`.heic`). Hors macOS, sans décodeur HEIC, le scan écarte le HEIC : il est
+compté (`Rapport::heic_illisibles`) et le bilan dit « HEIC non lisible sur ce système ». Un RAW sûr est
+nommé (`format`), jamais réécrit. **Le bilan de l'import** (`BilanView`) retire de « N photos trop
+petites… restées dans la réserve » celles qui ont maintenant leur original (`petitesRestantes`, cumul
+`Etat.revenues`), pour ne jamais contredire la ligne « ont maintenant leur original » ; le nom du bouton est
+entre guillemets, « Recomposer l'album ».
 Rien n'est effacé : la vignette part dans `<dossier>-vignettes` (voisin du dossier, hors du balayage de
 `scan.rs`), `originaux.json` (à côté de `voyage.json`) dit qui est devenu quoi, d'où, à quelle distance ;
 `retablir` rend tout (`--originaux-retablir`). `thumbs.json` et le cache de l'album sont refaits pour les
@@ -731,7 +743,8 @@ ont leur original, et recomposer fait passer l'album de 153 à 450 photos placé
 (`Rapport::revenues_possibles`, curation `definition` ou `hors_budget`), la personne tranche. CLI :
 `--originaux <DOSSIER> --originaux-voyage <VOYAGE> [--originaux-album <ALBUM>]`. Banc hors dépôt :
 `COLOPHON_ORIGINAUX_CAS=<cas> cargo test -p colophon-core --release banc_du_cas -- --ignored --nocapture`.
-**Non vérifié sur un vrai voyage** : les originaux du voyage réel n'existent pas.
+**Non vérifié sur un vrai voyage** : les originaux du voyage réel n'existent pas. Cas fabriqué avec la
+moitié des originaux en HEIC (`sips`) : mêmes 469 appariés, 0 faux, que tout en JPEG.
 
 ## Envoi, le dossier préparé et la commande
 

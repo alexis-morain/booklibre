@@ -28,6 +28,8 @@ export type RapportOriginaux = {
   deja: number;
   refus: RefusOriginal[];
   illisibles: number;
+  heic_illisibles: number;
+  reecrites: number;
   sous_seuil_avant: number;
   sous_seuil_apres: number;
   revenues_possibles: number;
@@ -69,6 +71,9 @@ export type Etat = {
   remplacees: number;
   refus: RefusOriginal[];
   dossier: string;
+  /** Les photos de la réserve qui ont maintenant leur original, tous passages
+   *  confondus depuis l'ouverture de l'écran. */
+  revenues: number;
   /** Un passage vient de finir : ce qu'il a changé. */
   rapport: RapportOriginaux | null;
   /** Les vignettes viennent d'être rendues. */
@@ -83,6 +88,7 @@ export const ETAT_INITIAL: Etat = {
   remplacees: 0,
   refus: [],
   dossier: "",
+  revenues: 0,
   rapport: null,
   rendues: false,
   detail: "",
@@ -114,12 +120,13 @@ export function reduire(e: Etat, ev: Evenement): Etat {
         rapport: ev.rapport,
         dossier: ev.dossier,
         remplacees: e.remplacees + ev.rapport.remplacees,
+        revenues: e.revenues + ev.rapport.revenues_possibles,
         refus: ev.rapport.refus,
       };
     case "echec":
       return { ...e, phase: ev.annule ? "annule" : "echec", detail: ev.detail };
     case "rendues":
-      return { ...e, phase: "repos", remplacees: 0, refus: [], dossier: "", rapport: null, rendues: true };
+      return { ...e, phase: "repos", remplacees: 0, refus: [], dossier: "", revenues: 0, rapport: null, rendues: true };
   }
 }
 
@@ -148,8 +155,19 @@ export function lignesOriginaux(e: Etat, langue: "fr" | "en"): Ligne[] {
       out.push({ cle: "originaux.reserve", params: { n: entier(r.revenues_possibles, langue) } });
     }
     if (r.illisibles > 0) out.push({ cle: "originaux.illisibles", params: { n: entier(r.illisibles, langue) } });
+    if (r.heic_illisibles === 1) out.push({ cle: "originaux.heic.un" });
+    else if (r.heic_illisibles > 1) {
+      out.push({ cle: "originaux.heic", params: { n: entier(r.heic_illisibles, langue) } });
+    }
   }
   return out;
+}
+
+/** Les photos « trop petites » que le bilan de l'import dit encore dans la
+ *  réserve : celles qui ont maintenant leur original en sont sorties (c'est
+ *  `originaux.reserve` qui les dit), jamais les deux phrases à la fois. */
+export function petitesRestantes(tropPetites: number, revenues: number): number {
+  return Math.max(0, tropPetites - revenues);
 }
 
 // ---- les commandes -------------------------------------------------------------
