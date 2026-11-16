@@ -24,9 +24,11 @@ sur la page des releases.
   composition ends, the report names the videos ignored, the emoji not printed, the
   stories longer than their pages and the steps grouped on one page; for photos too
   small to be printed well it advises the Polarsteps data export or your original
-  photos (the link only gives thumbnails). Ordering a book over 200 pages now says so
-  ("This book has 488 pages; ordering in Booklibre goes up to 200") instead of showing
-  the relay's raw code. Booklibre is not affiliated with Polarsteps. The Mentions
+  photos (the link only gives thumbnails). A book longer than the relay sells
+  (200 pages, read from the app's own limit) can no longer be ordered from Booklibre:
+  the Order buttons are greyed out and say why before the click ("This book has 488
+  pages. Ordering in Booklibre goes up to 200 pages: remove some spreads, or export the
+  PDF to have it printed elsewhere"). The PDF export has no limit and stays available. Booklibre is not affiliated with Polarsteps. The Mentions
   panel of a trip album gets its two boxes: "Weather of the step" and "The trip in
   numbers", which can be ticked and unticked on an existing album.
 - Weather and a numbers page in a trip album. The line under a step now ends with the

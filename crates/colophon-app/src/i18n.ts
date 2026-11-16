@@ -976,8 +976,8 @@ export const FR = {
   "commande.confirmer.reel":
     "Commander pour {prix}, livraison comprise : vous paierez par carte sur la page de Stripe, qui s’ouvre dans votre navigateur.",
   "commande.erreur": "La commande a échoué : {erreur}",
-  "commande.err.pages": "Ce livre fait {n} pages ; la commande dans Booklibre va jusqu’à {max}. Exportez le PDF, ou réduisez l’album.",
-  "commande.err.pages.sans": "Ce livre a trop de pages : la commande dans Booklibre va jusqu’à {max}. Exportez le PDF, ou réduisez l’album.",
+  "commande.err.pages.sans": "Ce livre a trop de pages pour la commande dans Booklibre : retirez des planches, ou exportez le PDF pour le faire imprimer ailleurs.",
+  "commande.trop.pages": "Ce livre fait {n} pages. La commande dans Booklibre va jusqu’à {max} pages : retirez des planches, ou exportez le PDF pour le faire imprimer ailleurs.",
   "commande.annuler.tard": "La production a commencé, l’annulation n’est plus possible.",
   "commande.etat.aucun": "État pas encore relu.",
   "commande.etat.nouvelle": "Reçue par Cloudprinter.",
@@ -2350,8 +2350,8 @@ export const EN: Record<Cle, string> = {
   "commande.confirmer.reel":
     "Order for {prix}, delivery included: you will pay by card on Stripe’s page, which opens in your browser.",
   "commande.erreur": "The order failed: {erreur}",
-  "commande.err.pages": "This book has {n} pages; ordering in Booklibre goes up to {max}. Export the PDF, or shrink the album.",
-  "commande.err.pages.sans": "This book has too many pages: ordering in Booklibre goes up to {max}. Export the PDF, or shrink the album.",
+  "commande.err.pages.sans": "This book has too many pages for ordering in Booklibre: remove some spreads, or export the PDF to have it printed elsewhere.",
+  "commande.trop.pages": "This book has {n} pages. Ordering in Booklibre goes up to {max} pages: remove some spreads, or export the PDF to have it printed elsewhere.",
   "commande.annuler.tard": "Production has started, the order can no longer be cancelled.",
   "commande.etat.aucun": "State not read yet.",
   "commande.etat.nouvelle": "Received by Cloudprinter.",

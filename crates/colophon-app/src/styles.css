@@ -6778,3 +6778,30 @@ button.envoi-defaut-ou:focus-visible {
 .voyage-import .lede[role="status"] {
   margin-top: 16px;
 }
+
+/* Lu par les lecteurs d'écran, jamais dessiné : le message qui relie un bouton
+   grisé à sa raison (`aria-describedby`). */
+.sr-seul {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.foot-prix-trop {
+  white-space: normal;
+}
+
+.commande-ouvrir .commande-format {
+  margin-bottom: 12px;
+}
+
+.commande-ouvrir .envoi-exporter:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

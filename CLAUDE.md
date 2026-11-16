@@ -691,8 +691,15 @@ vignettes : l'export de vos données Polarsteps ou vos photos d'origine » ; le 
 (`photos_sous_seuil`) n'est pas un ppi et n'est plus dit à l'écran. Les étapes sans photo posée ne
 sont pas un défaut : une phrase, seulement pour celles dont les photos étaient trop petites.
 « Toutes les photos du dossier sont dans l'album » exige `toutesDansLAlbum` (rien écarté ni en
-réserve). `commande.ts::phraseErreur(e, pages)` traduit le refus `relais : pages (400)` (au-delà de
-`PAGES_MAX_COMMANDE` = 200) ; le bouton Commander n'est pas désactivé, décision d'Alexis. `OpenedAlbum::voyage` (un `voyage.json` lisible à côté des photos) montre, dans
+réserve). **Commander se grise au-delà de la limite du relais** (décision d'Alexis, 15/11) : la limite est
+`tarifs::PAGES_MAX`, ajoutée à `Tarifs` à la sérialisation (`pages_max`, jamais lue dans le JSON du
+Worker) et lue par `useLimitePages()` ; aucune constante côté TS. Le compte est celui des pages
+intérieures (`pagesDuLivre`, `fiche.pages_interieur`), `pagesInvendables(pages, max)` ferme à
+`max + 1`. Trois endroits : le bouton de la barre (`BoutonCommander`, `aria-describedby`), « Faire
+imprimer » (`EnvoiPage`) et « Commander » (`CommandeView`), plus la raison dans le pied
+(`LignePrix`). **Limite : la table ne se lit qu'avec le choix « Par Booklibre »** ; sans elle rien ne
+se grise et `phraseErreur(e, pages, max)` traduit le refus `relais : pages (400)` en filet. L'export
+du PDF n'a aucune limite. `OpenedAlbum::voyage` (un `voyage.json` lisible à côté des photos) montre, dans
 Planche → Dates et lieux, « Météo de l'étape » (grisée sans mention) et « Le voyage en chiffres »
 (`voyage_chiffres` = `chiffres::regler`, un pas d'annulation). Le guide du zip tient en un
 paragraphe : le lecteur du zip n'est pas codé.

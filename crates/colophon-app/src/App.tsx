@@ -195,7 +195,8 @@ import { Tourneur } from "./Feuilletage";
 import { chargerReleve } from "./photos";
 import { LegendeQualite } from "./LegendeQualite";
 import { PrixLivre, QuestionAccueil } from "./ChoixImpression";
-import { chargerTarifs } from "./impression";
+import { chargerTarifs, pagesDuLivre, useLimitePages } from "./impression";
+import { BoutonCommander } from "./BoutonCommander";
 import { loadThumb, resetThumbs } from "./thumbs";
 import "./styles.css";
 
@@ -2993,6 +2994,7 @@ export default function App() {
   const listeChapitres = chapitres(album);
   const chapitreCourant = chapitreDe(listeChapitres, index);
   const commanderOffert = relais !== null && relais.etat !== "absent";
+  const limitePages = useLimitePages();
   /** Un chapitre se rejoint par sa première planche : en Planches on y reste,
    *  partout ailleurs on ouvre le Livre. */
   const allerAuChapitre = (debut: number) => {
@@ -3041,6 +3043,7 @@ export default function App() {
         onRecompose={() => void ouvrirRecomposer()}
         onExporter={() => gotoView("envoi")}
         onCommander={commanderOffert ? () => gotoView("envoi") : undefined}
+        limitePages={limitePages}
       />
       {view === "tri" ? (
         <TriView
@@ -3642,6 +3645,7 @@ function Bar({
   onRecompose,
   onExporter,
   onCommander,
+  limitePages,
 }: {
   album: Album;
   canUndo: boolean;
@@ -3659,6 +3663,8 @@ function Bar({
   onExporter: () => void;
   /** Absent quand aucun relais n'est compilé : rien n'annonce la commande. */
   onCommander?: () => void;
+  /** La limite de pages du relais, `null` tant que la table n'est pas lue. */
+  limitePages: number | null;
 }) {
   const fil: string[] =
     view === "livre"
@@ -3718,9 +3724,11 @@ function Bar({
       {view !== "envoi" && (
         <>
           {onCommander && (
-            <button className="btn-second" onClick={onCommander} title={t("bar.commander.titre")}>
-              {t("bar.commander")}
-            </button>
+            <BoutonCommander
+              pages={pagesDuLivre(album)}
+              limite={limitePages}
+              onCommander={onCommander}
+            />
           )}
           <button className="cta small" onClick={onExporter} title={t("bar.exporter.titre")}>
             {t("bar.exporter")}

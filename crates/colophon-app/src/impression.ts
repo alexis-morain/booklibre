@@ -140,6 +140,13 @@ export function useTarifs(): EtatTarifs {
   return useSyncExternalStore(abonneImpression, etatTarifs, etatTarifs);
 }
 
+/** La limite de pages du relais, ou `null` tant que la table n'est pas lue.
+ *  Elle vient de la table (`Tarifs.pages_max`), donc du moteur. */
+export function useLimitePages(): number | null {
+  const e = useTarifs();
+  return e.etat === "lus" ? e.tarifs.pages_max : null;
+}
+
 export function useOffre(): boolean | null {
   return useSyncExternalStore(abonneImpression, offre, offre);
 }

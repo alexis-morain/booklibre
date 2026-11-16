@@ -67,8 +67,16 @@ export function commandePossible(
 /** « Faire imprimer » a préparé ce dossier pour la commande (A1) : le
  *  parcours s'ouvre de lui-même, sans le bouton « Commander » entre deux.
  *  Un dossier préparé à la main, dans un dossier choisi, garde ce bouton. */
-export function commandeDirecte(relaisJoignable: boolean, preparationNeuve: Preparation | null): boolean {
-  return commandePossible(relaisJoignable, preparationNeuve) && preparationNeuve?.commande === true;
+export function commandeDirecte(
+  relaisJoignable: boolean,
+  preparationNeuve: Preparation | null,
+  pagesMax: number | null = null,
+): boolean {
+  return (
+    commandePossible(relaisJoignable, preparationNeuve) &&
+    preparationNeuve?.commande === true &&
+    tropDePages(preparationNeuve, pagesMax) === null
+  );
 }
 
 /** Ce que l'écran sait du relais. `absent` : ce build n'en porte aucun
@@ -224,10 +232,22 @@ export function phraseConfirmation(prix: string, mode: Mode): string {
   });
 }
 
+/** Les pages du livre, quand elles dépassent ce que le relais vend ; `null`
+ *  sinon, ou tant que la limite n'est pas connue (le relais refuse alors, et
+ *  `phraseErreur` le dit). `max` est `Tarifs.pages_max`, qui vient du code
+ *  (`tarifs::PAGES_MAX`) : jamais une constante d'ici. Au plus `max` passe,
+ *  `max + 1` ne passe pas. L'export du PDF n'a pas de limite. */
+export function pagesInvendables(pages: number | undefined | null, max: number | null | undefined): number | null {
+  return typeof pages === "number" && typeof max === "number" && pages > max ? pages : null;
+}
+
+/** Le dossier préparé, par ses pages intérieures (le compte que Commander
+ *  montre), contre la limite du relais. */
+export function tropDePages(preparationNeuve: Preparation | null, max: number | null | undefined): number | null {
+  return pagesInvendables(preparationNeuve?.rapport.fiche?.pages_interieur, max);
+}
+
 /** Les codes du relais qui ont leur phrase ; le reste voyage tel quel. */
-/** Le plus grand livre que le relais vend (`tarifs::PAGES_MAX`, `PAGES_MAX` du
- *  Worker). */
-export const PAGES_MAX_COMMANDE = 200;
 
 const ERREURS: [string, Cle][] = [
   ["abandon_envoi_en_cours", "commande.abandon.envoi"],
@@ -271,15 +291,13 @@ export function ignorable(e: unknown): boolean {
 }
 
 /** Une erreur de commande, dite. */
-export function phraseErreur(e: unknown, pages?: number): string {
+export function phraseErreur(e: unknown, pages?: number, max?: number | null): string {
   const s = String(e);
   // « relais : pages (400) » : le relais refuse le nombre de pages. Le code est
   // cherché en entier : « pages » seul se lit aussi dans « 201 pages sont sous
   // 250 ppi », un autre refus.
   if (s.includes("relais : pages (")) {
-    return pages
-      ? t("commande.err.pages", { n: pages, max: PAGES_MAX_COMMANDE })
-      : t("commande.err.pages.sans", { max: PAGES_MAX_COMMANDE });
+    return pages && max ? t("commande.trop.pages", { n: pages, max }) : t("commande.err.pages.sans");
   }
   for (const [code, cle] of ERREURS) if (s.includes(code)) return t(cle);
   return t("commande.erreur", { erreur: s.replace(/^Error: /, "") });

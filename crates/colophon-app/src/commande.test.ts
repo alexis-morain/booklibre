@@ -33,7 +33,8 @@ import {
   payable,
   phraseConfirmation,
   phraseErreur,
-  PAGES_MAX_COMMANDE,
+  pagesInvendables,
+  tropDePages,
   phraseEtat,
   phraseIntention,
   phraseLivraison,
@@ -145,6 +146,44 @@ describe("commandePossible", () => {
     expect(formatInvendable(true, p)).toBe(false);
     expect(formatInvendable(false, sansProduit)).toBe(false);
     expect(formatInvendable(true, null)).toBe(false);
+  });
+});
+
+describe("la limite de pages du relais", () => {
+  // La limite est celle du moteur (`Tarifs.pages_max`) : les tests la passent, aucune constante ici.
+  const MAX = 200;
+  const avecPages = (pages: number, commande = false): Preparation => {
+    const p = preparation(true);
+    return { ...p, commande, rapport: { ...p.rapport, fiche: { ...p.rapport.fiche, pages_interieur: pages } } };
+  };
+
+  it("passe à 200 pages et se ferme à 201", () => {
+    expect(pagesInvendables(200, MAX)).toBeNull();
+    expect(pagesInvendables(201, MAX)).toBe(201);
+    expect(pagesInvendables(488, MAX)).toBe(488);
+    expect(pagesInvendables(undefined, MAX)).toBeNull();
+    // Tant que la limite n'est pas lue, rien ne se grise (le relais refusera, et la phrase le dit).
+    expect(pagesInvendables(488, null)).toBeNull();
+    expect(tropDePages(avecPages(200), MAX)).toBeNull();
+    expect(tropDePages(avecPages(490), MAX)).toBe(490);
+    expect(tropDePages(null, MAX)).toBeNull();
+  });
+
+  it("n'ouvre pas le parcours de lui-même sur un livre trop long, et le rouvre sous la limite", () => {
+    expect(commandeDirecte(true, avecPages(198, true), MAX)).toBe(true);
+    expect(commandeDirecte(true, avecPages(202, true), MAX)).toBe(false);
+    expect(commandeDirecte(true, avecPages(198, true), MAX)).toBe(true);
+  });
+
+  it("dit la limite avant le clic, dans les deux langues, avec les nombres du moteur", () => {
+    setLangue("fr");
+    expect(t("commande.trop.pages", { n: 488, max: MAX })).toBe(
+      "Ce livre fait 488 pages. La commande dans Booklibre va jusqu’à 200 pages : retirez des planches, ou exportez le PDF pour le faire imprimer ailleurs.",
+    );
+    setLangue("en");
+    expect(t("commande.trop.pages", { n: 488, max: MAX })).toBe(
+      "This book has 488 pages. Ordering in Booklibre goes up to 200 pages: remove some spreads, or export the PDF to have it printed elsewhere.",
+    );
   });
 });
 
@@ -323,19 +362,17 @@ describe("les états du relais", () => {
   it("dit le refus du nombre de pages au lieu de la phrase brute du relais", () => {
     setLangue("fr");
     const brut = "relais : pages (400)";
-    expect(phraseErreur(brut, 488)).toBe(
-      "Ce livre fait 488 pages ; la commande dans Booklibre va jusqu’à 200. Exportez le PDF, ou réduisez l’album.",
+    // Le filet : la même phrase que l'avertissement d'avant le clic quand les nombres sont connus.
+    expect(phraseErreur(brut, 488, 200)).toBe(
+      "Ce livre fait 488 pages. La commande dans Booklibre va jusqu’à 200 pages : retirez des planches, ou exportez le PDF pour le faire imprimer ailleurs.",
     );
     expect(phraseErreur(brut)).not.toContain("relais");
-    expect(phraseErreur(brut)).toContain("jusqu’à 200");
+    expect(phraseErreur(brut)).toContain("trop de pages");
     setLangue("en");
-    expect(phraseErreur(brut, 488)).toBe(
-      "This book has 488 pages; ordering in Booklibre goes up to 200. Export the PDF, or shrink the album.",
-    );
+    expect(phraseErreur(brut, 488, 200)).toContain("This book has 488 pages. Ordering in Booklibre goes up to 200 pages");
     // Un autre refus qui contient le mot « pages » garde sa phrase.
     setLangue("fr");
-    expect(phraseErreur("201 pages sont sous 250 ppi", 488)).toContain("La commande a échoué");
-    expect(PAGES_MAX_COMMANDE).toBe(200);
+    expect(phraseErreur("201 pages sont sous 250 ppi", 488, 200)).toContain("La commande a échoué");
   });
 
   it("ne promettent « rien n'a été payé » qu'après la confirmation du relais", () => {

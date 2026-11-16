@@ -1514,6 +1514,9 @@ export type Tarifs = {
   devise: string;
   pays: string[];
   formats: Record<string, Record<string, LigneTarifs>>;
+  /** Le plus grand livre que le relais vend (`tarifs::PAGES_MAX`) : le moteur
+   *  l'ajoute à la table, l'écran n'en recopie aucune. */
+  pages_max: number;
 };
 
 /** Ce build a-t-il un Worker de tarifs ? Sans réseau. Faux dans la version

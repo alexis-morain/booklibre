@@ -80,6 +80,15 @@ pub struct Tarifs {
     pub devise: String,
     pub pays: Vec<String>,
     pub formats: BTreeMap<String, BTreeMap<String, Ligne>>,
+    /// Le plus grand livre que le relais vend : [`PAGES_MAX`], jamais ce que le
+    /// document dit. Il sort vers l'écran avec la table (qui en grise Commander
+    /// au-delà) et ne se lit pas dans le JSON reçu.
+    #[serde(skip_deserializing, default = "pages_max")]
+    pub pages_max: u32,
+}
+
+fn pages_max() -> u32 {
+    PAGES_MAX
 }
 
 /// Ce qui empêche de lire un prix. Aucune ne recopie un corps reçu.
@@ -183,6 +192,22 @@ mod tests {
     use crate::relais::{Envoi, Secret};
     use serde_json::{json, Value};
     use std::cell::RefCell;
+
+    /// La limite que l'écran applique est celle du code : elle sort avec la table
+    /// et un Worker qui en annonce une autre n'est pas cru.
+    #[test]
+    fn la_limite_de_pages_sort_avec_la_table_et_ne_se_lit_pas_dans_le_json() {
+        let mut doc = serde_json::from_str::<Value>(&serde_json::to_string(&json!({
+            "mode": "sandbox", "genere_le": "2026-11-12T00:00:00Z", "devise": "EUR",
+            "pays": ["FR"], "formats": {}
+        })).unwrap()).unwrap();
+        let t: Tarifs = serde_json::from_value(doc.clone()).unwrap();
+        assert_eq!(t.pages_max, PAGES_MAX);
+        assert_eq!(serde_json::to_value(&t).unwrap()["pages_max"], PAGES_MAX);
+        doc["pages_max"] = json!(9999);
+        let t: Tarifs = serde_json::from_value(doc).unwrap();
+        assert_eq!(t.pages_max, PAGES_MAX, "le Worker ne fixe pas la limite");
+    }
 
     /// Un faux Worker : un statut et un corps, et tout ce qu'on lui a demandé.
     struct Faux {
