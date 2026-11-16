@@ -5,7 +5,9 @@
 
 import { Legendes } from "./album";
 import { Dialogue } from "./Dialogue";
+import { cancelBuild } from "./bridge";
 import { Cle, t } from "./i18n";
+import { Originaux } from "./VoyageOriginaux";
 
 type Contenu = Legendes["contenu"] | null;
 
@@ -30,6 +32,7 @@ export function LegendesView({
   chiffres = false,
   onMeteo,
   onChiffres,
+  onOriginaux,
   onClose,
 }: {
   /** Le réglage de l'album, `null` pour rien. */
@@ -44,6 +47,8 @@ export function LegendesView({
   chiffres?: boolean;
   onMeteo?: (meteo: boolean) => void;
   onChiffres?: (actif: boolean) => void;
+  /** Les photos du voyage ont changé (P-s8) : l'album se relit. */
+  onOriginaux?: () => Promise<void>;
   onClose: () => void;
 }) {
   const contenu = reglage?.contenu ?? null;
@@ -111,6 +116,7 @@ export function LegendesView({
               <span className="setup-case-note">{t("legendes.chiffres.note")}</span>
             </span>
           </label>
+          {onOriginaux && <Originaux onChange={onOriginaux} onAnnuler={() => void cancelBuild()} />}
         </>
       )}
       <p className="signaler-note" role="status">

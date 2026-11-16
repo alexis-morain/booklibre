@@ -1500,6 +1500,23 @@ export default function App() {
     setStatus(t("legendes.bilan", { n: b.posees, m: b.sansRien, p: b.sansPlace }));
   };
 
+  /** Les photos d'un voyage viennent de changer sur le disque (P-s8) : écrit
+   *  d'abord, puis l'album se rouvre, ses vignettes en cache refaites. Le bilan
+   *  qui était à l'écran y reste. */
+  const apresOriginaux = async () => {
+    if (!opened) return;
+    if (!(await save(false))) return;
+    const enBilan = bilan;
+    try {
+      const result = await openAlbumAt(opened.dir);
+      adopt(result);
+      setCuration(await fetchCuration().catch(() => []));
+      if (enBilan) setBilan(enBilan);
+    } catch (e) {
+      setError(fault(t("erreur.reouverture"), e));
+    }
+  };
+
   /** Coche ou décoche « Le voyage en chiffres » : le moteur pose ou retire
    *  la page sur l'album tel qu'il est, un seul pas d'annulation. */
   const poserChiffres = async (actif: boolean) => {
@@ -2723,6 +2740,7 @@ export default function App() {
         variantes={variantes}
         choisie={variante}
         voyageImporte={voyageImporte}
+        onOriginaux={inTauri ? apresOriginaux : undefined}
         onChoisir={(id) => void basculerVariante(id)}
         onOpen={() => setBilan(null)}
         onTri={() => {
@@ -3481,6 +3499,7 @@ export default function App() {
             if (l) void choisirLegendes(l.contenu, l.date, m);
           }}
           onChiffres={(actif) => void poserChiffres(actif)}
+          onOriginaux={inTauri ? apresOriginaux : undefined}
           onClose={() => setLegendesOuvert(false)}
         />
       )}
