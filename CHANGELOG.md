@@ -11,6 +11,22 @@ sur la page des releases.
 
 ### Added
 
+- Replace a trip's thumbnails with your original photos. A trip imported from its link
+  only has 960 px thumbnails, almost all too small to print sharp. In the import summary,
+  and in Page, Dates and places, "Photos d'origine" lets you pick the folder of your
+  originals (Booklibre reads it, never writes to it). A thumbnail is replaced only when
+  its original is sure: the shooting time narrows the choice (the trip's UTC time and the
+  step's time zone against the camera's local time), then a small image fingerprint decides,
+  and a single candidate clearly ahead of the next one is required, with a compatible aspect
+  ratio. A burst never replaces anything. The photo keeps its name, its place, its crop and
+  its caption: the album file is not touched. Nothing is deleted: the thumbnails move to a
+  folder beside the trip (`<folder>-vignettes`), `originaux.json` says what became what, and
+  "Put the thumbnails back" restores them. The summary reads "1,412 photos replaced by
+  their original; 134 without a sure original", with the list and the reason for each.
+  Only JPEG originals replace for now (a HEIC or a PNG is named, not used). Command line:
+  `--originaux <FOLDER> --originaux-voyage <TRIP> [--originaux-album <ALBUM>]`, and
+  `--originaux-retablir <TRIP>`.
+
 - Import a Polarsteps trip from its link (not in the Mac App Store edition). On the
   start screen, "Import a Polarsteps trip": paste the link of your trip (a public one,
   or a share link with its "?s="), and Booklibre downloads it into a folder of its own,

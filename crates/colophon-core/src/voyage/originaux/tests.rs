@@ -527,14 +527,27 @@ fn les_photos_de_la_reserve_qui_peuvent_revenir_sont_comptees() {
     std::fs::create_dir_all(&album).unwrap();
     std::fs::write(
         album.join("curation.json"),
-        r#"[{"src":"e001-p01-aaaa.jpg","reason":"definition","focal":[0.5,0.42]},{"src":"e003-p01-cccc.jpg","reason":"definition","focal":[0.5,0.42]}]"#,
+        r#"[{"src":"e001-p01-aaaa.jpg","reason":"hors_budget","focal":[0.5,0.42]},{"src":"e003-p01-cccc.jpg","reason":"definition","focal":[0.5,0.42]}]"#,
     )
     .unwrap();
     let (p, a) = pas_de_progres();
     let r = remplacer(&v, &c.racine.join("originaux"), Some(&album), &p, &a).unwrap();
     // A revient (remplacée), C reste (sans original) : un seul chiffre vrai.
     assert_eq!(r.revenues_possibles, 1);
-    assert_eq!(std::fs::read_to_string(album.join("curation.json")).unwrap().matches("definition").count(), 2);
+    assert_eq!(std::fs::read_to_string(album.join("curation.json")).unwrap().matches("reason").count(), 2);
+}
+
+/// Un jumeau écarté reste écarté : l'original ne change pas ce choix.
+#[test]
+fn un_jumeau_ecarte_ne_compte_pas_parmi_ceux_qui_peuvent_revenir() {
+    let c = cas("jumeau");
+    let v = c.racine.join("voyage");
+    let album = c.racine.join("album");
+    std::fs::create_dir_all(&album).unwrap();
+    std::fs::write(album.join("curation.json"), r#"[{"src":"e001-p01-aaaa.jpg","reason":"jumeau","focal":[0.5,0.42]}]"#).unwrap();
+    let (p, a) = pas_de_progres();
+    let r = remplacer(&v, &c.racine.join("originaux"), Some(&album), &p, &a).unwrap();
+    assert_eq!((r.remplacees, r.revenues_possibles), (1, 0));
 }
 
 #[test]

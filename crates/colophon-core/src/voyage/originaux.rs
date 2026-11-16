@@ -455,8 +455,8 @@ pub struct Rapport {
     pub sous_seuil_avant: usize,
     pub sous_seuil_apres: usize,
     /// Parmi les remplacées, celles que la composition avait laissées à la
-    /// réserve faute de définition (`curation.json`) : elles peuvent revenir
-    /// par une recomposition, jamais d'office.
+    /// réserve (`curation.json` : `definition` ou `hors_budget`) : une
+    /// recomposition peut en ramener dans le livre, jamais d'office.
     pub revenues_possibles: usize,
 }
 
@@ -523,12 +523,16 @@ fn rafraichir_cache(album: &Path, dossier: &Path, fichiers: &[String]) -> Result
     Ok(())
 }
 
-/// Les photos que la curation avait écartées pour leur définition.
-fn ecartees_pour_definition(album: Option<&Path>) -> Vec<String> {
+/// Les photos que la composition a laissées à la réserve faute de place pour
+/// leur taille : `definition` (trop petites pour la plus petite case) et
+/// `hors_budget` (où le composer range aussi les « trop petites » d'un voyage,
+/// `layout::Composer::trop_petites`). Les jumeaux, panoramas, doublons et
+/// rejets sont des décisions que l'original ne change pas.
+fn ecartees_pour_la_taille(album: Option<&Path>) -> Vec<String> {
     let Some(a) = album else { return Vec::new() };
     let Ok(t) = std::fs::read_to_string(a.join("curation.json")) else { return Vec::new() };
     serde_json::from_str::<Vec<crate::model::Discard>>(&t)
-        .map(|d| d.into_iter().filter(|x| x.reason == "definition").map(|x| x.src).collect())
+        .map(|d| d.into_iter().filter(|x| matches!(x.reason.as_str(), "definition" | "hors_budget")).map(|x| x.src).collect())
         .unwrap_or_default()
 }
 
@@ -561,7 +565,7 @@ pub fn remplacer(
     let verdicts = apparier(&seules, &index);
 
     std::fs::create_dir_all(&archive).with_context(|| format!("créer {}", archive.display()))?;
-    let ecartees = ecartees_pour_definition(album);
+    let ecartees = ecartees_pour_la_taille(album);
     let mut rapport = Rapport { deja: deja.len(), illisibles, sous_seuil_avant, ..Rapport::default() };
     let mut refus = Vec::new();
     let mut changes = Vec::new();

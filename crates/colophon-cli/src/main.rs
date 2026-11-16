@@ -399,7 +399,7 @@ fn main() -> Result<()> {
         println!("{} sans original sûr", r.refus.len());
         println!("sous le repère après : {}", r.sous_seuil_apres);
         println!("{} fichiers illisibles dans le dossier d'originaux", r.illisibles);
-        println!("{} photos laissées à la réserve pour leur définition peuvent revenir (recomposer)", r.revenues_possibles);
+        println!("{} photos de la réserve ont maintenant leur original : une recomposition peut en ramener", r.revenues_possibles);
         return Ok(());
     }
 

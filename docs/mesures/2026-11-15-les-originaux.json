@@ -1,0 +1,107 @@
+{
+  "date": "2026-11-15",
+  "objet": "Appariement des vignettes d'un voyage à leurs originaux (P-s8, plan D17) : calibration des seuils et mesure sur un cas fabriqué",
+  "cas": {
+    "source": "corse-2013 (hors dépôt, ~/Pictures/colophon-testsets/), photos ≥ 2000 px à EXIF daté : 516 vignettes de 960 px au côté court (Lanczos, JPEG q72, sans EXIF), 533 originaux (heure locale Europe/Paris sans fuseau), voyage.json à la Polarsteps (début d'étape en UTC + fuseau)",
+    "pieges": {
+      "normal": 414,
+      "sans_original": 25,
+      "originaux_en_trop": 30,
+      "rafale (jumeau à +1 s)": 12,
+      "recadree_meme_ratio (80 %)": 5,
+      "recadree_carree": 5,
+      "posee_dans_une_autre_etape": 20,
+      "original_sans_heure": 20,
+      "original_couche_avec_tag_exif_6": 15
+    }
+  },
+  "distances": {
+    "note": "écart quadratique moyen d'empreintes 24 × 24 de luminance centrées-réduites : 0 identiques, ~1,4 sans rapport",
+    "bon_original": {
+      "max": 0.019,
+      "mediane": 0.007
+    },
+    "meilleur_autre_original": {
+      "min_cas_normal": 0.175,
+      "min_sans_original": 0.245,
+      "min_recadree_carree": 0.604,
+      "min_tournee": 0.511
+    },
+    "rafale_jumeau": 0.006,
+    "recadree_meme_ratio": {
+      "bon_original_mediane": 0.265,
+      "bon_original_max": 0.448
+    }
+  },
+  "seuils_retenus": {
+    "SEUIL_HEURE": 0.12,
+    "MARGE_HEURE": 0.1,
+    "SEUIL_IMAGE": 0.08,
+    "MARGE_IMAGE": 0.15,
+    "TOLERANCE_RATIO": 0.025,
+    "MARGE_HORAIRE_h": 6,
+    "DUREE_ETAPE_MIN_h": 24,
+    "pourquoi": "les vrais appariés sont sous 0,02 : le seuil est six fois au-dessus, pour absorber une recompression et une retouche de couleur de la source ; le meilleur faux candidat d'un cas normal est à 0,175 : le seuil reste sous lui. La marge 0,10 (0,15 sans l'heure) exige un second candidat nettement plus loin ; une rafale (0,006) est refusée. Le recadrage à 80 % (0,265 et plus) est refusé par le seuil. Valeurs à reprendre sur un vrai voyage dès que ses originaux existent."
+  },
+  "resultat": {
+    "remplacees": 469,
+    "refusees": 47,
+    "faux_positifs": 0,
+    "mauvais_original": 0,
+    "par_methode": {
+      "heure": 429,
+      "image": 40
+    },
+    "refus_par_piege": {
+      "rafale": {
+        "ambigu": 12
+      },
+      "sans_original": {
+        "sans_original": 25
+      },
+      "recadree_carree": {
+        "sans_original": 5
+      },
+      "recadree_meme_ratio": {
+        "sans_original": 5
+      }
+    },
+    "taux": "469 / 469 vignettes qui ont un original sûr (100 %) ; 47 / 47 pièges refusés",
+    "distance_des_remplacements": {
+      "max": 0.0186,
+      "mediane": 0.0072
+    },
+    "marge_minimale": 0.165,
+    "temps": "516 originaux de 12 Mpx lus et appariés en 6,2 s (35 s de cœur) en release, M-series"
+  },
+  "definition": {
+    "cote_court_median_avant_px": 960,
+    "ppi_pleine_page_avant": 113,
+    "photos_a_250_ppi_pleine_page_avant": 0,
+    "cote_court_median_apres_px": 2448,
+    "ppi_pleine_page_apres": 288,
+    "photos_a_250_ppi_pleine_page_apres": 468,
+    "sur": 516
+  },
+  "reserve": {
+    "album_compose_avant": {
+      "photos_placees": 153,
+      "planches": 42,
+      "trop_petites_a_la_reserve": 329
+    },
+    "apres_remplacement_sans_recomposer": {
+      "photos_placees": 153,
+      "album_json_identique_a_l_octet": true,
+      "remplacees_non_placees": 329,
+      "reserve_qui_a_maintenant_son_original": 297
+    },
+    "apres_recomposition": {
+      "photos_placees": 450,
+      "planches": 296,
+      "trop_petites_a_la_reserve": 32,
+      "planches_gardees": 0
+    },
+    "decision": "le remplacement ne recompose jamais : aucune photo ne change de planche (album.json identique à l'octet). La recomposition est proposée au bilan (297 photos de la réserve ont maintenant leur original), elle reste un geste de la personne : elle redistribue les planches non retouchées."
+  },
+  "reel_non_mesure": "les originaux du voyage réel n'existent pas (données d'un tiers) : les seuils sont calibrés sur un cas fabriqué, plus facile que le réel sur un point (la réduction est faite par PIL, pas par la source)."
+}

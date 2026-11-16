@@ -88,7 +88,7 @@ describe("les lignes du bilan", () => {
   it("annonce les photos de la réserve qui peuvent revenir, et les fichiers illisibles", () => {
     setLangue("fr");
     const l = lignesOriginaux(termine(rapport({ revenues_possibles: 659, illisibles: 2 })), "fr").map((x) => t(x.cle, x.params));
-    expect(l.some((x) => x.startsWith("659 photos laissées à la réserve") && x.includes("Recomposer"))).toBe(true);
+    expect(l.some((x) => x.startsWith("659 photos de la réserve") && x.includes("Recomposer"))).toBe(true);
     expect(l).toContain("2 fichiers du dossier n’ont pas pu être lus.");
   });
 
