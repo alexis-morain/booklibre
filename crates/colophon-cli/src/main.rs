@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 #[command(after_help = FORMAT_HELP.as_str())]
 struct Cli {
     /// Folder of photos to build the album from
-    #[arg(required_unless_present_any = ["formats", "profils", "profils_json", "dump_geometry", "dump_ornements", "dump_cartes", "dump_lut", "dump_scene", "print", "cover", "audit", "reprise", "prevol", "preparer", "sheets", "bascule", "proposition", "gabarits", "reserve", "remplir", "devis", "fiche", "releve_album", "survol", "dates", "banc_gabarits", "depuis_fiches", "recomposer", "voyage_importer", "voyage_lire", "page_chiffres"])]
+    #[arg(required_unless_present_any = ["formats", "profils", "profils_json", "dump_geometry", "dump_ornements", "dump_cartes", "dump_lut", "dump_scene", "print", "cover", "audit", "reprise", "prevol", "preparer", "sheets", "bascule", "proposition", "gabarits", "reserve", "remplir", "devis", "fiche", "releve_album", "survol", "dates", "banc_gabarits", "depuis_fiches", "recomposer", "voyage_importer", "voyage_lire", "page_chiffres", "originaux", "originaux_retablir"])]
     photos: Option<PathBuf>,
 
     /// Output directory (album.json, album.pdf, thumbnail cache)
@@ -202,6 +202,28 @@ struct Cli {
     #[arg(long, value_name = "DOSSIER")]
     voyage_lire: Option<PathBuf>,
 
+    /// Remplace les vignettes d'un voyage par leurs originaux : DOSSIER est celui
+    /// de vos photos d'origine, --originaux-voyage celui du voyage importé. Seul
+    /// un original sûr (un seul candidat net, ratio compatible) remplace ; rien
+    /// n'est effacé (les vignettes partent dans `<voyage>-vignettes`, la
+    /// correspondance dans originaux.json).
+    #[arg(long, value_name = "DOSSIER", requires = "originaux_voyage")]
+    originaux: Option<PathBuf>,
+
+    /// Le dossier du voyage (celui de voyage.json) pour --originaux.
+    #[arg(long, value_name = "DOSSIER")]
+    originaux_voyage: Option<PathBuf>,
+
+    /// Le dossier de l'album déjà composé, pour rafraîchir ses vignettes en
+    /// cache et dire combien de photos de la réserve peuvent revenir.
+    #[arg(long, value_name = "DOSSIER")]
+    originaux_album: Option<PathBuf>,
+
+    /// Rend les vignettes d'un voyage dont les originaux ont été posés
+    /// (annule --originaux, d'après originaux.json).
+    #[arg(long, value_name = "DOSSIER")]
+    originaux_retablir: Option<PathBuf>,
+
     /// Bascule l'album de --out vers un autre format, et dit ce que ça coûte.
     /// Le même album : mêmes planches, même ordre, mêmes photos. Seul le
     /// gabarit d'une planche dont les photos trahiraient leurs nouvelles
@@ -359,6 +381,31 @@ fn main() -> Result<()> {
             },
         )?;
         println!("« {} »\n{}", voyage.titre, voyage.bilan());
+        return Ok(());
+    }
+
+    if let Some(originaux) = &cli.originaux {
+        let voyage = cli.originaux_voyage.as_deref().expect("requires");
+        let avant = colophon_core::voyage::lire(voyage)?.bilan();
+        let r = colophon_core::voyage::originaux::remplacer(
+            voyage,
+            originaux,
+            cli.originaux_album.as_deref(),
+            &|faits, total| eprintln!("originaux lus : {faits}/{total}"),
+            &|| false,
+        )?;
+        println!("photos : {} dont {} sous le repère de {} px de côté court", avant.photos, avant.photos_sous_seuil, colophon_core::voyage::SEUIL_COTE_COURT_PX);
+        println!("{} photos remplacées par leur original ({} déjà faites avant)", r.remplacees, r.deja);
+        println!("{} sans original sûr", r.refus.len());
+        println!("sous le repère après : {}", r.sous_seuil_apres);
+        println!("{} fichiers illisibles dans le dossier d'originaux", r.illisibles);
+        println!("{} photos laissées à la réserve pour leur définition peuvent revenir (recomposer)", r.revenues_possibles);
+        return Ok(());
+    }
+
+    if let Some(voyage) = &cli.originaux_retablir {
+        let r = colophon_core::voyage::originaux::retablir(voyage, cli.originaux_album.as_deref())?;
+        println!("{} vignettes rendues", r.vignettes_rendues);
         return Ok(());
     }
 
