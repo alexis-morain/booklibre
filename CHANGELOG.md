@@ -9,6 +9,11 @@ sur la page des releases.
 
 ## [Non publié]
 
+### Fixed
+
+- The app no longer crashes (React error #310) when leaving an import summary or an empty
+  folder for the album: the page-limit hook ran only once an album was open.
+
 ### Added
 
 - Replace a trip's thumbnails with your original photos. A trip imported from its link

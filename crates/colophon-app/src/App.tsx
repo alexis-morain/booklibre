@@ -2639,6 +2639,9 @@ export default function App() {
     if (view !== "tri" || left === 0) setRevue(null);
   }, [revue, view, album, curation, opened]);
 
+  // Hook : avant tout return anticipé (règle des hooks, app-hooks.test.ts).
+  const limitePages = useLimitePages();
+
   if (!album || building) {
     return (
       <>
@@ -3012,7 +3015,6 @@ export default function App() {
   const listeChapitres = chapitres(album);
   const chapitreCourant = chapitreDe(listeChapitres, index);
   const commanderOffert = relais !== null && relais.etat !== "absent";
-  const limitePages = useLimitePages();
   /** Un chapitre se rejoint par sa première planche : en Planches on y reste,
    *  partout ailleurs on ouvre le Livre. */
   const allerAuChapitre = (debut: number) => {
