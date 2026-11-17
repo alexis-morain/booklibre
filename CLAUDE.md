@@ -667,6 +667,11 @@ plancher) ; températures min et max. CLI : `--chiffres` à la composition,
 `--page-chiffres oui|non` sur l'album de `--out` (`chiffres::regler`), `--meteo` avec
 `--legendes`. Pas de pictos (V2). Les deux cases sont dans l'app depuis P-s3 (ci-dessous).
 
+**L'import Polarsteps est en pause (17/11, décision d'Alexis)** : les photos du lien plafonnent à
+960 × 1280. `voyageOffert()` exige en plus `VITE_COLOPHON_VOYAGE=1` à la construction, donc le bouton
+n'existe dans aucune release ; les commandes Rust, le moteur et la CLI restent, et un album de voyage
+déjà importé s'ouvre comme avant. Ne pas coder plus loin sans que la pause soit levée.
+
 **L'écran d'import (P-s3, `voyage.ts`, `VoyageImport.tsx`).** Accueil → « Importer un voyage
 Polarsteps » (texte, « non affilié », FR/EN), **hors édition App Store** : le bouton
 (`voyageOffert()` = Tauri et pas `saveurMas()`), les commandes `voyage_analyser` et
