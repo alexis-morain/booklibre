@@ -9,6 +9,11 @@ sur la page des releases.
 
 ## [Non publié]
 
+> **The Polarsteps trip import is paused (17/11) and hidden in every build**: photos from a
+> trip's public link stop at 960 × 1280, too small for a printed album. The entries about trips
+> below describe code that ships but cannot be reached from the app until the import is turned
+> back on (`VITE_COLOPHON_VOYAGE=1` at build time). Albums already imported open as before.
+
 ### Fixed
 
 - The app no longer crashes (React error #310) when leaving an import summary or an empty

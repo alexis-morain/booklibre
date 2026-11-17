@@ -8,6 +8,12 @@
 //
 // **Absent de la version Mac App Store** : `voyageOffert()` est faux là, le
 // bouton ne se dessine pas, et la commande Rust n'y existe pas non plus.
+//
+// **En pause depuis le 17/11** (décision d'Alexis) : les photos du lien public
+// plafonnent à 960 × 1280, trop peu pour un album imprimé. Le bouton ne se
+// dessine plus dans aucune construction, sauf `VITE_COLOPHON_VOYAGE=1` (pour
+// reprendre le chantier). Un album de voyage déjà importé s'ouvre comme avant :
+// seule l'entrée de l'import est retirée.
 
 import { invoke } from "@tauri-apps/api/core";
 import type { Album } from "./album";
@@ -17,7 +23,7 @@ import { saveurMas } from "./saveur";
 
 /** Le point d'entrée existe-t-il dans cette version de l'app ? */
 export function voyageOffert(): boolean {
-  return inTauri && !saveurMas();
+  return inTauri && !saveurMas() && import.meta.env.VITE_COLOPHON_VOYAGE === "1";
 }
 
 // ---- ce que le moteur rend ---------------------------------------------------

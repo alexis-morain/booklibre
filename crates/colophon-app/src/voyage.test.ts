@@ -169,15 +169,30 @@ describe("le bilan d'un voyage", () => {
 });
 
 describe("le point d'entrée", () => {
-  it("existe dans l'application, jamais dans la version Mac App Store", async () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("en pause : absent de l'application tant que VITE_COLOPHON_VOYAGE ne vaut pas 1", async () => {
     vi.stubGlobal("window", { __TAURI_INTERNALS__: {} });
+    vi.resetModules();
+    expect((await import("./voyage")).voyageOffert()).toBe(false);
+    vi.stubEnv("VITE_COLOPHON_VOYAGE", "0");
+    expect((await import("./voyage")).voyageOffert()).toBe(false);
+  });
+
+  it("rallumé, existe dans l'application, jamais dans la version Mac App Store", async () => {
+    vi.stubGlobal("window", { __TAURI_INTERNALS__: {} });
+    vi.stubEnv("VITE_COLOPHON_VOYAGE", "1");
     vi.resetModules();
     expect((await import("./voyage")).voyageOffert()).toBe(true);
     vi.stubEnv("VITE_COLOPHON_MAS", "1");
     expect((await import("./voyage")).voyageOffert()).toBe(false);
   });
 
-  it("n'existe pas dans le navigateur", async () => {
+  it("n'existe pas dans le navigateur, même rallumé", async () => {
+    vi.stubEnv("VITE_COLOPHON_VOYAGE", "1");
     vi.resetModules();
     expect((await import("./voyage")).voyageOffert()).toBe(false);
   });
