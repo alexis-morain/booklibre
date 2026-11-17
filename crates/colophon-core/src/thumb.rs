@@ -91,10 +91,10 @@ impl ThumbCache {
         // demosaic: everything up to the print reads this cache, and the
         // print asks for the sensor itself only when the preview falls
         // short of the resolution floor (`print.rs`).
-        let img = if crate::heic::is_raw(src) {
+        let (img, icc) = if crate::heic::is_raw(src) {
             crate::heic::apercu_vignette(src, THUMB_SIZE)
         } else {
-            crate::heic::open(src)
+            crate::heic::open_avec_profil(src)
         }
         .with_context(|| format!("decode {}", src.display()))?;
         let img = apply_orientation(img, orientation);
@@ -109,10 +109,23 @@ impl ThumbCache {
         } else {
             img
         };
-        thumb
-            .to_rgb8()
-            .save_with_format(&cached, image::ImageFormat::Jpeg)
-            .with_context(|| format!("write thumb for {}", src.display()))?;
+        // The pixels are in the source's space, so the file names it: WebKit
+        // manages the colour of a JPEG that declares a profile. Without one
+        // (sRGB), this is the encoder `save_with_format` uses, byte for byte.
+        let rgb = thumb.to_rgb8();
+        let ecrire = || -> Result<()> {
+            use image::ImageEncoder;
+            use std::io::Write;
+            let mut fichier = std::io::BufWriter::new(fs::File::create(&cached)?);
+            let mut encodeur = image::codecs::jpeg::JpegEncoder::new(&mut fichier);
+            if let Some(p) = &icc {
+                encodeur.set_icc_profile(p.to_vec())?;
+            }
+            encodeur.write_image(&rgb, rgb.width(), rgb.height(), image::ExtendedColorType::Rgb8)?;
+            fichier.flush()?;
+            Ok(())
+        };
+        ecrire().with_context(|| format!("write thumb for {}", src.display()))?;
         // Read it back instead of returning the in-memory version: JPEG is
         // lossy, and every later run analyses the encoded pixels. Without this
         // the first build and the next one produce different albums.

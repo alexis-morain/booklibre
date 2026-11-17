@@ -97,7 +97,7 @@ const COTE_SYSTEME: u32 = 320;
 pub fn miniature(path: &Path) -> Option<DynamicImage> {
     if crate::heic::systeme_requis(path) {
         let d = crate::heic::system()?;
-        let img = d.preview(path, Some(COTE_SYSTEME)).ok()?;
+        let (img, _) = d.preview(path, Some(COTE_SYSTEME), crate::heic::Espace::Srgb).ok()?;
         let orientation = d.exif(path).and_then(|e| e.orientation).unwrap_or(1);
         return Some(crate::thumb::apply_orientation(img, orientation));
     }

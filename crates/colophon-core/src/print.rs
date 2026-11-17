@@ -44,7 +44,7 @@ pub fn effective_ppi(rect: &pdf::Rect, iw: u32, ih: u32, zoom: f64) -> f64 {
 
 /// Width, height and component count from a JPEG's SOF marker, without
 /// decoding. Component count decides passthrough: only plain 3-component
-/// (YCbCr/RGB) files can be embedded as-is under DeviceRGB.
+/// (YCbCr/RGB) files can be embedded as-is, under DeviceRGB or their profile.
 fn jpeg_sof(data: &[u8]) -> Option<(u32, u32, u8)> {
     let mut i = 2usize;
     while i + 10 < data.len() {
@@ -189,7 +189,10 @@ pub(crate) fn print_asset(
                         src.display()
                     )
                 })?;
-                return Ok(pdf::JpegAsset { data, width: w, height: h, focal, zoom });
+                // The bytes travel untouched, profile segments included;
+                // the PDF only has to say which space they are in.
+                let icc = crate::icc::du_jpeg(&data);
+                return Ok(pdf::JpegAsset { data, width: w, height: h, focal, zoom, icc });
             }
         }
     }
@@ -202,7 +205,7 @@ pub(crate) fn print_asset(
     // never smaller than the preview, so a preview that passes here
     // prints at least what they promised.
     let apercu = if crate::heic::is_raw(src) {
-        crate::heic::apercu(src).ok().filter(|a| {
+        crate::heic::apercu_avec_profil(src).ok().filter(|(a, _)| {
             // Judged the way the cell will see it: a preview on its side
             // is measured after the swap, like every other size here.
             let (w, h) = crate::heic::oriente((a.width(), a.height()), orientation);
@@ -211,9 +214,13 @@ pub(crate) fn print_asset(
     } else {
         None
     };
-    let img = match apercu {
+    // The pixels come back in the file's own space with its profile, and
+    // stay there: orientation, downscale and adjustment all work in it (the
+    // LUT and the 709 luma of black and white are applied to source values,
+    // assumed). Nothing here converts colour.
+    let (img, icc) = match apercu {
         Some(a) => a,
-        None => crate::heic::open(src)
+        None => crate::heic::open_avec_profil(src)
             .with_context(|| format!("décodage de {}", src.display()))?,
     };
     let img = thumb::apply_orientation(img, orientation);
@@ -233,7 +240,7 @@ pub(crate) fn print_asset(
     image::codecs::jpeg::JpegEncoder::new_with_quality(&mut data, JPEG_QUALITY)
         .encode_image(&rgb)
         .with_context(|| format!("réencodage de {}", src.display()))?;
-    Ok(pdf::JpegAsset { data, width: rgb.width(), height: rgb.height(), focal, zoom })
+    Ok(pdf::JpegAsset { data, width: rgb.width(), height: rgb.height(), focal, zoom, icc })
 }
 
 /// The caller decided to abandon a long render. Checked between photos, so
