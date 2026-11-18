@@ -443,6 +443,10 @@ pub struct JpegAsset {
     pub focal: [f64; 2],
     /// Manual zoom past the cover fill, 1.0 = exact fill.
     pub zoom: f64,
+    /// The source profile, only when it is not sRGB (`icc::a_declarer`):
+    /// the pixels are in that space and the PDF says so. `None` is
+    /// `DeviceRGB`, read as sRGB by the OutputIntent, as before.
+    pub icc: Option<std::sync::Arc<[u8]>>,
 }
 
 pub fn geometry(album: &Album) -> SpreadGeometry {
@@ -1132,7 +1136,7 @@ fn solid_jpeg(rgb: [u8; 3], w: u32, h: u32) -> Result<JpegAsset> {
     image::codecs::jpeg::JpegEncoder::new_with_quality(&mut data, 95)
         .encode_image(&img)
         .context("encodage de l'aplat")?;
-    Ok(JpegAsset { data, width: w, height: h, focal: [0.5, 0.5], zoom: 1.0 })
+    Ok(JpegAsset { data, width: w, height: h, focal: [0.5, 0.5], zoom: 1.0, icc: None })
 }
 
 pub struct PdfWriter {
@@ -1155,6 +1159,9 @@ pub struct PdfWriter {
     /// Les dessins déjà calculés, par plage : une carte posée sur deux
     /// planches ne se dessine qu'une fois.
     cartes: std::collections::HashMap<(usize, usize), Option<std::sync::Arc<crate::carte::Dessin>>>,
+    /// One `ICCBased` stream per distinct source profile, keyed by its bytes:
+    /// 188 photos from one phone share one profile object.
+    profils: std::collections::BTreeMap<std::sync::Arc<[u8]>, lopdf::ObjectId>,
 
     bleed_mm: f64,
     /// Goes into `/Info`, into `dc:title`, and nowhere else.
@@ -1348,6 +1355,7 @@ impl PdfWriter {
             geom: geometry(album),
             voyage: crate::carte::voyage_de(album),
             cartes: std::collections::HashMap::new(),
+            profils: std::collections::BTreeMap::new(),
             bleed_mm: album.bleed_mm,
             title: album.title.clone(),
             stamp,
@@ -1578,13 +1586,28 @@ impl PdfWriter {
         asset: &JpegAsset,
         rect: &Rect,
     ) {
+        // The pixels stay in their source space and the file names it; the
+        // RIP converts. sRGB or no profile keeps `DeviceRGB`, byte for byte.
+        let espace = match &asset.icc {
+            None => Object::Name(b"DeviceRGB".to_vec()),
+            Some(profil) => {
+                let doc = &mut self.doc;
+                let id = *self.profils.entry(profil.clone()).or_insert_with(|| {
+                    doc.add_object(Stream::new(
+                        dictionary! { "N" => 3, "Alternate" => "DeviceRGB" },
+                        profil.to_vec(),
+                    ))
+                });
+                Object::Array(vec![Object::Name(b"ICCBased".to_vec()), Object::Reference(id)])
+            }
+        };
         let img_id = self.doc.add_object(Stream::new(
             dictionary! {
                 "Type" => "XObject",
                 "Subtype" => "Image",
                 "Width" => asset.width as i64,
                 "Height" => asset.height as i64,
-                "ColorSpace" => "DeviceRGB",
+                "ColorSpace" => espace,
                 "BitsPerComponent" => 8,
                 "Filter" => "DCTDecode",
             },
@@ -1775,6 +1798,73 @@ mod tests {
         let chasse = caption_anchor_of(None, &bas_gauche, &g);
         let surimpression = caption_anchor_of(Some(&sur), &bas_gauche, &g);
         assert!(chasse.x > surimpression.x);
+    }
+
+    /// The colour spaces of a duo's two images, each given a profile or
+    /// none, plus how many profile streams the file holds besides the
+    /// OutputIntent's.
+    fn espaces_du_duo(profils: [Option<&[u8]>; 2]) -> (Vec<Object>, usize) {
+        let mut album = Album::new("Duo", std::path::Path::new("."), Size { w: 210.0, h: 210.0 });
+        album.spreads.push(Spread {
+            template: "duo".into(),
+            slots: vec![
+                Slot::new("a.jpg".into(), [0.5, 0.5]),
+                Slot::new("b.jpg".into(), [0.5, 0.5]),
+            ],
+            caption: None,
+            text: None,
+            edited: false,
+            locked: false,
+            objets: Vec::new(),
+        });
+        let assets: Vec<JpegAsset> = profils
+            .iter()
+            .map(|p| JpegAsset { icc: p.map(std::sync::Arc::from), ..solid_jpeg([200, 30, 40], 160, 120).unwrap() })
+            .collect();
+        let mut w = PdfWriter::new(&album, std::path::Path::new("."));
+        w.add_spread(&album.spreads[0], &assets).unwrap();
+        let path = std::env::temp_dir().join(format!(
+            "colophon-icc-{}-{:?}.pdf",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        w.save(&path).unwrap();
+        let doc = Document::load(&path).unwrap();
+        let _ = std::fs::remove_file(&path);
+        let mut espaces = Vec::new();
+        let mut profils_du_fichier = 0;
+        for o in doc.objects.values() {
+            let Ok(s) = o.as_stream() else { continue };
+            if s.dict.get(b"Subtype").map(nom).ok() == Some("Image") {
+                espaces.push(s.dict.get(b"ColorSpace").unwrap().clone());
+            } else if s.dict.get(b"Alternate").is_ok() {
+                profils_du_fichier += 1;
+            }
+        }
+        (espaces, profils_du_fichier)
+    }
+
+    /// A profile goes in as `ICCBased`, once per distinct profile however
+    /// many images carry it; no profile stays `DeviceRGB` and adds nothing.
+    #[test]
+    fn un_profil_s_ecrit_une_fois_et_se_nomme_iccbased() {
+        let (p3, autre): (&[u8], &[u8]) = (b"profil p3", b"autre profil");
+        let iccbased = |o: &Object| {
+            let a = o.as_array().ok()?;
+            (nom(&a[0]) == "ICCBased").then(|| a[1].as_reference().unwrap())
+        };
+
+        let (e, n) = espaces_du_duo([Some(p3), Some(p3)]);
+        assert_eq!(n, 1, "deux images, un profil : un seul flux");
+        assert_eq!(iccbased(&e[0]).unwrap(), iccbased(&e[1]).unwrap());
+
+        let (e, n) = espaces_du_duo([Some(p3), Some(autre)]);
+        assert_eq!(n, 2);
+        assert_ne!(iccbased(&e[0]).unwrap(), iccbased(&e[1]).unwrap());
+
+        let (e, n) = espaces_du_duo([None, None]);
+        assert_eq!(n, 0);
+        assert!(e.iter().all(|o| o.as_name().map(|b| b == b"DeviceRGB").unwrap_or(false)));
     }
 
     /// Write a one-spread album and hand back its bytes plus the reopened

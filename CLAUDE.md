@@ -730,8 +730,8 @@ l'octet. Un original **HEIC ou PNG** (un dossier d'iPhone est presque tout HEIC)
 le nom de la vignette** (`ecrire_jpeg`) : décodé par `heic::open` (décodeur système, jamais une crate),
 redressé par son EXIF (les pixels sont droits, aucun tag d'orientation), PNG transparent posé sur du blanc,
 JPEG à `QUALITE_JPEG` (95), avec un segment EXIF minimal (`DateTimeOriginal` et `OffsetTimeOriginal`, ce
-que `meta::read` relit). **Aucun profil ICC n'est écrit** : les pixels sont ceux que le décodeur rend (RGB
-d'appareil pour ImageIO, comme pour tout HEIC de l'app), lus comme du sRGB par le reste ; l'import Photos
+que `meta::read` relit). **Aucun profil ICC n'est écrit, et c'est juste** : `heic::open` dessine en sRGB
+nommé (`Espace::Srgb`), la plate-forme convertit en chemin, donc ce JPEG sans profil est bien du sRGB ; l'import Photos
 ne ré-encode rien (copie d'octets), il n'y avait pas de réglage à reprendre. `originaux.json` garde le
 chemin de l'original réel (`.heic`). Hors macOS, sans décodeur HEIC, le scan écarte le HEIC : il est
 compté (`Rapport::heic_illisibles`) et le bilan dit « HEIC non lisible sur ce système ». Un RAW sûr est
@@ -1608,6 +1608,28 @@ espaces après son EOI, une recherche en queue de fichier le refusait à tort.
 l'aperçu fidèle ; `--print` = 300 dpi, rien ne court-circuite `print_scale` ; `--cover` =
 la feuille à plat, une par profil. **Ce qui doit survivre au massicot se mesure depuis la
 coupe**, et il n'y a plus qu'une implémentation, `scene::distance_to_trim`.
+
+**Le profil voyage avec les pixels** (couleur-profil-source). Une photo dans un autre espace que
+sRGB (Display P3 d'un iPhone, Adobe RGB) entre dans le PDF avec son profil, en `[/ICCBased n]`, au
+lieu d'être lue comme du sRGB ; le RIP convertit, rien ne convertit chez nous. **Le profil se lit à
+la source** : `icc::du_jpeg` (APP2 recollé dans l'ordre de ses numéros, un segment manquant ou en
+double rend `None`), `PngDecoder::icc_profile`, ou l'espace du `CGImage` pour ImageIO
+(`heic::Espace::Source`, `open_avec_profil`, `apercu_avec_profil`, `apercu_vignette`). **Ne se
+déclare que ce qui n'est pas sRGB** (`icc::a_declarer`) : RVB, v4 au plus, PCS XYZ ou Lab, et des
+colorants à plus de `TOLERANCE_SRGB` (0,002) de ceux de l'`ICC_DATA` ; mesuré, tout sRGB des jeux
+s'écarte de 0, Generic RGB de 0,032, Display P3 de 0,093. Un sRGB, un fichier sans profil ou un
+profil refusé restent `DeviceRGB`, **donc corse et random rendent leurs trois PDF et leurs
+vignettes à l'octet** ; mauritanie (188 P3) change, et sa fiche avec. **Un flux par profil
+distinct**, dédoublonné sur ses octets (`PdfWriter::profils`), `{N 3, Alternate /DeviceRGB}` ;
+deux « Display P3 » aux octets différents (JPEG, ImageIO) font deux flux. **ImageIO ne dessine
+jamais en `DeviceRGB`**, qui laisse le sens des nombres à la plate-forme : l'espace de la source
+quand il est déclarable, sinon sRGB nommé. La vignette porte le profil en APP2
+(`set_icc_profile`), l'écran le lit, et `album.pdf` le reprend de ses octets. L'OutputIntent reste
+sRGB, veraPDF PDF/A-2b passe. Mesures : `docs/mesures/2026-11-17-le-profil-voyage.json` (JPEG P3 :
+ΔE76 2,51 → 0,75). **Deux angles morts** : pdf.js n'honore `ICCBased` qu'avec `wasmUrl` (qcms), que
+`raster.ts` ne passe pas, donc l'aperçu fidèle montre une P3 comme du sRGB ; et une vignette en
+cache ne se refait que si la photo change (clé chemin, taille, mtime), donc un album déjà ouvert
+garde ses vignettes sRGB de HEIC jusqu'à ce qu'on vide son `.cache`.
 
 ### L'imposition, quand l'imprimeur relie page par page
 

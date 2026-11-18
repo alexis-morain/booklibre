@@ -1,0 +1,405 @@
+{
+ "date": "2026-11-17",
+ "objet": "Une photo P3 (Display P3) entre dans le PDF avec son profil (ICCBased) au lieu d'être lue comme du sRGB.",
+ "methode": "Chaque image du tirage --print est décodée par PDFium (pypdfium2, get_bitmap sans rendu, qui applique ICCBased) puis comparée à l'original converti en sRGB par ColorSync (sips -m 'sRGB Profile.icc'), les deux ramenés à 128 px de grand côté (Lanczos), ΔE76 moyen par photo. Le même album.json est exporté par main (4cb5d30) et par la branche. Script hors dépôt : /tmp/icc-mesure/delta.py.",
+ "plancher_du_bruit": "Une HEIC rendue par la plate-forme puis réencodée JPEG q de print.rs reste vers 0,5-1,4 : rééchantillonnage et compression, pas couleur.",
+ "seuil_du_critere": "ΔE76 moyen < 1,5 sur au moins six photos P3",
+ "jeux": {
+  "mauritanie-2019": {
+   "photos_p3_posees": "33 (2 JPEG, 31 HEIC), album.json de main pour les deux exports",
+   "avant": {
+    "photos": 33,
+    "de76_moyen": 0.99,
+    "de76_max": 5.42,
+    "par_photo": {
+     "2019-03-10_210002_IMG_1009.heic": {
+      "moyenne": 0.53,
+      "p95": 1.32
+     },
+     "2019-03-10_210002_IMG_1010.heic": {
+      "moyenne": 0.59,
+      "p95": 1.39
+     },
+     "2019-02-25_080413_IMG_1018.jpg": {
+      "moyenne": 1.79,
+      "p95": 4.02
+     },
+     "2019-03-10_210008_IMG_1013.heic": {
+      "moyenne": 0.46,
+      "p95": 1.04
+     },
+     "2019-03-10_210222_IMG_1022.heic": {
+      "moyenne": 0.72,
+      "p95": 1.88
+     },
+     "2019-03-10_210428_IMG_1142.heic": {
+      "moyenne": 0.95,
+      "p95": 2.56
+     },
+     "2019-03-10_210400_IMG_1095.heic": {
+      "moyenne": 0.75,
+      "p95": 1.77
+     },
+     "2019-03-10_210440_IMG_1148.heic": {
+      "moyenne": 1.09,
+      "p95": 3.06
+     },
+     "2019-03-10_210456_IMG_1192.heic": {
+      "moyenne": 0.63,
+      "p95": 1.39
+     },
+     "2019-03-10_210438_IMG_1144.heic": {
+      "moyenne": 0.78,
+      "p95": 2.02
+     },
+     "2019-03-10_210444_IMG_1158.heic": {
+      "moyenne": 1.12,
+      "p95": 3.05
+     },
+     "2019-02-26_125852_IMG_1149.jpg": {
+      "moyenne": 5.42,
+      "p95": 7.19
+     },
+     "2019-03-10_210442_IMG_1153.heic": {
+      "moyenne": 0.75,
+      "p95": 1.84
+     },
+     "2019-03-10_210442_IMG_1150.heic": {
+      "moyenne": 1.22,
+      "p95": 3.23
+     },
+     "2019-03-10_210500_IMG_1196.heic": {
+      "moyenne": 1.35,
+      "p95": 4.63
+     },
+     "2019-03-10_210454_IMG_1176.heic": {
+      "moyenne": 0.97,
+      "p95": 2.77
+     },
+     "2019-03-10_210500_IMG_1194.heic": {
+      "moyenne": 0.9,
+      "p95": 2.45
+     },
+     "2019-03-10_210522_IMG_1212.heic": {
+      "moyenne": 0.93,
+      "p95": 2.57
+     },
+     "2019-03-10_210530_IMG_1226.heic": {
+      "moyenne": 0.63,
+      "p95": 1.57
+     },
+     "2019-03-10_210532_IMG_1238.heic": {
+      "moyenne": 0.82,
+      "p95": 2.34
+     },
+     "2019-03-10_210530_IMG_1230.heic": {
+      "moyenne": 0.63,
+      "p95": 1.43
+     },
+     "2019-03-10_210538_IMG_1244.heic": {
+      "moyenne": 0.67,
+      "p95": 1.51
+     },
+     "2019-03-10_210538_IMG_1252.heic": {
+      "moyenne": 0.88,
+      "p95": 2.34
+     },
+     "2019-03-10_210542_IMG_1260.heic": {
+      "moyenne": 0.76,
+      "p95": 2.18
+     },
+     "2019-03-10_210538_IMG_1246.heic": {
+      "moyenne": 0.7,
+      "p95": 1.6
+     },
+     "2019-03-10_210546_IMG_1286.heic": {
+      "moyenne": 0.93,
+      "p95": 2.55
+     },
+     "2019-03-10_210546_IMG_1287.heic": {
+      "moyenne": 0.72,
+      "p95": 1.84
+     },
+     "2019-03-10_210548_IMG_1307.heic": {
+      "moyenne": 0.73,
+      "p95": 1.85
+     },
+     "2019-03-10_210556_IMG_1330.heic": {
+      "moyenne": 1.09,
+      "p95": 3.2
+     },
+     "2019-03-10_210556_IMG_1335.heic": {
+      "moyenne": 0.64,
+      "p95": 1.59
+     },
+     "2019-03-10_210556_IMG_1338.heic": {
+      "moyenne": 0.88,
+      "p95": 2.2
+     },
+     "2019-03-10_210556_IMG_1339.heic": {
+      "moyenne": 0.81,
+      "p95": 2.25
+     },
+     "2019-03-10_210558_IMG_1342.heic": {
+      "moyenne": 0.93,
+      "p95": 2.72
+     }
+    }
+   },
+   "apres": {
+    "photos": 33,
+    "de76_moyen": 0.84,
+    "de76_max": 1.37,
+    "par_photo": {
+     "2019-03-10_210002_IMG_1009.heic": {
+      "moyenne": 0.6,
+      "p95": 1.4
+     },
+     "2019-03-10_210002_IMG_1010.heic": {
+      "moyenne": 0.61,
+      "p95": 1.38
+     },
+     "2019-02-25_080413_IMG_1018.jpg": {
+      "moyenne": 0.87,
+      "p95": 2.03
+     },
+     "2019-03-10_210008_IMG_1013.heic": {
+      "moyenne": 0.46,
+      "p95": 1.04
+     },
+     "2019-03-10_210222_IMG_1022.heic": {
+      "moyenne": 0.71,
+      "p95": 1.9
+     },
+     "2019-03-10_210428_IMG_1142.heic": {
+      "moyenne": 0.93,
+      "p95": 2.56
+     },
+     "2019-03-10_210400_IMG_1095.heic": {
+      "moyenne": 0.76,
+      "p95": 1.79
+     },
+     "2019-03-10_210440_IMG_1148.heic": {
+      "moyenne": 1.11,
+      "p95": 3.05
+     },
+     "2019-03-10_210456_IMG_1192.heic": {
+      "moyenne": 0.64,
+      "p95": 1.44
+     },
+     "2019-03-10_210438_IMG_1144.heic": {
+      "moyenne": 0.76,
+      "p95": 2.02
+     },
+     "2019-03-10_210444_IMG_1158.heic": {
+      "moyenne": 1.11,
+      "p95": 3.04
+     },
+     "2019-02-26_125852_IMG_1149.jpg": {
+      "moyenne": 0.81,
+      "p95": 1.62
+     },
+     "2019-03-10_210442_IMG_1153.heic": {
+      "moyenne": 0.76,
+      "p95": 1.87
+     },
+     "2019-03-10_210442_IMG_1150.heic": {
+      "moyenne": 1.23,
+      "p95": 3.24
+     },
+     "2019-03-10_210500_IMG_1196.heic": {
+      "moyenne": 1.37,
+      "p95": 4.6
+     },
+     "2019-03-10_210454_IMG_1176.heic": {
+      "moyenne": 1.01,
+      "p95": 2.78
+     },
+     "2019-03-10_210500_IMG_1194.heic": {
+      "moyenne": 0.93,
+      "p95": 2.46
+     },
+     "2019-03-10_210522_IMG_1212.heic": {
+      "moyenne": 0.97,
+      "p95": 2.58
+     },
+     "2019-03-10_210530_IMG_1226.heic": {
+      "moyenne": 0.66,
+      "p95": 1.57
+     },
+     "2019-03-10_210532_IMG_1238.heic": {
+      "moyenne": 0.88,
+      "p95": 2.35
+     },
+     "2019-03-10_210530_IMG_1230.heic": {
+      "moyenne": 0.68,
+      "p95": 1.49
+     },
+     "2019-03-10_210538_IMG_1244.heic": {
+      "moyenne": 0.66,
+      "p95": 1.52
+     },
+     "2019-03-10_210538_IMG_1252.heic": {
+      "moyenne": 0.89,
+      "p95": 2.31
+     },
+     "2019-03-10_210542_IMG_1260.heic": {
+      "moyenne": 0.77,
+      "p95": 2.18
+     },
+     "2019-03-10_210538_IMG_1246.heic": {
+      "moyenne": 0.73,
+      "p95": 1.64
+     },
+     "2019-03-10_210546_IMG_1286.heic": {
+      "moyenne": 0.93,
+      "p95": 2.55
+     },
+     "2019-03-10_210546_IMG_1287.heic": {
+      "moyenne": 0.74,
+      "p95": 1.84
+     },
+     "2019-03-10_210548_IMG_1307.heic": {
+      "moyenne": 0.75,
+      "p95": 1.84
+     },
+     "2019-03-10_210556_IMG_1330.heic": {
+      "moyenne": 1.09,
+      "p95": 3.21
+     },
+     "2019-03-10_210556_IMG_1335.heic": {
+      "moyenne": 0.69,
+      "p95": 1.62
+     },
+     "2019-03-10_210556_IMG_1338.heic": {
+      "moyenne": 0.86,
+      "p95": 2.21
+     },
+     "2019-03-10_210556_IMG_1339.heic": {
+      "moyenne": 0.87,
+      "p95": 2.25
+     },
+     "2019-03-10_210558_IMG_1342.heic": {
+      "moyenne": 0.94,
+      "p95": 2.72
+     }
+    }
+   }
+  },
+  "mauritanie-2019-jpeg-p3": {
+   "photos_p3_posees": "11 des 12 JPEG P3 du jeu, composées seules (la douzième reste en réserve)",
+   "avant": {
+    "photos": 11,
+    "de76_moyen": 2.51,
+    "de76_max": 5.42,
+    "par_photo": {
+     "2019-02-25_075709_IMG_1017.jpg": {
+      "moyenne": 2.14,
+      "p95": 4.73
+     },
+     "2019-02-25_071515_IMG_1014.jpg": {
+      "moyenne": 1.61,
+      "p95": 3.98
+     },
+     "2019-02-25_080413_IMG_1018.jpg": {
+      "moyenne": 1.8,
+      "p95": 4.03
+     },
+     "2019-02-26_125852_IMG_1149.jpg": {
+      "moyenne": 5.42,
+      "p95": 7.19
+     },
+     "2019-02-25_071531_IMG_1015.jpg": {
+      "moyenne": 1.03,
+      "p95": 3.15
+     },
+     "2019-02-25_122818_IMG_1022.jpg": {
+      "moyenne": 2.36,
+      "p95": 5.67
+     },
+     "2019-02-25_075658_IMG_1016.jpg": {
+      "moyenne": 1.65,
+      "p95": 3.04
+     },
+     "2019-02-25_122807_IMG_1021.jpg": {
+      "moyenne": 3.13,
+      "p95": 6.65
+     },
+     "2019-02-25_122819_IMG_1023.jpg": {
+      "moyenne": 2.23,
+      "p95": 5.45
+     },
+     "2019-02-25_190103_IMG_1071.jpg": {
+      "moyenne": 4.78,
+      "p95": 6.93
+     },
+     "2019-02-27_210915_IMG_1266.jpg": {
+      "moyenne": 1.42,
+      "p95": 6.19
+     }
+    }
+   },
+   "apres": {
+    "photos": 11,
+    "de76_moyen": 0.75,
+    "de76_max": 0.91,
+    "par_photo": {
+     "2019-02-25_075709_IMG_1017.jpg": {
+      "moyenne": 0.91,
+      "p95": 1.98
+     },
+     "2019-02-25_071515_IMG_1014.jpg": {
+      "moyenne": 0.68,
+      "p95": 1.54
+     },
+     "2019-02-25_080413_IMG_1018.jpg": {
+      "moyenne": 0.87,
+      "p95": 2.04
+     },
+     "2019-02-26_125852_IMG_1149.jpg": {
+      "moyenne": 0.81,
+      "p95": 1.62
+     },
+     "2019-02-25_071531_IMG_1015.jpg": {
+      "moyenne": 0.56,
+      "p95": 1.32
+     },
+     "2019-02-25_122818_IMG_1022.jpg": {
+      "moyenne": 0.78,
+      "p95": 1.72
+     },
+     "2019-02-25_075658_IMG_1016.jpg": {
+      "moyenne": 0.79,
+      "p95": 1.64
+     },
+     "2019-02-25_122807_IMG_1021.jpg": {
+      "moyenne": 0.78,
+      "p95": 1.59
+     },
+     "2019-02-25_122819_IMG_1023.jpg": {
+      "moyenne": 0.77,
+      "p95": 1.69
+     },
+     "2019-02-25_190103_IMG_1071.jpg": {
+      "moyenne": 0.75,
+      "p95": 1.58
+     },
+     "2019-02-27_210915_IMG_1266.jpg": {
+      "moyenne": 0.59,
+      "p95": 1.92
+     }
+    }
+   }
+  }
+ },
+ "lecture": [
+  "Le défaut était le passe-plat JPEG : ses octets P3 partaient en DeviceRGB, lus comme du sRGB (ΔE moyen 2,51, jusqu'à 5,42). Avec ICCBased : 0,75, au plus 0,91.",
+  "Les HEIC étaient déjà proches avant (0,99 de moyenne sur mauritanie, JPEG compris) : ImageIO dessinait en DeviceRGB, que ce Mac traite comme du sRGB, donc la plate-forme convertissait. Ce qui change pour elles : la conversion ne dépend plus de ce que la plate-forme entend par DeviceRGB, et le gamut P3 n'est plus rogné avant l'imprimeur.",
+  "PDFium honore ICCBased : sans lui, les JPEG P3 de la branche mesureraient comme celles de main."
+ ],
+ "autres_chiffres": {
+  "corse-2013": "album.pdf, album-print.pdf, album-cover.pdf et les 572 vignettes identiques à l'octet entre main et la branche",
+  "random-2024": "les trois PDF et les 575 vignettes (sRGB, écart 0) identiques à l'octet",
+  "mauritanie-2019": "33 images ICCBased + couverture, 64 DeviceRGB, 2 flux de profil (le Display P3 des JPEG et celui qu'ImageIO rend pour les HEIC, octets différents) ; veraPDF PDF/A-2b PASS sur album-print.pdf, album-cover.pdf et album.pdf ; prévol cloudprinter, prodigi et lulu identique à main à album égal ; vignettes : 316 non-P3 identiques, 188 P3 changées et déclarées Display P3"
+ }
+}

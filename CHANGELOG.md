@@ -18,6 +18,11 @@ sur la page des releases.
 
 - The app no longer crashes (React error #310) when leaving an import summary or an empty
   folder for the album: the page-limit hook ran only once an album was open.
+- Photos taken in Display P3 (iPhone) or Adobe RGB now print in their own colours. Their profile
+  goes into the PDF with them instead of their values being read as sRGB, which washed out or
+  shifted saturated colours (a mean ΔE of 2.5, up to 5.4, on the JPEGs measured; 0.75 now). The
+  thumbnails keep the profile too. sRGB photos and photos without a profile export exactly as
+  before. The faithful preview still shows them as sRGB.
 
 ### Added
 

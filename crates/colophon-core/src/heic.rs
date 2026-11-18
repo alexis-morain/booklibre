@@ -43,11 +43,26 @@ pub struct ExifSysteme {
     pub focale: Option<f64>,
 }
 
+/// Pixels and the profile of the space they are in, `None` meaning sRGB
+/// (already filtered by `icc::a_declarer`).
+pub type Pixels = (DynamicImage, Option<std::sync::Arc<[u8]>>);
+
+/// Where a decoder puts the pixels it draws.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Espace {
+    /// The file's own RGB space, its profile handed over with the pixels:
+    /// for the readers that carry it on (the print, the thumbnails).
+    Source,
+    /// sRGB, named, and the platform converts on the way: for the readers
+    /// that drop the profile and would otherwise read P3 values as sRGB.
+    Srgb,
+}
+
 /// One platform's system decoder. Same contract as `image::open`: pixels
 /// come back unrotated, the caller applies the EXIF orientation. The
 /// preview of a RAW comes back in the same frame as its sensor data.
 pub trait SystemDecoder: Sync {
-    fn decode(&self, path: &Path) -> Result<DynamicImage>;
+    fn decode(&self, path: &Path, espace: Espace) -> Result<Pixels>;
     /// Pixel size without a full decode, orientation not applied. For a
     /// RAW this is the sensor, never the preview: resolution is judged on
     /// what the file can print, not on what it shows.
@@ -55,10 +70,10 @@ pub trait SystemDecoder: Sync {
     /// The preview the file embeds, at most `max_px` on its long side when
     /// given, native size otherwise. Fails when the file embeds none: the
     /// caller then decides whether a full decode is worth it.
-    fn preview(&self, path: &Path, max_px: Option<u32>) -> Result<DynamicImage>;
+    fn preview(&self, path: &Path, max_px: Option<u32>, espace: Espace) -> Result<Pixels>;
     /// A preview computed from the pixels, whatever the file embeds. A full
     /// decode, counted as one.
-    fn preview_calcule(&self, path: &Path, max_px: u32) -> Result<DynamicImage>;
+    fn preview_calcule(&self, path: &Path, max_px: u32, espace: Espace) -> Result<Pixels>;
     /// The file's own metadata, `None` when the codec has nothing to say.
     fn exif(&self, path: &Path) -> Option<ExifSysteme>;
 }
@@ -121,13 +136,27 @@ fn decodeur(path: &Path) -> Result<&'static dyn SystemDecoder> {
 }
 
 /// `image::open`, HEIC and RAW routed through the system decoder. For a
-/// RAW this is the demosaic: full sensor, the platform's rendering.
+/// RAW this is the demosaic: full sensor, the platform's rendering. The
+/// pixels of a HEIC or a RAW come back in sRGB; a JPEG or a PNG comes back
+/// as its values, whatever profile they were written in.
 pub fn open(path: &Path) -> Result<DynamicImage> {
+    decoder(path, Espace::Srgb).map(|(img, _)| img)
+}
+
+/// `open`, the pixels left in the file's own space and its profile handed
+/// over, read from the bytes for a JPEG or a PNG, from ImageIO otherwise.
+pub fn open_avec_profil(path: &Path) -> Result<Pixels> {
+    decoder(path, Espace::Source)
+}
+
+fn decoder(path: &Path, espace: Espace) -> Result<Pixels> {
     if systeme_requis(path) {
         DECODAGES_PLEINS.fetch_add(1, Ordering::Relaxed);
-        decodeur(path)?.decode(path)
+        decodeur(path)?.decode(path, espace)
     } else {
-        image::open(path).with_context(|| format!("décodage de {}", path.display()))
+        let img = image::open(path).with_context(|| format!("décodage de {}", path.display()))?;
+        let icc = (espace == Espace::Source).then(|| crate::icc::du_fichier(path)).flatten();
+        Ok((img, icc))
     }
 }
 
@@ -141,10 +170,10 @@ pub fn dimensions(path: &Path) -> Result<(u32, u32)> {
     }
 }
 
-/// The embedded preview of a RAW, native size. `Err` when the file has
-/// none or the platform cannot read it.
-pub fn apercu(path: &Path) -> Result<DynamicImage> {
-    decodeur(path)?.preview(path, None)
+/// The embedded preview of a RAW, native size, in its own space with its
+/// profile. `Err` when the file has none or the platform cannot read it.
+pub fn apercu_avec_profil(path: &Path) -> Result<Pixels> {
+    decodeur(path)?.preview(path, None, Espace::Source)
 }
 
 /// A RAW's thumbnail, at most `max_px` on its long side, without a demosaic
@@ -154,17 +183,17 @@ pub fn apercu(path: &Path) -> Result<DynamicImage> {
 /// the file. A camera whose preview is smaller than the cap while its
 /// sensor is not would break it, so that one case — none of the eight
 /// reference bodies — pays a decode, once, into the cache.
-pub fn apercu_vignette(path: &Path, max_px: u32) -> Result<DynamicImage> {
+pub fn apercu_vignette(path: &Path, max_px: u32) -> Result<Pixels> {
     let d = decodeur(path)?;
-    if let Ok(img) = d.preview(path, Some(max_px)) {
+    if let Ok((img, icc)) = d.preview(path, Some(max_px), Espace::Source) {
         let cote = img.width().max(img.height());
         let capteur = d.dimensions(path).map(|(w, h)| w.max(h)).unwrap_or(0);
         if cote >= max_px || capteur <= cote {
-            return Ok(img);
+            return Ok((img, icc));
         }
     }
     DECODAGES_PLEINS.fetch_add(1, Ordering::Relaxed);
-    d.preview_calcule(path, max_px)
+    d.preview_calcule(path, max_px, Espace::Source)
 }
 
 /// The system's reading of a RAW's metadata, `None` off macOS or when the
@@ -219,7 +248,7 @@ mod imageio {
     //! `CreateImageAtIndex` is lazy: the demosaic runs at the draw, which
     //! is why `decode` is the only place a full decode can be timed.
 
-    use super::{ExifSysteme, SystemDecoder};
+    use super::{Espace, ExifSysteme, Pixels, SystemDecoder};
     use anyhow::{anyhow, Context, Result};
     use image::DynamicImage;
     use std::ffi::c_void;
@@ -249,6 +278,8 @@ mod imageio {
             is_directory: bool,
         ) -> *const c_void;
         fn CFRelease(cf: *const c_void);
+        fn CFDataGetLength(data: *const c_void) -> isize;
+        fn CFDataGetBytePtr(data: *const c_void) -> *const u8;
         fn CFDictionaryGetValue(dict: *const c_void, key: *const c_void) -> *const c_void;
         fn CFDictionaryCreate(
             allocator: *const c_void,
@@ -335,8 +366,12 @@ mod imageio {
         fn CGImageGetWidth(image: *const c_void) -> usize;
         fn CGImageGetHeight(image: *const c_void) -> usize;
         fn CGImageRelease(image: *const c_void);
-        fn CGColorSpaceCreateDeviceRGB() -> *const c_void;
+        fn CGImageGetColorSpace(image: *const c_void) -> *const c_void;
+        fn CGColorSpaceGetModel(space: *const c_void) -> i32;
+        fn CGColorSpaceCopyICCData(space: *const c_void) -> *const c_void;
+        fn CGColorSpaceCreateWithName(name: *const c_void) -> *const c_void;
         fn CGColorSpaceRelease(space: *const c_void);
+        static kCGColorSpaceSRGB: *const c_void;
         fn CGBitmapContextCreate(
             data: *mut c_void,
             width: usize,
@@ -394,23 +429,59 @@ mod imageio {
         }
     }
 
+    /// kCGColorSpaceModelRGB
+    const MODELE_RGB: i32 = 1;
+
+    /// The image's own colour space and its ICC bytes, when it is RGB and
+    /// has them; `None` sends the drawing to sRGB.
+    unsafe fn espace_source(img: *const c_void) -> Option<(*const c_void, Vec<u8>)> {
+        let espace = CGImageGetColorSpace(img); // not owned: no release
+        if espace.is_null() || CGColorSpaceGetModel(espace) != MODELE_RGB {
+            return None;
+        }
+        let data = CGColorSpaceCopyICCData(espace);
+        if data.is_null() {
+            return None;
+        }
+        let data = Released(data, CFRelease);
+        let n = CFDataGetLength(data.0);
+        let ptr = CFDataGetBytePtr(data.0);
+        (n > 0 && !ptr.is_null())
+            .then(|| (espace, std::slice::from_raw_parts(ptr, n as usize).to_vec()))
+    }
+
     /// Draw a CGImage into an RGB buffer. For a RAW this is where the
     /// demosaic actually runs: the image object itself is lazy.
-    fn pixels(img: *const c_void, path: &Path) -> Result<DynamicImage> {
+    ///
+    /// The bitmap's space decides what the numbers mean, so it is never
+    /// `DeviceRGB`, which leaves it to the platform. With `Espace::Source`
+    /// the context takes the image's own RGB space, drawing is then a copy,
+    /// and its profile comes back with the pixels; otherwise, or when that
+    /// space has no ICC bytes or refuses to be a bitmap, named sRGB.
+    fn pixels(img: *const c_void, path: &Path, espace: Espace) -> Result<Pixels> {
         unsafe {
             let (w, h) = (CGImageGetWidth(img), CGImageGetHeight(img));
             anyhow::ensure!(w > 0 && h > 0, "image vide : {}", path.display());
 
-            let space = Released(CGColorSpaceCreateDeviceRGB(), CGColorSpaceRelease);
-            let ctx = CGBitmapContextCreate(
-                std::ptr::null_mut(),
-                w,
-                h,
-                8,
-                w * 4,
-                space.0,
-                BITMAP_INFO_RGBX,
-            );
+            let contexte = |space: *const c_void| {
+                CGBitmapContextCreate(std::ptr::null_mut(), w, h, 8, w * 4, space, BITMAP_INFO_RGBX)
+            };
+            let srgb = Released(CGColorSpaceCreateWithName(kCGColorSpaceSRGB), CGColorSpaceRelease);
+            let mut profil = None;
+            let mut ctx = std::ptr::null();
+            if espace == Espace::Source {
+                // A space whose profile the PDF would not declare (sRGB,
+                // v5…) is drawn into sRGB like everything else.
+                if let Some((space, icc)) = espace_source(img) {
+                    if let Some(p) = crate::icc::a_declarer(icc) {
+                        ctx = contexte(space);
+                        profil = (!ctx.is_null()).then_some(p);
+                    }
+                }
+            }
+            if ctx.is_null() {
+                ctx = contexte(srgb.0);
+            }
             if ctx.is_null() {
                 return Err(anyhow!("contexte bitmap refusé ({w}×{h})"));
             }
@@ -429,7 +500,7 @@ mod imageio {
             }
             let buf = image::RgbImage::from_raw(w as u32, h as u32, rgb)
                 .context("tampon RGB incohérent")?;
-            Ok(DynamicImage::ImageRgb8(buf))
+            Ok((DynamicImage::ImageRgb8(buf), profil))
         }
     }
 
@@ -471,7 +542,12 @@ mod imageio {
         }
     }
 
-    fn vignette(path: &Path, plafond: i32, depuis_les_pixels: Option<bool>) -> Result<DynamicImage> {
+    fn vignette(
+        path: &Path,
+        plafond: i32,
+        depuis_les_pixels: Option<bool>,
+        espace: Espace,
+    ) -> Result<Pixels> {
         let source = image_source(path)?;
         let options = options_vignette(plafond, depuis_les_pixels);
         unsafe {
@@ -480,7 +556,7 @@ mod imageio {
                 return Err(anyhow!("pas d'aperçu embarqué : {}", path.display()));
             }
             let img = Released(img, CGImageRelease);
-            pixels(img.0, path)
+            pixels(img.0, path, espace)
         }
     }
 
@@ -551,7 +627,7 @@ mod imageio {
     pub struct ImageIo;
 
     impl SystemDecoder for ImageIo {
-        fn decode(&self, path: &Path) -> Result<DynamicImage> {
+        fn decode(&self, path: &Path, espace: Espace) -> Result<Pixels> {
             let source = image_source(path)?;
             unsafe {
                 let img =
@@ -560,7 +636,7 @@ mod imageio {
                     return Err(anyhow!("décodage refusé par ImageIO : {}", path.display()));
                 }
                 let img = Released(img, CGImageRelease);
-                pixels(img.0, path)
+                pixels(img.0, path, espace)
             }
         }
 
@@ -576,15 +652,17 @@ mod imageio {
             }
         }
 
-        fn preview(&self, path: &Path, max_px: Option<u32>) -> Result<DynamicImage> {
+        fn preview(&self, path: &Path, max_px: Option<u32>, espace: Espace) -> Result<Pixels> {
             match max_px {
-                Some(max) => vignette(path, max.min(SANS_PLAFOND as u32) as i32, Some(false)),
-                None => vignette(path, SANS_PLAFOND, None),
+                Some(max) => {
+                    vignette(path, max.min(SANS_PLAFOND as u32) as i32, Some(false), espace)
+                }
+                None => vignette(path, SANS_PLAFOND, None, espace),
             }
         }
 
-        fn preview_calcule(&self, path: &Path, max_px: u32) -> Result<DynamicImage> {
-            vignette(path, max_px.min(SANS_PLAFOND as u32) as i32, Some(true))
+        fn preview_calcule(&self, path: &Path, max_px: u32, espace: Espace) -> Result<Pixels> {
+            vignette(path, max_px.min(SANS_PLAFOND as u32) as i32, Some(true), espace)
         }
 
         fn exif(&self, path: &Path) -> Option<ExifSysteme> {
@@ -734,10 +812,10 @@ mod tests {
             let avant = decodages_pleins();
             let capteur = dimensions(p).unwrap();
             let t = std::time::Instant::now();
-            let ap = apercu(p).unwrap();
+            let (ap, _) = apercu_avec_profil(p).unwrap();
             let ms_ap = t.elapsed().as_millis();
             let t = std::time::Instant::now();
-            let vg = apercu_vignette(p, crate::thumb::THUMB_SIZE).unwrap();
+            let (vg, _) = apercu_vignette(p, crate::thumb::THUMB_SIZE).unwrap();
             let ms_vg = t.elapsed().as_millis();
             assert_eq!(decodages_pleins(), avant, "l'aperçu a coûté un décodage plein : {}", p.display());
             let ex = exif(p).expect("le système lit les métadonnées");
@@ -785,5 +863,35 @@ mod tests {
         assert_eq!(conteneurs_hors_tiff, 4, "les quatre conteneurs que le crate exif refuse");
         assert_eq!(iso_absents, ["IMG_6310.CR3"], "l'ISO ne manque qu'au CR3");
         assert_eq!(sans_objectif, ["PB290154.ORF"], "ouverture et focale ne manquent qu'à l'ORF (f/0, 0 mm)");
+    }
+
+    /// The pixels of a P3 photo stay its P3 numbers when they keep their
+    /// profile, and become other numbers when they are drawn into sRGB. A
+    /// context in `DeviceRGB` would convert to whatever the platform thinks
+    /// that is, and the first assertion catches it.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn une_photo_p3_garde_ses_valeurs_et_son_profil() {
+        use image::ImageEncoder;
+        let p3 = std::fs::read("/System/Library/ColorSync/Profiles/Display P3.icc").unwrap();
+        let dir = std::env::temp_dir().join(format!("colophon-heic-p3-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("p3.png");
+        let rgb = image::RgbImage::from_pixel(16, 16, image::Rgb([200, 100, 50]));
+        let mut enc = image::codecs::png::PngEncoder::new(std::fs::File::create(&path).unwrap());
+        enc.set_icc_profile(p3.clone()).unwrap();
+        enc.write_image(&rgb, 16, 16, image::ExtendedColorType::Rgb8).unwrap();
+
+        let d = system().unwrap();
+        let (img, icc) = d.decode(&path, Espace::Source).unwrap();
+        let px = img.to_rgb8().get_pixel(8, 8).0;
+        assert!(px.iter().zip([200u8, 100, 50]).all(|(a, b)| a.abs_diff(b) <= 1), "{px:?}");
+        assert!(crate::icc::a_declarer(icc.unwrap().to_vec()).is_some());
+
+        let (img, icc) = d.decode(&path, Espace::Srgb).unwrap();
+        let px = img.to_rgb8().get_pixel(8, 8).0;
+        assert!(icc.is_none());
+        assert!(px[0] > 205, "converti en sRGB, le rouge sort plus fort : {px:?}");
+        std::fs::remove_dir_all(&dir).ok();
     }
 }

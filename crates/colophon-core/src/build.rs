@@ -1385,6 +1385,8 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                 // A recomposition of an adjusted album comes through here:
                 // the cached thumbnail stays untouched on disk, its copy is
                 // adjusted on the way into the preview PDF.
+                // Read before an adjustment re-encodes the bytes without it.
+                let icc = crate::icc::du_jpeg(&data);
                 let (data, w, h) = match album.reglages.get(&slot.src) {
                     Some(r) => crate::reglage::regler_jpeg(&data, r, 92).ok()?,
                     None => {
@@ -1392,7 +1394,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                         (data, w, h)
                     }
                 };
-                Some(pdf::JpegAsset { data, width: w, height: h, focal: slot.focal, zoom: slot.zoom })
+                Some(pdf::JpegAsset { data, width: w, height: h, focal: slot.focal, zoom: slot.zoom, icc })
             })
             .collect();
         // A spread that cannot be drawn is an error, not a page that
@@ -1920,6 +1922,8 @@ fn rendre_apercu(dir: &Path, stamp: chrono::DateTime<chrono::Local>) -> Result<P
                 // The faithful preview and the page turn both read this PDF:
                 // an adjusted photo shows adjusted there too, the cache file
                 // itself staying pixel-for-pixel what the analysis measured.
+                // Read before an adjustment re-encodes the bytes without it.
+                let icc = crate::icc::du_jpeg(&data);
                 let (data, w, h) = match album.reglages.get(&slot.src) {
                     Some(r) => crate::reglage::regler_jpeg(&data, r, 92).ok()?,
                     None => {
@@ -1927,7 +1931,7 @@ fn rendre_apercu(dir: &Path, stamp: chrono::DateTime<chrono::Local>) -> Result<P
                         (data, w, h)
                     }
                 };
-                Some(pdf::JpegAsset { data, width: w, height: h, focal: slot.focal, zoom: slot.zoom })
+                Some(pdf::JpegAsset { data, width: w, height: h, focal: slot.focal, zoom: slot.zoom, icc })
             })
             .collect();
         anyhow::ensure!(
