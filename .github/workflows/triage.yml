@@ -1,7 +1,8 @@
 name: triage
 
-# Trie une PR une fois `check` terminé : labels par zone touchée, label de
-# taille, un mot d'accueil au premier passage d'un contributeur extérieur.
+# Trie une PR dès son ouverture ou sa mise à jour (signal de `pr-signal.yml`) :
+# labels par zone touchée, label de taille, un mot d'accueil au premier passage
+# d'un contributeur extérieur.
 #
 # Pourquoi `workflow_run` et pas `pull_request_target` : GitHub bloque ce
 # dernier par défaut sur les dépôts publics à partir du 2 décembre 2026, et
@@ -10,7 +11,7 @@ name: triage
 # par l'API : rien du contributeur ne s'exécute avec le jeton en écriture.
 on:
   workflow_run:
-    workflows: [check]
+    workflows: [pr-signal]
     types: [completed]
 
 permissions:
