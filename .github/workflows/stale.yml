@@ -1,0 +1,29 @@
+name: stale
+
+# Ne touche qu'aux PR qu'Alexis a marquées `waiting-for-author` : relancées
+# après 30 jours sans réponse, fermées 14 jours plus tard. Ni les issues, ni les
+# brouillons.
+on:
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/stale@v11
+        with:
+          only-pr-labels: waiting-for-author
+          days-before-issue-stale: -1
+          days-before-issue-close: -1
+          days-before-pr-stale: 30
+          days-before-pr-close: 14
+          exempt-draft-pr: true
+          stale-pr-label: stale
+          stale-pr-message: "No news for 30 days. Without a reply within 14 days this pull request will be closed; it can be reopened at any time."
+          close-pr-message: "Closed for lack of a reply. Thanks for the work already done: reopen it whenever you like."

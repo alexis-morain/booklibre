@@ -20,7 +20,10 @@ name: check
 
 on:
   push:
-    branches: ["**"]
+    # `pr-*` : la branche où Claude pousse ses correctifs sur la PR d'un fork,
+    # avec les commits du contributeur. La PR qu'on en tire passe par
+    # `pull_request`, comme toute contribution.
+    branches: ["**", "!pr-*"]
   pull_request:
   workflow_dispatch:
 

@@ -1,0 +1,34 @@
+# Second avis sur les PR. Sous 10 étoiles, CodeRabbit ne relit que sur
+# demande : `@coderabbitai review` dans la PR.
+language: en-US
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!**/Cargo.lock"
+    - "!**/package-lock.json"
+    - "!target/**"
+    - "!**/dist/**"
+  path_instructions:
+    - path: "crates/colophon-core/src/{pdf,cover}.rs"
+      instructions: >-
+        Slot and cover geometry exist twice: pdf.rs::slots_for with
+        album.ts::slotsBottomUp, cover.rs::geometry with album.ts::coverSheet.
+        Flag any change to one side that is not mirrored on the other.
+    - path: "crates/colophon-app/src/album.ts"
+      instructions: >-
+        Mirror of the Rust geometry in pdf.rs and cover.rs. Flag any change not
+        mirrored on the Rust side.
+    - path: "crates/colophon-core/src/{audit,layout}.rs"
+      instructions: >-
+        The linter and the composer share their constants in audit.rs. Flag a
+        threshold defined or changed in layout.rs instead of imported.
+chat:
+  auto_reply: true

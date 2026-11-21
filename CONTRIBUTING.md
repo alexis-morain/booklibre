@@ -109,6 +109,21 @@ project captive.
 Some of these are good ideas in other products. They are not this one, and
 saying no to them is the design.
 
+## What happens on your pull request
+
+- **`check`** runs the gate on macOS, Linux and Windows. All three are
+  required.
+- **A triage bot** labels the areas you touched and the size of the change,
+  and flags geometry files.
+- **An AI review** (Claude, CodeRabbit) may be requested by the maintainer.
+  Its remarks are suggestions; the decision stays with a human.
+- If the maintainer labels your pull request `waiting-for-author` and nothing
+  moves for 30 days, it gets a reminder, then closes 14 days later. It can be
+  reopened at any time.
+
+Leave "Allow edits by maintainers" ticked, so small fixes can land on your
+branch instead of in a comment.
+
 ## Reporting a problem instead
 
 Three issue templates: a bug, a bad spread, a bad crop. Each one asks for the
