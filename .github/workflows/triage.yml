@@ -1,0 +1,86 @@
+name: triage
+
+# Trie une PR une fois `check` terminé : labels par zone touchée, label de
+# taille, un mot d'accueil au premier passage d'un contributeur extérieur.
+#
+# Pourquoi `workflow_run` et pas `pull_request_target` : GitHub bloque ce
+# dernier par défaut sur les dépôts publics à partir du 2 décembre 2026, et
+# `pull_request` n'a qu'un jeton en lecture sur un fork. Ici le workflow vient
+# de `main`, ne récupère aucun code de la PR et ne lit que des noms de fichiers
+# par l'API : rien du contributeur ne s'exécute avec le jeton en écriture.
+on:
+  workflow_run:
+    workflows: [check]
+    types: [completed]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  triage:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            const PROPRIETAIRE = 'alexis-morain';
+            // Premier motif qui correspond, par fichier ; un fichier peut ne rien porter.
+            const ZONES = [
+              ['core',     /^crates\/colophon-core\//],
+              ['tauri',    /^crates\/colophon-app\/src-tauri\//],
+              ['editor',   /^crates\/colophon-app\//],
+              ['cli',      /^crates\/colophon-cli\//],
+              ['design',   /^design\/|^DESIGN\.md$/],
+              ['ci',       /^\.github\/|^scripts\//],
+              ['docs',     /^docs\/|\.md$/],
+            ];
+            // Verrous, hors du compte de taille.
+            const DERIVES = /(^|\/)(Cargo\.lock|package-lock\.json)$/;
+            // Les deux géométries vivent en double : toucher un côté sans l'autre se signale.
+            const GEOMETRIE = /(pdf|cover)\.rs$|album\.ts$/;
+            const ACCUEIL = [
+              'Thanks for this pull request!',
+              '',
+              'What happens next:',
+              '- `check` runs the full gate on macOS, Linux and Windows. All three must be green;',
+              '- Alexis reviews every change himself, sometimes with an AI second opinion (Claude, CodeRabbit). Its remarks are suggestions, the decision is his;',
+              '- if your change alters what the composer produces, please post the audit numbers before and after (see `CONTRIBUTING.md`).',
+              '',
+              'By contributing you agree to license your work under GPL-3.0-or-later, with the additional permission in `LICENSE-APPSTORE.md`.',
+            ].join('\n');
+            const MARQUE = '<!-- triage:welcome -->';
+
+            const { owner, repo } = context.repo;
+            const run = context.payload.workflow_run;
+            // `workflow_run.pull_requests` est vide pour un fork : on retrouve la PR par son commit.
+            const ouvertes = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', per_page: 100 });
+            const pr = ouvertes.find((p) => p.head.sha === run.head_sha);
+            if (!pr) { core.info(`aucune PR ouverte pour ${run.head_sha}`); return; }
+
+            const fichiers = await github.paginate(github.rest.pulls.listFiles, { owner, repo, pull_number: pr.number, per_page: 100 });
+            const labels = new Set();
+            let lignes = 0;
+            for (const f of fichiers) {
+              const zone = ZONES.find(([, re]) => re.test(f.filename));
+              if (zone) labels.add(zone[0]);
+              if (!DERIVES.test(f.filename)) lignes += f.additions + f.deletions;
+            }
+            if (fichiers.some((f) => GEOMETRIE.test(f.filename))) labels.add('geometry');
+            const taille = lignes < 10 ? 'XS' : lignes < 50 ? 'S' : lignes < 200 ? 'M' : lignes < 600 ? 'L' : 'XL';
+            const TAILLES = ['size/XS', 'size/S', 'size/M', 'size/L', 'size/XL'];
+            const exterieur = pr.user.login !== PROPRIETAIRE && pr.user.type !== 'Bot';
+            if (exterieur) labels.add('contribution');
+
+            // Le label de taille change d'une poussée à l'autre : on retire l'ancien.
+            for (const l of pr.labels.map((l) => l.name).filter((n) => TAILLES.includes(n) && n !== `size/${taille}`)) {
+              await github.rest.issues.removeLabel({ owner, repo, issue_number: pr.number, name: l }).catch(() => {});
+            }
+            await github.rest.issues.addLabels({ owner, repo, issue_number: pr.number, labels: [...labels, `size/${taille}`] });
+
+            if (!exterieur) return;
+            const commentaires = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: pr.number, per_page: 100 });
+            if (commentaires.some((c) => c.body?.includes(MARQUE))) return;
+            await github.rest.issues.createComment({ owner, repo, issue_number: pr.number, body: `${MARQUE}\n${ACCUEIL}` });

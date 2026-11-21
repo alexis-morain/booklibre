@@ -1,0 +1,50 @@
+name: claude
+
+# Revue et correctifs à la demande : Alexis écrit `@claude …` dans une PR ou
+# une issue. Rien ne part tout seul, et personne d'autre ne peut déclencher :
+# l'action vérifie les droits d'écriture, le `if` ne garde que le propriétaire.
+#
+# Sur la PR d'un contributeur extérieur, l'action refuse d'exécuter son code
+# (cargo, npm, scripts) dans ce job, qui tient le jeton : Claude lit, modifie,
+# commente, et lit le verdict de `check` sur les trois OS. Aucune règle
+# `Bash(...)` n'est ouverte ici, car une règle ouverte resterait permise sur un
+# fork.
+#
+# Sur un fork, Claude pousse dans une branche `pr-<n>` de ce dépôt, qui porte
+# aussi les commits du contributeur : on la relit avant de la fusionner, et on
+# la supprime ensuite. `check` et `audit` ignorent `pr-*`, la release ne part
+# que d'un tag.
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  claude:
+    if: >-
+      (github.event.comment.user.login == 'alexis-morain' && contains(github.event.comment.body, '@claude')) ||
+      (github.event.review.user.login == 'alexis-morain' && contains(github.event.review.body, '@claude'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          additional_permissions: |
+            actions: read
+          claude_args: |
+            --max-turns 40
+            --append-system-prompt "You are reviewing or fixing a Booklibre pull request. The repository's CLAUDE.md and CONTRIBUTING.md are the rules. Hard rules: (1) the two geometries (pdf.rs::slots_for / album.ts::slotsBottomUp, cover.rs::geometry / album.ts::coverSheet) change together or not at all; (2) linter and composer share their constants in audit.rs; (3) album.origin.json is never rewritten; (4) anything that retouches the user's pixels, telemetry, accounts or captive features is declined, say so; (5) never merge, never push to main, never touch release or signing workflows. For a review: answer in the language of the pull request author (French for alexis-morain), verdict first (mergeable / needs changes / decline), then blocking points with file and line, then the rest. To check CI, read the logs of the check runs on the three OS."

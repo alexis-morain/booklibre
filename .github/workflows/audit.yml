@@ -8,6 +8,8 @@ name: audit
 
 on:
   push:
+    # Ce job écrit des issues : rien sur `pr-*`, qui porte le code d'un fork.
+    branches-ignore: ["pr-*"]
     paths: ["Cargo.lock", ".cargo/audit.toml", ".github/workflows/audit.yml"]
   schedule:
     - cron: "17 6 * * 1"
