@@ -103,7 +103,9 @@ fn read_exif(path: &Path, meta: &mut PhotoMeta) {
             return;
         }
     }
-    let Ok(file) = fs::File::open(path) else { return };
+    let Ok(file) = fs::File::open(path) else {
+        return;
+    };
     let mut reader = std::io::BufReader::new(file);
     let Ok(exif) = exif::Reader::new().read_from_container(&mut reader) else {
         return;
@@ -114,9 +116,10 @@ fn read_exif(path: &Path, meta: &mut PhotoMeta) {
     // photo copied on June 14th carried « 2026:06:14 » there and dated a
     // whole chapter in the future. It still beats mtime as a sort key, so
     // it fills `taken`, but it earns no trust.
-    for (tag, reliable) in
-        [(exif::Tag::DateTimeOriginal, true), (exif::Tag::DateTime, false)]
-    {
+    for (tag, reliable) in [
+        (exif::Tag::DateTimeOriginal, true),
+        (exif::Tag::DateTime, false),
+    ] {
         if let Some(f) = exif.get_field(tag, exif::In::PRIMARY) {
             let s = f.display_value().to_string();
             if let Ok(dt) = NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S") {
@@ -165,7 +168,9 @@ fn read_exif(path: &Path, meta: &mut PhotoMeta) {
 /// `rating_factor` and `split_junk`, and `geoDataExif` is the EXIF's own
 /// copy, already read from the photograph itself.
 fn takeout_complete(path: &Path, meta: &mut PhotoMeta) {
-    let Some(sidecar) = takeout_read(path) else { return };
+    let Some(sidecar) = takeout_read(path) else {
+        return;
+    };
     if !meta.taken_reliable {
         if let Some(taken) = sidecar.taken {
             // A declared shooting date, not an export date: it earns the
@@ -274,10 +279,7 @@ fn takeout_sidecar_candidates(path: &Path) -> Vec<std::path::PathBuf> {
     let Some(name) = path.file_name().map(|n| n.to_string_lossy().to_string()) else {
         return Vec::new();
     };
-    let mut bases: Vec<String> = vec![
-        name.clone(),
-        format!("{name}.supplemental-metadata"),
-    ];
+    let mut bases: Vec<String> = vec![name.clone(), format!("{name}.supplemental-metadata")];
     if let Some(stem) = path.file_stem().map(|s| s.to_string_lossy().to_string()) {
         if stem != name {
             bases.push(stem.clone());
@@ -503,7 +505,8 @@ mod tests {
 
     /// Un dossier jetable pour les tests de sidecars Takeout.
     fn dossier(nom: &str) -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join(format!("colophon-takeout-{nom}-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("colophon-takeout-{nom}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -545,9 +548,19 @@ mod tests {
             fs::write(&p, b"pas un jpeg").unwrap();
             fs::write(dir.join(sidecar), sidecar_json(ts, 42.3, 9.15)).unwrap();
             let meta = read(&p);
-            assert_eq!(meta.taken, attendu, "orthographe {sidecar} non lue pour {photo}");
-            assert!(meta.taken_reliable, "une date de sidecar est fiable ({sidecar})");
-            assert_eq!(meta.gps, Some((42.3, 9.15)), "le GPS du sidecar comble ({sidecar})");
+            assert_eq!(
+                meta.taken, attendu,
+                "orthographe {sidecar} non lue pour {photo}"
+            );
+            assert!(
+                meta.taken_reliable,
+                "une date de sidecar est fiable ({sidecar})"
+            );
+            assert_eq!(
+                meta.gps,
+                Some((42.3, 9.15)),
+                "le GPS du sidecar comble ({sidecar})"
+            );
         }
 
         // Le sidecar du voisin n'est jamais pris : IMG_1234 ne lit pas IMG_1235.
@@ -555,7 +568,10 @@ mod tests {
         fs::write(&p, b"pas un jpeg").unwrap();
         fs::write(dir.join("IMG_1235.jpg.json"), sidecar_json(ts, 42.3, 9.15)).unwrap();
         let meta = read(&p);
-        assert!(!meta.taken_reliable, "le sidecar d'une autre photo a été pris");
+        assert!(
+            !meta.taken_reliable,
+            "le sidecar d'une autre photo a été pris"
+        );
         assert_eq!(meta.gps, None);
         let _ = fs::remove_dir_all(&dir);
     }
@@ -569,7 +585,11 @@ mod tests {
         let p = dir.join("appareil.jpg");
         fs::write(&p, jpeg_avec_date_exif("2019:07:14 18:30:00")).unwrap();
         // Le sidecar prétend une tout autre date.
-        fs::write(dir.join("appareil.jpg.json"), sidecar_json(1_589_112_000, 42.3, 9.15)).unwrap();
+        fs::write(
+            dir.join("appareil.jpg.json"),
+            sidecar_json(1_589_112_000, 42.3, 9.15),
+        )
+        .unwrap();
         let meta = read(&p);
         let appareil =
             NaiveDateTime::parse_from_str("2019-07-14 18:30:00", "%Y-%m-%d %H:%M:%S").unwrap();
@@ -591,10 +611,17 @@ mod tests {
         let dir = dossier("golfe");
         let p = dir.join("sans-lieu.jpg");
         fs::write(&p, b"pas un jpeg").unwrap();
-        fs::write(dir.join("sans-lieu.jpg.json"), sidecar_json(1_589_112_000, 0.0, 0.0)).unwrap();
+        fs::write(
+            dir.join("sans-lieu.jpg.json"),
+            sidecar_json(1_589_112_000, 0.0, 0.0),
+        )
+        .unwrap();
         let meta = read(&p);
         assert!(meta.taken_reliable, "la date, elle, reste bonne à prendre");
-        assert_eq!(meta.gps, None, "(0, 0) veut dire « inconnu », pas le golfe de Guinée");
+        assert_eq!(
+            meta.gps, None,
+            "(0, 0) veut dire « inconnu », pas le golfe de Guinée"
+        );
 
         // geoDataExif est ignoré, même quand geoData se tait.
         let q = dir.join("copie-exif.jpg");
@@ -604,7 +631,11 @@ mod tests {
             r#"{"photoTakenTime":{"timestamp":"1589112000"},"geoDataExif":{"latitude":42.3,"longitude":9.15}}"#,
         )
         .unwrap();
-        assert_eq!(read(&q).gps, None, "geoDataExif est la copie de l'EXIF, déjà lue");
+        assert_eq!(
+            read(&q).gps,
+            None,
+            "geoDataExif est la copie de l'EXIF, déjà lue"
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -620,7 +651,11 @@ mod tests {
             r#"{"photoTakenTime":{"timestamp":"1589112000"},"favorited":true}"#,
         )
         .unwrap();
-        assert_eq!(read(&p).rating, None, "un booléen n'a pas de rang dans l'échelle 1..5");
+        assert_eq!(
+            read(&p).rating,
+            None,
+            "un booléen n'a pas de rang dans l'échelle 1..5"
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -722,14 +757,18 @@ mod tests {
             image::Rgb([(x * 3) as u8, (y * 2) as u8, 30])
         });
         let mut jpeg = Vec::new();
-        img.write_to(&mut std::io::Cursor::new(&mut jpeg), image::ImageFormat::Jpeg)
-            .unwrap();
+        img.write_to(
+            &mut std::io::Cursor::new(&mut jpeg),
+            image::ImageFormat::Jpeg,
+        )
+        .unwrap();
 
         let dossier = |nom: &str, sidecars: bool| {
             let dir = base.join(nom);
             fs::create_dir_all(&dir).unwrap();
-            let paths: Vec<std::path::PathBuf> =
-                (0..1000).map(|i| dir.join(format!("photo-{i}.jpg"))).collect();
+            let paths: Vec<std::path::PathBuf> = (0..1000)
+                .map(|i| dir.join(format!("photo-{i}.jpg")))
+                .collect();
             for (i, p) in paths.iter().enumerate() {
                 fs::write(p, &jpeg).unwrap();
                 if sidecars {
@@ -752,7 +791,10 @@ mod tests {
                     std::hint::black_box(read(p));
                 }
             }
-            println!("{label}: {} ms (10 x 1000 lectures)", t.elapsed().as_millis());
+            println!(
+                "{label}: {} ms (10 x 1000 lectures)",
+                t.elapsed().as_millis()
+            );
         };
         let nus = dossier("nu", false);
         mesure("sans sidecars", &nus);
@@ -769,7 +811,8 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
 
-        let packet = br#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:Description xmp:Rating="5"/></x:xmpmeta>"#;
+        let packet =
+            br#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:Description xmp:Rating="5"/></x:xmpmeta>"#;
 
         let near = dir.join("near.jpg");
         let mut data = b"\xff\xd8\xff\xe1".to_vec();
@@ -792,7 +835,12 @@ mod tests {
 /// An ASCII field, quotes and edges stripped, `None` when absent or blank.
 fn chaine(exif: &exif::Exif, tag: exif::Tag) -> Option<String> {
     let f = exif.get_field(tag, exif::In::PRIMARY)?;
-    let s = f.display_value().to_string().replace('"', "").trim().to_string();
+    let s = f
+        .display_value()
+        .to_string()
+        .replace('"', "")
+        .trim()
+        .to_string();
     (!s.is_empty()).then_some(s)
 }
 
@@ -824,7 +872,12 @@ pub fn temps_de_pose(secondes: f64) -> Option<String> {
         }
     }
     let court = format!("{secondes:.1}");
-    Some(court.trim_end_matches('0').trim_end_matches('.').to_string())
+    Some(
+        court
+            .trim_end_matches('0')
+            .trim_end_matches('.')
+            .to_string(),
+    )
 }
 
 fn ref_sign(exif: &exif::Exif, tag: exif::Tag, negative: &str) -> f64 {

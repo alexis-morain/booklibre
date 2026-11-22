@@ -113,7 +113,10 @@ pub fn mention(root: &Path, src: &str, reglage: &Legendes) -> Option<String> {
     }
     let m = meta::read(&path);
     let jour = m.taken_reliable.then(|| m.taken.date());
-    let lieu = m.gps.and_then(|(lat, lon)| places::nearest(lat, lon)).map(|(c, _)| c.name);
+    let lieu = m
+        .gps
+        .and_then(|(lat, lon)| places::nearest(lat, lon))
+        .map(|(c, _)| c.name);
     texte_de_mention(jour, lieu, reglage)
 }
 
@@ -146,7 +149,9 @@ pub fn mentions(album: &Album, reglage: &Legendes, srcs: &[String]) -> BTreeMap<
 /// de voyage, la règle d'avant s'applique à l'identique.
 fn mentions_du_voyage(album: &Album, r: &Legendes) -> Option<BTreeMap<String, String>> {
     use crate::voyage::composition::{lecture, mention, Lecture};
-    let Lecture::Voyage(v) = lecture(Path::new(&album.root)) else { return None };
+    let Lecture::Voyage(v) = lecture(Path::new(&album.root)) else {
+        return None;
+    };
     let etape_de: BTreeMap<&str, usize> = v
         .etapes
         .iter()
@@ -178,7 +183,9 @@ fn mentions_du_voyage(album: &Album, r: &Legendes) -> Option<BTreeMap<String, St
             && (0..spread.slots.len()).any(|k| !a_droite(k));
         let mut choisis = Vec::new();
         for (k, slot) in spread.slots.iter().enumerate() {
-            let Some(&i) = etape_de.get(slot.src.as_str()) else { continue };
+            let Some(&i) = etape_de.get(slot.src.as_str()) else {
+                continue;
+            };
             if vues.contains(&i) || choisis.iter().any(|&(j, _)| j == i) {
                 if !(des_deux_cotes && a_droite(k)) {
                     continue;
@@ -218,7 +225,11 @@ pub fn poser_mentions(album: &mut Album) {
 }
 
 /// La règle d'écriture, pure pour se tester sans photos.
-pub(crate) fn texte_de_mention(jour: Option<NaiveDate>, lieu: Option<&str>, r: &Legendes) -> Option<String> {
+pub(crate) fn texte_de_mention(
+    jour: Option<NaiveDate>,
+    lieu: Option<&str>,
+    r: &Legendes,
+) -> Option<String> {
     let date = jour.map(|d| match r.date {
         FormatDate::Jour => r.langue.date(d, true),
         FormatDate::Court => r.langue.date_courte(d),
@@ -264,8 +275,8 @@ fn texte(
     jours_chapitre: Option<(NaiveDate, NaiveDate)>,
     langue: Langue,
 ) -> Option<String> {
-    let place = place_planche
-        .filter(|p| place_chapitre != Some(*p) && !titre_chapitre.contains(*p));
+    let place =
+        place_planche.filter(|p| place_chapitre != Some(*p) && !titre_chapitre.contains(*p));
     let jour = match (jour_planche, jours_chapitre) {
         (Some(d), Some((lo, hi))) if lo != hi => Some(d),
         _ => None,
@@ -290,7 +301,14 @@ mod tests {
     fn se_tait_quand_la_planche_dit_comme_son_chapitre() {
         // Même ville, chapitre d'un seul jour : rien à ajouter.
         assert_eq!(
-            texte(Some("Calvi"), Some("Calvi"), "Calvi, 27 octobre 2013", Some(j(27)), Some((j(27), j(27))), Langue::Fr),
+            texte(
+                Some("Calvi"),
+                Some("Calvi"),
+                "Calvi, 27 octobre 2013",
+                Some(j(27)),
+                Some((j(27), j(27))),
+                Langue::Fr
+            ),
             None
         );
     }
@@ -314,7 +332,14 @@ mod tests {
     #[test]
     fn date_seule_quand_le_chapitre_couvre_plusieurs_jours() {
         assert_eq!(
-            texte(Some("Calvi"), Some("Calvi"), "Calvi", Some(j(29)), Some((j(27), j(31))), Langue::Fr),
+            texte(
+                Some("Calvi"),
+                Some("Calvi"),
+                "Calvi",
+                Some(j(29)),
+                Some((j(27), j(31))),
+                Langue::Fr
+            ),
             Some("29 octobre 2013".into())
         );
     }
@@ -325,7 +350,14 @@ mod tests {
         // mais le titre imprimé dit déjà « Porto-Vecchio » : le répéter est
         // du bruit.
         assert_eq!(
-            texte(Some("Porto-Vecchio"), None, "Porto-Vecchio, octobre 2013", Some(j(27)), Some((j(27), j(27))), Langue::Fr),
+            texte(
+                Some("Porto-Vecchio"),
+                None,
+                "Porto-Vecchio, octobre 2013",
+                Some(j(27)),
+                Some((j(27), j(27))),
+                Langue::Fr
+            ),
             None
         );
     }
@@ -333,14 +365,31 @@ mod tests {
     #[test]
     fn ville_seule_quand_le_chapitre_tient_en_un_jour() {
         assert_eq!(
-            texte(Some("Bonifacio"), Some("Calvi"), "Calvi, 27 octobre 2013", Some(j(27)), Some((j(27), j(27))), Langue::Fr),
+            texte(
+                Some("Bonifacio"),
+                Some("Calvi"),
+                "Calvi, 27 octobre 2013",
+                Some(j(27)),
+                Some((j(27), j(27))),
+                Langue::Fr
+            ),
             Some("Bonifacio".into())
         );
     }
 
     #[test]
     fn silence_sans_gps_ni_pluralite_de_jours() {
-        assert_eq!(texte(None, None, "", Some(j(27)), Some((j(27), j(27))), Langue::Fr), None);
+        assert_eq!(
+            texte(
+                None,
+                None,
+                "",
+                Some(j(27)),
+                Some((j(27), j(27))),
+                Langue::Fr
+            ),
+            None
+        );
         assert_eq!(texte(None, None, "", None, None, Langue::Fr), None);
     }
 
@@ -366,7 +415,10 @@ mod tests {
         )
         .unwrap();
         assert!(!s.contains('/') && !s.contains('\\'));
-        assert!(!s.contains('.'), "une coordonnée décimale n'a rien à faire ici : {s}");
+        assert!(
+            !s.contains('.'),
+            "une coordonnée décimale n'a rien à faire ici : {s}"
+        );
     }
 
     /// La plomberie entière se tait sur un album dont les originaux
@@ -401,8 +453,8 @@ mod tests {
     /// elle que la ligne de statut compte.
     #[test]
     fn dates_fiables_ne_rend_que_les_dates_fiables() {
-        let dir = std::env::temp_dir()
-            .join(format!("colophon-dates-fiables-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("colophon-dates-fiables-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         // Un sidecar Takeout date « a.jpg » : 2020-05-10 12:00:00 UTC.
@@ -433,11 +485,19 @@ mod tests {
         assert_eq!(dates.len(), 1, "{dates:?}");
         assert_eq!(dates.get("a.jpg").map(String::as_str), Some("10 mai 2020"));
         // La même fonction que la proposition de la case, à la lettre.
-        assert_eq!(date_de(&dir, "a.jpg", Langue::Fr).as_deref(), Some("10 mai 2020"));
-        // Et dans la langue de l'interface qui la demande.
-        assert_eq!(date_de(&dir, "a.jpg", Langue::En).as_deref(), Some("10 May 2020"));
         assert_eq!(
-            dates_fiables(&album, Langue::En).get("a.jpg").map(String::as_str),
+            date_de(&dir, "a.jpg", Langue::Fr).as_deref(),
+            Some("10 mai 2020")
+        );
+        // Et dans la langue de l'interface qui la demande.
+        assert_eq!(
+            date_de(&dir, "a.jpg", Langue::En).as_deref(),
+            Some("10 May 2020")
+        );
+        assert_eq!(
+            dates_fiables(&album, Langue::En)
+                .get("a.jpg")
+                .map(String::as_str),
             Some("10 May 2020")
         );
         assert_eq!(date_de(&dir, "b.jpg", Langue::Fr), None);
@@ -446,7 +506,12 @@ mod tests {
     }
 
     fn reglage(contenu: Mention, date: FormatDate, langue: Langue) -> Legendes {
-        Legendes { contenu, date, langue, meteo: false }
+        Legendes {
+            contenu,
+            date,
+            langue,
+            meteo: false,
+        }
     }
 
     /// Les quatre réglages devant les quatre états d'une photo : rien n'est
@@ -454,28 +519,60 @@ mod tests {
     #[test]
     fn la_mention_n_ecrit_que_ce_que_la_photo_sait() {
         let dl = reglage(Mention::DateLieu, FormatDate::Jour, Langue::Fr);
-        assert_eq!(texte_de_mention(Some(j(27)), Some("Calvi"), &dl).as_deref(), Some("Calvi, 27 octobre 2013"));
-        assert_eq!(texte_de_mention(None, Some("Calvi"), &dl).as_deref(), Some("Calvi"));
-        assert_eq!(texte_de_mention(Some(j(27)), None, &dl).as_deref(), Some("27 octobre 2013"));
+        assert_eq!(
+            texte_de_mention(Some(j(27)), Some("Calvi"), &dl).as_deref(),
+            Some("Calvi, 27 octobre 2013")
+        );
+        assert_eq!(
+            texte_de_mention(None, Some("Calvi"), &dl).as_deref(),
+            Some("Calvi")
+        );
+        assert_eq!(
+            texte_de_mention(Some(j(27)), None, &dl).as_deref(),
+            Some("27 octobre 2013")
+        );
         assert_eq!(texte_de_mention(None, None, &dl), None);
 
         let d = reglage(Mention::Date, FormatDate::Jour, Langue::Fr);
-        assert_eq!(texte_de_mention(Some(j(27)), Some("Calvi"), &d).as_deref(), Some("27 octobre 2013"));
-        assert_eq!(texte_de_mention(None, Some("Calvi"), &d), None, "le lieu ne remplace pas la date");
+        assert_eq!(
+            texte_de_mention(Some(j(27)), Some("Calvi"), &d).as_deref(),
+            Some("27 octobre 2013")
+        );
+        assert_eq!(
+            texte_de_mention(None, Some("Calvi"), &d),
+            None,
+            "le lieu ne remplace pas la date"
+        );
 
         let l = reglage(Mention::Lieu, FormatDate::Jour, Langue::Fr);
-        assert_eq!(texte_de_mention(Some(j(27)), Some("Calvi"), &l).as_deref(), Some("Calvi"));
-        assert_eq!(texte_de_mention(Some(j(27)), None, &l), None, "la date ne remplace pas le lieu");
+        assert_eq!(
+            texte_de_mention(Some(j(27)), Some("Calvi"), &l).as_deref(),
+            Some("Calvi")
+        );
+        assert_eq!(
+            texte_de_mention(Some(j(27)), None, &l),
+            None,
+            "la date ne remplace pas le lieu"
+        );
     }
 
     #[test]
     fn la_mention_suit_son_format_et_sa_langue() {
         let court = reglage(Mention::Date, FormatDate::Court, Langue::Fr);
-        assert_eq!(texte_de_mention(Some(j(27)), None, &court).as_deref(), Some("27 oct. 2013"));
+        assert_eq!(
+            texte_de_mention(Some(j(27)), None, &court).as_deref(),
+            Some("27 oct. 2013")
+        );
         let mois = reglage(Mention::DateLieu, FormatDate::Mois, Langue::En);
-        assert_eq!(texte_de_mention(Some(j(27)), Some("Calvi"), &mois).as_deref(), Some("Calvi, October 2013"));
+        assert_eq!(
+            texte_de_mention(Some(j(27)), Some("Calvi"), &mois).as_deref(),
+            Some("Calvi, October 2013")
+        );
         let jour = reglage(Mention::Date, FormatDate::Jour, Langue::En);
-        assert_eq!(texte_de_mention(Some(j(27)), None, &jour).as_deref(), Some("27 October 2013"));
+        assert_eq!(
+            texte_de_mention(Some(j(27)), None, &jour).as_deref(),
+            Some("27 October 2013")
+        );
     }
 
     /// La plomberie, sur de vrais fichiers : une photo datée et placée par
@@ -488,7 +585,10 @@ mod tests {
             // Pas « colophon-mentions-» : c'est le dossier de
             // `build::dossier_test("mentions")`, que ce test effaçait sous
             // lui quand les deux tournaient ensemble.
-            .join(format!("colophon-legende-poser-mentions-{}", std::process::id()));
+            .join(format!(
+                "colophon-legende-poser-mentions-{}",
+                std::process::id()
+            ));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         // 2020-05-10 12:00:00 UTC, à Calvi.
@@ -527,13 +627,27 @@ mod tests {
 
         album.legendes = Some(reglage(Mention::DateLieu, FormatDate::Jour, Langue::Fr));
         poser_mentions(&mut album);
-        let m: Vec<Option<&str>> = album.spreads[0].slots.iter().map(|s| s.mention.as_deref()).collect();
-        assert_eq!(m, [Some("Calvi, 10 mai 2020"), Some("10 mai 2020"), None, None]);
-        assert!(!album.spreads[0].edited, "ce ne sont pas des mots de la main");
+        let m: Vec<Option<&str>> = album.spreads[0]
+            .slots
+            .iter()
+            .map(|s| s.mention.as_deref())
+            .collect();
+        assert_eq!(
+            m,
+            [Some("Calvi, 10 mai 2020"), Some("10 mai 2020"), None, None]
+        );
+        assert!(
+            !album.spreads[0].edited,
+            "ce ne sont pas des mots de la main"
+        );
         assert!(album.spreads[0].slots.iter().all(|s| s.caption.is_none()));
 
         // La réserve aussi, par la table.
-        let table = mentions(&album, &reglage(Mention::Lieu, FormatDate::Jour, Langue::Fr), &["a.jpg".into(), "z.jpg".into()]);
+        let table = mentions(
+            &album,
+            &reglage(Mention::Lieu, FormatDate::Jour, Langue::Fr),
+            &["a.jpg".into(), "z.jpg".into()],
+        );
         assert_eq!(table.len(), 1, "{table:?}");
         assert_eq!(table.get("a.jpg").map(String::as_str), Some("Calvi"));
 
@@ -548,7 +662,14 @@ mod tests {
     #[test]
     fn la_legende_parle_la_langue_demandee() {
         assert_eq!(
-            texte(Some("Calvi"), Some("Calvi"), "Calvi", Some(j(29)), Some((j(27), j(31))), Langue::En),
+            texte(
+                Some("Calvi"),
+                Some("Calvi"),
+                "Calvi",
+                Some(j(29)),
+                Some((j(27), j(31))),
+                Langue::En
+            ),
             Some("29 October 2013".into())
         );
         assert_eq!(

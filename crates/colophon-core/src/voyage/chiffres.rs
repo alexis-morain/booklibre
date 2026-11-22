@@ -62,7 +62,12 @@ pub fn distance_km(v: &Voyage) -> Option<(f64, bool)> {
     let somme: f64 = v
         .etapes
         .windows(2)
-        .map(|w| haversine_km((w[0].lieu.lat, w[0].lieu.lon), (w[1].lieu.lat, w[1].lieu.lon)))
+        .map(|w| {
+            haversine_km(
+                (w[0].lieu.lat, w[0].lieu.lon),
+                (w[1].lieu.lat, w[1].lieu.lon),
+            )
+        })
         .sum();
     (somme >= 1.0).then_some((somme, false))
 }
@@ -107,7 +112,9 @@ fn groupes(n: u64, langue: Langue) -> String {
 
 fn majuscule(t: &str) -> String {
     let mut c = t.chars();
-    c.next().map(|p| p.to_uppercase().chain(c).collect()).unwrap_or_default()
+    c.next()
+        .map(|p| p.to_uppercase().chain(c).collect())
+        .unwrap_or_default()
 }
 
 /// Le texte de la page, une ligne par chiffre, rien d'inventé : une ligne dont
@@ -168,7 +175,11 @@ pub fn texte(v: &Voyage, langue: Langue) -> String {
 
 /// La planche : du texte et rien d'autre, comme le colophon.
 pub fn spread(v: &Voyage, langue: Langue) -> Spread {
-    Spread { text: Some(texte(v, langue)), template: "texte".into(), ..Spread::vide() }
+    Spread {
+        text: Some(texte(v, langue)),
+        template: "texte".into(),
+        ..Spread::vide()
+    }
 }
 
 /// Pose la page en fin de livre, avant le colophon qui reste la dernière
@@ -178,7 +189,10 @@ pub fn poser(album: &mut Album, v: &Voyage, langue: Langue) -> bool {
     if album.spreads.iter().any(est_la_page) {
         return false;
     }
-    let au_bout = album.spreads.last().is_some_and(|s| s.template == crate::colophon::TEMPLATE);
+    let au_bout = album
+        .spreads
+        .last()
+        .is_some_and(|s| s.template == crate::colophon::TEMPLATE);
     let rang = album.spreads.len() - usize::from(au_bout);
     album.spreads.insert(rang, spread(v, langue));
     true

@@ -79,10 +79,7 @@ impl Classe {
             // Composer aurait pu attraper : il n'en propose aucun, et aucun
             // compteur ne pouvait donc le prévenir. `objet_hors_marge` et
             // `objet_deborde` comptent un objet *raté*, jamais un objet posé.
-            Classe::Texte
-            | Classe::ObjetLibre
-            | Classe::Insertion
-            | Classe::Suppression => "",
+            Classe::Texte | Classe::ObjetLibre | Classe::Insertion | Classe::Suppression => "",
         }
     }
 }
@@ -212,8 +209,8 @@ pub fn origine(dir: &Path) -> Result<Album> {
 }
 
 fn read_album(path: &Path) -> Result<Album> {
-    let text = fs::read_to_string(path)
-        .with_context(|| format!("lecture de {}", path.display()))?;
+    let text =
+        fs::read_to_string(path).with_context(|| format!("lecture de {}", path.display()))?;
     serde_json::from_str(&text).with_context(|| format!("{} illisible", path.display()))
 }
 
@@ -303,13 +300,16 @@ pub fn compare(titre: &str, origine: &Album, actuel: &Album) -> RepriseReport {
 
     let touchees = details.len();
     let base = origine.spreads.len();
-    let part = if base == 0 { 0.0 } else { touchees as f64 / base as f64 };
+    let part = if base == 0 {
+        0.0
+    } else {
+        touchees as f64 / base as f64
+    };
 
     // Strict equality on purpose: both trims come from `format::parse`
     // literals, and a tolerance would let 210 pass for 210.4 — exactly the
     // silence this field exists to remove.
-    let bascule = (origine.trim_mm.w != actuel.trim_mm.w
-        || origine.trim_mm.h != actuel.trim_mm.h)
+    let bascule = (origine.trim_mm.w != actuel.trim_mm.w || origine.trim_mm.h != actuel.trim_mm.h)
         .then(|| Bascule {
             origine_mm: [origine.trim_mm.w, origine.trim_mm.h],
             album_mm: [actuel.trim_mm.w, actuel.trim_mm.h],
@@ -343,7 +343,11 @@ pub fn compare(titre: &str, origine: &Album, actuel: &Album) -> RepriseReport {
              la proposition : du travail annulé ou refait à l'identique, non compté"
         ));
     }
-    let verrous = actuel.spreads.iter().filter(|s| s.locked && !s.edited).count();
+    let verrous = actuel
+        .spreads
+        .iter()
+        .filter(|s| s.locked && !s.edited)
+        .count();
     if verrous > 0 {
         notes.push(format!(
             "{verrous} planches épinglées sans modification : approuvées telles quelles, \
@@ -538,7 +542,13 @@ fn cover_diff(origine: Option<&Cover>, actuel: Option<&Cover>) -> Vec<&'static s
             }
             let photo_q = |c: &crate::model::Cover| {
                 c.back_photo.as_ref().map(|p| {
-                    (p.photo.src.clone(), p.photo.focal, p.photo.zoom, p.position, p.taille)
+                    (
+                        p.photo.src.clone(),
+                        p.photo.focal,
+                        p.photo.zoom,
+                        p.position,
+                        p.taille,
+                    )
                 })
             };
             if a.back_text != b.back_text
@@ -650,7 +660,10 @@ mod tests {
 
         // Déplacé, tourné, réécrit : toujours la même classe, une seule fois.
         let mut bouge = album(vec![spread("duo", &["a.jpg", "b.jpg"])]);
-        bouge.spreads[0].objets = vec![Objet { angle: 12.0, ..bloc("Calvi, au matin") }];
+        bouge.spreads[0].objets = vec![Objet {
+            angle: 12.0,
+            ..bloc("Calvi, au matin")
+        }];
         let r = compare("t", &actuel, &bouge);
         assert_eq!(r.details[0].classes, vec![Classe::ObjetLibre]);
 
@@ -662,8 +675,14 @@ mod tests {
     /// An album nobody touched costs nothing.
     #[test]
     fn untouched_album_scores_zero() {
-        let a = album(vec![spread("duo", &["a.jpg", "b.jpg"]), spread("solo", &["c.jpg"])]);
-        let b = album(vec![spread("duo", &["a.jpg", "b.jpg"]), spread("solo", &["c.jpg"])]);
+        let a = album(vec![
+            spread("duo", &["a.jpg", "b.jpg"]),
+            spread("solo", &["c.jpg"]),
+        ]);
+        let b = album(vec![
+            spread("duo", &["a.jpg", "b.jpg"]),
+            spread("solo", &["c.jpg"]),
+        ]);
         let r = compare("t", &a, &b);
         assert_eq!(r.planches_touchees, 0);
         assert_eq!(r.pourcentage, 0.0);
@@ -685,13 +704,21 @@ mod tests {
         let mut regle = album(vec![spread("duo", &["a.jpg", "b.jpg"])]);
         regle.reglages.insert(
             "a.jpg".into(),
-            crate::model::Reglage { expo: 1.0, contraste: 0.5, nb: true },
+            crate::model::Reglage {
+                expo: 1.0,
+                contraste: 0.5,
+                nb: true,
+            },
         );
         // An entry on a photograph the book does not show: posed, then the
         // photo pulled back to the drawer. It is not a retouch anyone sees.
         regle.reglages.insert(
             "tiroir.jpg".into(),
-            crate::model::Reglage { expo: -1.0, contraste: 0.0, nb: false },
+            crate::model::Reglage {
+                expo: -1.0,
+                contraste: 0.0,
+                nb: false,
+            },
         );
         let sans = compare("t", &origine, &nu);
         let avec = compare("t", &origine, &regle);
@@ -717,13 +744,17 @@ mod tests {
         assert_eq!(avec.photos_reglees, 1, "a.jpg compte, tiroir.jpg non");
         assert!(sans.notes.iter().all(|n| !n.contains("photos réglées")));
         assert!(
-            avec.notes.iter().any(|n| n.contains("1 photos réglées, hors verdict")),
+            avec.notes
+                .iter()
+                .any(|n| n.contains("1 photos réglées, hors verdict")),
             "le chiffre s'explique là où on le lit : {:?}",
             avec.notes
         );
         // Absent from the JSON at zero, so an album nobody retouched reads
         // exactly as it did before this field existed.
-        assert!(!serde_json::to_string(&sans).unwrap().contains("photos_reglees"));
+        assert!(!serde_json::to_string(&sans)
+            .unwrap()
+            .contains("photos_reglees"));
     }
 
     /// The cover is part of the book: a réglage on its photograph counts,
@@ -742,7 +773,11 @@ mod tests {
         });
         actuel.reglages.insert(
             "couv.jpg".into(),
-            crate::model::Reglage { expo: 0.4, contraste: 0.0, nb: false },
+            crate::model::Reglage {
+                expo: 0.4,
+                contraste: 0.0,
+                nb: false,
+            },
         );
         let r = compare("t", &origine, &actuel);
         assert_eq!(r.photos_reglees, 1);
@@ -808,8 +843,7 @@ mod tests {
         let b = album(vec![spread("solo", &["a.jpg"]), spread("solo", &["z.jpg"])]);
         let r = compare("t", &a, &b);
         assert_eq!(r.planches_touchees, 2);
-        let kinds: HashSet<Classe> =
-            r.details.iter().flat_map(|d| d.classes.clone()).collect();
+        let kinds: HashSet<Classe> = r.details.iter().flat_map(|d| d.classes.clone()).collect();
         assert!(kinds.contains(&Classe::Insertion));
         assert!(kinds.contains(&Classe::Suppression));
     }
@@ -963,7 +997,11 @@ mod tests {
         let r = compare("t", &a, &b);
         assert_eq!(r.planches_touchees, 0);
         assert_eq!(r.verdict, "bon");
-        assert!(r.notes.is_empty(), "ni badge ni verrou ne survit : {:?}", r.notes);
+        assert!(
+            r.notes.is_empty(),
+            "ni badge ni verrou ne survit : {:?}",
+            r.notes
+        );
     }
 
     /// A spread inserted by hand has no automatic version, and the command
@@ -1020,6 +1058,9 @@ mod tests {
 
         // Une couleur de fond est une retouche de couverture comme une autre.
         b.cover.as_mut().unwrap().fond = Some("#1a1a1a".into());
-        assert_eq!(compare("t", &a, &b).couverture, vec!["titre", "sous-titre", "fond"]);
+        assert_eq!(
+            compare("t", &a, &b).couverture,
+            vec!["titre", "sous-titre", "fond"]
+        );
     }
 }

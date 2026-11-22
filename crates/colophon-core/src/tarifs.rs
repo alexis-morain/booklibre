@@ -38,7 +38,11 @@ pub const PAGES_MAX: u32 = 200;
 /// L'adresse pour un build : le sandbox en debug ou si la compilation l'a
 /// demandé, sinon l'adresse réelle reçue, et rien sans elle. Le même choix
 /// que [`relais::url_pour`], pour que les deux visent le même mode.
-pub const fn url_pour(debug: bool, sandbox: bool, reel: Option<&'static str>) -> Option<&'static str> {
+pub const fn url_pour(
+    debug: bool,
+    sandbox: bool,
+    reel: Option<&'static str>,
+) -> Option<&'static str> {
     if debug || sandbox {
         Some(SANDBOX)
     } else {
@@ -61,7 +65,8 @@ const _: () = match relais::relais_unique(relais::SANDBOX_EN_RELEASE, REEL) {
 
 /// L'adresse compilée du Worker des tarifs. Sans elle, l'app ne pose pas la
 /// question et n'affiche aucun prix.
-pub const TARIFS_URL: Option<&str> = url_pour(cfg!(debug_assertions), relais::SANDBOX_EN_RELEASE, REEL);
+pub const TARIFS_URL: Option<&str> =
+    url_pour(cfg!(debug_assertions), relais::SANDBOX_EN_RELEASE, REEL);
 
 /// Une ligne de la table : les prix de `de` pages à 200, de `pas` en `pas`.
 /// `None` quand aucun niveau de livraison ne tient dans les bornes de prix.
@@ -122,7 +127,10 @@ fn code_pays(c: &str) -> bool {
 }
 
 fn nom_de_format(c: &str) -> bool {
-    !c.is_empty() && c.len() <= 40 && c.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+    !c.is_empty()
+        && c.len() <= 40
+        && c.bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
 }
 
 impl Tarifs {
@@ -151,13 +159,17 @@ impl Tarifs {
                     || l.de % 2 != 0
                     || n == 0
                     || fin.is_none_or(|f| f > PAGES_MAX)
-                    || l.ttc_centimes.iter().flatten().any(|&c| c == 0 || c > 10_000_000)
+                    || l.ttc_centimes
+                        .iter()
+                        .flatten()
+                        .any(|&c| c == 0 || c > 10_000_000)
                 {
                     return Err(Erreur::Illisible("ligne"));
                 }
             }
         }
-        let genere = chrono::DateTime::parse_from_rfc3339(&self.genere_le).map_err(|_| Erreur::Illisible("genere_le"))?;
+        let genere = chrono::DateTime::parse_from_rfc3339(&self.genere_le)
+            .map_err(|_| Erreur::Illisible("genere_le"))?;
         if maintenant_s - genere.timestamp() > PEREMPTION_S {
             return Err(Erreur::Perime);
         }
@@ -174,7 +186,11 @@ pub fn lire(base: &str, transport: &dyn Transport, maintenant_s: i64) -> Result<
         let erreur = serde_json::from_str::<serde_json::Value>(&texte)
             .ok()
             .and_then(|v| v["erreur"].as_str().map(str::to_string))
-            .filter(|e| !e.is_empty() && e.len() <= 32 && e.bytes().all(|b| b.is_ascii_lowercase() || b == b'_'))
+            .filter(|e| {
+                !e.is_empty()
+                    && e.len() <= 32
+                    && e.bytes().all(|b| b.is_ascii_lowercase() || b == b'_')
+            })
             .unwrap_or_else(|| "illisible".to_string());
         return Err(Erreur::Statut { statut, erreur });
     }
@@ -197,10 +213,14 @@ mod tests {
     /// et un Worker qui en annonce une autre n'est pas cru.
     #[test]
     fn la_limite_de_pages_sort_avec_la_table_et_ne_se_lit_pas_dans_le_json() {
-        let mut doc = serde_json::from_str::<Value>(&serde_json::to_string(&json!({
-            "mode": "sandbox", "genere_le": "2026-11-12T00:00:00Z", "devise": "EUR",
-            "pays": ["FR"], "formats": {}
-        })).unwrap()).unwrap();
+        let mut doc = serde_json::from_str::<Value>(
+            &serde_json::to_string(&json!({
+                "mode": "sandbox", "genere_le": "2026-11-12T00:00:00Z", "devise": "EUR",
+                "pays": ["FR"], "formats": {}
+            }))
+            .unwrap(),
+        )
+        .unwrap();
         let t: Tarifs = serde_json::from_value(doc.clone()).unwrap();
         assert_eq!(t.pages_max, PAGES_MAX);
         assert_eq!(serde_json::to_value(&t).unwrap()["pages_max"], PAGES_MAX);
@@ -218,19 +238,34 @@ mod tests {
 
     impl Faux {
         fn new(statut: u16, corps: Value) -> Self {
-            Faux { statut, corps: corps.to_string(), vus: RefCell::new(vec![]) }
+            Faux {
+                statut,
+                corps: corps.to_string(),
+                vus: RefCell::new(vec![]),
+            }
         }
     }
 
     impl Transport for Faux {
         fn get(&self, url: &str, bearer: Option<&Secret>) -> Result<(u16, String), String> {
-            self.vus.borrow_mut().push((url.to_string(), bearer.is_some()));
+            self.vus
+                .borrow_mut()
+                .push((url.to_string(), bearer.is_some()));
             Ok((self.statut, self.corps.clone()))
         }
-        fn post_json(&self, _: &str, _: Option<&Secret>, _: &Value) -> Result<(u16, String), String> {
+        fn post_json(
+            &self,
+            _: &str,
+            _: Option<&Secret>,
+            _: &Value,
+        ) -> Result<(u16, String), String> {
             panic!("les tarifs ne postent rien")
         }
-        fn put_fichier(&self, _: &Envoi<'_>, _: &dyn Fn(u64)) -> Result<(u16, Option<String>), String> {
+        fn put_fichier(
+            &self,
+            _: &Envoi<'_>,
+            _: &dyn Fn(u64),
+        ) -> Result<(u16, Option<String>), String> {
             panic!("les tarifs ne posent rien")
         }
     }
@@ -254,7 +289,10 @@ mod tests {
     fn l_adresse_suit_celle_du_relais() {
         assert_eq!(url_pour(true, false, None), Some(SANDBOX));
         assert_eq!(url_pour(false, true, None), Some(SANDBOX));
-        assert_eq!(url_pour(false, false, Some("https://prices.booklibre.app")), Some("https://prices.booklibre.app"));
+        assert_eq!(
+            url_pour(false, false, Some("https://prices.booklibre.app")),
+            Some("https://prices.booklibre.app")
+        );
         // La release publique sans adresse : aucun prix, aucun appel.
         assert_eq!(url_pour(false, false, None), None);
         // Le gate tourne en debug : le sandbox, jamais une autre adresse.
@@ -265,24 +303,45 @@ mod tests {
     fn un_get_nu_vers_la_seule_ressource() {
         let f = Faux::new(200, document());
         let t = lire("https://tarifs.example/", &f, LUNDI + 3600).unwrap();
-        assert_eq!(*f.vus.borrow(), vec![("https://tarifs.example/v1/prices".to_string(), false)]);
+        assert_eq!(
+            *f.vus.borrow(),
+            vec![("https://tarifs.example/v1/prices".to_string(), false)]
+        );
         assert_eq!(t.pays, vec!["FR"]);
-        assert_eq!(t.formats["carre-21"]["FR"].ttc_centimes, vec![Some(4600), Some(4650), None]);
+        assert_eq!(
+            t.formats["carre-21"]["FR"].ttc_centimes,
+            vec![Some(4600), Some(4650), None]
+        );
     }
 
     #[test]
     fn un_refus_du_worker_se_nomme_sans_recopier_le_corps() {
         let f = Faux::new(503, json!({ "erreur": "pas_encore" }));
-        assert_eq!(lire("https://t", &f, LUNDI), Err(Erreur::Statut { statut: 503, erreur: "pas_encore".into() }));
+        assert_eq!(
+            lire("https://t", &f, LUNDI),
+            Err(Erreur::Statut {
+                statut: 503,
+                erreur: "pas_encore".into()
+            })
+        );
         let f = Faux::new(500, json!({ "erreur": "<script>alert(1)</script>" }));
-        assert_eq!(lire("https://t", &f, LUNDI), Err(Erreur::Statut { statut: 500, erreur: "illisible".into() }));
+        assert_eq!(
+            lire("https://t", &f, LUNDI),
+            Err(Erreur::Statut {
+                statut: 500,
+                erreur: "illisible".into()
+            })
+        );
     }
 
     #[test]
     fn au_dela_de_sept_jours_aucun_prix() {
         let f = Faux::new(200, document());
         assert!(lire("https://t", &f, LUNDI + PEREMPTION_S).is_ok());
-        assert_eq!(lire("https://t", &f, LUNDI + PEREMPTION_S + 1), Err(Erreur::Perime));
+        assert_eq!(
+            lire("https://t", &f, LUNDI + PEREMPTION_S + 1),
+            Err(Erreur::Perime)
+        );
     }
 
     #[test]
@@ -320,10 +379,19 @@ mod tests {
             fn get(&self, _: &str, _: Option<&Secret>) -> Result<(u16, String), String> {
                 Err("tls: https://t/v1/prices".into())
             }
-            fn post_json(&self, _: &str, _: Option<&Secret>, _: &Value) -> Result<(u16, String), String> {
+            fn post_json(
+                &self,
+                _: &str,
+                _: Option<&Secret>,
+                _: &Value,
+            ) -> Result<(u16, String), String> {
                 unreachable!()
             }
-            fn put_fichier(&self, _: &Envoi<'_>, _: &dyn Fn(u64)) -> Result<(u16, Option<String>), String> {
+            fn put_fichier(
+                &self,
+                _: &Envoi<'_>,
+                _: &dyn Fn(u64),
+            ) -> Result<(u16, Option<String>), String> {
                 unreachable!()
             }
         }

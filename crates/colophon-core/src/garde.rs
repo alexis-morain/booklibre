@@ -58,7 +58,10 @@ const MAX_LIEUX: usize = 3;
 /// upper third. High on the page and ranged left, the way a half-title is
 /// set, rather than centred in the middle of nothing.
 pub fn anchor(g: &SpreadGeometry) -> Point {
-    Point { x: g.media_w / 2.0 + g.gutter / 2.0, y: g.media_h * 0.68 }
+    Point {
+        x: g.media_w / 2.0 + g.gutter / 2.0,
+        y: g.media_h * 0.68,
+    }
 }
 
 /// The room a line has on that page: the recto's margined box, edge to edge.
@@ -139,7 +142,9 @@ pub fn mise_en_page_avec(
     mesure: impl Fn(&str, f64) -> f64,
 ) -> Vec<Ligne> {
     let mut lignes = text.lines();
-    let Some(titre) = lignes.next() else { return Vec::new() };
+    let Some(titre) = lignes.next() else {
+        return Vec::new();
+    };
     let mut out = vec![Ligne {
         texte: titre.to_string(),
         taille_pt: taille_titre_avec(titre, place_mm, &mesure),
@@ -165,11 +170,7 @@ pub fn taille_titre(titre: &str, place_mm: f64) -> f64 {
     taille_titre_avec(titre, place_mm, |s, pt| crate::font::text_width_mm(s, pt))
 }
 
-fn taille_titre_avec(
-    titre: &str,
-    place_mm: f64,
-    mesure: impl Fn(&str, f64) -> f64,
-) -> f64 {
+fn taille_titre_avec(titre: &str, place_mm: f64, mesure: impl Fn(&str, f64) -> f64) -> f64 {
     let large = mesure(titre, TITRE_PT);
     if large <= place_mm || large <= 0.0 {
         return TITRE_PT;
@@ -229,7 +230,12 @@ mod tests {
 
     #[test]
     fn the_page_says_the_title_then_when_then_where() {
-        let t = texte("Corse 2013", &faits(), place(&geom(210.0, 210.0)), Langue::Fr);
+        let t = texte(
+            "Corse 2013",
+            &faits(),
+            place(&geom(210.0, 210.0)),
+            Langue::Fr,
+        );
         assert_eq!(
             t,
             "Corse 2013\n\nDu 21 au 29 octobre 2013\nPorto-Vecchio, Bonifacio"
@@ -259,13 +265,21 @@ mod tests {
         let t = texte("Corse 2013", &f, place(&geom(210.0, 210.0)), Langue::Fr);
         assert_eq!(t, "Corse 2013\n\nPorto-Vecchio, Bonifacio");
         f.lieux = Vec::new();
-        assert_eq!(texte("Corse 2013", &f, place(&geom(210.0, 210.0)), Langue::Fr), "Corse 2013");
+        assert_eq!(
+            texte("Corse 2013", &f, place(&geom(210.0, 210.0)), Langue::Fr),
+            "Corse 2013"
+        );
     }
 
     /// Same forbidden list as the colophon page and the report channel.
     #[test]
     fn the_page_never_carries_a_path_a_coordinate_or_a_file_name() {
-        let t = texte("Corse 2013", &faits(), place(&geom(210.0, 210.0)), Langue::Fr);
+        let t = texte(
+            "Corse 2013",
+            &faits(),
+            place(&geom(210.0, 210.0)),
+            Langue::Fr,
+        );
         assert!(!t.contains('/') && !t.contains('\\'), "{t}");
         assert!(!t.contains('\u{b0}'), "{t}");
         for ext in [".jpg", ".JPG", ".png", ".heic", ".HEIC"] {
@@ -277,7 +291,12 @@ mod tests {
     /// edit flag, so a recomposition rebuilds it like any machine page.
     #[test]
     fn the_spread_holds_text_and_nothing_else() {
-        let s = spread("Corse 2013", &faits(), place(&geom(210.0, 210.0)), Langue::Fr);
+        let s = spread(
+            "Corse 2013",
+            &faits(),
+            place(&geom(210.0, 210.0)),
+            Langue::Fr,
+        );
         assert_eq!(s.template, TEMPLATE);
         assert!(s.slots.is_empty());
         assert!(s.caption.is_none());
@@ -360,9 +379,15 @@ mod tests {
                     "{nom} : « {} » fait {large:.1} mm pour {p:.1} mm de place",
                     l.texte
                 );
-                assert!(l.taille_pt >= TITRE_PT_MIN, "{nom} : titre sous le plancher");
+                assert!(
+                    l.taille_pt >= TITRE_PT_MIN,
+                    "{nom} : titre sous le plancher"
+                );
                 // And the block stays on the page, above the trimmed foot.
-                assert!(at.y - l.dy_mm > g.bleed, "{nom} : le bloc descend sous la coupe");
+                assert!(
+                    at.y - l.dy_mm > g.bleed,
+                    "{nom} : le bloc descend sous la coupe"
+                );
             }
         }
     }
@@ -372,13 +397,26 @@ mod tests {
     /// virgules comme en français.
     #[test]
     fn la_page_de_garde_parle_la_langue_de_la_composition() {
-        let t = texte("Corsica 2013", &faits(), place(&geom(210.0, 210.0)), Langue::En);
-        assert_eq!(t, "Corsica 2013\n\nFrom 21 to 29 October 2013\nPorto-Vecchio, Bonifacio");
+        let t = texte(
+            "Corsica 2013",
+            &faits(),
+            place(&geom(210.0, 210.0)),
+            Langue::En,
+        );
+        assert_eq!(
+            t,
+            "Corsica 2013\n\nFrom 21 to 29 October 2013\nPorto-Vecchio, Bonifacio"
+        );
         assert_eq!(
             ligne_des_dates(&faits(), Langue::En).as_deref(),
             Some("From 21 to 29 October 2013")
         );
-        let s = spread("Corsica 2013", &faits(), place(&geom(210.0, 210.0)), Langue::En);
+        let s = spread(
+            "Corsica 2013",
+            &faits(),
+            place(&geom(210.0, 210.0)),
+            Langue::En,
+        );
         assert!(s.text.unwrap().contains("October"));
     }
 }

@@ -113,13 +113,21 @@ pub fn geometry(album: &Album, profil: &PrinterProfile) -> CoverGeometry {
     let marge = ext + rempli + debord;
     let media_w = album.trim_mm.w * 2.0 + spine_w + mors * 2.0 + marge * 2.0;
     let media_h = album.trim_mm.h + (haut + rempli + debord) + (bas + rempli + debord);
-    let panel = |x: f64, w: f64| Rect { x, y: bas + rempli + debord, w, h: album.trim_mm.h };
+    let panel = |x: f64, w: f64| Rect {
+        x,
+        y: bas + rempli + debord,
+        w,
+        h: album.trim_mm.h,
+    };
 
     let back = panel(marge, album.trim_mm.w);
     let spine = profil
         .dos_mm(pages, GRAMMAGE_DEFAUT)
         .map(|w| panel(marge + album.trim_mm.w + mors, w));
-    let front = panel(marge + album.trim_mm.w + mors + spine_w + mors, album.trim_mm.w);
+    let front = panel(
+        marge + album.trim_mm.w + mors + spine_w + mors,
+        album.trim_mm.w,
+    );
 
     CoverGeometry {
         media_w,
@@ -212,10 +220,20 @@ fn render_cover_pdf_at(
     }
 
     draw_back_photo(&mut writer, &mut content, &mut xobjects, &album, &g, &cover)?;
-    draw_text(&mut content, &mut writer.ecrivain, &g, &album, &cover, encre_sur(fond));
+    draw_text(
+        &mut content,
+        &mut writer.ecrivain,
+        &g,
+        &album,
+        &cover,
+        encre_sur(fond),
+    );
 
     writer.add_page(
-        Boxes { media: [g.media_w, g.media_h], trim: g.trim() },
+        Boxes {
+            media: [g.media_w, g.media_h],
+            trim: g.trim(),
+        },
         content,
         xobjects,
     );
@@ -252,7 +270,12 @@ pub fn photo_rect(g: &CoverGeometry) -> Rect {
 /// Where the front photograph goes on a single leaf: the whole card. A leaf
 /// has no fold to stop it at, so it bleeds on all four sides.
 pub fn leaf_photo_rect(g: &CoverGeometry) -> Rect {
-    Rect { x: 0.0, y: 0.0, w: g.media_w, h: g.media_h }
+    Rect {
+        x: 0.0,
+        y: 0.0,
+        w: g.media_w,
+        h: g.media_h,
+    }
 }
 
 /// The rectangle the front photograph is printed into **at this supplier**,
@@ -266,9 +289,7 @@ pub fn leaf_photo_rect(g: &CoverGeometry) -> Rect {
 pub fn photo_rect_du_profil(album: &Album, profil: &PrinterProfile) -> Rect {
     match profil.fichiers {
         Fichiers::Deux => photo_rect(&geometry(album, profil)),
-        Fichiers::Un => {
-            leaf_photo_rect(&page_geometry(album, profil, Face::Premiere))
-        }
+        Fichiers::Un => leaf_photo_rect(&page_geometry(album, profil, Face::Premiere)),
     }
 }
 
@@ -293,11 +314,21 @@ pub fn page_geometry(album: &Album, profil: &PrinterProfile, face: Face) -> Cove
     let (ext, haut, bas) = (b.exterieur, b.haut, b.bas);
     let media_w = album.trim_mm.w + ext * 2.0;
     let media_h = album.trim_mm.h + haut + bas;
-    let panel = Rect { x: ext, y: bas, w: album.trim_mm.w, h: album.trim_mm.h };
+    let panel = Rect {
+        x: ext,
+        y: bas,
+        w: album.trim_mm.w,
+        h: album.trim_mm.h,
+    };
     // The face this leaf does not carry is given no surface at all, so a
     // caller that draws the wrong one draws nothing rather than something in
     // the wrong corner.
-    let absent = Rect { x: 0.0, y: 0.0, w: 0.0, h: 0.0 };
+    let absent = Rect {
+        x: 0.0,
+        y: 0.0,
+        w: 0.0,
+        h: 0.0,
+    };
     let (back, front) = match face {
         Face::Premiere => (absent, panel),
         Face::Quatrieme => (panel, absent),
@@ -380,7 +411,10 @@ pub(crate) fn add_cover_page(
     }
 
     writer.add_page(
-        Boxes { media: [g.media_w, g.media_h], trim: g.trim() },
+        Boxes {
+            media: [g.media_w, g.media_h],
+            trim: g.trim(),
+        },
         content,
         xobjects,
     );
@@ -429,7 +463,9 @@ fn aplat(content: &mut String, g: &CoverGeometry, rgb: [f64; 3]) {
 /// this project has always printed, and otherwise whichever of that ink and
 /// the paper white reads on the fond ([`couleur::encre_lisible`]).
 fn encre_sur(fond: Option<[f64; 3]>) -> [f64; 3] {
-    fond.map_or(pdf::TEXT_INK, |f| couleur::encre_lisible(f, pdf::TEXT_INK, PAPER))
+    fond.map_or(pdf::TEXT_INK, |f| {
+        couleur::encre_lisible(f, pdf::TEXT_INK, PAPER)
+    })
 }
 
 /// The title the book wears, from the album alone: the cover's when it was
@@ -447,7 +483,11 @@ pub fn titre_du_livre(album: &Album) -> &str {
 
 /// The title of the album, whether or not the cover editor has been opened.
 fn cover_title<'a>(album: &'a Album, cover: &'a Cover) -> &'a str {
-    if cover.title.is_empty() { album.title.as_str() } else { cover.title.as_str() }
+    if cover.title.is_empty() {
+        album.title.as_str()
+    } else {
+        cover.title.as_str()
+    }
 }
 
 /// Front: title block, bottom left, inside the trim by the same share the
@@ -473,8 +513,19 @@ fn draw_front(
     } else {
         (y, y + title_pt * PT_TO_MM * 1.25)
     };
-    plate(content, ecrivain, x, subtitle_y, subtitle_pt, over_photo, encre, &cover.subtitle);
-    plate(content, ecrivain, x, title_y, title_pt, over_photo, encre, title);
+    plate(
+        content,
+        ecrivain,
+        x,
+        subtitle_y,
+        subtitle_pt,
+        over_photo,
+        encre,
+        &cover.subtitle,
+    );
+    plate(
+        content, ecrivain, x, title_y, title_pt, over_photo, encre, title,
+    );
 }
 
 /// Spine: the title along the fold, running bottom to top, centred. Only when
@@ -531,7 +582,10 @@ pub fn taille_quatrieme(cover: &Cover, trim_w: f64) -> f64 {
 /// across; against the top or the bottom of the inner box, or centred.
 pub fn cadre_quatrieme(panneau: &Rect, p: &crate::model::PhotoQuatrieme) -> Rect {
     use crate::model::PositionQuatrieme as P;
-    let (iw, ih) = (panneau.w * (1.0 - 2.0 * TITLE_INSET), panneau.h * (1.0 - 2.0 * TITLE_INSET));
+    let (iw, ih) = (
+        panneau.w * (1.0 - 2.0 * TITLE_INSET),
+        panneau.h * (1.0 - 2.0 * TITLE_INSET),
+    );
     let cote = p.taille.part() * iw.min(ih);
     let bas = panneau.y + panneau.h * TITLE_INSET;
     let y = match p.position {
@@ -539,7 +593,12 @@ pub fn cadre_quatrieme(panneau: &Rect, p: &crate::model::PhotoQuatrieme) -> Rect
         P::Centre => panneau.y + (panneau.h - cote) / 2.0,
         P::Bas => bas,
     };
-    Rect { x: panneau.x + (panneau.w - cote) / 2.0, y, w: cote, h: cote }
+    Rect {
+        x: panneau.x + (panneau.w - cote) / 2.0,
+        y,
+        w: cote,
+        h: cote,
+    }
 }
 
 /// One line of the quatrième: its text, its baseline, its measured width.
@@ -624,15 +683,26 @@ pub fn quatrieme(
     use crate::model::PositionQuatrieme as P;
     let size = taille_pt;
     let leading = size * PT_TO_MM * BACK_LEADING;
-    let cadre = cover.back_photo.as_ref().map(|p| cadre_quatrieme(panneau, p));
+    let cadre = cover
+        .back_photo
+        .as_ref()
+        .map(|p| cadre_quatrieme(panneau, p));
     let bande = match (&cadre, cover.back_photo.as_ref().map(|p| p.position)) {
         (Some(c), Some(P::Bas)) => {
             let y = c.y + c.h + leading;
-            Rect { x: panneau.x, y, w: panneau.w, h: panneau.y + panneau.h - y }
+            Rect {
+                x: panneau.x,
+                y,
+                w: panneau.w,
+                h: panneau.y + panneau.h - y,
+            }
         }
-        (Some(c), _) => {
-            Rect { x: panneau.x, y: panneau.y, w: panneau.w, h: c.y - leading - panneau.y }
-        }
+        (Some(c), _) => Rect {
+            x: panneau.x,
+            y: panneau.y,
+            w: panneau.w,
+            h: c.y - leading - panneau.y,
+        },
         (None, _) => panneau.clone(),
     };
     let mut q = Quatrieme {
@@ -663,7 +733,12 @@ pub fn quatrieme(
         // Centred on the panel, measured on the real advance widths.
         let largeur = mesure(line, size);
         let x = panneau.x + (panneau.w - largeur) / 2.0;
-        q.lignes.push(LigneQuatrieme { texte: line.clone(), x, y, largeur });
+        q.lignes.push(LigneQuatrieme {
+            texte: line.clone(),
+            x,
+            y,
+            largeur,
+        });
         y -= leading;
     }
     q
@@ -687,7 +762,9 @@ fn draw_back(
     let size = taille_quatrieme(cover, album.trim_mm.w);
     let q = {
         let e = &*ecrivain;
-        quatrieme(&g.back, g.safe, cover, size, &|s, pt| e.largeur_mm_dans(face, s, pt))
+        quatrieme(&g.back, g.safe, cover, size, &|s, pt| {
+            e.largeur_mm_dans(face, s, pt)
+        })
     };
     for l in &q.lignes {
         pdf::text_op(content, ecrivain, face, l.x, l.y, size, encre, &l.texte);
@@ -704,7 +781,9 @@ fn draw_back_photo(
     g: &CoverGeometry,
     cover: &Cover,
 ) -> Result<()> {
-    let Some(p) = &cover.back_photo else { return Ok(()) };
+    let Some(p) = &cover.back_photo else {
+        return Ok(());
+    };
     let root = std::path::PathBuf::from(&album.root);
     anyhow::ensure!(
         root.is_dir(),
@@ -745,7 +824,16 @@ fn plate(
         return;
     }
     if over_photo {
-        pdf::text_op(content, ecrivain, 1, x + SHADOW_OFFSET, y - SHADOW_OFFSET, size, SHADOW, s);
+        pdf::text_op(
+            content,
+            ecrivain,
+            1,
+            x + SHADOW_OFFSET,
+            y - SHADOW_OFFSET,
+            size,
+            SHADOW,
+            s,
+        );
         pdf::text_op(content, ecrivain, 1, x, y, size, PAPER, s);
     } else {
         pdf::text_op(content, ecrivain, 1, x, y, size, encre, s);
@@ -781,7 +869,11 @@ mod tests {
     use crate::model::Size;
 
     fn album_de(spreads: usize) -> Album {
-        let mut a = Album::new("Corse", std::path::Path::new("/photos"), Size { w: 210.0, h: 210.0 });
+        let mut a = Album::new(
+            "Corse",
+            std::path::Path::new("/photos"),
+            Size { w: 210.0, h: 210.0 },
+        );
         for _ in 0..spreads {
             a.spreads.push(crate::model::Spread {
                 template: "solo".into(),
@@ -813,24 +905,22 @@ mod tests {
             "{}",
             g.media_w
         );
-        assert!((g.media_h - (210.0 + marge * 2.0)).abs() < 1e-9, "{}", g.media_h);
+        assert!(
+            (g.media_h - (210.0 + marge * 2.0)).abs() < 1e-9,
+            "{}",
+            g.media_h
+        );
         // The panels no longer touch the bleed: on a case-wrap cover they sit
         // inland by the board and the turn-in, and a groove separates each of
         // them from the spine.
         assert!((g.back.x - marge).abs() < 1e-9, "{}", g.back.x);
-        assert!(
-            (g.spine.as_ref().unwrap().x - (g.back.x + g.back.w + cp.mors_mm)).abs() < 1e-9
-        );
-        assert!(
-            (g.front.x - (g.spine.as_ref().unwrap().x + spine + cp.mors_mm)).abs() < 1e-9
-        );
+        assert!((g.spine.as_ref().unwrap().x - (g.back.x + g.back.w + cp.mors_mm)).abs() < 1e-9);
+        assert!((g.front.x - (g.spine.as_ref().unwrap().x + spine + cp.mors_mm)).abs() < 1e-9);
         assert!((g.front.x + g.front.w - (g.media_w - marge)).abs() < 1e-9);
         // And the numbers their own template is drawn with: 492 × 258 at a
         // 14 mm spine is what `photobook_cw_s210_s_fc_cover.pdf` measures.
         assert!((g.media_h - 258.0).abs() < 1e-9, "{}", g.media_h);
-        assert!(
-            (210.0 * 2.0 + 14.0 + cp.mors_mm * 2.0 + marge * 2.0 - 492.0).abs() < 1e-9
-        );
+        assert!((210.0 * 2.0 + 14.0 + cp.mors_mm * 2.0 + marge * 2.0 - 492.0).abs() < 1e-9);
     }
 
     /// A supplier who does not wrap boards gets the sheet this project has
@@ -846,14 +936,20 @@ mod tests {
             let g = geometry(&a, p);
             let spine = p.dos_mm(96, GRAMMAGE_DEFAUT).unwrap_or(0.0);
             let ext = p.bleed_mm.exterieur;
-            assert!((g.media_w - (210.0 * 2.0 + spine + ext * 2.0)).abs() < 1e-9, "{id}");
+            assert!(
+                (g.media_w - (210.0 * 2.0 + spine + ext * 2.0)).abs() < 1e-9,
+                "{id}"
+            );
             assert!(
                 (g.media_h - (210.0 + p.bleed_mm.haut + p.bleed_mm.bas)).abs() < 1e-9,
                 "{id}"
             );
             assert!((g.back.x - ext).abs() < 1e-9, "{id}");
             assert!((g.back.y - p.bleed_mm.bas).abs() < 1e-9, "{id}");
-            assert!((g.front.x + g.front.w - (g.media_w - ext)).abs() < 1e-9, "{id}");
+            assert!(
+                (g.front.x + g.front.w - (g.media_w - ext)).abs() < 1e-9,
+                "{id}"
+            );
             // And the photograph covers what it has always covered.
             let r = photo_rect(&g);
             assert!((r.x - g.front.x).abs() < 1e-9, "{id}");
@@ -870,7 +966,10 @@ mod tests {
         let g = geometry(&a, PrinterProfile::par_id("prodigi").unwrap());
         assert!(g.spine.is_none());
         assert_eq!(g.spine_mm(), 0.0);
-        assert!((g.media_w - 210.0 * 2.0).abs() < 1e-9, "Prodigi ne demande aucun fond perdu");
+        assert!(
+            (g.media_w - 210.0 * 2.0).abs() < 1e-9,
+            "Prodigi ne demande aucun fond perdu"
+        );
         assert!((g.front.x - (g.back.x + g.back.w)).abs() < 1e-9);
     }
 
@@ -883,7 +982,8 @@ mod tests {
         let fat = geometry(&album_de(90), cp);
         // The extra width is the extra spine, no more and no less: pinning a
         // millimetre count here would only pin the coefficient of the day.
-        let attendu = cp.dos_mm(180, GRAMMAGE_DEFAUT).unwrap() - cp.dos_mm(40, GRAMMAGE_DEFAUT).unwrap();
+        let attendu =
+            cp.dos_mm(180, GRAMMAGE_DEFAUT).unwrap() - cp.dos_mm(40, GRAMMAGE_DEFAUT).unwrap();
         assert!(attendu > 0.0, "un dos qui ne grossit pas ne se calcule pas");
         assert!(
             (fat.media_w - thin.media_w - attendu).abs() < 1e-9,
@@ -891,7 +991,10 @@ mod tests {
             fat.media_w,
             thin.media_w
         );
-        assert!((fat.media_h - thin.media_h).abs() < 1e-9, "la hauteur ne bouge pas");
+        assert!(
+            (fat.media_h - thin.media_h).abs() < 1e-9,
+            "la hauteur ne bouge pas"
+        );
     }
 
     /// The photo reaches the four edges of the card and stops at the spine.
@@ -906,11 +1009,23 @@ mod tests {
         let g = geometry(&a, cp);
         let spine = g.spine.as_ref().unwrap();
         let r = photo_rect(&g);
-        assert!((r.x - (spine.x + spine.w)).abs() < 1e-9, "la photo mord sur le dos");
-        assert!(r.x < g.front.x, "elle doit entrer dans le mors, pas s'y arrêter");
-        assert!((g.front.x - r.x - cp.mors_mm).abs() < 1e-9, "d'exactement un mors");
+        assert!(
+            (r.x - (spine.x + spine.w)).abs() < 1e-9,
+            "la photo mord sur le dos"
+        );
+        assert!(
+            r.x < g.front.x,
+            "elle doit entrer dans le mors, pas s'y arrêter"
+        );
+        assert!(
+            (g.front.x - r.x - cp.mors_mm).abs() < 1e-9,
+            "d'exactement un mors"
+        );
         assert_eq!(r.y, 0.0);
-        assert!((r.x + r.w - g.media_w).abs() < 1e-9, "elle atteint le bord extérieur");
+        assert!(
+            (r.x + r.w - g.media_w).abs() < 1e-9,
+            "elle atteint le bord extérieur"
+        );
         assert!((r.h - g.media_h).abs() < 1e-9, "et le haut comme le bas");
     }
 
@@ -935,7 +1050,10 @@ mod tests {
                 && (boitier.h - attendu.h).abs() < 1e-9,
             "{boitier:?} ≠ {attendu:?}"
         );
-        assert!((boitier.h - (210.0 + 24.0 * 2.0)).abs() < 1e-9, "{boitier:?}");
+        assert!(
+            (boitier.h - (210.0 + 24.0 * 2.0)).abs() < 1e-9,
+            "{boitier:?}"
+        );
 
         // Feuillet volant : la page plus son fond perdu, et rien de plus.
         // Prodigi n'en demande aucun, donc c'est la page nue.
@@ -982,14 +1100,28 @@ mod tests {
             fond: None,
             ..Default::default()
         };
-        draw_text(&mut content, &mut pdf::Ecrivain::incorporee(), &g, &album_de(12), &cover, pdf::TEXT_INK);
+        draw_text(
+            &mut content,
+            &mut pdf::Ecrivain::incorporee(),
+            &g,
+            &album_de(12),
+            &cover,
+            pdf::TEXT_INK,
+        );
         // The title is on the front and nowhere else: one occurrence. Under
         // Identity-H a string in the stream is glyph ids, so the title is
         // looked for the way it is written.
         let face = font::Embarquee::incorporee().expect("face ouverte");
-        let pose: String =
-            face.glyphes("Corse").iter().map(|(gid, _)| format!("{gid:04X}")).collect();
-        assert_eq!(content.matches(&format!("<{pose}>")).count(), 1, "{content}");
+        let pose: String = face
+            .glyphes("Corse")
+            .iter()
+            .map(|(gid, _)| format!("{gid:04X}"))
+            .collect();
+        assert_eq!(
+            content.matches(&format!("<{pose}>")).count(),
+            1,
+            "{content}"
+        );
     }
 
     /// The quatrième's wrap, through the one [`crate::scene::replier`].
@@ -1008,7 +1140,12 @@ mod tests {
         }
     }
 
-    const PANNEAU: Rect = Rect { x: 27.0, y: 24.0, w: 210.0, h: 210.0 };
+    const PANNEAU: Rect = Rect {
+        x: 27.0,
+        y: 24.0,
+        w: 210.0,
+        h: 210.0,
+    };
     /// Six points to the character: wide enough to wrap, simple enough to count.
     fn mesure_simple(s: &str, pt: f64) -> f64 {
         s.chars().count() as f64 * pt * 0.2
@@ -1036,7 +1173,12 @@ mod tests {
             }
         }
         // Un format en largeur : le côté suit la hauteur, la plus courte.
-        let large = Rect { x: 0.0, y: 0.0, w: 280.0, h: 210.0 };
+        let large = Rect {
+            x: 0.0,
+            y: 0.0,
+            w: 280.0,
+            h: 210.0,
+        };
         let c = cadre_quatrieme(&large, &photo_q(P::Centre, T::Grande));
         assert!((c.w - 2.0 / 3.0 * 210.0 * (1.0 - 2.0 * TITLE_INSET)).abs() < 1e-9);
     }
@@ -1046,7 +1188,10 @@ mod tests {
     #[test]
     fn le_texte_prend_la_bande_que_la_photo_laisse() {
         use crate::model::{PositionQuatrieme as P, TailleQuatrieme as T};
-        let mut c = Cover { back_text: "Pour Marie.\nEt la suite.".into(), ..Default::default() };
+        let mut c = Cover {
+            back_text: "Pour Marie.\nEt la suite.".into(),
+            ..Default::default()
+        };
         for pos in [P::Haut, P::Centre, P::Bas] {
             c.back_photo = Some(photo_q(pos, T::Moyenne));
             let q = quatrieme(&PANNEAU, 7.0, &c, 10.5, &mesure_simple);
@@ -1056,7 +1201,10 @@ mod tests {
             let mm = 10.5 * PT_TO_MM;
             for l in &q.lignes {
                 if pos == P::Bas {
-                    assert!(l.y - mm * ENCRE_BAS > cadre.y + cadre.h, "{pos:?} : au-dessus");
+                    assert!(
+                        l.y - mm * ENCRE_BAS > cadre.y + cadre.h,
+                        "{pos:?} : au-dessus"
+                    );
                 } else {
                     assert!(l.y + mm * ENCRE_HAUT < cadre.y, "{pos:?} : dessous");
                 }
@@ -1082,12 +1230,18 @@ mod tests {
         assert_eq!(q.lignes.len() + q.coupees, 60);
         assert!(q.ecarts(&PANNEAU, 7.0).0 > 0);
 
-        let mot = Cover { back_text: "x".repeat(110), ..Default::default() };
+        let mot = Cover {
+            back_text: "x".repeat(110),
+            ..Default::default()
+        };
         let q = quatrieme(&PANNEAU, 7.0, &mot, 10.5, &mesure_simple);
         assert!(q.trop_large);
         assert_eq!(q.ecarts(&PANNEAU, 7.0), (1, 0), "plus large que la page");
         // Plus large que la boîte, pas que la page : la marge avertit.
-        let mot = Cover { back_text: "x".repeat(94), ..Default::default() };
+        let mot = Cover {
+            back_text: "x".repeat(94),
+            ..Default::default()
+        };
         let q = quatrieme(&PANNEAU, 7.0, &mot, 10.5, &mesure_simple);
         assert_eq!(q.ecarts(&PANNEAU, 7.0), (0, 1), "dans la bande sûre");
     }
@@ -1120,23 +1274,41 @@ mod tests {
             back_taille_pt: Some(14.0),
             ..Default::default()
         });
-        fs::write(dir.join("album.json"), serde_json::to_string(&album).unwrap()).unwrap();
+        fs::write(
+            dir.join("album.json"),
+            serde_json::to_string(&album).unwrap(),
+        )
+        .unwrap();
         let cp = PrinterProfile::par_id("cloudprinter").unwrap();
         let out = dir.join("album-cover.pdf");
         render_cover_pdf_at(&dir, cp, &out, instant()).expect("rendu");
         let flux = flux_de(&fs::read(&out).unwrap());
         let g = geometry(&album, cp);
-        let c = cadre_quatrieme(&g.back, album.cover.as_ref().unwrap().back_photo.as_ref().unwrap());
+        let c = cadre_quatrieme(
+            &g.back,
+            album.cover.as_ref().unwrap().back_photo.as_ref().unwrap(),
+        );
         let pt = |mm: f64| format!("{:.2}", mm * 72.0 / 25.4);
         let attendu = format!("q {} {} {} {} re W n", pt(c.x), pt(c.y), pt(c.w), pt(c.h));
         assert!(flux.contains(&attendu), "cadre {attendu} absent : {flux}");
-        assert!(flux.contains("/Im1 Do") && flux.contains("/Im0 Do"), "{flux}");
-        let quatrieme = flux.lines().find(|l| l.contains("/F2 ")).expect("texte en face 2");
+        assert!(
+            flux.contains("/Im1 Do") && flux.contains("/Im0 Do"),
+            "{flux}"
+        );
+        let quatrieme = flux
+            .lines()
+            .find(|l| l.contains("/F2 "))
+            .expect("texte en face 2");
         assert!(quatrieme.contains("/F2 14"), "à sa taille : {quatrieme}");
 
         let mut w = PdfWriter::new(&album, &dir);
-        add_cover_page(&mut w, &album, PrinterProfile::par_id("prodigi").unwrap(), Face::Quatrieme)
-            .unwrap();
+        add_cover_page(
+            &mut w,
+            &album,
+            PrinterProfile::par_id("prodigi").unwrap(),
+            Face::Quatrieme,
+        )
+        .unwrap();
         let feuillet = dir.join("feuillet.pdf");
         w.save(&feuillet).unwrap();
         let flux = flux_de(&fs::read(&feuillet).unwrap());
@@ -1168,17 +1340,27 @@ mod tests {
         let lines = wrap(&pdf::Ecrivain::incorporee(), long, 100.0, 10.5);
         assert!(lines.len() > 1, "rien n'a été coupé : {lines:?}");
         for l in &lines {
-            assert!(font::text_width_mm(l, 10.5) <= 100.0, "ligne trop large : {l}");
+            assert!(
+                font::text_width_mm(l, 10.5) <= 100.0,
+                "ligne trop large : {l}"
+            );
         }
         // Words survive whole.
-        assert_eq!(lines.join(" ").split_whitespace().count(), long.split_whitespace().count());
+        assert_eq!(
+            lines.join(" ").split_whitespace().count(),
+            long.split_whitespace().count()
+        );
     }
 
     /// Blank lines in the quatrième are kept: a dedication has paragraphs.
     #[test]
     fn the_back_text_keeps_its_paragraphs() {
-        let lines =
-            wrap(&pdf::Ecrivain::incorporee(), "Pour Marie.\n\nEt pour la suite.", 100.0, 10.5);
+        let lines = wrap(
+            &pdf::Ecrivain::incorporee(),
+            "Pour Marie.\n\nEt pour la suite.",
+            100.0,
+            10.5,
+        );
         assert_eq!(lines, vec!["Pour Marie.", "", "Et pour la suite."]);
     }
 
@@ -1205,7 +1387,11 @@ mod tests {
             fond: None,
             ..Default::default()
         });
-        fs::write(dir.join("album.json"), serde_json::to_string(&album).unwrap()).unwrap();
+        fs::write(
+            dir.join("album.json"),
+            serde_json::to_string(&album).unwrap(),
+        )
+        .unwrap();
 
         let cp = PrinterProfile::par_id("cloudprinter").unwrap();
         let out = dir.join("album-cover.pdf");
@@ -1215,7 +1401,11 @@ mod tests {
         let doc = lopdf::Document::load(&out).expect("relecture");
         let pages = doc.get_pages();
         assert_eq!(pages.len(), 1, "la couverture est une seule feuille");
-        let page = doc.get_object(*pages.values().next().unwrap()).unwrap().as_dict().unwrap();
+        let page = doc
+            .get_object(*pages.values().next().unwrap())
+            .unwrap()
+            .as_dict()
+            .unwrap();
         let mm = |k: &[u8]| -> Vec<f64> {
             page.get(k)
                 .unwrap()
@@ -1226,8 +1416,16 @@ mod tests {
                 .collect()
         };
         let media = mm(b"MediaBox");
-        assert!((media[2] - g.media_w).abs() < 0.01, "{media:?} contre {}", g.media_w);
-        assert!((media[3] - g.media_h).abs() < 0.01, "{media:?} contre {}", g.media_h);
+        assert!(
+            (media[2] - g.media_w).abs() < 0.01,
+            "{media:?} contre {}",
+            g.media_w
+        );
+        assert!(
+            (media[3] - g.media_h).abs() < 0.01,
+            "{media:?} contre {}",
+            g.media_h
+        );
         // Two pages, a spine, two grooves and the case on each outer edge:
         // the number a supplier checks against their own template.
         let marge = cp.bleed_mm.exterieur + cp.rempli_mm + cp.debord_mm;
@@ -1263,13 +1461,16 @@ mod tests {
     /// Reprise à la 1.1.0, où [`neutre`] masque aussi le producteur : la même
     /// empreinte sort avec la version mise à 1.0.1 et à 1.1.0, et l'ancienne
     /// (`[145, 244, 10, …]`) était celle de la 1.0.1 non masquée.
-    const EMPREINTE_SANS_FOND: [u8; 16] =
-        [164, 102, 28, 39, 2, 22, 118, 68, 191, 214, 146, 37, 84, 163, 130, 143];
+    const EMPREINTE_SANS_FOND: [u8; 16] = [
+        164, 102, 28, 39, 2, 22, 118, 68, 191, 214, 146, 37, 84, 163, 130, 143,
+    ];
 
     /// L'instant figé de [`feuille_figee`].
     fn instant() -> chrono::DateTime<chrono::Local> {
         use chrono::TimeZone;
-        chrono::Local.with_ymd_and_hms(2026, 10, 18, 11, 0, 0).unwrap()
+        chrono::Local
+            .with_ymd_and_hms(2026, 10, 18, 11, 0, 0)
+            .unwrap()
     }
 
     /// Les octets d'une feuille dont on a masqué les trois écritures de
@@ -1289,7 +1490,10 @@ mod tests {
             .map(|b| format!("{b:02X}"))
             .collect();
         let producteur = crate::pdfx::producer();
-        let utf16: Vec<u8> = producteur.encode_utf16().flat_map(u16::to_be_bytes).collect();
+        let utf16: Vec<u8> = producteur
+            .encode_utf16()
+            .flat_map(u16::to_be_bytes)
+            .collect();
         let mut out = octets.to_vec();
         for (motif, m, attendu) in [
             (crate::pdfx::pdf_date(t), None, 2),
@@ -1323,8 +1527,7 @@ mod tests {
     /// fichier ne dépend que de la face du projet et de l'arithmétique : il
     /// rend les mêmes octets sur les trois OS du gate.
     fn feuille_figee(nom: &str, fond: Option<&str>) -> Vec<u8> {
-        let dir = std::env::temp_dir()
-            .join(format!("colophon-fond-{nom}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("colophon-fond-{nom}-{}", std::process::id()));
         fs::create_dir_all(&dir).unwrap();
         let mut album = album_de(48);
         album.root = dir.to_string_lossy().to_string();
@@ -1336,10 +1539,19 @@ mod tests {
             fond: fond.map(str::to_string),
             ..Default::default()
         });
-        fs::write(dir.join("album.json"), serde_json::to_string(&album).unwrap()).unwrap();
+        fs::write(
+            dir.join("album.json"),
+            serde_json::to_string(&album).unwrap(),
+        )
+        .unwrap();
         let out = dir.join("album-cover.pdf");
-        render_cover_pdf_at(&dir, PrinterProfile::par_id("cloudprinter").unwrap(), &out, instant())
-            .expect("rendu");
+        render_cover_pdf_at(
+            &dir,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &out,
+            instant(),
+        )
+        .expect("rendu");
         let octets = fs::read(&out).unwrap();
         let _ = fs::remove_dir_all(&dir);
         octets
@@ -1372,7 +1584,10 @@ mod tests {
         let page = *doc.get_pages().values().next().unwrap();
         let d = doc.get_object(page).unwrap().as_dict().unwrap();
         let m = d.get(b"MediaBox").unwrap().as_array().unwrap();
-        [f64::from(m[2].as_float().unwrap()), f64::from(m[3].as_float().unwrap())]
+        [
+            f64::from(m[2].as_float().unwrap()),
+            f64::from(m[3].as_float().unwrap()),
+        ]
     }
 
     /// Le fond est un aplat de la feuille entière, fond perdu compris, posé
@@ -1387,13 +1602,20 @@ mod tests {
         let c = 26.0 / 255.0;
         assert_eq!(&ops[..2], ["q", &c.to_string()], "{premiere}");
         assert_eq!(ops[4], "rg", "{premiere}");
-        assert_eq!(&ops[5..7], ["0", "0"], "l'aplat part du coin de la feuille : {premiere}");
+        assert_eq!(
+            &ops[5..7],
+            ["0", "0"],
+            "l'aplat part du coin de la feuille : {premiere}"
+        );
         assert_eq!(&ops[9..], ["re", "f", "Q"], "{premiere}");
         let [w, h] = media_pt(&octets);
         let (aw, ah): (f64, f64) = (ops[7].parse().unwrap(), ops[8].parse().unwrap());
         assert!(aw >= w && aw - w < 0.02, "{aw} contre {w}");
         assert!(ah >= h && ah - h < 0.02, "{ah} contre {h}");
-        assert_ne!(crate::export::empreinte(&neutre(&octets)), EMPREINTE_SANS_FOND);
+        assert_ne!(
+            crate::export::empreinte(&neutre(&octets)),
+            EMPREINTE_SANS_FOND
+        );
     }
 
     /// Une valeur hors `#rrggbb` est ignorée : la feuille est celle d'un album
@@ -1402,7 +1624,11 @@ mod tests {
     fn un_fond_illisible_rend_la_feuille_sans_fond() {
         for gate in ["terracotta", "#abc", "#12345g"] {
             let octets = feuille_figee("gate", Some(gate));
-            assert_eq!(crate::export::empreinte(&neutre(&octets)), EMPREINTE_SANS_FOND, "{gate}");
+            assert_eq!(
+                crate::export::empreinte(&neutre(&octets)),
+                EMPREINTE_SANS_FOND,
+                "{gate}"
+            );
         }
     }
 
@@ -1413,7 +1639,12 @@ mod tests {
         let encre = |fond: &str| {
             let flux = flux_de(&feuille_figee(&format!("encre-{}", &fond[1..]), Some(fond)));
             let papier = format!("{} {} {} rg", PAPER[0], PAPER[1], PAPER[2]);
-            let ink = format!("{} {} {} rg", pdf::TEXT_INK[0], pdf::TEXT_INK[1], pdf::TEXT_INK[2]);
+            let ink = format!(
+                "{} {} {} rg",
+                pdf::TEXT_INK[0],
+                pdf::TEXT_INK[1],
+                pdf::TEXT_INK[2]
+            );
             // Une ligne de texte par couleur rencontrée : titre, sous-titre,
             // dos et quatrième, aucune photo dessous.
             let textes: Vec<&str> = flux.lines().filter(|l| l.contains("Tj")).collect();
@@ -1423,7 +1654,11 @@ mod tests {
                 textes.iter().filter(|l| l.contains(&ink)).count(),
             )
         };
-        assert_eq!(encre("#1a1a1a"), (4, 0), "sur du noir, tout passe au papier");
+        assert_eq!(
+            encre("#1a1a1a"),
+            (4, 0),
+            "sur du noir, tout passe au papier"
+        );
         assert_eq!(encre("#f3ead8"), (0, 4), "sur du crème, l'encre reste");
     }
 
@@ -1432,8 +1667,8 @@ mod tests {
     /// la première comme sous la quatrième.
     #[test]
     fn le_feuillet_porte_le_fond_aussi() {
-        let dir = std::env::temp_dir()
-            .join(format!("colophon-feuillet-fond-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("colophon-feuillet-fond-{}", std::process::id()));
         fs::create_dir_all(&dir).unwrap();
         let img = image::RgbImage::from_pixel(2400, 1600, image::Rgb([70, 110, 160]));
         image::DynamicImage::ImageRgb8(img)
@@ -1490,11 +1725,17 @@ mod tests {
         assert!((devant.media_w - 210.0).abs() < 1e-9, "{}", devant.media_w);
         assert!((devant.media_h - 210.0).abs() < 1e-9, "{}", devant.media_h);
         assert!((devant.front.w - 210.0).abs() < 1e-9);
-        assert_eq!(devant.back.w, 0.0, "la quatrième n'est pas sur cette feuille");
+        assert_eq!(
+            devant.back.w, 0.0,
+            "la quatrième n'est pas sur cette feuille"
+        );
 
         let derriere = page_geometry(&a, pr, Face::Quatrieme);
         assert!((derriere.back.w - 210.0).abs() < 1e-9);
-        assert_eq!(derriere.front.w, 0.0, "la première n'est pas sur cette feuille");
+        assert_eq!(
+            derriere.front.w, 0.0,
+            "la première n'est pas sur cette feuille"
+        );
 
         // A profile that asks for bleed gets it on all four edges, because a
         // leaf is cut on all four: this is not half a flat sheet.
@@ -1533,7 +1774,11 @@ mod tests {
             fond: None,
             ..Default::default()
         });
-        fs::write(dir.join("album.json"), serde_json::to_string(&album).unwrap()).unwrap();
+        fs::write(
+            dir.join("album.json"),
+            serde_json::to_string(&album).unwrap(),
+        )
+        .unwrap();
 
         let largeurs = |profil: &'static PrinterProfile, nom: &str| -> Vec<f64> {
             let out = dir.join(format!("album-print-{nom}.pdf"));
@@ -1556,9 +1801,19 @@ mod tests {
         // recto, then both pages of the other three, then the blank verso —
         // and the file is ten pages long.
         let pr = largeurs(PrinterProfile::par_id("prodigi").unwrap(), "prodigi");
-        assert_eq!(pr.len(), 10, "8 pages de livre plus les deux couvertures : {pr:?}");
-        assert!((pr[0] - 210.0).abs() < 0.01, "première de couverture : {pr:?}");
-        assert!((pr[9] - 210.0).abs() < 0.01, "quatrième de couverture : {pr:?}");
+        assert_eq!(
+            pr.len(),
+            10,
+            "8 pages de livre plus les deux couvertures : {pr:?}"
+        );
+        assert!(
+            (pr[0] - 210.0).abs() < 0.01,
+            "première de couverture : {pr:?}"
+        );
+        assert!(
+            (pr[9] - 210.0).abs() < 0.01,
+            "quatrième de couverture : {pr:?}"
+        );
         // A leaf is the trimmed page, an interior page is that page plus the
         // bleed the album carries: they are close in width and the file has
         // to keep them apart, which is what the count above says.
@@ -1567,8 +1822,15 @@ mod tests {
         }
 
         // Cloudprinter binds two files, so its interior stays an interior.
-        let cp = largeurs(PrinterProfile::par_id("cloudprinter").unwrap(), "cloudprinter");
-        assert_eq!(cp.len(), 8, "l'intérieur seul, la couverture est son fichier : {cp:?}");
+        let cp = largeurs(
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            "cloudprinter",
+        );
+        assert_eq!(
+            cp.len(),
+            8,
+            "l'intérieur seul, la couverture est son fichier : {cp:?}"
+        );
         // Their own inside-page template: 216 × 216, bleed on all four edges.
         assert!(cp.iter().all(|w| (w - 216.0).abs() < 0.01), "{cp:?}");
 
@@ -1637,7 +1899,10 @@ mod tests {
             let ppmm = f64::from(leur.width()) / large;
             let mut gg = g.clone();
             gg.media_w = large;
-            gg.spine = gg.spine.map(|r| Rect { w: DOS_DU_GABARIT, ..r });
+            gg.spine = gg.spine.map(|r| Rect {
+                w: DOS_DU_GABARIT,
+                ..r
+            });
             gg.front.x = gg.back.x + gg.back.w + cp.mors_mm + DOS_DU_GABARIT + cp.mors_mm;
             guides(&mut leur, &gg, cp, ppmm, DOS_DU_GABARIT);
             leur.save(out.join("gabarit.png")).unwrap();
@@ -1649,7 +1914,12 @@ mod tests {
         println!("feuille  : {}", out.join("feuille.png").display());
         println!(
             "cotes    : feuille {:.2} × {:.2} mm, dos {:.2}, rempli {}, débord {}, mors {}",
-            g.media_w, g.media_h, g.spine_mm(), cp.rempli_mm, cp.debord_mm, cp.mors_mm
+            g.media_w,
+            g.media_h,
+            g.spine_mm(),
+            cp.rempli_mm,
+            cp.debord_mm,
+            cp.mors_mm
         );
         println!("légende  : rouge = coupe de la feuille (fond perdu)");
         println!("           vert  = panneaux finis (dos, quatrième, première)");
@@ -1717,11 +1987,19 @@ mod tests {
         for x in [pli, g.media_w - pli] {
             v(im, x, ppmm, JAUNE);
         }
-        for y in [g.bleed_bas + profil.rempli_mm, g.media_h - g.bleed_haut - profil.rempli_mm] {
+        for y in [
+            g.bleed_bas + profil.rempli_mm,
+            g.media_h - g.bleed_haut - profil.rempli_mm,
+        ] {
             hh(im, y, g.media_h, ppmm, JAUNE);
         }
         // Les panneaux finis, et les deux mors entre eux.
-        for x in [g.back.x, g.back.x + g.back.w, g.front.x, g.front.x + g.front.w] {
+        for x in [
+            g.back.x,
+            g.back.x + g.back.w,
+            g.front.x,
+            g.front.x + g.front.w,
+        ] {
             v(im, x, ppmm, VERT);
         }
         for y in [g.back.y, g.back.y + g.back.h] {

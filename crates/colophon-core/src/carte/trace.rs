@@ -56,7 +56,10 @@ fn plus_proche(etapes: &[Etape], p: P) -> usize {
 /// est connue et plausible) au début de la seconde.
 fn heures_entre(etapes: &[Etape], i: usize, j: usize) -> Option<f64> {
     let (a, b) = (&etapes[i.min(j)], &etapes[i.max(j)]);
-    let depuis = a.fin.filter(|f| *f >= a.debut && *f <= b.debut).unwrap_or(a.debut);
+    let depuis = a
+        .fin
+        .filter(|f| *f >= a.debut && *f <= b.debut)
+        .unwrap_or(a.debut);
     let h = (b.debut - depuis).num_seconds() as f64 / 3600.0;
     (h > 0.0).then_some(h)
 }
@@ -67,7 +70,11 @@ fn plus_vite_qu_un_avion(km: f64, heures: Option<f64>) -> bool {
 
 /// Un trajet de `a` à `b` : l'arc de grand cercle d'un vol, la corde sinon.
 fn jambe(a: P, b: P, vol: bool) -> Piece {
-    let mut points = if vol { arc_grand_cercle(a, b) } else { vec![a, b] };
+    let mut points = if vol {
+        arc_grand_cercle(a, b)
+    } else {
+        vec![a, b]
+    };
     derouler(&mut points);
     Piece { vol, points }
 }
@@ -82,10 +89,17 @@ fn polyligne(points: &[P], vol: bool) -> Piece {
     let mut sortie: Vec<P> = Vec::new();
     for w in points.windows(2) {
         let arc = arc_grand_cercle(w[0], w[1]);
-        sortie.extend(if sortie.is_empty() { &arc[..] } else { &arc[1..] });
+        sortie.extend(if sortie.is_empty() {
+            &arc[..]
+        } else {
+            &arc[1..]
+        });
     }
     derouler(&mut sortie);
-    Piece { vol, points: sortie }
+    Piece {
+        vol,
+        points: sortie,
+    }
 }
 
 pub fn pieces(voyage: &Voyage, plage: &Range<usize>) -> Vec<Piece> {
@@ -95,9 +109,16 @@ pub fn pieces(voyage: &Voyage, plage: &Range<usize>) -> Vec<Piece> {
 
     for seg in &voyage.segments {
         let bout = |explicite: Option<usize>, p: Option<&crate::voyage::Point>| {
-            explicite.filter(|i| *i < etapes.len()).or_else(|| p.map(|p| plus_proche(etapes, (p.lat, p.lon))))
+            explicite
+                .filter(|i| *i < etapes.len())
+                .or_else(|| p.map(|p| plus_proche(etapes, (p.lat, p.lon))))
         };
-        let (Some(s), Some(e)) = (bout(seg.de, seg.polyligne.first()), bout(seg.a, seg.polyligne.last())) else { continue };
+        let (Some(s), Some(e)) = (
+            bout(seg.de, seg.polyligne.first()),
+            bout(seg.a, seg.polyligne.last()),
+        ) else {
+            continue;
+        };
         if !(plage.contains(&s) && plage.contains(&e)) {
             continue;
         }
@@ -155,7 +176,11 @@ fn decouper_la_trace(points: &[(P, DateTime<Utc>)]) -> Vec<Piece> {
             let km = haversine_km(q, *p);
             let h = (*t - tq).num_seconds() as f64 / 3600.0;
             // Un saut sans durée lisible, mais de plus de 500 km, est un vol aussi.
-            let vol = if h > 0.0 { km / h > VITESSE_AVION_KMH && km > 50.0 } else { km > 500.0 };
+            let vol = if h > 0.0 {
+                km / h > VITESSE_AVION_KMH && km > 50.0
+            } else {
+                km > 500.0
+            };
             if vol {
                 if courant.len() >= 2 {
                     sortie.push(polyligne(&std::mem::take(&mut courant), false));
@@ -182,7 +207,10 @@ mod tests {
     fn la_vitesse_fait_l_avion() {
         assert!(plus_vite_qu_un_avion(900.0, Some(2.0)));
         assert!(!plus_vite_qu_un_avion(400.0, Some(4.0)));
-        assert!(!plus_vite_qu_un_avion(9000.0, None), "sans durée, rien ne se conclut");
+        assert!(
+            !plus_vite_qu_un_avion(9000.0, None),
+            "sans durée, rien ne se conclut"
+        );
         assert!(est_vol("flight") && !est_vol("car"));
     }
 
@@ -196,7 +224,10 @@ mod tests {
             ((35.8, 139.8), t("2024-01-01T20:10:00Z")),
         ];
         let p = decouper_la_trace(&pts);
-        assert_eq!(p.iter().map(|p| p.vol).collect::<Vec<_>>(), vec![false, true, false]);
+        assert_eq!(
+            p.iter().map(|p| p.vol).collect::<Vec<_>>(),
+            vec![false, true, false]
+        );
         assert!(p[1].points.len() > 10, "l'arc est densifié");
     }
 }

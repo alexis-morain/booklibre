@@ -94,7 +94,6 @@ impl Ecrivain {
         Self::depuis(font::face_projet(), None)
     }
 
-
     /// Un writer sur la face qu'un album a choisie, et le dossier où sont
     /// les faces de ses blocs. Le `Cow` est tout l'intérêt : la face du projet
     /// s'ouvre une fois par processus et s'emprunte, celle d'un album se lit
@@ -104,7 +103,11 @@ impl Ecrivain {
         dir: Option<&Path>,
     ) -> Self {
         Self {
-            faces: vec![FaceEcrite { cle: String::new(), face, utilises: font::Utilises::default() }],
+            faces: vec![FaceEcrite {
+                cle: String::new(),
+                face,
+                utilises: font::Utilises::default(),
+            }],
             dir: dir.map(Path::to_path_buf),
             manquantes: Vec::new(),
         }
@@ -116,7 +119,12 @@ impl Ecrivain {
     /// se lit ici et prend le numéro suivant.
     pub(crate) fn ressource(&mut self, police: Option<&crate::model::Police>) -> usize {
         let Some(police) = police else { return 1 };
-        if let Some(i) = self.faces.iter().skip(1).position(|f| f.cle == police.fichier) {
+        if let Some(i) = self
+            .faces
+            .iter()
+            .skip(1)
+            .position(|f| f.cle == police.fichier)
+        {
             return i + 2;
         }
         if self.manquantes.contains(&police.fichier) {
@@ -142,7 +150,11 @@ impl Ecrivain {
     /// emprunté.
     fn face_propre(&self, police: Option<&crate::model::Police>) -> Option<&font::Embarquee> {
         let police = police?;
-        self.faces.iter().skip(1).find(|f| f.cle == police.fichier).map(|f| &*f.face)
+        self.faces
+            .iter()
+            .skip(1)
+            .find(|f| f.cle == police.fichier)
+            .map(|f| &*f.face)
     }
 
     /// Le nombre de faces que porte le document jusqu'ici, `/F1` comprise.
@@ -165,7 +177,11 @@ impl Ecrivain {
     /// `/Fk` ; un numéro qu'aucune face ne porte vaut celle du livre, comme
     /// au dessin. La quatrième, qui peut avoir sa face, se coupe ici.
     pub(crate) fn largeur_mm_dans(&self, k: usize, s: &str, size_pt: f64) -> f64 {
-        let k = if (1..=self.faces.len()).contains(&k) { k } else { 1 };
+        let k = if (1..=self.faces.len()).contains(&k) {
+            k
+        } else {
+            1
+        };
         self.faces[k - 1].face.largeur_mm(s, size_pt)
     }
 
@@ -175,7 +191,11 @@ impl Ecrivain {
     /// du livre : un appelant ne fait pas paniquer le writer en demandant une
     /// face jamais résolue.
     fn poser(&mut self, k: usize, s: &str) -> (usize, String) {
-        let k = if (1..=self.faces.len()).contains(&k) { k } else { 1 };
+        let k = if (1..=self.faces.len()).contains(&k) {
+            k
+        } else {
+            1
+        };
         let f = &mut self.faces[k - 1];
         let glyphes = f.face.glyphes(s);
         let mut hex = String::with_capacity(glyphes.len() * 4);
@@ -186,7 +206,6 @@ impl Ecrivain {
         (k, hex)
     }
 }
-
 
 /// One run of text at a baseline, in millimetres, dans la face `face` du
 /// document : `1` pour celle du livre, qui porte tout sauf les blocs.
@@ -309,7 +328,10 @@ pub(crate) fn ornement_op(
         let (cx, cy) = (c.x * MM_TO_PT, c.y * MM_TO_PT);
         let (sin, cos) = angle_deg.to_radians().sin_cos();
         let (e, f) = (cx - cos * cx + sin * cy, cy - sin * cx - cos * cy);
-        content.push_str(&format!("{} {e:.2} {f:.2} cm\n", coefficients_rotation(angle_deg)));
+        content.push_str(&format!(
+            "{} {e:.2} {f:.2} cm\n",
+            coefficients_rotation(angle_deg)
+        ));
     }
     // The `viewBox` runs y downward and a page runs it upward, which is the
     // whole of the `-sy`: one flip, in the placement matrix, so that not a
@@ -328,7 +350,14 @@ pub(crate) fn ornement_op(
             match seg {
                 Segment::Vers { x, y } => content.push_str(&format!("{x:.4} {y:.4} m\n")),
                 Segment::Ligne { x, y } => content.push_str(&format!("{x:.4} {y:.4} l\n")),
-                Segment::Courbe { x1, y1, x2, y2, x, y } => content.push_str(&format!(
+                Segment::Courbe {
+                    x1,
+                    y1,
+                    x2,
+                    y2,
+                    x,
+                    y,
+                } => content.push_str(&format!(
                     "{x1:.4} {y1:.4} {x2:.4} {y2:.4} {x:.4} {y:.4} c\n"
                 )),
                 Segment::Ferme => content.push_str("h\n"),
@@ -348,9 +377,16 @@ fn chemin_op(content: &mut String, chemin: &crate::ornement::Chemin) {
         match seg {
             Segment::Vers { x, y } => content.push_str(&format!("{x:.4} {y:.4} m\n")),
             Segment::Ligne { x, y } => content.push_str(&format!("{x:.4} {y:.4} l\n")),
-            Segment::Courbe { x1, y1, x2, y2, x, y } => {
-                content.push_str(&format!("{x1:.4} {y1:.4} {x2:.4} {y2:.4} {x:.4} {y:.4} c\n"))
-            }
+            Segment::Courbe {
+                x1,
+                y1,
+                x2,
+                y2,
+                x,
+                y,
+            } => content.push_str(&format!(
+                "{x1:.4} {y1:.4} {x2:.4} {y2:.4} {x:.4} {y:.4} c\n"
+            )),
             Segment::Ferme => content.push_str("h\n"),
         }
     }
@@ -388,7 +424,10 @@ pub(crate) fn carte_op(
         let (cx, cy) = (c.x * MM_TO_PT, c.y * MM_TO_PT);
         let (sin, cos) = angle_deg.to_radians().sin_cos();
         let (e, f) = (cx - cos * cx + sin * cy, cy - sin * cx - cos * cy);
-        content.push_str(&format!("{} {e:.2} {f:.2} cm\n", coefficients_rotation(angle_deg)));
+        content.push_str(&format!(
+            "{} {e:.2} {f:.2} cm\n",
+            coefficients_rotation(angle_deg)
+        ));
     }
     content.push_str(&format!(
         "{sx:.5} 0 0 {msy:.5} {e:.3} {f:.3} cm\n",
@@ -398,7 +437,9 @@ pub(crate) fn carte_op(
     ));
     // Everything below is cut at the box: a stroke at the edge of the map
     // must not spill past the ink the box promised.
-    content.push_str(&format!("{minx:.3} {miny:.3} {vw:.3} {vh:.3} re W n\n1 J 1 j\n"));
+    content.push_str(&format!(
+        "{minx:.3} {miny:.3} {vw:.3} {vh:.3} re W n\n1 J 1 j\n"
+    ));
     for calque in &dessin.calques {
         let [r, g, b] = crate::couleur::parse(calque.encre).unwrap_or(ORNEMENT_INK);
         match calque.style {
@@ -419,10 +460,15 @@ pub(crate) fn carte_op(
                     content.push('\n');
                 }
             }
-            Style::Tracer { epaisseur_mm, pointille } => {
+            Style::Tracer {
+                epaisseur_mm,
+                pointille,
+            } => {
                 content.push_str(&format!("{r} {g} {b} RG\n{epaisseur_mm:.4} w\n"));
                 match pointille {
-                    Some([plein, vide]) => content.push_str(&format!("[{plein:.4} {vide:.4}] 0 d\n")),
+                    Some([plein, vide]) => {
+                        content.push_str(&format!("[{plein:.4} {vide:.4}] 0 d\n"))
+                    }
                     None => content.push_str("[] 0 d\n"),
                 }
                 for chemin in &calque.chemins {
@@ -466,7 +512,12 @@ pub fn geometry(album: &Album) -> SpreadGeometry {
 /// across the fold is swallowed by the binding.
 pub(crate) fn full_page(right: bool, g: &SpreadGeometry) -> Rect {
     let half = g.media_w / 2.0;
-    Rect { x: if right { half } else { 0.0 }, y: 0.0, w: half, h: g.media_h }
+    Rect {
+        x: if right { half } else { 0.0 },
+        y: 0.0,
+        w: half,
+        h: g.media_h,
+    }
 }
 
 /// One content box as the dump carries it: `[x, y, w, h]`, engine frame.
@@ -480,7 +531,11 @@ pub(crate) fn page_box(right: bool, g: &SpreadGeometry) -> Rect {
     let half = g.media_w / 2.0;
     let w = half - g.margin - g.gutter / 2.0;
     Rect {
-        x: if right { half + g.gutter / 2.0 } else { g.margin },
+        x: if right {
+            half + g.gutter / 2.0
+        } else {
+            g.margin
+        },
         y: g.margin,
         w,
         h: g.media_h - 2.0 * g.margin,
@@ -496,7 +551,12 @@ pub(crate) fn grid(b: Rect, cols: usize, rows: usize, gap: f64) -> Vec<Rect> {
         // y grows upward, so the first row sits at the top
         let y = b.y + (rows - 1 - r) as f64 * (ch + gap);
         for c in 0..cols {
-            out.push(Rect { x: b.x + c as f64 * (cw + gap), y, w: cw, h: ch });
+            out.push(Rect {
+                x: b.x + c as f64 * (cw + gap),
+                y,
+                w: cw,
+                h: ch,
+            });
         }
     }
     out
@@ -506,7 +566,12 @@ pub(crate) fn grid(b: Rect, cols: usize, rows: usize, gap: f64) -> Vec<Rect> {
 pub(crate) fn fitted(b: Rect, aspect: f64) -> Rect {
     let w = b.w.min(b.h * aspect);
     let h = w / aspect;
-    Rect { x: b.x + (b.w - w) / 2.0, y: b.y + (b.h - h) / 2.0, w, h }
+    Rect {
+        x: b.x + (b.w - w) / 2.0,
+        y: b.y + (b.h - h) / 2.0,
+        w,
+        h,
+    }
 }
 
 /// Every template the composer can emit, with the number of photos it
@@ -515,7 +580,10 @@ pub(crate) fn fitted(b: Rect, aspect: f64) -> Rect {
 /// walks names and capacities.
 pub static TEMPLATES: std::sync::LazyLock<Vec<(&'static str, usize)>> =
     std::sync::LazyLock::new(|| {
-        crate::gabarit::catalogue().iter().map(|s| (s.nom, s.capacite)).collect()
+        crate::gabarit::catalogue()
+            .iter()
+            .map(|s| (s.nom, s.capacite))
+            .collect()
     });
 
 pub use crate::gabarit::{CELL_CARRE, CELL_ETROIT, CELL_LANDSCAPE, CELL_PANO, CELL_PORTRAIT};
@@ -549,7 +617,14 @@ pub fn fallback_template(current: &str, remaining: usize) -> Option<(String, usi
     let (family, capacity) = template_for_count(remaining)?;
     let verso = format!("{family}_verso");
     let keep_verso = current.ends_with("_verso") && TEMPLATES.iter().any(|(t, _)| *t == verso);
-    Some((if keep_verso { verso } else { family.to_string() }, capacity))
+    Some((
+        if keep_verso {
+            verso
+        } else {
+            family.to_string()
+        },
+        capacity,
+    ))
 }
 
 /// Every template's geometry for one page format, as JSON. Feeds the parity
@@ -560,8 +635,10 @@ pub fn dump_geometry(album: &Album) -> serde_json::Value {
     // The dump speaks for the offered list, not just the historical
     // catalogue: a retained generated template must reach the editor's
     // picker and previews through the same single source.
-    let offerts: Vec<(&'static str, usize)> =
-        crate::gabarit::offerts().iter().map(|s| (s.nom, s.capacite)).collect();
+    let offerts: Vec<(&'static str, usize)> = crate::gabarit::offerts()
+        .iter()
+        .map(|s| (s.nom, s.capacite))
+        .collect();
     let templates: serde_json::Map<String, serde_json::Value> = offerts
         .iter()
         .map(|(name, n)| {
@@ -644,12 +721,11 @@ pub fn dump_geometry(album: &Album) -> serde_json::Value {
     .iter()
     .map(|text| {
         let place = crate::garde::place(&g);
-        let lignes: Vec<serde_json::Value> = crate::garde::mise_en_page_avec(
-            text, place, garde_mesure,
-        )
-        .into_iter()
-        .map(|l| serde_json::json!([l.texte, l.taille_pt, l.dy_mm]))
-        .collect();
+        let lignes: Vec<serde_json::Value> =
+            crate::garde::mise_en_page_avec(text, place, garde_mesure)
+                .into_iter()
+                .map(|l| serde_json::json!([l.texte, l.taille_pt, l.dy_mm]))
+                .collect();
         serde_json::json!({ "texte": text, "place": place, "lignes": lignes })
     })
     .collect();
@@ -666,10 +742,25 @@ pub fn dump_geometry(album: &Album) -> serde_json::Value {
         // paragraph that keeps its turn; a word wider than the box; and each
         // of the three alignments, because the offset a line is set at is
         // computed from the same measure and is just as much the algorithm.
-        ("un bloc droit qui revient à la ligne tout seul", 40.0, 11.0, Alignement::Gauche),
-        ("deux lignes\ndont la seconde est nettement plus longue", 40.0, 11.0, Alignement::Centre),
+        (
+            "un bloc droit qui revient à la ligne tout seul",
+            40.0,
+            11.0,
+            Alignement::Gauche,
+        ),
+        (
+            "deux lignes\ndont la seconde est nettement plus longue",
+            40.0,
+            11.0,
+            Alignement::Centre,
+        ),
         ("avant\n\naprès", 40.0, 11.0, Alignement::Droite),
-        ("court anticonstitutionnellement court", 25.0, 9.0, Alignement::Centre),
+        (
+            "court anticonstitutionnellement court",
+            25.0,
+            9.0,
+            Alignement::Centre,
+        ),
         ("mot", 100.0, 12.0, Alignement::Droite),
     ]
     .iter()
@@ -697,7 +788,12 @@ pub fn dump_geometry(album: &Album) -> serde_json::Value {
     // depuis son port, et c'est ici que les deux se comparent.
     let quatrieme_samples: Vec<serde_json::Value> = {
         use crate::model::{PhotoQuatrieme, PositionQuatrieme as P, TailleQuatrieme as T};
-        let panneau = Rect { x: 0.0, y: 0.0, w: album.trim_mm.w, h: album.trim_mm.h };
+        let panneau = Rect {
+            x: 0.0,
+            y: 0.0,
+            w: album.trim_mm.w,
+            h: album.trim_mm.h,
+        };
         let mut poses: Vec<Option<PhotoQuatrieme>> = vec![None];
         for position in [P::Haut, P::Centre, P::Bas] {
             for taille in [T::Petite, T::Moyenne, T::Grande] {
@@ -743,8 +839,7 @@ pub fn dump_geometry(album: &Album) -> serde_json::Value {
     // Count -> [template, capacity], for every count a spread can reach.
     let fallbacks: serde_json::Map<String, serde_json::Value> = (1..=9usize)
         .filter_map(|n| {
-            template_for_count(n)
-                .map(|(t, cap)| (n.to_string(), serde_json::json!([t, cap])))
+            template_for_count(n).map(|(t, cap)| (n.to_string(), serde_json::json!([t, cap])))
         })
         .collect();
 
@@ -754,7 +849,12 @@ pub fn dump_geometry(album: &Album) -> serde_json::Value {
     let crop_samples: Vec<serde_json::Value> = CROP_SAMPLES
         .iter()
         .map(|(rw, rh, iw, ih, fx, fy, zoom)| {
-            let rect = Rect { x: 0.0, y: 0.0, w: *rw, h: *rh };
+            let rect = Rect {
+                x: 0.0,
+                y: 0.0,
+                w: *rw,
+                h: *rh,
+            };
             let (x0, y0, vw, vh) = crop_window(&rect, *iw, *ih, [*fx, *fy], *zoom);
             serde_json::json!({
                 "rect": [rw, rh], "image": [iw, ih], "focal": [fx, fy],
@@ -876,19 +976,22 @@ pub const CAPTION_SIZE_PT: f64 = 9.0;
 /// covered where the printed line runs clear of every photo.
 fn caption_box(at: Point, g: &SpreadGeometry) -> Rect {
     let size = CAPTION_SIZE_PT / MM_TO_PT;
-    Rect { x: at.x, y: at.y - size * 0.3, w: g.margin * 3.5, h: size * 1.35 }
+    Rect {
+        x: at.x,
+        y: at.y - size * 0.3,
+        w: g.margin * 3.5,
+        h: size * 1.35,
+    }
 }
 
 /// The first caption spot no image covers, tried in reading order, or None
 /// when every candidate is covered. The linter counts the None case: it means
 /// the caption will print over a photo.
 pub fn caption_anchor_free(rects: &[Rect], g: &SpreadGeometry) -> Option<Point> {
-    caption_candidates(g)
-        .into_iter()
-        .find(|at| {
-            let b = caption_box(*at, g);
-            rects.iter().all(|r| !overlaps(r, &b))
-        })
+    caption_candidates(g).into_iter().find(|at| {
+        let b = caption_box(*at, g);
+        rects.iter().all(|r| !overlaps(r, &b))
+    })
 }
 
 fn caption_candidates(g: &SpreadGeometry) -> [Point; 4] {
@@ -947,7 +1050,10 @@ pub fn caption_anchor_of(
             // (1.1-d). Anything with a photo on the left keeps its anchor.
             let a_droite = rects.iter().all(|r| r.x >= g.media_w / 2.0);
             let x = if a_droite { c[1].x } else { c[0].x };
-            return Point { x, y: bas - PHOTO_CAPTION_DROP_MM };
+            return Point {
+                x,
+                y: bas - PHOTO_CAPTION_DROP_MM,
+            };
         }
     }
     if declared < 0.0 {
@@ -1014,14 +1120,20 @@ pub const ORNEMENT_INK: [f64; 3] = [0.0, 0.0, 0.0];
 /// Where a `texte` spread's first baseline sits: left margin of the recto
 /// page, at 62 % of the height. The editor mirrors this anchor.
 pub fn text_anchor(g: &SpreadGeometry) -> Point {
-    Point { x: g.media_w / 2.0 + g.gutter / 2.0, y: g.media_h * 0.62 }
+    Point {
+        x: g.media_w / 2.0 + g.gutter / 2.0,
+        y: g.media_h * 0.62,
+    }
 }
 
 /// Where the colophon's first line sits: same left margin as a text page,
 /// but low on the recto, under the whole empty page. It is the last thing in
 /// the book and it should read like it: quiet, at the foot, not a statement.
 pub fn colophon_anchor(g: &SpreadGeometry) -> Point {
-    Point { x: g.media_w / 2.0 + g.gutter / 2.0, y: g.media_h * 0.30 }
+    Point {
+        x: g.media_w / 2.0 + g.gutter / 2.0,
+        y: g.media_h * 0.30,
+    }
 }
 
 /// The part of an image a cover-crop into `rect` shows, in image pixels:
@@ -1102,7 +1214,10 @@ pub fn render_template_sheets(album: &Album, dir: &Path) -> Result<Vec<std::path
     let mut out = Vec::new();
     // The offered list, not just the historical catalogue: a retained
     // generated template is exportable, so its real render is checked too.
-    for (name, n) in crate::gabarit::offerts().iter().map(|s| (&s.nom, &s.capacite)) {
+    for (name, n) in crate::gabarit::offerts()
+        .iter()
+        .map(|s| (&s.nom, &s.capacite))
+    {
         if *n == 0 {
             continue; // photo-less templates have no cells to check
         }
@@ -1136,7 +1251,14 @@ fn solid_jpeg(rgb: [u8; 3], w: u32, h: u32) -> Result<JpegAsset> {
     image::codecs::jpeg::JpegEncoder::new_with_quality(&mut data, 95)
         .encode_image(&img)
         .context("encodage de l'aplat")?;
-    Ok(JpegAsset { data, width: w, height: h, focal: [0.5, 0.5], zoom: 1.0, icc: None })
+    Ok(JpegAsset {
+        data,
+        width: w,
+        height: h,
+        focal: [0.5, 0.5],
+        zoom: 1.0,
+        icc: None,
+    })
 }
 
 pub struct PdfWriter {
@@ -1334,11 +1456,7 @@ impl PdfWriter {
     /// this crate emits is a pure function of the album and its assets, so
     /// two writers given the same stamp produce the same bytes — which is how
     /// a change to the emitter proves it changed nothing.
-    pub fn with_stamp(
-        album: &Album,
-        dir: &Path,
-        stamp: chrono::DateTime<chrono::Local>,
-    ) -> Self {
+    pub fn with_stamp(album: &Album, dir: &Path, stamp: chrono::DateTime<chrono::Local>) -> Self {
         let mut doc = Document::with_version(pdfx::PDF_VERSION);
         let pages_id = doc.new_object_id();
         let font_id = doc.new_object_id();
@@ -1364,7 +1482,11 @@ impl PdfWriter {
 
     /// Le dessin de rendu de la plage `debut..fin`, ou `None` quand l'album n'a
     /// pas de voyage lisible ou que la plage n'y tient pas.
-    fn dessin_de_carte(&mut self, debut: usize, fin: usize) -> Option<std::sync::Arc<crate::carte::Dessin>> {
+    fn dessin_de_carte(
+        &mut self,
+        debut: usize,
+        fin: usize,
+    ) -> Option<std::sync::Arc<crate::carte::Dessin>> {
         let voyage = self.voyage.as_ref()?;
         self.cartes
             .entry((debut, fin))
@@ -1382,7 +1504,6 @@ impl PdfWriter {
     pub fn police_defaut(&self) -> Option<&'static str> {
         self.police_defaut
     }
-
 
     /// One spread, drawn from its scene.
     ///
@@ -1456,14 +1577,25 @@ impl PdfWriter {
                 Role::Photo { cell, .. } => {
                     // A spread whose thumbnails went missing is refused by the
                     // caller, never drawn short: this only guards the index.
-                    let Some(asset) = assets.get(*cell) else { continue };
+                    let Some(asset) = assets.get(*cell) else {
+                        continue;
+                    };
                     self.draw_image(&mut content, &mut xobjects, *cell, asset, &object.rect);
                 }
                 // Photo captions: 7 pt under the slot's bottom edge,
                 // left-aligned on the slot. Printed as typed, never
                 // truncated: the editor is the place that signals overflow.
                 Role::PhotoCaption { text, at, .. } => {
-                    text_op(&mut content, &mut self.ecrivain, 1, at.x, at.y, PHOTO_CAPTION_SIZE_PT, INK, text);
+                    text_op(
+                        &mut content,
+                        &mut self.ecrivain,
+                        1,
+                        at.x,
+                        at.y,
+                        PHOTO_CAPTION_SIZE_PT,
+                        INK,
+                        text,
+                    );
                 }
                 // The three pages of text, now one role: the half-title's two
                 // sizes, the text page's regular leading and the colophon's
@@ -1483,21 +1615,37 @@ impl PdfWriter {
                     }
                 }
                 Role::ChapterCaption { text, at } => {
-                    text_op(&mut content, &mut self.ecrivain, 1, at.x, at.y, SPREAD_CAPTION_SIZE_PT, INK, text);
+                    text_op(
+                        &mut content,
+                        &mut self.ecrivain,
+                        1,
+                        at.x,
+                        at.y,
+                        SPREAD_CAPTION_SIZE_PT,
+                        INK,
+                        text,
+                    );
                 }
                 // A free block: laid out upright inside its box by the scene,
                 // then turned once around the box's centre. The lines know
                 // nothing about the angle, which is why the same three numbers
                 // draw it here, on the canvas and in the DOM. Face et couleur
                 // sont celles de l'objet, la face et l'encre du livre par défaut.
-                Role::FreeText { index, at, lines, .. } => {
+                Role::FreeText {
+                    index, at, lines, ..
+                } => {
                     let libre = libres.get(*index);
-                    let face = self.ecrivain.ressource(libre.and_then(|o| o.police_texte()));
+                    let face = self
+                        .ecrivain
+                        .ressource(libre.and_then(|o| o.police_texte()));
                     let rgb = libre.and_then(|o| o.rgb()).unwrap_or(TEXT_INK);
                     let centre = crate::scene::centre(&object.rect);
                     for l in lines {
                         let p = crate::scene::tourner(
-                            crate::pdf::Point { x: at.x + l.dx_mm, y: at.y - l.dy_mm },
+                            crate::pdf::Point {
+                                x: at.x + l.dx_mm,
+                                y: at.y - l.dy_mm,
+                            },
                             centre,
                             object.angle,
                         );
@@ -1520,7 +1668,10 @@ impl PdfWriter {
                 // state someone can reach, and it must never cost an export.
                 Role::Ornement { index, id, .. } => {
                     if let Some(o) = crate::ornement::par_id(id) {
-                        let rgb = libres.get(*index).and_then(|o| o.rgb()).unwrap_or(ORNEMENT_INK);
+                        let rgb = libres
+                            .get(*index)
+                            .and_then(|o| o.rgb())
+                            .unwrap_or(ORNEMENT_INK);
                         ornement_op(&mut content, &o.dessin, &object.rect, object.angle, rgb);
                     }
                 }
@@ -1556,7 +1707,14 @@ impl PdfWriter {
         let objets = crate::imposition::page(&scene, cote, &self.geom, pli_mm);
         let (content, xobjects) = self.dessiner(&objets, assets, &spread.objets);
         let f = crate::imposition::page_simple(album, cote, pli_mm);
-        self.add_page(Boxes { media: [f.media_w, f.media_h], trim: f.trim }, content, xobjects);
+        self.add_page(
+            Boxes {
+                media: [f.media_w, f.media_h],
+                trim: f.trim,
+            },
+            content,
+            xobjects,
+        );
         Ok(())
     }
 
@@ -1568,7 +1726,10 @@ impl PdfWriter {
     pub fn add_page_blanche(&mut self, album: &Album, cote: crate::imposition::Cote, pli_mm: f64) {
         let f = crate::imposition::page_simple(album, cote, pli_mm);
         self.add_page(
-            Boxes { media: [f.media_w, f.media_h], trim: f.trim },
+            Boxes {
+                media: [f.media_w, f.media_h],
+                trim: f.trim,
+            },
             String::new(),
             dictionary! {},
         );
@@ -1598,7 +1759,10 @@ impl PdfWriter {
                         profil.to_vec(),
                     ))
                 });
-                Object::Array(vec![Object::Name(b"ICCBased".to_vec()), Object::Reference(id)])
+                Object::Array(vec![
+                    Object::Name(b"ICCBased".to_vec()),
+                    Object::Reference(id),
+                ])
             }
         };
         let img_id = self.doc.add_object(Stream::new(
@@ -1734,15 +1898,24 @@ mod tests {
         let (iw, ih) = (4000.0, 3000.0);
         let focal = [0.62, 0.38];
         for (w, h) in [(300.0, 200.0), (200.0, 300.0)] {
-            let rect = Rect { x: 0.0, y: 0.0, w, h };
+            let rect = Rect {
+                x: 0.0,
+                y: 0.0,
+                w,
+                h,
+            };
             let (x0, y0, vw, vh) = crop_window(&rect, iw, ih, focal, 2.0);
             assert!(
                 (x0 + vw / 2.0 - focal[0] * iw).abs() < 0.5,
-                "centre x {} attendu {}", x0 + vw / 2.0, focal[0] * iw
+                "centre x {} attendu {}",
+                x0 + vw / 2.0,
+                focal[0] * iw
             );
             assert!(
                 (y0 + vh / 2.0 - focal[1] * ih).abs() < 0.5,
-                "centre y {} attendu {}", y0 + vh / 2.0, focal[1] * ih
+                "centre y {} attendu {}",
+                y0 + vh / 2.0,
+                focal[1] * ih
             );
         }
     }
@@ -1753,7 +1926,12 @@ mod tests {
     #[test]
     fn le_point_au_bord_ancre_la_fenetre_sans_la_sortir() {
         let (iw, ih) = (4000.0, 3000.0);
-        let rect = Rect { x: 0.0, y: 0.0, w: 300.0, h: 200.0 };
+        let rect = Rect {
+            x: 0.0,
+            y: 0.0,
+            w: 300.0,
+            h: 200.0,
+        };
         for focal in [[0.0, 0.0], [1.0, 1.0]] {
             let (x0, y0, vw, vh) = crop_window(&rect, iw, ih, focal, 2.0);
             assert!(x0 >= 0.0 && x0 + vw <= iw + 0.5, "x0 {x0} vw {vw}");
@@ -1766,13 +1944,30 @@ mod tests {
     /// free spot, negative when every candidate is covered).
     #[test]
     fn la_hauteur_signee_porte_le_verdict() {
-        let g = SpreadGeometry { media_w: 426.0, media_h: 216.0, margin: 14.0, gutter: 7.0, bleed: 3.0 };
+        let g = SpreadGeometry {
+            media_w: 426.0,
+            media_h: 216.0,
+            margin: 14.0,
+            gutter: 7.0,
+            bleed: 3.0,
+        };
         assert!(caption_height_of(None, &[], &g) > 0.0);
-        let tout = [Rect { x: 0.0, y: 0.0, w: g.media_w, h: g.media_h }];
+        let tout = [Rect {
+            x: 0.0,
+            y: 0.0,
+            w: g.media_w,
+            h: g.media_h,
+        }];
         assert!(caption_height_of(None, &tout, &g) < 0.0);
         let duo = crate::gabarit::spec("duo").unwrap();
-        let bande = crate::gabarit::Spec { legende: 8.0, ..duo.clone() };
-        let sur = crate::gabarit::Spec { legende: -6.0, ..duo.clone() };
+        let bande = crate::gabarit::Spec {
+            legende: 8.0,
+            ..duo.clone()
+        };
+        let sur = crate::gabarit::Spec {
+            legende: -6.0,
+            ..duo.clone()
+        };
         assert_eq!(caption_height_of(Some(&bande), &tout, &g), 8.0);
         assert_eq!(caption_height_of(Some(&sur), &[], &g), -6.0);
     }
@@ -1782,10 +1977,19 @@ mod tests {
     /// hunting, zero still hunts.
     #[test]
     fn l_ancre_suit_le_signe() {
-        let g = SpreadGeometry { media_w: 426.0, media_h: 216.0, margin: 14.0, gutter: 7.0, bleed: 3.0 };
+        let g = SpreadGeometry {
+            media_w: 426.0,
+            media_h: 216.0,
+            margin: 14.0,
+            gutter: 7.0,
+            bleed: 3.0,
+        };
         let duo = crate::gabarit::spec("duo").unwrap();
 
-        let bande = crate::gabarit::Spec { legende: 8.0, ..duo.clone() };
+        let bande = crate::gabarit::Spec {
+            legende: 8.0,
+            ..duo.clone()
+        };
         let rects = crate::gabarit::slots(&bande, 2, &g);
         let bas = rects.iter().map(|r| r.y).fold(f64::INFINITY, f64::min);
         let at = caption_anchor_of(Some(&bande), &rects, &g);
@@ -1793,8 +1997,16 @@ mod tests {
 
         // A photo over the first candidate spot: the hunt moves to the next
         // one, the declared overlay stays put.
-        let bas_gauche = [Rect { x: 0.0, y: 0.0, w: g.media_w / 2.0, h: g.media_h / 2.0 }];
-        let sur = crate::gabarit::Spec { legende: -6.0, ..duo.clone() };
+        let bas_gauche = [Rect {
+            x: 0.0,
+            y: 0.0,
+            w: g.media_w / 2.0,
+            h: g.media_h / 2.0,
+        }];
+        let sur = crate::gabarit::Spec {
+            legende: -6.0,
+            ..duo.clone()
+        };
         let chasse = caption_anchor_of(None, &bas_gauche, &g);
         let surimpression = caption_anchor_of(Some(&sur), &bas_gauche, &g);
         assert!(chasse.x > surimpression.x);
@@ -1804,7 +2016,11 @@ mod tests {
     /// none, plus how many profile streams the file holds besides the
     /// OutputIntent's.
     fn espaces_du_duo(profils: [Option<&[u8]>; 2]) -> (Vec<Object>, usize) {
-        let mut album = Album::new("Duo", std::path::Path::new("."), Size { w: 210.0, h: 210.0 });
+        let mut album = Album::new(
+            "Duo",
+            std::path::Path::new("."),
+            Size { w: 210.0, h: 210.0 },
+        );
         album.spreads.push(Spread {
             template: "duo".into(),
             slots: vec![
@@ -1819,7 +2035,10 @@ mod tests {
         });
         let assets: Vec<JpegAsset> = profils
             .iter()
-            .map(|p| JpegAsset { icc: p.map(std::sync::Arc::from), ..solid_jpeg([200, 30, 40], 160, 120).unwrap() })
+            .map(|p| JpegAsset {
+                icc: p.map(std::sync::Arc::from),
+                ..solid_jpeg([200, 30, 40], 160, 120).unwrap()
+            })
             .collect();
         let mut w = PdfWriter::new(&album, std::path::Path::new("."));
         w.add_spread(&album.spreads[0], &assets).unwrap();
@@ -1864,7 +2083,9 @@ mod tests {
 
         let (e, n) = espaces_du_duo([None, None]);
         assert_eq!(n, 0);
-        assert!(e.iter().all(|o| o.as_name().map(|b| b == b"DeviceRGB").unwrap_or(false)));
+        assert!(e
+            .iter()
+            .all(|o| o.as_name().map(|b| b == b"DeviceRGB").unwrap_or(false)));
     }
 
     /// Write a one-spread album and hand back its bytes plus the reopened
@@ -1879,11 +2100,21 @@ mod tests {
     /// makes byte identity testable: it is the one field of a Colophon PDF
     /// that is not a function of the album.
     fn written_at(stamp: chrono::DateTime<chrono::Local>) -> (Vec<u8>, Document) {
-        let mut album = Album::new("Été & cie", std::path::Path::new("."), Size { w: 210.0, h: 210.0 });
+        let mut album = Album::new(
+            "Été & cie",
+            std::path::Path::new("."),
+            Size { w: 210.0, h: 210.0 },
+        );
         album.spreads.push(Spread {
             template: "duo".into(),
             slots: vec![
-                Slot { src: "a.jpg".into(), focal: [0.5, 0.5], zoom: 1.0, caption: Some("la plage".into()), mention: None },
+                Slot {
+                    src: "a.jpg".into(),
+                    focal: [0.5, 0.5],
+                    zoom: 1.0,
+                    caption: Some("la plage".into()),
+                    mention: None,
+                },
                 Slot::new("b.jpg".into(), [0.5, 0.5]),
             ],
             caption: Some("Corse, 2013".into()),
@@ -1958,8 +2189,7 @@ mod tests {
     /// The content stream of a spread that carries one free object, so a test
     /// can read what the emitter actually wrote.
     fn flux_avec_objet(objet: crate::model::Objet) -> String {
-        let mut album =
-            Album::new("t", std::path::Path::new("."), Size { w: 210.0, h: 210.0 });
+        let mut album = Album::new("t", std::path::Path::new("."), Size { w: 210.0, h: 210.0 });
         album.spreads.push(Spread {
             template: "texte".into(),
             slots: vec![],
@@ -1971,8 +2201,11 @@ mod tests {
         });
         let mut w = PdfWriter::new(&album, std::path::Path::new("."));
         w.add_spread(&album.spreads[0], &[]).unwrap();
-        let path = std::env::temp_dir()
-            .join(format!("colophon-libre-{}-{:?}.pdf", std::process::id(), std::thread::current().id()));
+        let path = std::env::temp_dir().join(format!(
+            "colophon-libre-{}-{:?}.pdf",
+            std::process::id(),
+            std::thread::current().id()
+        ));
         w.save(&path).unwrap();
         let doc = Document::load(&path).unwrap();
         let _ = std::fs::remove_file(&path);
@@ -1993,25 +2226,36 @@ mod tests {
     /// à côté de photos que personne n'a besoin de voir.
     fn dossier_de_voyage(nom: &str) -> std::path::PathBuf {
         use crate::voyage::{Etape, Lieu, Provenance, Voyage, VERSION};
-        let dir = std::env::temp_dir().join(format!("booklibre-pdf-carte-{nom}-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("booklibre-pdf-carte-{nom}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        let etapes = [("Paris", 48.86, 2.35), ("Lyon", 45.76, 4.84), ("Marseille", 43.30, 5.37)]
-            .into_iter()
-            .enumerate()
-            .map(|(i, (n, lat, lon))| Etape {
-                nom: n.into(),
-                recit: None,
-                debut: chrono::DateTime::parse_from_rfc3339(&format!("2025-06-{:02}T12:00:00Z", i + 1))
-                    .unwrap()
-                    .with_timezone(&chrono::Utc),
-                fin: None,
-                fuseau: "UTC".into(),
-                lieu: Lieu { lat, lon, localite: None, pays: None, code_pays: Some("FR".into()) },
-                meteo: None,
-                photos: vec![],
-            })
-            .collect();
+        let etapes = [
+            ("Paris", 48.86, 2.35),
+            ("Lyon", 45.76, 4.84),
+            ("Marseille", 43.30, 5.37),
+        ]
+        .into_iter()
+        .enumerate()
+        .map(|(i, (n, lat, lon))| Etape {
+            nom: n.into(),
+            recit: None,
+            debut: chrono::DateTime::parse_from_rfc3339(&format!("2025-06-{:02}T12:00:00Z", i + 1))
+                .unwrap()
+                .with_timezone(&chrono::Utc),
+            fin: None,
+            fuseau: "UTC".into(),
+            lieu: Lieu {
+                lat,
+                lon,
+                localite: None,
+                pays: None,
+                code_pays: Some("FR".into()),
+            },
+            meteo: None,
+            photos: vec![],
+        })
+        .collect();
         let v = Voyage {
             version: VERSION,
             titre: "t".into(),
@@ -2026,7 +2270,11 @@ mod tests {
             trace: vec![],
             videos_ignorees: 0,
             couverture: None,
-            provenance: Provenance { source: "test".into(), reference: None, format: None },
+            provenance: Provenance {
+                source: "test".into(),
+                reference: None,
+                format: None,
+            },
         };
         crate::voyage::ecrire(&dir, &v).unwrap();
         dir
@@ -2047,7 +2295,10 @@ mod tests {
 
     /// La planche d'une carte seule, écrite en PDF depuis `racine` : le flux du
     /// contenu, la MediaBox, et le PDF lui-même.
-    fn pdf_de_carte(racine: &std::path::Path, objet: crate::model::Objet) -> (String, Vec<f64>, Vec<u8>) {
+    fn pdf_de_carte(
+        racine: &std::path::Path,
+        objet: crate::model::Objet,
+    ) -> (String, Vec<f64>, Vec<u8>) {
         let mut album = Album::new("t", racine, Size { w: 210.0, h: 210.0 });
         album.spreads.push(Spread {
             template: "vide".into(),
@@ -2058,11 +2309,15 @@ mod tests {
             locked: false,
             objets: vec![objet],
         });
-        let stamp = chrono::TimeZone::with_ymd_and_hms(&chrono::Local, 2026, 11, 14, 12, 0, 0).unwrap();
+        let stamp =
+            chrono::TimeZone::with_ymd_and_hms(&chrono::Local, 2026, 11, 14, 12, 0, 0).unwrap();
         let mut w = PdfWriter::with_stamp(&album, std::path::Path::new("."), stamp);
         w.add_spread(&album.spreads[0], &[]).unwrap();
-        let path = std::env::temp_dir()
-            .join(format!("colophon-carte-{}-{:?}.pdf", std::process::id(), std::thread::current().id()));
+        let path = std::env::temp_dir().join(format!(
+            "colophon-carte-{}-{:?}.pdf",
+            std::process::id(),
+            std::thread::current().id()
+        ));
         w.save(&path).unwrap();
         let octets = std::fs::read(&path).unwrap();
         let doc = Document::load(&path).unwrap();
@@ -2076,17 +2331,34 @@ mod tests {
             .as_array()
             .unwrap()
             .iter()
-            .map(|v| v.as_float().map(f64::from).or_else(|_| v.as_i64().map(|i| i as f64)).unwrap())
+            .map(|v| {
+                v.as_float()
+                    .map(f64::from)
+                    .or_else(|_| v.as_i64().map(|i| i as f64))
+                    .unwrap()
+            })
             .collect();
-        let contents = doc.get_dictionary(page).unwrap().get(b"Contents").unwrap().as_reference().unwrap();
-        (String::from_utf8_lossy(&flux(&doc, contents)).into_owned(), media, octets)
+        let contents = doc
+            .get_dictionary(page)
+            .unwrap()
+            .get(b"Contents")
+            .unwrap()
+            .as_reference()
+            .unwrap();
+        (
+            String::from_utf8_lossy(&flux(&doc, contents)).into_owned(),
+            media,
+            octets,
+        )
     }
 
     /// Les opérateurs qui déposent de l'encre : un remplissage, un trait, les
     /// deux. C'est la mesure que ce test peut faire sans rasteriser ; la
     /// rasterisation est `scripts/carte-encre.py`, dans le gate.
     fn operateurs_d_encre(flux: &str) -> usize {
-        flux.lines().filter(|l| matches!(l.trim(), "f" | "f*" | "S" | "B" | "B*")).count()
+        flux.lines()
+            .filter(|l| matches!(l.trim(), "f" | "f*" | "S" | "B" | "B*"))
+            .count()
     }
 
     /// **L'encre se mesure, et distingue une carte d'une carte vide.** Le même
@@ -2100,8 +2372,16 @@ mod tests {
         let (avec, media_avec, _) = pdf_de_carte(&dir, carte_libre(0.0, 3));
         let (sans, media_sans, _) = pdf_de_carte(&dir.join("absent"), carte_libre(0.0, 3));
         assert_eq!(media_avec, media_sans, "les cotes sont les mêmes");
-        assert!(operateurs_d_encre(&avec) > 10, "une carte peint :\n{}", &avec[..avec.len().min(600)]);
-        assert_eq!(operateurs_d_encre(&sans), 0, "une carte vide ne peint rien :\n{sans}");
+        assert!(
+            operateurs_d_encre(&avec) > 10,
+            "une carte peint :\n{}",
+            &avec[..avec.len().min(600)]
+        );
+        assert_eq!(
+            operateurs_d_encre(&sans),
+            0,
+            "une carte vide ne peint rien :\n{sans}"
+        );
         // Une plage que le voyage n'a pas : vide aussi.
         let (hors, _, _) = pdf_de_carte(&dir, carte_libre(0.0, 0));
         assert_eq!(operateurs_d_encre(&hors), 0);
@@ -2116,16 +2396,35 @@ mod tests {
     fn la_carte_trace_pointille_et_decoupe() {
         let dir = dossier_de_voyage("trait");
         let (flux, _, _) = pdf_de_carte(&dir, carte_libre(0.0, 3));
-        let decoupe = flux.find("re W n").expect("la carte est découpée à sa boîte");
-        assert!(flux.find(" m\n").unwrap() > decoupe, "la découpe précède la première forme");
-        assert!(flux.contains(" RG\n") && flux.contains(" w\n"), "des traits colorés, d'une épaisseur");
+        let decoupe = flux
+            .find("re W n")
+            .expect("la carte est découpée à sa boîte");
+        assert!(
+            flux.find(" m\n").unwrap() > decoupe,
+            "la découpe précède la première forme"
+        );
+        assert!(
+            flux.contains(" RG\n") && flux.contains(" w\n"),
+            "des traits colorés, d'une épaisseur"
+        );
         assert!(flux.contains("[] 0 d"), "les traits pleins le disent");
         assert!(flux.contains(" rg\n"), "des remplissages");
         // Paris-Lyon-Marseille, un jour chacun : du sol, aucun vol, aucun tiret.
-        assert!(!flux.lines().any(|l| l.starts_with('[') && !l.starts_with("[]")), "pas de pointillé sans vol");
+        assert!(
+            !flux
+                .lines()
+                .any(|l| l.starts_with('[') && !l.starts_with("[]")),
+            "pas de pointillé sans vol"
+        );
         // Le contour de la terre : `B`, pas `f`, c'est ce qui recolle les moitiés.
-        assert!(flux.lines().any(|l| l == "B"), "la terre se remplit et se contourne");
-        let (q, qq) = (flux.lines().filter(|l| *l == "q").count(), flux.lines().filter(|l| *l == "Q").count());
+        assert!(
+            flux.lines().any(|l| l == "B"),
+            "la terre se remplit et se contourne"
+        );
+        let (q, qq) = (
+            flux.lines().filter(|l| *l == "q").count(),
+            flux.lines().filter(|l| *l == "Q").count(),
+        );
         assert_eq!(q, qq, "q/Q équilibrés");
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -2137,10 +2436,23 @@ mod tests {
         let dir = dossier_de_voyage("vol");
         // Même voyage, mais Marseille devient Tokyo : un jour pour 9 700 km.
         let mut v = crate::voyage::lire(&dir).unwrap();
-        v.etapes[2].lieu = crate::voyage::Lieu { lat: 35.68, lon: 139.69, localite: None, pays: None, code_pays: None };
+        v.etapes[2].lieu = crate::voyage::Lieu {
+            lat: 35.68,
+            lon: 139.69,
+            localite: None,
+            pays: None,
+            code_pays: None,
+        };
         crate::voyage::ecrire(&dir, &v).unwrap();
         let (flux, _, _) = pdf_de_carte(&dir, carte_libre(0.0, 3));
-        assert!(flux.lines().any(|l| l.starts_with("[1.2000 0.9000] 0 d")), "le vol est pointillé :\n{}", flux.lines().filter(|l| l.ends_with(" d")).collect::<Vec<_>>().join("\n"));
+        assert!(
+            flux.lines().any(|l| l.starts_with("[1.2000 0.9000] 0 d")),
+            "le vol est pointillé :\n{}",
+            flux.lines()
+                .filter(|l| l.ends_with(" d"))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -2151,14 +2463,32 @@ mod tests {
     #[test]
     #[ignore = "écrit un PDF pour le lecteur : COLOPHON_CARTE_PDF=<dossier>"]
     fn le_pdf_du_pacifique_pour_le_lecteur() {
-        let Ok(sortie) = std::env::var("COLOPHON_CARTE_PDF") else { return };
+        let Ok(sortie) = std::env::var("COLOPHON_CARTE_PDF") else {
+            return;
+        };
         let dir = dossier_de_voyage("pacifique");
         let mut v = crate::voyage::lire(&dir).unwrap();
-        for (e, (lat, lon)) in v.etapes.iter_mut().zip([(34.05, -118.24), (-17.80, 177.42), (-36.85, 174.76)]) {
-            e.lieu = crate::voyage::Lieu { lat, lon, localite: None, pays: None, code_pays: None };
+        for (e, (lat, lon)) in
+            v.etapes
+                .iter_mut()
+                .zip([(34.05, -118.24), (-17.80, 177.42), (-36.85, 174.76)])
+        {
+            e.lieu = crate::voyage::Lieu {
+                lat,
+                lon,
+                localite: None,
+                pays: None,
+                code_pays: None,
+            };
         }
         crate::voyage::ecrire(&dir, &v).unwrap();
-        let obj = crate::model::Objet { x: 6.0, y: 8.0, w: 400.0, h: 400.0 / 2.0, ..carte_libre(0.0, 3) };
+        let obj = crate::model::Objet {
+            x: 6.0,
+            y: 8.0,
+            w: 400.0,
+            h: 400.0 / 2.0,
+            ..carte_libre(0.0, 3)
+        };
         let (_, _, octets) = pdf_de_carte(&dir, obj);
         std::fs::create_dir_all(&sortie).unwrap();
         std::fs::write(std::path::Path::new(&sortie).join("pacifique.pdf"), octets).unwrap();
@@ -2175,7 +2505,10 @@ mod tests {
         let (flux, _, _) = pdf_de_carte(&dir, carte_libre(ANGLE, 3));
         let coef = coefficients_rotation(ANGLE);
         let rot = flux.find(&format!("{coef} ")).expect("la carte tourne");
-        assert!(rot < flux.find("re W n").unwrap(), "elle tourne avant de se découper");
+        assert!(
+            rot < flux.find("re W n").unwrap(),
+            "elle tourne avant de se découper"
+        );
         // Droite, aucune matrice de rotation.
         let (droite, _, _) = pdf_de_carte(&dir, carte_libre(0.0, 3));
         assert!(!droite.contains(&coef));
@@ -2219,12 +2552,24 @@ mod tests {
     #[test]
     fn un_bloc_droit_garde_td_un_bloc_tourne_passe_a_tm() {
         let droit = flux_avec_objet(bloc_libre(0.0));
-        assert!(droit.contains(" Td "), "un bloc droit doit rester en Td :\n{droit}");
-        assert!(!droit.contains(" Tm "), "un bloc droit n'écrit pas de matrice");
+        assert!(
+            droit.contains(" Td "),
+            "un bloc droit doit rester en Td :\n{droit}"
+        );
+        assert!(
+            !droit.contains(" Tm "),
+            "un bloc droit n'écrit pas de matrice"
+        );
 
         let tourne = flux_avec_objet(bloc_libre(30.0));
-        assert!(tourne.contains(" Tm "), "un bloc tourné doit poser sa matrice :\n{tourne}");
-        assert!(!tourne.contains(" Td "), "et ne pas garder le placement droit");
+        assert!(
+            tourne.contains(" Tm "),
+            "un bloc tourné doit poser sa matrice :\n{tourne}"
+        );
+        assert!(
+            !tourne.contains(" Td "),
+            "et ne pas garder le placement droit"
+        );
         // The matrix is the rotation, not decoration: cos 30° = 0.86603,
         // sin 30° = 0.5, and the anti-diagonal carries the sign.
         assert!(
@@ -2277,11 +2622,18 @@ mod tests {
     #[test]
     fn un_ornement_droit_ne_pose_que_sa_matrice_de_placement() {
         let flux = flux_avec_objet(ornement_libre(0.0));
-        assert_eq!(flux.matches(" cm").count(), 1, "une seule matrice :\n{flux}");
+        assert_eq!(
+            flux.matches(" cm").count(),
+            1,
+            "une seule matrice :\n{flux}"
+        );
         // Le `viewBox` du losange est 100 x 5 et la boîte 80 x 30 mm : le
         // dessin est bien mis à l'échelle des deux côtés, et le `y` du SVG
         // descend là où celui de la page monte, d'où l'échelle négative.
-        assert!(flux.contains("2.26772 0 0 -17.00787"), "échelle inattendue :\n{flux}");
+        assert!(
+            flux.contains("2.26772 0 0 -17.00787"),
+            "échelle inattendue :\n{flux}"
+        );
         assert!(flux.contains("0 0 0 rg"), "un ornement est noir :\n{flux}");
         assert!(flux.contains("\nf\n"), "et rempli :\n{flux}");
     }
@@ -2305,7 +2657,12 @@ mod tests {
             .take(6)
             .map(|n| n.parse().unwrap())
             .collect();
-        let boite = Rect { x: 40.0, y: 60.0, w: 80.0, h: 30.0 };
+        let boite = Rect {
+            x: 40.0,
+            y: 60.0,
+            w: 80.0,
+            h: 30.0,
+        };
         for (vx, vy) in [(minx, miny), (minx + vw, miny + vh)] {
             let x = (m[0] * vx + m[2] * vy + m[4]) / MM_TO_PT;
             let y = (m[1] * vx + m[3] * vy + m[5]) / MM_TO_PT;
@@ -2341,8 +2698,7 @@ mod tests {
     #[test]
     fn un_objet_libre_atteint_la_page() {
         let sans = {
-            let mut album =
-                Album::new("t", std::path::Path::new("."), Size { w: 210.0, h: 210.0 });
+            let mut album = Album::new("t", std::path::Path::new("."), Size { w: 210.0, h: 210.0 });
             album.spreads.push(Spread {
                 template: "texte".into(),
                 slots: vec![],
@@ -2363,18 +2719,25 @@ mod tests {
             let doc = Document::load(&path).unwrap();
             let _ = std::fs::remove_file(&path);
             let pages: Vec<_> = doc.get_pages().values().copied().collect();
-            let c = doc.get_dictionary(pages[0]).unwrap().get(b"Contents").unwrap()
-                .as_reference().unwrap();
+            let c = doc
+                .get_dictionary(pages[0])
+                .unwrap()
+                .get(b"Contents")
+                .unwrap()
+                .as_reference()
+                .unwrap();
             String::from_utf8_lossy(&flux(&doc, c)).into_owned()
         };
-        assert!(sans.trim().is_empty(), "une planche vide ne dessine rien : {sans:?}");
+        assert!(
+            sans.trim().is_empty(),
+            "une planche vide ne dessine rien : {sans:?}"
+        );
         assert!(!flux_avec_objet(bloc_libre(0.0)).trim().is_empty());
     }
 
     /// Un album dans `dir`, une planche portant `objets`, écrit et relu.
     fn ecrit_objets(dir: &std::path::Path, objets: Vec<crate::model::Objet>) -> Document {
-        let mut album =
-            Album::new("t", std::path::Path::new("."), Size { w: 210.0, h: 210.0 });
+        let mut album = Album::new("t", std::path::Path::new("."), Size { w: 210.0, h: 210.0 });
         album.spreads.push(Spread {
             template: "texte".into(),
             slots: vec![],
@@ -2396,9 +2759,16 @@ mod tests {
     /// Les noms `/Fk` que la première page déclare, dans l'ordre.
     fn ressources_de_police(doc: &Document) -> Vec<String> {
         let (_, page_id) = doc.get_pages().into_iter().next().expect("une page");
-        let resources = doc.get_page_resources(page_id).unwrap().0.expect("des ressources");
+        let resources = doc
+            .get_page_resources(page_id)
+            .unwrap()
+            .0
+            .expect("des ressources");
         let fonts = resources.get(b"Font").unwrap().as_dict().unwrap();
-        fonts.iter().map(|(k, _)| String::from_utf8_lossy(k).into_owned()).collect()
+        fonts
+            .iter()
+            .map(|(k, _)| String::from_utf8_lossy(k).into_owned())
+            .collect()
     }
 
     /// Les `FontFile2` du document, par leur nom de base.
@@ -2429,19 +2799,35 @@ mod tests {
     fn un_bloc_colore_ne_change_que_son_rg() {
         let dir = dossier_objets("colore");
         let noir = flux_avec_objet(bloc_libre(0.0));
-        let colore = crate::model::Objet { couleur: Some("#ff0000".into()), ..bloc_libre(0.0) };
+        let colore = crate::model::Objet {
+            couleur: Some("#ff0000".into()),
+            ..bloc_libre(0.0)
+        };
         let rouge = flux_avec_objet(colore.clone());
         let [r, g, b] = TEXT_INK;
-        assert!(noir.contains(&format!(" Tf {r} {g} {b} rg ")), "l'encre du livre par défaut :\n{noir}");
-        assert!(rouge.contains(" Tf 1 0 0 rg "), "la couleur de l'objet :\n{rouge}");
-        assert_eq!(noir.replace(&format!("{r} {g} {b} rg"), "1 0 0 rg"), rouge, "rien d'autre ne bouge");
+        assert!(
+            noir.contains(&format!(" Tf {r} {g} {b} rg ")),
+            "l'encre du livre par défaut :\n{noir}"
+        );
+        assert!(
+            rouge.contains(" Tf 1 0 0 rg "),
+            "la couleur de l'objet :\n{rouge}"
+        );
+        assert_eq!(
+            noir.replace(&format!("{r} {g} {b} rg"), "1 0 0 rg"),
+            rouge,
+            "rien d'autre ne bouge"
+        );
 
         let doc = ecrit_objets(&dir, vec![colore]);
         assert_eq!(ressources_de_police(&doc), ["F1"]);
         assert_eq!(faces_embarquees(&doc), [font::FONT_NAME]);
 
         // Une couleur gâtée à la main retombe sur l'encre du livre.
-        let gatee = crate::model::Objet { couleur: Some("rouge".into()), ..bloc_libre(0.0) };
+        let gatee = crate::model::Objet {
+            couleur: Some("rouge".into()),
+            ..bloc_libre(0.0)
+        };
         assert_eq!(flux_avec_objet(gatee), noir);
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -2450,7 +2836,10 @@ mod tests {
     /// qu'il avait : jamais `g`, le document ne déclare qu'un espace.
     #[test]
     fn un_ornement_prend_la_couleur_de_son_objet() {
-        let o = crate::model::Objet { couleur: Some("#336699".into()), ..ornement_libre(0.0) };
+        let o = crate::model::Objet {
+            couleur: Some("#336699".into()),
+            ..ornement_libre(0.0)
+        };
         let flux = flux_avec_objet(o);
         let [r, g, b] = crate::couleur::parse("#336699").unwrap();
         assert!(flux.contains(&format!("\n{r} {g} {b} rg\n")), "{flux}");
@@ -2472,15 +2861,27 @@ mod tests {
             postscript: "ColophonTest-Regular".into(),
             nom: "Colophon Test Regular".into(),
         };
-        let propre = crate::model::Objet { police: Some(police), ..bloc_libre(0.0) };
+        let propre = crate::model::Objet {
+            police: Some(police),
+            ..bloc_libre(0.0)
+        };
         let doc = ecrit_objets(&dir, vec![bloc_libre(0.0), propre.clone(), propre]);
         assert_eq!(ressources_de_police(&doc), ["F1", "F2"]);
-        let mut attendu = vec!["ColophonTest-Regular".to_string(), font::FONT_NAME.to_string()];
+        let mut attendu = vec![
+            "ColophonTest-Regular".to_string(),
+            font::FONT_NAME.to_string(),
+        ];
         attendu.sort();
         assert_eq!(faces_embarquees(&doc), attendu);
 
         let (_, page_id) = doc.get_pages().into_iter().next().unwrap();
-        let c = doc.get_dictionary(page_id).unwrap().get(b"Contents").unwrap().as_reference().unwrap();
+        let c = doc
+            .get_dictionary(page_id)
+            .unwrap()
+            .get(b"Contents")
+            .unwrap()
+            .as_reference()
+            .unwrap();
         let contenu = String::from_utf8_lossy(&flux(&doc, c)).into_owned();
         assert_eq!(contenu.matches("/F1 ").count(), 1, "{contenu}");
         assert_eq!(contenu.matches("/F2 ").count(), 2, "{contenu}");
@@ -2499,7 +2900,10 @@ mod tests {
                 postscript: "Disparue".into(),
                 nom: "Disparue".into(),
             };
-            let bloc = crate::model::Objet { police: Some(police), ..bloc_libre(0.0) };
+            let bloc = crate::model::Objet {
+                police: Some(police),
+                ..bloc_libre(0.0)
+            };
             let doc = ecrit_objets(&dir, vec![bloc]);
             assert_eq!(ressources_de_police(&doc), ["F1"], "{fichier}");
             assert_eq!(faces_embarquees(&doc), [font::FONT_NAME], "{fichier}");
@@ -2516,9 +2920,11 @@ mod tests {
     #[test]
     #[ignore]
     fn banc_deux_faces() {
-        let voulue = std::env::var("COLOPHON_FACE").unwrap_or_else(|_| "Helvetica Neue Bold".into());
-        let Some(installee) =
-            font::installed().into_iter().find(|i| i.face.embeddable() && i.face.nom == voulue)
+        let voulue =
+            std::env::var("COLOPHON_FACE").unwrap_or_else(|_| "Helvetica Neue Bold".into());
+        let Some(installee) = font::installed()
+            .into_iter()
+            .find(|i| i.face.embeddable() && i.face.nom == voulue)
         else {
             println!("aucune face acceptée ne s'appelle « {voulue} »");
             return;
@@ -2536,12 +2942,21 @@ mod tests {
             },
             ..bloc_libre(angle)
         };
-        let mut album =
-            Album::new("Deux faces", std::path::Path::new("."), Size { w: 210.0, h: 210.0 });
+        let mut album = Album::new(
+            "Deux faces",
+            std::path::Path::new("."),
+            Size { w: 210.0, h: 210.0 },
+        );
         album.spreads.push(Spread {
             template: "duo".into(),
             slots: vec![
-                Slot { src: "a.jpg".into(), focal: [0.5, 0.5], zoom: 1.0, caption: Some("la plage".into()), mention: None },
+                Slot {
+                    src: "a.jpg".into(),
+                    focal: [0.5, 0.5],
+                    zoom: 1.0,
+                    caption: Some("la plage".into()),
+                    mention: None,
+                },
                 Slot::new("b.jpg".into(), [0.5, 0.5]),
             ],
             caption: Some("Corse, 2013".into()),
@@ -2550,8 +2965,14 @@ mod tests {
             locked: false,
             objets: vec![
                 bloc(0.0, "#c0604a", "Zażółć gęślą jaźń, un été à l'Île-Rousse"),
-                crate::model::Objet { x: 250.0, ..bloc(-20.0, "#ffffff", "Calvi, au matin") },
-                crate::model::Objet { couleur: Some("#7f7f7f".into()), ..ornement_libre(10.0) },
+                crate::model::Objet {
+                    x: 250.0,
+                    ..bloc(-20.0, "#ffffff", "Calvi, au matin")
+                },
+                crate::model::Objet {
+                    couleur: Some("#7f7f7f".into()),
+                    ..ornement_libre(10.0)
+                },
             ],
         });
         let assets = vec![
@@ -2563,7 +2984,11 @@ mod tests {
         let out = "/tmp/colophon-deux-faces.pdf";
         w.save(std::path::Path::new(out)).unwrap();
         let doc = Document::load(out).unwrap();
-        println!("{out} : {:?}, {:?}", ressources_de_police(&doc), faces_embarquees(&doc));
+        println!(
+            "{out} : {:?}, {:?}",
+            ressources_de_police(&doc),
+            faces_embarquees(&doc)
+        );
         assert_eq!(ressources_de_police(&doc), ["F1", "F2"]);
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -2598,17 +3023,23 @@ mod tests {
         // disagree on the destination.
         let profiles: Vec<lopdf::ObjectId> = intents
             .iter()
-            .map(|o| match o.as_dict().unwrap().get(b"DestOutputProfile").unwrap() {
-                Object::Reference(id) => *id,
-                other => panic!("profil non référencé : {other:?}"),
-            })
+            .map(
+                |o| match o.as_dict().unwrap().get(b"DestOutputProfile").unwrap() {
+                    Object::Reference(id) => *id,
+                    other => panic!("profil non référencé : {other:?}"),
+                },
+            )
             .collect();
         assert_eq!(profiles[0], profiles[1]);
 
         let stream = doc.get_object(profiles[0]).unwrap().as_stream().unwrap();
         assert_eq!(stream.dict.get(b"N").unwrap().as_i64().unwrap(), 3);
         let icc = stream.decompressed_content().unwrap();
-        assert_eq!(icc, crate::icc::ICC_DATA, "le profil embarqué n'est pas l'asset");
+        assert_eq!(
+            icc,
+            crate::icc::ICC_DATA,
+            "le profil embarqué n'est pas l'asset"
+        );
     }
 
     /// The XMP packet is in the file, readable without unpacking a filter,
@@ -2622,7 +3053,10 @@ mod tests {
             other => panic!("métadonnées non référencées : {other:?}"),
         };
         let stream = doc.get_object(id).unwrap().as_stream().unwrap();
-        assert!(stream.dict.get(b"Filter").is_err(), "le paquet XMP est compressé");
+        assert!(
+            stream.dict.get(b"Filter").is_err(),
+            "le paquet XMP est compressé"
+        );
         let xmp = String::from_utf8(stream.content.clone()).expect("XMP en UTF-8");
         assert!(xmp.contains("<pdfxid:GTS_PDFXVersion>PDF/X-4</pdfxid:GTS_PDFXVersion>"));
         assert!(xmp.contains("<pdfaid:part>2</pdfaid:part>"));
@@ -2635,7 +3069,11 @@ mod tests {
         let pages = doc.get_pages();
         let (_, page_id) = pages.iter().next().expect("une page");
         let page_id = *page_id;
-        let resources = doc.get_page_resources(page_id).unwrap().0.expect("des ressources");
+        let resources = doc
+            .get_page_resources(page_id)
+            .unwrap()
+            .0
+            .expect("des ressources");
         let fonts = resources.get(b"Font").unwrap().as_dict().unwrap();
         let id = match fonts.get(b"F1").unwrap() {
             Object::Reference(id) => *id,
@@ -2647,7 +3085,9 @@ mod tests {
     /// The bytes of a stream, whether or not the writer compressed it.
     fn flux(doc: &Document, id: lopdf::ObjectId) -> Vec<u8> {
         let stream = doc.get_object(id).unwrap().as_stream().unwrap();
-        stream.decompressed_content().unwrap_or_else(|_| stream.content.clone())
+        stream
+            .decompressed_content()
+            .unwrap_or_else(|_| stream.content.clone())
     }
 
     /// `/W`, flattened back into the advance of each glyph it names.
@@ -2679,11 +3119,17 @@ mod tests {
         let f = police(&doc);
         assert_eq!(nom(f.get(b"Subtype").unwrap()), "Type0");
         assert_eq!(nom(f.get(b"Encoding").unwrap()), "Identity-H");
-        assert!(f.get(b"ToUnicode").is_ok(), "sans ToUnicode, la page ne se copie pas");
+        assert!(
+            f.get(b"ToUnicode").is_ok(),
+            "sans ToUnicode, la page ne se copie pas"
+        );
 
         let base = nom(f.get(b"BaseFont").unwrap()).to_string();
         assert_eq!(base, font::FONT_NAME, "la face se nomme elle-même");
-        assert!(!base.contains('+'), "préfixe de sous-ensemble sur une face entière : {base}");
+        assert!(
+            !base.contains('+'),
+            "préfixe de sous-ensemble sur une face entière : {base}"
+        );
 
         let d = match &f.get(b"DescendantFonts").unwrap().as_array().unwrap()[0] {
             Object::Reference(id) => doc.get_object(*id).unwrap().as_dict().unwrap().clone(),
@@ -2698,8 +3144,14 @@ mod tests {
             Object::Reference(id) => doc.get_object(*id).unwrap().as_dict().unwrap().clone(),
             other => panic!("descripteur non référencé : {other:?}"),
         };
-        assert!(descr.get(b"FontFile2").is_ok(), "la face n'est pas dans le fichier");
-        assert!(descr.get(b"CIDSet").is_err(), "un CIDSet annonce un sous-ensemble");
+        assert!(
+            descr.get(b"FontFile2").is_ok(),
+            "la face n'est pas dans le fichier"
+        );
+        assert!(
+            descr.get(b"CIDSet").is_err(),
+            "un CIDSet annonce un sous-ensemble"
+        );
     }
 
     /// What was measured is what is declared. The engine set the album's type
@@ -2722,7 +3174,11 @@ mod tests {
         let em: i64 = face
             .glyphes(ligne)
             .iter()
-            .map(|(gid, _)| *declarees.get(gid).unwrap_or_else(|| panic!("glyphe {gid} hors /W")))
+            .map(|(gid, _)| {
+                *declarees
+                    .get(gid)
+                    .unwrap_or_else(|| panic!("glyphe {gid} hors /W"))
+            })
             .sum();
         let large = em as f64 / 1000.0 * PHOTO_CAPTION_SIZE_PT * 25.4 / 72.0;
         assert!(
@@ -2732,7 +3188,11 @@ mod tests {
         );
 
         // Et `/W` ne porte que ce qui a été dessiné : la face en a deux mille.
-        assert!(declarees.len() < 100, "{} glyphes déclarés", declarees.len());
+        assert!(
+            declarees.len() < 100,
+            "{} glyphes déclarés",
+            declarees.len()
+        );
 
         // Les tranches sortent dans l'ordre des glyphes. Ce n'est pas de
         // l'esthétique : un ensemble non ordonné rendrait un `/W` différent
@@ -2743,7 +3203,10 @@ mod tests {
         // diffère, là où ceci nomme la règle.
         let w = d.get(b"W").unwrap().as_array().unwrap();
         let debuts: Vec<i64> = w.iter().step_by(2).map(|v| v.as_i64().unwrap()).collect();
-        assert!(debuts.windows(2).all(|p| p[0] < p[1]), "/W dans le désordre : {debuts:?}");
+        assert!(
+            debuts.windows(2).all(|p| p[0] < p[1]),
+            "/W dans le désordre : {debuts:?}"
+        );
     }
 
     /// Every glyph the file draws can say which character it is, so the page
@@ -2759,13 +3222,19 @@ mod tests {
         };
         let cmap = String::from_utf8(flux(&doc, id)).expect("un CMap est du texte");
         assert!(cmap.contains("begincmap") && cmap.contains("endcmap"));
-        assert!(cmap.contains("<0000> <FFFF>"), "l'espace de codes des deux octets");
+        assert!(
+            cmap.contains("<0000> <FFFF>"),
+            "l'espace de codes des deux octets"
+        );
 
         let face = font::Embarquee::incorporee().expect("face ouverte");
         // La légende de planche porte une accentuée : elle doit se relire.
         for (gid, c) in face.glyphes("Corse, 2013") {
             let attendu = format!("<{gid:04X}> <{:04X}>", c as u32);
-            assert!(cmap.contains(&attendu), "{c} manque au ToUnicode : {attendu}");
+            assert!(
+                cmap.contains(&attendu),
+                "{c} manque au ToUnicode : {attendu}"
+            );
         }
     }
 
@@ -2780,7 +3249,10 @@ mod tests {
         assert_eq!(poses.len(), mot.chars().count());
         let interro = face.glyphes("?")[0].0;
         for (gid, c) in &poses {
-            assert_ne!(*gid, interro, "{c} tombe encore sur le point d'interrogation");
+            assert_ne!(
+                *gid, interro,
+                "{c} tombe encore sur le point d'interrogation"
+            );
         }
         // Et la mesure suit le dessin, sinon la coupure de ligne mentirait.
         assert!(font::text_width_mm(mot, 10.0) > font::text_width_mm("Za", 10.0));
@@ -2792,7 +3264,11 @@ mod tests {
     #[test]
     fn la_face_extraite_donne_le_meme_composite() {
         let sortie = font::Face::extraire(font::FONT_DATA, 0).expect("extraction");
-        assert_ne!(sortie.len(), font::FONT_DATA.len(), "l'extraction n'a rien retiré");
+        assert_ne!(
+            sortie.len(),
+            font::FONT_DATA.len(),
+            "l'extraction n'a rien retiré"
+        );
 
         let depuis = |octets: Vec<u8>| {
             let mut doc = Document::with_version(pdfx::PDF_VERSION);
@@ -2800,7 +3276,16 @@ mod tests {
             let face = font::Embarquee::depuis(octets, 0).expect("face ouverte");
             let mut ecrivain = Ecrivain::depuis(std::borrow::Cow::Owned(face), None);
             let mut content = String::new();
-            text_op(&mut content, &mut ecrivain, 1, 0.0, 0.0, 10.0, INK, "Corse, 2013");
+            text_op(
+                &mut content,
+                &mut ecrivain,
+                1,
+                0.0,
+                0.0,
+                10.0,
+                INK,
+                "Corse, 2013",
+            );
             embed_font(&mut doc, id, &ecrivain.faces[0]);
             (doc, id, content)
         };
@@ -2829,13 +3314,22 @@ mod tests {
         dir: &std::path::Path,
         police: Option<crate::model::Police>,
     ) -> (Document, Option<&'static str>) {
-        let mut album =
-            Album::new("Été & cie", std::path::Path::new("."), Size { w: 210.0, h: 210.0 });
+        let mut album = Album::new(
+            "Été & cie",
+            std::path::Path::new("."),
+            Size { w: 210.0, h: 210.0 },
+        );
         album.police = police;
         album.spreads.push(Spread {
             template: "duo".into(),
             slots: vec![
-                Slot { src: "a.jpg".into(), focal: [0.5, 0.5], zoom: 1.0, caption: Some("la plage".into()), mention: None },
+                Slot {
+                    src: "a.jpg".into(),
+                    focal: [0.5, 0.5],
+                    zoom: 1.0,
+                    caption: Some("la plage".into()),
+                    mention: None,
+                },
                 Slot::new("b.jpg".into(), [0.5, 0.5]),
             ],
             caption: Some("Corse, 2013".into()),
@@ -2865,14 +3359,12 @@ mod tests {
     /// is nowhere in the file.
     #[test]
     fn les_octets_poses_a_cote_de_lalbum_sont_ceux_du_fichier() {
-        let dir = std::env::temp_dir()
-            .join(format!("colophon-police-pdf-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("colophon-police-pdf-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 
         // Une vraie face du fichier de test, extraite comme le fait l'app.
-        let (nom, octets) =
-            font::extraire_pour_album(font::FONT_DATA, 0).expect("extraction");
+        let (nom, octets) = font::extraire_pour_album(font::FONT_DATA, 0).expect("extraction");
         std::fs::write(dir.join(nom), &octets).unwrap();
         let choix = crate::model::Police {
             fichier: nom.to_string(),
@@ -2912,8 +3404,8 @@ mod tests {
     /// never a book printed in a face nobody chose without knowing.
     #[test]
     fn une_police_effacee_a_la_main_sort_quand_meme_et_se_dit() {
-        let dir = std::env::temp_dir()
-            .join(format!("colophon-police-absente-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("colophon-police-absente-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 
@@ -2947,12 +3439,20 @@ mod tests {
         };
         assert_eq!(nom(info.get(b"Trapped").unwrap()), "False");
         let created = info.get(b"CreationDate").unwrap().as_str().unwrap();
-        assert!(created.starts_with(b"D:"), "{:?}", String::from_utf8_lossy(created));
+        assert!(
+            created.starts_with(b"D:"),
+            "{:?}",
+            String::from_utf8_lossy(created)
+        );
         assert_eq!(info.get(b"ModDate").unwrap().as_str().unwrap(), created);
 
         let ids = doc.trailer.get(b"ID").unwrap().as_array().unwrap();
         assert_eq!(ids.len(), 2);
-        assert_eq!(ids[0].as_str().unwrap().len(), 16, "identifiant de 16 octets");
+        assert_eq!(
+            ids[0].as_str().unwrap().len(),
+            16,
+            "identifiant de 16 octets"
+        );
     }
 
     /// Every page says where the knife goes, and the trim never leaves the
@@ -2974,8 +3474,14 @@ mod tests {
             };
             let media = nums(b"MediaBox");
             let trim = nums(b"TrimBox");
-            assert!(trim[0] > media[0] && trim[1] > media[1], "le fond perdu est nul");
-            assert!(trim[2] < media[2] && trim[3] < media[3], "trim {trim:?} media {media:?}");
+            assert!(
+                trim[0] > media[0] && trim[1] > media[1],
+                "le fond perdu est nul"
+            );
+            assert!(
+                trim[2] < media[2] && trim[3] < media[3],
+                "trim {trim:?} media {media:?}"
+            );
         }
     }
 
@@ -3009,4 +3515,3 @@ mod tests {
         }
     }
 }
-

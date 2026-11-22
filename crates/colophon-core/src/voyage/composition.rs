@@ -52,7 +52,11 @@ pub fn lecture(dossier: &Path) -> Lecture {
 pub fn jour_local(e: &Etape) -> Option<NaiveDate> {
     let t = jiff::Timestamp::from_second(e.debut.timestamp()).ok()?;
     let d = t.in_tz(&e.fuseau).ok()?.date();
-    NaiveDate::from_ymd_opt(i32::from(d.year()), u32::from(d.month() as u8), u32::from(d.day() as u8))
+    NaiveDate::from_ymd_opt(
+        i32::from(d.year()),
+        u32::from(d.month() as u8),
+        u32::from(d.day() as u8),
+    )
 }
 
 /// Le lieu que la mention nomme : la localité de l'étape, sinon son pays.
@@ -71,15 +75,29 @@ pub fn mention(e: &Etape, r: &Legendes) -> Option<String> {
     // sous lui : « Bloomington » et « Bloomington, 25 mai 2024 » en tête de la
     // même page, c'est trois fois le même mot avec le pied de page.
     let mots = |t: &str| {
-        let propre: String = t.chars().map(|c| if c.is_alphanumeric() { c } else { ' ' }).collect();
-        format!(" {} ", propre.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase())
+        let propre: String = t
+            .chars()
+            .map(|c| if c.is_alphanumeric() { c } else { ' ' })
+            .collect();
+        format!(
+            " {} ",
+            propre
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ")
+                .to_lowercase()
+        )
     };
     let nom = mots(&sans_emojis(&e.nom).0);
     let lieu = lieu_nomme(e)
         .map(|l| sans_emojis(l).0)
         .filter(|l| !nom.contains(&mots(l)));
     let base = crate::legende::texte_de_mention(jour_local(e), lieu.as_deref(), r);
-    let meteo = if r.meteo { e.meteo.as_ref().and_then(|m| texte_meteo(m, r.langue)) } else { None };
+    let meteo = if r.meteo {
+        e.meteo.as_ref().and_then(|m| texte_meteo(m, r.langue))
+    } else {
+        None
+    };
     match (base, meteo) {
         (Some(b), Some(m)) => Some(format!("{b} \u{b7} {m}")),
         (b, m) => b.or(m),
@@ -94,7 +112,10 @@ pub fn texte_meteo(m: &super::Meteo, langue: crate::langue::Langue) -> Option<St
         .temperature
         .filter(|t| t.is_finite())
         .map(|t| format!("{} \u{b0}C", t.round() as i64));
-    let condition = m.condition.as_deref().and_then(|c| langue.condition_meteo(c));
+    let condition = m
+        .condition
+        .as_deref()
+        .and_then(|c| langue.condition_meteo(c));
     match (temperature, condition) {
         (Some(t), Some(c)) => Some(format!("{t}, {c}")),
         (Some(t), None) => Some(t),
@@ -170,7 +191,12 @@ pub fn sans_emojis(texte: &str) -> (String, usize) {
     // L'émoji parti laisse des blancs : on les resserre, ligne par ligne.
     let propre = sortie
         .split('\n')
-        .map(|l| l.split(' ').filter(|m| !m.is_empty()).collect::<Vec<_>>().join(" "))
+        .map(|l| {
+            l.split(' ')
+                .filter(|m| !m.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     (propre.trim_end().to_string(), compte)
@@ -253,7 +279,11 @@ pub struct Bloc {
 
 /// Ce que le bloc pèse, en lignes de récit : le titre en vaut deux.
 pub fn poids(b: &Bloc, mesure: &dyn Fn(&str, f64) -> f64) -> usize {
-    let lignes = |t: &str, pt| crate::scene::replier(t, LARGEUR_RECIT_MM, pt, mesure).0.len();
+    let lignes = |t: &str, pt| {
+        crate::scene::replier(t, LARGEUR_RECIT_MM, pt, mesure)
+            .0
+            .len()
+    };
     2 * lignes(&b.titre, TITRE_PT).max(1)
         + usize::from(b.mention.is_some())
         + b.recit.as_deref().map_or(0, |r| lignes(r, TAILLE_RECIT_PT))
@@ -351,7 +381,9 @@ impl Resume {
             placement,
             signes: recit.map_or(0, |r| r.chars().count()),
             lignes: recit.map_or(0, |r| {
-                crate::scene::replier(r, LARGEUR_RECIT_MM, TAILLE_RECIT_PT, mesure).0.len()
+                crate::scene::replier(r, LARGEUR_RECIT_MM, TAILLE_RECIT_PT, mesure)
+                    .0
+                    .len()
             }),
             deborde: false,
             emojis,
@@ -376,7 +408,10 @@ pub enum Cartes {
 /// Le code de pays d'une étape, quand il nomme un pays : jamais vide, jamais
 /// le `00` de la source pour « aucun pays ».
 fn pays_de(e: &Etape) -> Option<&str> {
-    e.lieu.code_pays.as_deref().filter(|c| !c.is_empty() && *c != "00")
+    e.lieu
+        .code_pays
+        .as_deref()
+        .filter(|c| !c.is_empty() && *c != "00")
 }
 
 /// Les cartes d'un voyage à sa première composition, dans l'ordre où elles
@@ -425,7 +460,11 @@ pub fn pages_de_cartes(
         .filter(|p| !deja.contains(p))
         .filter_map(|(debut, fin)| {
             let d = crate::carte::dessiner(v, debut..fin).ok()?;
-            (fin <= v.etapes.len() && debut < fin).then(|| PageDeCarte { debut, fin, rapport: d.rapport() })
+            (fin <= v.etapes.len() && debut < fin).then(|| PageDeCarte {
+                debut,
+                fin,
+                rapport: d.rapport(),
+            })
         })
         .collect()
 }
@@ -470,7 +509,11 @@ fn colonne(g: &SpreadGeometry) -> (f64, f64, f64) {
     let gauche = pdf::page_box(false, g);
     let droite = pdf::page_box(true, g);
     let w = LARGEUR_RECIT_MM.min(gauche.w - 10.0);
-    (gauche.x + (gauche.w - w) / 2.0, droite.x + (droite.w - w) / 2.0, w)
+    (
+        gauche.x + (gauche.w - w) / 2.0,
+        droite.x + (droite.w - w) / 2.0,
+        w,
+    )
 }
 
 fn blocs_de(p: &[Texte]) -> Vec<Bloc> {
@@ -494,7 +537,10 @@ pub fn objet_de_carte(g: &SpreadGeometry, c: &PageDeCarte, droite: bool) -> Obje
         w,
         h,
         angle: 0.0,
-        contenu: Contenu::Carte { debut: c.debut, fin: c.fin },
+        contenu: Contenu::Carte {
+            debut: c.debut,
+            fin: c.fin,
+        },
         couleur: None,
         police: None,
     }
@@ -530,7 +576,8 @@ fn planche_de_texte(
     let mut s = Spread::vide();
     s.objets = objets_de_page(g, mesure, gauche, false, xg, w, haut);
     if let Some(d) = droite {
-        s.objets.extend(objets_de_page(g, mesure, d, true, xd, w, haut));
+        s.objets
+            .extend(objets_de_page(g, mesure, d, true, xd, w, haut));
     }
     s.caption = gauche
         .iter()
@@ -544,13 +591,18 @@ fn planche_de_texte(
 /// page est « groupée », seule elle a sa page de texte. Les étapes aux photos
 /// gardent leur placement.
 fn marquer(pages: &[&[Texte]], resumes: &mut [Resume], partage: bool) {
-    let mut rangs: Vec<usize> =
-        pages.iter().flat_map(|p| p.iter().filter(|t| t.carte.is_none()).map(|t| t.rang)).collect();
+    let mut rangs: Vec<usize> = pages
+        .iter()
+        .flat_map(|p| p.iter().filter(|t| t.carte.is_none()).map(|t| t.rang))
+        .collect();
     rangs.sort_unstable();
     rangs.dedup();
     for t in pages.iter().flat_map(|p| p.iter()).filter(|t| t.sans_photo) {
-        resumes[t.rang].placement =
-            if partage || rangs.len() > 1 { Placement::Groupee } else { Placement::PageDeTexte };
+        resumes[t.rang].placement = if partage || rangs.len() > 1 {
+            Placement::Groupee
+        } else {
+            Placement::PageDeTexte
+        };
     }
 }
 
@@ -601,8 +653,17 @@ impl Flux {
         sp: &mut Vec<Spread>,
     ) {
         self.fermer(g, mesure, resumes, sp);
-        let vide = Bloc { titre: String::new(), mention: None, recit: None };
-        self.courante.push(Texte { bloc: vide, rang: 0, sans_photo: false, carte: Some(page) });
+        let vide = Bloc {
+            titre: String::new(),
+            mention: None,
+            recit: None,
+        };
+        self.courante.push(Texte {
+            bloc: vide,
+            rang: 0,
+            sans_photo: false,
+            carte: Some(page),
+        });
         self.fermer(g, mesure, resumes, sp);
     }
 
@@ -623,7 +684,12 @@ impl Flux {
     ) {
         let cap = capacite(g);
         let w = poids(&bloc, mesure);
-        let texte = |bloc: Bloc| Texte { bloc, rang, sans_photo, carte: None };
+        let texte = |bloc: Bloc| Texte {
+            bloc,
+            rang,
+            sans_photo,
+            carte: None,
+        };
         if w <= cap {
             if w + poids_page(&self.courante, mesure) > cap {
                 self.fermer(g, mesure, resumes, sp);
@@ -635,13 +701,27 @@ impl Flux {
         self.fermer(g, mesure, resumes, sp);
         let recit = bloc.recit.clone().unwrap_or_default();
         let (lignes, _) = crate::scene::replier(&recit, LARGEUR_RECIT_MM, TAILLE_RECIT_PT, mesure);
-        let tete = Bloc { titre: bloc.titre.clone(), mention: bloc.mention.clone(), recit: None };
-        let n1 = cap.saturating_sub(poids(&tete, mesure)).max(1).min(lignes.len());
+        let tete = Bloc {
+            titre: bloc.titre.clone(),
+            mention: bloc.mention.clone(),
+            recit: None,
+        };
+        let n1 = cap
+            .saturating_sub(poids(&tete, mesure))
+            .max(1)
+            .min(lignes.len());
         let (a, b) = lignes.split_at(n1);
-        self.courante.push(texte(Bloc { recit: Some(a.join("\n")), ..tete }));
+        self.courante.push(texte(Bloc {
+            recit: Some(a.join("\n")),
+            ..tete
+        }));
         self.fermer(g, mesure, resumes, sp);
         if !b.is_empty() {
-            let reste = Bloc { titre: String::new(), mention: None, recit: Some(b.join("\n")) };
+            let reste = Bloc {
+                titre: String::new(),
+                mention: None,
+                recit: Some(b.join("\n")),
+            };
             self.courante.push(texte(reste));
             if b.len() > cap {
                 resumes[rang].deborde = true;
@@ -711,7 +791,8 @@ impl Flux {
         let mut essais = Vec::new();
         // Une carte prend sa page entière : les photos sont à droite, jamais
         // dessous.
-        if est_carte(&textes).is_none() && poids_page(&textes, mesure) <= lignes_pour_etre_court(&g) {
+        if est_carte(&textes).is_none() && poids_page(&textes, mesure) <= lignes_pour_etre_court(&g)
+        {
             let (_, h, _) = empiler(mesure, &blocs, xg, w, 0.0);
             essais.push(TexteOuvert::Tete((h + 8.0).ceil() as u32));
         }
@@ -740,7 +821,11 @@ impl Flux {
             marquer(&[&textes], resumes, true);
             sp.push(ouverture);
             if !reste.is_empty() {
-                let suite = Chapter { photos: reste, start: chapitre.start, end: chapitre.end };
+                let suite = Chapter {
+                    photos: reste,
+                    start: chapitre.start,
+                    end: chapitre.end,
+                };
                 sp.extend(composer.compose(&suite, None, root));
             }
             return;
@@ -797,7 +882,11 @@ pub struct Bilan {
 
 impl Bilan {
     pub fn de(titre: &str, etapes: usize, resumes: &[Resume]) -> Self {
-        let mut b = Bilan { titre: titre.to_string(), etapes, ..Default::default() };
+        let mut b = Bilan {
+            titre: titre.to_string(),
+            etapes,
+            ..Default::default()
+        };
         for r in resumes {
             b.emojis_non_imprimes += r.emojis;
             match r.placement {
@@ -823,7 +912,9 @@ impl Bilan {
     pub fn phrases(&self) -> Vec<String> {
         let mut p = Vec::new();
         if let Some(r) = &self.refus {
-            p.push(format!("voyage.json ignoré, dossier composé comme un dossier ordinaire : {r}"));
+            p.push(format!(
+                "voyage.json ignoré, dossier composé comme un dossier ordinaire : {r}"
+            ));
             return p;
         }
         p.push(format!(
@@ -831,10 +922,16 @@ impl Bilan {
             self.titre, self.etapes, self.recits_a_cote, self.recits_en_page, self.pages_de_texte
         ));
         if self.cartes > 0 {
-            p.push(format!("{} cartes posées (le voyage, puis un pays à partir de trois étapes de suite)", self.cartes));
+            p.push(format!(
+                "{} cartes posées (le voyage, puis un pays à partir de trois étapes de suite)",
+                self.cartes
+            ));
         }
         if self.etapes_vides > 0 {
-            p.push(format!("{} étapes sans photo ni récit n'ont rien donné au livre", self.etapes_vides));
+            p.push(format!(
+                "{} étapes sans photo ni récit n'ont rien donné au livre",
+                self.etapes_vides
+            ));
         }
         if self.etapes_groupees > 0 {
             p.push(format!(
@@ -855,7 +952,10 @@ impl Bilan {
             ));
         }
         if self.photos_absentes > 0 {
-            p.push(format!("{} photos du voyage ne sont pas dans le dossier", self.photos_absentes));
+            p.push(format!(
+                "{} photos du voyage ne sont pas dans le dossier",
+                self.photos_absentes
+            ));
         }
         if self.photos_hors_etapes > 0 {
             p.push(format!(

@@ -32,7 +32,10 @@ pub struct Reglages {
 
 impl Default for Reglages {
     fn default() -> Self {
-        Reglages { tolerance_monde: TOLERANCE_MONDE, tolerance_detail: TOLERANCE_DETAIL }
+        Reglages {
+            tolerance_monde: TOLERANCE_MONDE,
+            tolerance_detail: TOLERANCE_DETAIL,
+        }
     }
 }
 
@@ -58,19 +61,36 @@ pub struct Sources<'a> {
 /// Lit un `.shp` de polygones (5) ou de polylignes (3) : les parties de chaque
 /// enregistrement, dans l'ordre du fichier, en degrés `(lon, lat)`.
 pub fn lire_shp(octets: &[u8]) -> Result<Vec<Vec<(f64, f64)>>, String> {
-    let i32_le = |p: usize| octets.get(p..p + 4).map(|b| i32::from_le_bytes([b[0], b[1], b[2], b[3]])).ok_or("shapefile tronqué");
-    let f64_le = |p: usize| octets.get(p..p + 8).map(|b| f64::from_le_bytes(b.try_into().unwrap())).ok_or("shapefile tronqué");
+    let i32_le = |p: usize| {
+        octets
+            .get(p..p + 4)
+            .map(|b| i32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+            .ok_or("shapefile tronqué")
+    };
+    let f64_le = |p: usize| {
+        octets
+            .get(p..p + 8)
+            .map(|b| f64::from_le_bytes(b.try_into().unwrap()))
+            .ok_or("shapefile tronqué")
+    };
     if octets.len() < 100 || octets[..4] != [0, 0, 0x27, 0x0a] {
         return Err("pas un shapefile".into());
     }
     let genre = i32_le(32)?;
     if genre != 3 && genre != 5 {
-        return Err(format!("shapefile de genre {genre} : seuls 3 (polylignes) et 5 (polygones) sont lus"));
+        return Err(format!(
+            "shapefile de genre {genre} : seuls 3 (polylignes) et 5 (polygones) sont lus"
+        ));
     }
     let mut parties = Vec::new();
     let mut pos = 100;
     while pos + 8 <= octets.len() {
-        let mots = i32::from_be_bytes([octets[pos + 4], octets[pos + 5], octets[pos + 6], octets[pos + 7]]) as usize;
+        let mots = i32::from_be_bytes([
+            octets[pos + 4],
+            octets[pos + 5],
+            octets[pos + 6],
+            octets[pos + 7],
+        ]) as usize;
         let fin = pos + 8 + mots * 2;
         let c = pos + 8;
         if fin > octets.len() {
@@ -142,7 +162,8 @@ fn simplifier_anneau(p: &[Pt], tol: f64) -> Vec<Pt> {
     if p.len() < 4 {
         return p.to_vec();
     }
-    let d2 = |q: Pt| ((q.0 as i64 - p[0].0 as i64).pow(2) + (q.1 as i64 - p[0].1 as i64).pow(2)) as f64;
+    let d2 =
+        |q: Pt| ((q.0 as i64 - p[0].0 as i64).pow(2) + (q.1 as i64 - p[0].1 as i64).pow(2)) as f64;
     let mut loin = 1;
     for i in 2..p.len() {
         if d2(p[i]) > d2(p[loin]) {
@@ -194,7 +215,9 @@ fn contours(parties: &[Vec<(f64, f64)>], tol: f64) -> Vec<Vec<Pt>> {
         if n < 3 {
             continue;
         }
-        let coupures: Vec<usize> = (0..n).filter(|&i| arete_artificielle(a[i], a[(i + 1) % n])).collect();
+        let coupures: Vec<usize> = (0..n)
+            .filter(|&i| arete_artificielle(a[i], a[(i + 1) % n]))
+            .collect();
         if coupures.is_empty() {
             let mut l = a.clone();
             l.push(a[0]);
@@ -273,7 +296,11 @@ fn frontieres(parties: &[Vec<(f64, f64)>], tol: f64) -> Vec<Vec<Pt>> {
         }
         chaine
     };
-    let bornes: Vec<Pt> = voisins.iter().filter(|(_, v)| v.len() != 2).map(|(k, _)| *k).collect();
+    let bornes: Vec<Pt> = voisins
+        .iter()
+        .filter(|(_, v)| v.len() != 2)
+        .map(|(k, _)| *k)
+        .collect();
     for b in bornes {
         let mut vs = voisins[&b].clone();
         vs.sort();
@@ -316,22 +343,60 @@ fn ecrire_couche(couche: Couche, parties: &[Vec<Pt>], index: &mut Vec<u8>, corps
 pub fn compiler(src: &Sources, reg: &Reglages) -> Result<Vec<u8>, String> {
     let (m, d) = (reg.tolerance_monde, reg.tolerance_detail);
     let land50 = lire_shp(src.land50).map_err(|e| format!("ne_50m_land : {e}"))?;
-    let pays50 = lire_shp(src.countries50).map_err(|e| format!("ne_50m_admin_0_countries : {e}"))?;
-    let pays10 = lire_shp(src.countries10).map_err(|e| format!("ne_10m_admin_0_countries : {e}"))?;
+    let pays50 =
+        lire_shp(src.countries50).map_err(|e| format!("ne_50m_admin_0_countries : {e}"))?;
+    let pays10 =
+        lire_shp(src.countries10).map_err(|e| format!("ne_10m_admin_0_countries : {e}"))?;
     let cote10 = lire_shp(src.coastline10).map_err(|e| format!("ne_10m_coastline : {e}"))?;
     let lacs10 = lire_shp(src.lakes10).map_err(|e| format!("ne_10m_lakes : {e}"))?;
-    let rivieres10 = lire_shp(src.rivers10).map_err(|e| format!("ne_10m_rivers_lake_centerlines : {e}"))?;
+    let rivieres10 =
+        lire_shp(src.rivers10).map_err(|e| format!("ne_10m_rivers_lake_centerlines : {e}"))?;
 
     let mut index = Vec::new();
     let mut corps = Vec::new();
-    ecrire_couche(Couche::Terre50, &surfaces(&land50, m), &mut index, &mut corps);
-    ecrire_couche(Couche::Cotes50, &contours(&land50, m), &mut index, &mut corps);
-    ecrire_couche(Couche::Frontieres50, &frontieres(&pays50, m), &mut index, &mut corps);
-    ecrire_couche(Couche::Terre10, &surfaces(&pays10, d), &mut index, &mut corps);
+    ecrire_couche(
+        Couche::Terre50,
+        &surfaces(&land50, m),
+        &mut index,
+        &mut corps,
+    );
+    ecrire_couche(
+        Couche::Cotes50,
+        &contours(&land50, m),
+        &mut index,
+        &mut corps,
+    );
+    ecrire_couche(
+        Couche::Frontieres50,
+        &frontieres(&pays50, m),
+        &mut index,
+        &mut corps,
+    );
+    ecrire_couche(
+        Couche::Terre10,
+        &surfaces(&pays10, d),
+        &mut index,
+        &mut corps,
+    );
     ecrire_couche(Couche::Cotes10, &lignes(&cote10, d), &mut index, &mut corps);
-    ecrire_couche(Couche::Frontieres10, &frontieres(&pays10, d), &mut index, &mut corps);
-    ecrire_couche(Couche::Lacs10, &surfaces(&lacs10, d), &mut index, &mut corps);
-    ecrire_couche(Couche::Rivieres10, &lignes(&rivieres10, d), &mut index, &mut corps);
+    ecrire_couche(
+        Couche::Frontieres10,
+        &frontieres(&pays10, d),
+        &mut index,
+        &mut corps,
+    );
+    ecrire_couche(
+        Couche::Lacs10,
+        &surfaces(&lacs10, d),
+        &mut index,
+        &mut corps,
+    );
+    ecrire_couche(
+        Couche::Rivieres10,
+        &lignes(&rivieres10, d),
+        &mut index,
+        &mut corps,
+    );
 
     let mut sortie = MAGIE.to_vec();
     sortie.push(8);
@@ -413,19 +478,35 @@ mod tests {
 
     fn compiler_minuscule() -> Vec<u8> {
         let s = sources_minuscules();
-        let src = Sources { land50: &s[0], countries50: &s[1], countries10: &s[2], coastline10: &s[3], lakes10: &s[4], rivers10: &s[5] };
+        let src = Sources {
+            land50: &s[0],
+            countries50: &s[1],
+            countries10: &s[2],
+            coastline10: &s[3],
+            lakes10: &s[4],
+            rivers10: &s[5],
+        };
         compiler(&src, &Reglages::default()).unwrap()
     }
 
     #[test]
     fn le_lecteur_rend_les_parties_d_un_shapefile() {
-        let f = shp(5, &[vec![carre(0.0, 0.0, 1.0), carre(5.0, 5.0, 1.0)], vec![carre(9.0, 9.0, 1.0)]]);
+        let f = shp(
+            5,
+            &[
+                vec![carre(0.0, 0.0, 1.0), carre(5.0, 5.0, 1.0)],
+                vec![carre(9.0, 9.0, 1.0)],
+            ],
+        );
         let p = lire_shp(&f).unwrap();
         assert_eq!(p.len(), 3);
         assert_eq!(p[1][0], (5.0, 5.0));
         assert_eq!(p[2].len(), 5);
         assert!(lire_shp(b"nope").is_err());
-        assert!(lire_shp(&shp(1, &[])).is_err(), "un genre qu'on ne lit pas se refuse");
+        assert!(
+            lire_shp(&shp(1, &[])).is_err(),
+            "un genre qu'on ne lit pas se refuse"
+        );
         let mut coupe = f.clone();
         coupe.truncate(coupe.len() - 10);
         assert!(lire_shp(&coupe).is_err());
@@ -441,26 +522,45 @@ mod tests {
     fn la_frontiere_est_le_mur_commun_et_pas_la_cote() {
         let o = compiler_minuscule();
         let a = Actif::lire(&o).unwrap();
-        let f: Vec<_> = a.parties(Couche::Frontieres10).map(|p| p.unwrap().points().unwrap()).collect();
-        assert_eq!(f, vec![vec![(1.0, 0.0), (1.0, 1.0)]], "une seule chaîne : le mur x=1");
+        let f: Vec<_> = a
+            .parties(Couche::Frontieres10)
+            .map(|p| p.unwrap().points().unwrap())
+            .collect();
+        assert_eq!(
+            f,
+            vec![vec![(1.0, 0.0), (1.0, 1.0)]],
+            "une seule chaîne : le mur x=1"
+        );
         assert_eq!(a.nombre_de_parties(Couche::Terre10), 2);
         assert_eq!(a.nombre_de_parties(Couche::Lacs10), 1);
         // La côte de 1:10m est simplifiée : le point à 0,0001° du segment tombe.
-        let c: Vec<_> = a.parties(Couche::Cotes10).map(|p| p.unwrap().points().unwrap()).collect();
+        let c: Vec<_> = a
+            .parties(Couche::Cotes10)
+            .map(|p| p.unwrap().points().unwrap())
+            .collect();
         assert_eq!(c, vec![vec![(0.0, 0.0), (1.0, 0.0)]]);
     }
 
     #[test]
     fn les_aretes_sur_l_antimeridien_ou_un_pole_ne_sont_pas_des_traits() {
         // Un anneau qui longe l'antiméridien : sa côte est trois arêtes, pas quatre.
-        let anneau_de_bord = vec![(170.0, 0.0), (180.0, 0.0), (180.0, 10.0), (170.0, 10.0), (170.0, 0.0)];
+        let anneau_de_bord = vec![
+            (170.0, 0.0),
+            (180.0, 0.0),
+            (180.0, 10.0),
+            (170.0, 10.0),
+            (170.0, 0.0),
+        ];
         let terre = shp(5, &[vec![anneau_de_bord]]);
         let c = contours(&lire_shp(&terre).unwrap(), 0.0);
         assert_eq!(c.len(), 1);
         assert_eq!(c[0].len(), 4, "trois arêtes : {:?}", c[0]);
         assert!(!c[0].windows(2).any(|w| arete_artificielle(w[0], w[1])));
         // Un anneau libre est une ligne fermée sur elle-même.
-        let libre = contours(&lire_shp(&shp(5, &[vec![carre(0.0, 0.0, 1.0)]])).unwrap(), 0.0);
+        let libre = contours(
+            &lire_shp(&shp(5, &[vec![carre(0.0, 0.0, 1.0)]])).unwrap(),
+            0.0,
+        );
         assert_eq!((libre.len(), libre[0].len()), (1, 5));
         assert_eq!(libre[0][0], libre[0][4]);
     }
@@ -473,14 +573,18 @@ mod tests {
         assert_eq!(s.len(), 1, "l'îlot de 55 m disparaît");
         assert_eq!(s[0].len(), 4);
         // Un contour en dents de scie plus fines que la tolérance devient droit.
-        let dents: Vec<(f64, f64)> = (0..100).map(|i| (i as f64 * 0.01, if i % 2 == 0 { 0.0 } else { 0.0005 })).collect();
+        let dents: Vec<(f64, f64)> = (0..100)
+            .map(|i| (i as f64 * 0.01, if i % 2 == 0 { 0.0 } else { 0.0005 }))
+            .collect();
         assert_eq!(lignes(&[dents], 0.0015)[0].len(), 2);
     }
 
     #[test]
     fn deux_pays_voisins_simplifies_ne_se_contredisent_pas() {
         // Un mur commun en zigzag : les deux anneaux le portent, la chaîne le simplifie une fois.
-        let mur: Vec<(f64, f64)> = (0..=20).map(|i| (1.0 + if i % 2 == 0 { 0.0 } else { 0.0003 }, i as f64 * 0.05)).collect();
+        let mur: Vec<(f64, f64)> = (0..=20)
+            .map(|i| (1.0 + if i % 2 == 0 { 0.0 } else { 0.0003 }, i as f64 * 0.05))
+            .collect();
         let mut gauche = vec![(0.0, 0.0)];
         gauche.extend(mur.iter().copied());
         gauche.push((0.0, 1.0));

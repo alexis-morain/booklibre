@@ -124,7 +124,11 @@ impl Bilan {
 /// every spread as untouched — a no-op that looks exactly like a success, on
 /// precisely the albums this path exists to serve.
 pub fn tailles_du_releve(releve: &crate::releve::Releve) -> Tailles {
-    releve.photos.iter().map(|p| (releve.src(&p.path), p.orig)).collect()
+    releve
+        .photos
+        .iter()
+        .map(|p| (releve.src(&p.path), p.orig))
+        .collect()
 }
 
 /// Every photograph's **original** pixel size, for one album folder.
@@ -302,9 +306,11 @@ pub fn bascule(
         let rects_avant = pdf::slots_for(&av.template, av.slots.len(), &g_avant);
         let rects_apres = pdf::slots_for(&ap.template, ap.slots.len(), &g_apres);
         for (ci, slot) in ap.slots.iter().enumerate() {
-            let (Some(&(w, h)), Some(ra), Some(rb)) =
-                (tailles.get(&slot.src), rects_avant.get(ci), rects_apres.get(ci))
-            else {
+            let (Some(&(w, h)), Some(ra), Some(rb)) = (
+                tailles.get(&slot.src),
+                rects_avant.get(ci),
+                rects_apres.get(ci),
+            ) else {
                 continue;
             };
             let avant = print::effective_ppi(ra, w, h, slot.zoom);
@@ -358,11 +364,7 @@ pub fn bascule(
 /// dropped. Among those, the closest to what the spread had — same family
 /// first (a `duo` prefers `duo_paysage` to a `trio`), then the offered
 /// order, which the picker and the dump already agree on.
-fn replacant(
-    courant: &str,
-    aspects: &[f64],
-    g: &SpreadGeometry,
-) -> Option<&'static str> {
+fn replacant(courant: &str, aspects: &[f64], g: &SpreadGeometry) -> Option<&'static str> {
     let n = aspects.len();
     let famille = courant.trim_end_matches("_verso");
     let candidats: Vec<&'static str> = gabarit::compatibles(aspects, g)
@@ -406,7 +408,10 @@ mod tests {
     fn planche(template: &str, srcs: &[&str]) -> Spread {
         Spread {
             template: template.into(),
-            slots: srcs.iter().map(|s| Slot::new((*s).into(), [0.5, 0.5])).collect(),
+            slots: srcs
+                .iter()
+                .map(|s| Slot::new((*s).into(), [0.5, 0.5]))
+                .collect(),
             caption: None,
             text: None,
             edited: false,
@@ -424,7 +429,10 @@ mod tests {
     /// Photos big enough that resolution never enters the picture, so a test
     /// about templates is only about templates.
     fn tailles(entries: &[(&str, u32, u32)]) -> Tailles {
-        entries.iter().map(|(s, w, h)| ((*s).to_string(), (*w, *h))).collect()
+        entries
+            .iter()
+            .map(|(s, w, h)| ((*s).to_string(), (*w, *h)))
+            .collect()
     }
 
     /// The promise, and the whole reason the module is not a recomposition:
@@ -456,7 +464,10 @@ mod tests {
         for (av, ap) in album.spreads.iter().zip(&apres.spreads) {
             let srcs_av: Vec<&str> = av.slots.iter().map(|s| s.src.as_str()).collect();
             let srcs_ap: Vec<&str> = ap.slots.iter().map(|s| s.src.as_str()).collect();
-            assert_eq!(srcs_av, srcs_ap, "le jeu de photos d'une planche ne bouge pas");
+            assert_eq!(
+                srcs_av, srcs_ap,
+                "le jeu de photos d'une planche ne bouge pas"
+            );
             assert_eq!(av.caption, ap.caption);
             assert_eq!(av.text, ap.text);
             assert_eq!(av.edited, ap.edited);
@@ -475,7 +486,11 @@ mod tests {
         let mut album = album_de(vec![planche("duo", &["a.jpg", "b.jpg"])], carre());
         album.reglages.insert(
             "a.jpg".into(),
-            crate::model::Reglage { expo: 0.5, contraste: -1.0, nb: true },
+            crate::model::Reglage {
+                expo: 0.5,
+                contraste: -1.0,
+                nb: true,
+            },
         );
         let t = tailles(&[("a.jpg", 4000, 3000), ("b.jpg", 4000, 3000)]);
         let (apres, _) = bascule(&album, paysage(), &t, profil());
@@ -498,7 +513,6 @@ mod tests {
         let (apres, _) = bascule(&album, paysage(), &t, profil());
         assert_eq!(apres.police, album.police);
     }
-
 
     /// Every focal is untouched. This is 3.1's promise, and the bascule is
     /// its first real user: the crop means the same thing on any page shape,
@@ -622,7 +636,10 @@ mod tests {
 
         let (apres, bilan) = bascule(&album, paysage(), &t, profil());
 
-        assert_eq!(apres.spreads[0].template, "solo_pano", "rien ne lui a été fait");
+        assert_eq!(
+            apres.spreads[0].template, "solo_pano",
+            "rien ne lui a été fait"
+        );
         assert!(
             bilan.epinglees_touchees.is_empty(),
             "on ne déclare pas touché ce qu'on n'a pas touché"
@@ -649,7 +666,12 @@ mod tests {
         );
 
         let (_, grand) = bascule(&album, Size { w: 300.0, h: 300.0 }, &t, profil());
-        assert_eq!(grand.sous_resolution.len(), 1, "{:?}", grand.sous_resolution);
+        assert_eq!(
+            grand.sous_resolution.len(),
+            1,
+            "{:?}",
+            grand.sous_resolution
+        );
         let s = &grand.sous_resolution[0];
         assert_eq!(s.src, "petite.jpg");
         assert!(s.ppi_avant >= MIN_EFFECTIVE_PPI, "{}", s.ppi_avant);
@@ -666,7 +688,10 @@ mod tests {
 
         let (_, bilan) = bascule(&album, paysage(), &t, profil());
 
-        assert!(bilan.sous_resolution.is_empty(), "elle ne traverse rien, elle y était");
+        assert!(
+            bilan.sous_resolution.is_empty(),
+            "elle ne traverse rien, elle y était"
+        );
         assert_eq!(bilan.deja_sous_resolution, 1);
     }
 
@@ -719,7 +744,10 @@ mod tests {
 
         let (apres, bilan) = bascule(&album, paysage(), &Tailles::new(), profil());
 
-        assert_eq!(apres.spreads[0].text.as_deref(), Some("deux lignes\net une autre"));
+        assert_eq!(
+            apres.spreads[0].text.as_deref(),
+            Some("deux lignes\net une autre")
+        );
         assert_eq!(apres.spreads[0].template, "texte");
         assert_eq!(bilan.planches_inchangees, 1);
         assert!(bilan.tailles_manquantes.is_empty());
@@ -740,8 +768,8 @@ mod tests {
         use crate::pipeline::Photo;
         use crate::releve::Releve;
 
-        let dir = std::env::temp_dir()
-            .join(format!("colophon-bascule-releve-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("colophon-bascule-releve-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let racine = std::path::PathBuf::from("/ailleurs/corse-2013");
@@ -826,8 +854,8 @@ mod tests {
     /// machine's folds as hands.
     #[test]
     fn une_bascule_ne_reecrit_jamais_l_origine() {
-        let dir = std::env::temp_dir()
-            .join(format!("colophon-bascule-origine-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("colophon-bascule-origine-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 

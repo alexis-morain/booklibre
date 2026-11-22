@@ -32,7 +32,11 @@ pub fn init(dir: &Path) -> std::io::Result<()> {
     let path = dir.join("colophon.log");
     let file = OpenOptions::new().create(true).append(true).open(&path)?;
     let written = file.metadata().map(|m| m.len()).unwrap_or(0);
-    *LOG.lock().unwrap() = Some(Logger { path, file, written });
+    *LOG.lock().unwrap() = Some(Logger {
+        path,
+        file,
+        written,
+    });
     Ok(())
 }
 
@@ -46,9 +50,7 @@ pub fn line(msg: &str) {
     if log.written + l.len() as u64 > MAX_BYTES {
         let old = log.path.with_extension("log.1");
         let _ = fs::rename(&log.path, &old);
-        if let Ok(fresh) =
-            OpenOptions::new().create(true).append(true).open(&log.path)
-        {
+        if let Ok(fresh) = OpenOptions::new().create(true).append(true).open(&log.path) {
             log.file = fresh;
             log.written = 0;
         }
@@ -66,8 +68,12 @@ pub fn chemin() -> Option<PathBuf> {
 /// The last lines of the log, scrub already applied at write time. This is
 /// the extract a problem report attaches; `max` keeps it quotable.
 pub fn extrait(max: usize) -> String {
-    let Some(path) = chemin() else { return String::new() };
-    let Ok(text) = fs::read_to_string(&path) else { return String::new() };
+    let Some(path) = chemin() else {
+        return String::new();
+    };
+    let Ok(text) = fs::read_to_string(&path) else {
+        return String::new();
+    };
     let lines: Vec<&str> = text.lines().collect();
     let start = lines.len().saturating_sub(max);
     lines[start..].join("\n")

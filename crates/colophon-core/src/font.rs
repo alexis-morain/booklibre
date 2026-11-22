@@ -85,7 +85,6 @@ pub const POLICE_TTF: &str = "police.ttf";
 /// The CFF half of [`POLICE_TTF`].
 pub const POLICE_OTF: &str = "police.otf";
 
-
 /// What the PDF needs to know about the face, all in the 1000-unit em space
 /// PDF works in.
 #[derive(Debug, Clone)]
@@ -309,7 +308,10 @@ impl Face {
         // The face's own signature, never one we picked: a `.ttc` holds
         // `OTTO` faces and TrueType ones side by side, and the file we emit
         // has to say which it carries.
-        let version = data.get(dir..dir.saturating_add(4)).ok_or(REFUS_ILLISIBLE)?.to_vec();
+        let version = data
+            .get(dir..dir.saturating_add(4))
+            .ok_or(REFUS_ILLISIBLE)?
+            .to_vec();
 
         let (par_genre, requises_du_genre): (&[&[u8; 4]], &[&[u8; 4]]) = match face.genre {
             Some(Genre::Glyf) => (&TABLES_GARDEES_GLYF, &[b"glyf", b"loca"]),
@@ -366,10 +368,15 @@ impl Face {
             out.extend_from_slice(bytes);
             let rec = 12 + i * 16;
             out[rec..rec + 4].copy_from_slice(*tag);
-            out[rec + 8..rec + 12]
-                .copy_from_slice(&u32::try_from(off).map_err(|_| REFUS_ILLISIBLE)?.to_be_bytes());
+            out[rec + 8..rec + 12].copy_from_slice(
+                &u32::try_from(off)
+                    .map_err(|_| REFUS_ILLISIBLE)?
+                    .to_be_bytes(),
+            );
             out[rec + 12..rec + 16].copy_from_slice(
-                &u32::try_from(bytes.len()).map_err(|_| REFUS_ILLISIBLE)?.to_be_bytes(),
+                &u32::try_from(bytes.len())
+                    .map_err(|_| REFUS_ILLISIBLE)?
+                    .to_be_bytes(),
             );
         }
         while out.len() % 4 != 0 {
@@ -433,8 +440,12 @@ fn style(data: &[u8], dir: usize) -> (bool, bool) {
     let os2 = table(data, dir, b"OS/2");
     let selection = os2.and_then(|o| u16b(o, 62)).unwrap_or(0);
     let poids = os2.and_then(|o| u16b(o, 4)).unwrap_or(0);
-    let angle = table(data, dir, b"post").and_then(|p| i32b(p, 4)).unwrap_or(0);
-    let mac = table(data, dir, b"head").and_then(|h| u16b(h, 44)).unwrap_or(0);
+    let angle = table(data, dir, b"post")
+        .and_then(|p| i32b(p, 4))
+        .unwrap_or(0);
+    let mac = table(data, dir, b"head")
+        .and_then(|h| u16b(h, 44))
+        .unwrap_or(0);
     (
         selection & 0x0020 != 0 || poids >= 600 || mac & 0x0001 != 0,
         selection & 0x0001 != 0 || angle != 0 || mac & 0x0002 != 0,
@@ -598,7 +609,11 @@ impl Embarquee {
     /// tables this reader does not walk, and what is measured here has to be
     /// what the PDF draws.
     pub fn largeur_mm(&self, s: &str, size_pt: f64) -> f64 {
-        let em: i32 = self.glyphes(s).iter().map(|(gid, _)| self.avance(*gid)).sum();
+        let em: i32 = self
+            .glyphes(s)
+            .iter()
+            .map(|(gid, _)| self.avance(*gid))
+            .sum();
         f64::from(em) / 1000.0 * size_pt * 25.4 / 72.0
     }
 
@@ -684,7 +699,9 @@ pub fn extraire_pour_album(
     data: &[u8],
     index: u32,
 ) -> std::result::Result<(&'static str, Vec<u8>), &'static str> {
-    let genre = Face::parse(data, index)?.genre.ok_or(REFUS_BITMAP_SEULEMENT)?;
+    let genre = Face::parse(data, index)?
+        .genre
+        .ok_or(REFUS_BITMAP_SEULEMENT)?;
     Ok((fichier_pour(genre), Face::extraire(data, index)?))
 }
 
@@ -717,20 +734,35 @@ pub struct FaceAlbum {
 /// requires — and here it costs nothing, an extracted face being one face.
 pub fn face_album(dir: &Path, fichier: Option<&str>) -> FaceAlbum {
     let Some(nom) = fichier else {
-        return FaceAlbum { face: face_projet(), defaut: None };
+        return FaceAlbum {
+            face: face_projet(),
+            defaut: None,
+        };
     };
     if nom != POLICE_TTF && nom != POLICE_OTF {
-        return FaceAlbum { face: face_projet(), defaut: Some(REFUS_FICHIER_ABSENT) };
+        return FaceAlbum {
+            face: face_projet(),
+            defaut: Some(REFUS_FICHIER_ABSENT),
+        };
     }
     let Ok(data) = std::fs::read(dir.join(nom)) else {
-        return FaceAlbum { face: face_projet(), defaut: Some(REFUS_FICHIER_ABSENT) };
+        return FaceAlbum {
+            face: face_projet(),
+            defaut: Some(REFUS_FICHIER_ABSENT),
+        };
     };
 
     // An extracted face is one face, so index zero — and if these bytes are
     // not one, the face carries its own reason for it.
     match Embarquee::depuis(data, 0) {
-        Ok(face) => FaceAlbum { face: std::borrow::Cow::Owned(face), defaut: None },
-        Err(code) => FaceAlbum { face: face_projet(), defaut: Some(code) },
+        Ok(face) => FaceAlbum {
+            face: std::borrow::Cow::Owned(face),
+            defaut: None,
+        },
+        Err(code) => FaceAlbum {
+            face: face_projet(),
+            defaut: Some(code),
+        },
     }
 }
 
@@ -740,8 +772,7 @@ pub fn face_album(dir: &Path, fichier: Option<&str>) -> FaceAlbum {
 /// export failure this project refuses.
 pub fn face_projet() -> std::borrow::Cow<'static, Embarquee> {
     std::borrow::Cow::Borrowed(
-        Embarquee::incorporee()
-            .expect("police incorporée illisible ou refusée : asset corrompu"),
+        Embarquee::incorporee().expect("police incorporée illisible ou refusée : asset corrompu"),
     )
 }
 
@@ -767,7 +798,13 @@ const SLUG_MAX: usize = 64;
 pub fn fichier_objet(postscript: &str, genre: Genre) -> String {
     let mut slug: String = postscript
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '-' { c } else { '-' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' {
+                c
+            } else {
+                '-'
+            }
+        })
         .take(SLUG_MAX)
         .collect();
     if slug.is_empty() {
@@ -785,8 +822,13 @@ pub fn fichier_objet(postscript: &str, genre: Genre) -> String {
 /// chemin. `../x.ttf`, `objet-/.ttf` et le `police.ttf` du livre échouent
 /// tous ici.
 pub fn fichier_objet_valide(nom: &str) -> bool {
-    let Some(reste) = nom.strip_prefix(PREFIXE_OBJET) else { return false };
-    let Some(slug) = reste.strip_suffix(".ttf").or_else(|| reste.strip_suffix(".otf")) else {
+    let Some(reste) = nom.strip_prefix(PREFIXE_OBJET) else {
+        return false;
+    };
+    let Some(slug) = reste
+        .strip_suffix(".ttf")
+        .or_else(|| reste.strip_suffix(".otf"))
+    else {
         return false;
     };
     (1..=SLUG_MAX).contains(&slug.len())
@@ -807,7 +849,10 @@ pub fn extraire_pour_objet(
     let index = installee.face.index;
     let face = Face::parse(&data, index)?;
     let genre = face.genre.ok_or(REFUS_BITMAP_SEULEMENT)?;
-    Ok((fichier_objet(&face.postscript, genre), Face::extraire(&data, index)?))
+    Ok((
+        fichier_objet(&face.postscript, genre),
+        Face::extraire(&data, index)?,
+    ))
 }
 
 /// La face d'un bloc, résolue depuis le dossier de l'album, avec les deux
@@ -816,18 +861,28 @@ pub fn extraire_pour_objet(
 /// n'échoue : l'appelant pose le bloc dans la face du livre.
 pub fn face_objet(dir: &Path, police: &crate::model::Police) -> FaceAlbum {
     if !fichier_objet_valide(&police.fichier) {
-        return FaceAlbum { face: face_projet(), defaut: Some(REFUS_FICHIER_ABSENT) };
+        return FaceAlbum {
+            face: face_projet(),
+            defaut: Some(REFUS_FICHIER_ABSENT),
+        };
     }
     let Ok(data) = std::fs::read(dir.join(&police.fichier)) else {
-        return FaceAlbum { face: face_projet(), defaut: Some(REFUS_FICHIER_ABSENT) };
+        return FaceAlbum {
+            face: face_projet(),
+            defaut: Some(REFUS_FICHIER_ABSENT),
+        };
     };
     match Embarquee::depuis(data, 0) {
-        Ok(face) => FaceAlbum { face: std::borrow::Cow::Owned(face), defaut: None },
-        Err(code) => FaceAlbum { face: face_projet(), defaut: Some(code) },
+        Ok(face) => FaceAlbum {
+            face: std::borrow::Cow::Owned(face),
+            defaut: None,
+        },
+        Err(code) => FaceAlbum {
+            face: face_projet(),
+            defaut: Some(code),
+        },
     }
 }
-
-
 
 // --- Les faces installées ---------------------------------------------------
 
@@ -861,7 +916,10 @@ pub fn installed() -> Vec<Installee> {
 /// without a temporary exception, so it does not list it rather than list
 /// a folder it would be refused (the app says so in the font panel).
 pub fn installed_avec(utilisateur: bool) -> Vec<Installee> {
-    let mut dirs = dossiers_de(crate::maison::vrai_dossier_personnel().as_deref(), utilisateur);
+    let mut dirs = dossiers_de(
+        crate::maison::vrai_dossier_personnel().as_deref(),
+        utilisateur,
+    );
     dirs.retain(|d| d.is_dir());
     installed_in(&dirs)
 }
@@ -896,12 +954,18 @@ pub fn installed_in(dirs: &[PathBuf]) -> Vec<Installee> {
             }
             let chemin = entry.into_path();
             let Some((data, _)) = lire_tables(&chemin) else {
-                out.push(Installee { chemin, face: Face::refusee(0, REFUS_ILLISIBLE) });
+                out.push(Installee {
+                    chemin,
+                    face: Face::refusee(0, REFUS_ILLISIBLE),
+                });
                 continue;
             };
             for index in 0..face_count(&data).max(1) {
                 let face = Face::parse(&data, index).unwrap_or_else(|c| Face::refusee(index, c));
-                out.push(Installee { chemin: chemin.clone(), face });
+                out.push(Installee {
+                    chemin: chemin.clone(),
+                    face,
+                });
             }
         }
     }
@@ -939,7 +1003,12 @@ pub fn dossiers_de(maison: Option<&Path>, utilisateur: bool) -> Vec<PathBuf> {
         let racine = std::env::var_os("SystemRoot").unwrap_or_else(|| "C:\\Windows".into());
         dirs.push(PathBuf::from(racine).join("Fonts"));
         if let (true, Some(l)) = (utilisateur, std::env::var_os("LOCALAPPDATA")) {
-            dirs.push(PathBuf::from(l).join("Microsoft").join("Windows").join("Fonts"));
+            dirs.push(
+                PathBuf::from(l)
+                    .join("Microsoft")
+                    .join("Windows")
+                    .join("Fonts"),
+            );
         }
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -1006,11 +1075,15 @@ fn lire_tables(path: &Path) -> Option<(Vec<u8>, u64)> {
     let faces = face_count(&buf);
 
     for index in 0..faces {
-        let Some(dir) = dir_offset(&buf, index) else { continue };
+        let Some(dir) = dir_offset(&buf, index) else {
+            continue;
+        };
         if prendre(&mut f, &mut buf, &mut lus, taille, dir, 12).is_none() {
             continue;
         }
-        let Some(count) = u16b(&buf, dir.saturating_add(4)) else { continue };
+        let Some(count) = u16b(&buf, dir.saturating_add(4)) else {
+            continue;
+        };
         let _ = prendre(
             &mut f,
             &mut buf,
@@ -1113,7 +1186,9 @@ impl<'a> Communes<'a> {
             .filter(|v| *v != 0)
             .or_else(|| i16b(hhea, 6))?;
         let cap_height = if os2_version >= 2 {
-            os2.and_then(|o| i16b(o, 88)).filter(|v| *v != 0).unwrap_or(ascent)
+            os2.and_then(|o| i16b(o, 88))
+                .filter(|v| *v != 0)
+                .unwrap_or(ascent)
         } else {
             ascent
         };
@@ -1304,7 +1379,10 @@ fn macroman(bytes: &[u8]) -> String {
             if *b < 0x80 {
                 char::from(*b)
             } else {
-                MACROMAN_HAUT.chars().nth(usize::from(*b - 0x80)).unwrap_or('\u{fffd}')
+                MACROMAN_HAUT
+                    .chars()
+                    .nth(usize::from(*b - 0x80))
+                    .unwrap_or('\u{fffd}')
             }
         })
         .collect()
@@ -1319,8 +1397,12 @@ fn unicode_subtable(cmap: &[u8]) -> Option<&[u8]> {
     let mut best: Option<(u8, &[u8])> = None;
     for i in 0..count {
         let rec = 4usize.saturating_add(i.saturating_mul(8));
-        let Some(platform) = u16b(cmap, rec) else { continue };
-        let Some(encoding) = u16b(cmap, rec + 2) else { continue };
+        let Some(platform) = u16b(cmap, rec) else {
+            continue;
+        };
+        let Some(encoding) = u16b(cmap, rec + 2) else {
+            continue;
+        };
         let Some(off) = u32b(cmap, rec + 4).and_then(|o| usize::try_from(o).ok()) else {
             continue;
         };
@@ -1417,7 +1499,10 @@ fn advance(hmtx: &[u8], num_h: usize, gid: u16) -> u16 {
 }
 
 fn u16b(d: &[u8], at: usize) -> Option<u16> {
-    Some(u16::from_be_bytes([*d.get(at)?, *d.get(at.checked_add(1)?)?]))
+    Some(u16::from_be_bytes([
+        *d.get(at)?,
+        *d.get(at.checked_add(1)?)?,
+    ]))
 }
 
 fn i16b(d: &[u8], at: usize) -> Option<i16> {
@@ -1450,8 +1535,9 @@ fn i32b(d: &[u8], at: usize) -> Option<i32> {
 /// variation tables (`fvar`, `gvar`, `HVAR`, `MVAR`, `STAT`, `avar`) and
 /// everything else. The face that comes out is the default instance, which
 /// is what the tables here already describe, and it is static.
-const TABLES_GARDEES: [&[u8; 4]; 8] =
-    [b"head", b"hhea", b"hmtx", b"maxp", b"cmap", b"name", b"OS/2", b"post"];
+const TABLES_GARDEES: [&[u8; 4]; 8] = [
+    b"head", b"hhea", b"hmtx", b"maxp", b"cmap", b"name", b"OS/2", b"post",
+];
 
 /// Kept as well when the outlines are quadratic. `loca` travels with `glyf`
 /// or the glyphs shift; `cvt `, `fpgm` and `prep` are the hinting, which a
@@ -1464,15 +1550,15 @@ const TABLES_GARDEES_CFF: [&[u8; 4]; 1] = [b"CFF "];
 /// Without one of these there is no face to emit, whatever the outlines are.
 /// `OS/2` and `post` are deliberately not here: plenty of faces carry
 /// neither, and the reader falls back the same way on the other side.
-const TABLES_REQUISES: [&[u8; 4]; 6] =
-    [b"head", b"hhea", b"hmtx", b"maxp", b"cmap", b"name"];
+const TABLES_REQUISES: [&[u8; 4]; 6] = [b"head", b"hhea", b"hmtx", b"maxp", b"cmap", b"name"];
 
 /// The sfnt checksum: big-endian 32-bit words, summed and allowed to wrap.
 /// Every table is written padded to four bytes, and so is the whole file, so
 /// there is never a tail to worry about.
 fn somme_sfnt(data: &[u8]) -> u32 {
-    data.chunks_exact(4)
-        .fold(0u32, |s, w| s.wrapping_add(u32::from_be_bytes([w[0], w[1], w[2], w[3]])))
+    data.chunks_exact(4).fold(0u32, |s, w| {
+        s.wrapping_add(u32::from_be_bytes([w[0], w[1], w[2], w[3]]))
+    })
 }
 
 #[cfg(test)]
@@ -1494,7 +1580,10 @@ pub(crate) mod tests {
             assert!(avec.contains(&maison.join("Library/Fonts")), "{avec:?}");
             assert_eq!(
                 sans,
-                vec![PathBuf::from("/System/Library/Fonts"), PathBuf::from("/Library/Fonts")]
+                vec![
+                    PathBuf::from("/System/Library/Fonts"),
+                    PathBuf::from("/Library/Fonts")
+                ]
             );
         }
         assert!(sans.iter().all(|d| avec.contains(d)), "{sans:?} ⊄ {avec:?}");
@@ -1516,11 +1605,19 @@ pub(crate) mod tests {
     #[test]
     fn the_bundled_face_parses_and_may_be_embedded() {
         let m = metrics().expect("police lisible");
-        assert!(m.embeddable(), "fsType {} interdit l'incorporation", m.fs_type);
+        assert!(
+            m.embeddable(),
+            "fsType {} interdit l'incorporation",
+            m.fs_type
+        );
         assert!(m.ascent > 0 && m.descent < 0, "{m:?}");
         assert!(m.cap_height > 0);
         assert_eq!(m.italic_angle, 0.0, "la romaine n'est pas inclinée");
-        assert!(m.bbox[0] < m.bbox[2] && m.bbox[1] < m.bbox[3], "{:?}", m.bbox);
+        assert!(
+            m.bbox[0] < m.bbox[2] && m.bbox[1] < m.bbox[3],
+            "{:?}",
+            m.bbox
+        );
     }
 
     /// The face travels through the general reader, and names itself the way
@@ -1538,7 +1635,10 @@ pub(crate) mod tests {
         // Le même objet que `metrics()` rend, au chiffre près.
         let a = f.metrics.expect("métriques");
         let b = metrics().unwrap();
-        assert_eq!((a.bbox, a.ascent, a.descent, a.cap_height), (b.bbox, b.ascent, b.descent, b.cap_height));
+        assert_eq!(
+            (a.bbox, a.ascent, a.descent, a.cap_height),
+            (b.bbox, b.ascent, b.descent, b.cap_height)
+        );
         assert_eq!(a.fs_type, b.fs_type);
     }
 
@@ -1557,7 +1657,9 @@ pub(crate) mod tests {
         assert!(w('M') > w('i'), "M {} contre i {}", w('M'), w('i'));
         assert!(w('W') > w('.'));
         // The French set, which is the whole point of picking this face.
-        for c in ['é', 'è', 'ê', 'à', 'ù', 'ô', 'ç', 'œ', 'Œ', '«', '»', '\u{2019}', '…', '€'] {
+        for c in [
+            'é', 'è', 'ê', 'à', 'ù', 'ô', 'ç', 'œ', 'Œ', '«', '»', '\u{2019}', '…', '€',
+        ] {
             assert!(w(c) > 0, "{c} sans chasse : glyphe absent de la police");
         }
         // Et ce que l'encodage simple ne pouvait pas atteindre : la face les
@@ -1572,7 +1674,10 @@ pub(crate) mod tests {
     #[test]
     fn les_caracteres_absents_se_nomment_une_fois_chacun() {
         let face = Embarquee::depuis(fichier(&[Fonte::neuve()]), 0).expect("face ouverte");
-        assert!(face.absents("Le vif zéphyr").is_empty(), "la fixture couvre 0x20..0xFF");
+        assert!(
+            face.absents("Le vif zéphyr").is_empty(),
+            "la fixture couvre 0x20..0xFF"
+        );
         assert_eq!(face.absents("a → b → c\n日本"), vec!['→', '日', '本']);
     }
 
@@ -1595,8 +1700,15 @@ pub(crate) mod tests {
         let mut sans = Fonte::neuve();
         sans.cmap = Cmap::SansInterro;
         let face = Embarquee::depuis(fichier(&[sans]), 0).expect("face ouverte");
-        assert!(face.glyphes("?").is_empty(), "rien à dessiner, rien de dessiné");
-        assert_eq!(face.glyphes("A?B").len(), 2, "seul le caractère perdu tombe");
+        assert!(
+            face.glyphes("?").is_empty(),
+            "rien à dessiner, rien de dessiné"
+        );
+        assert_eq!(
+            face.glyphes("A?B").len(),
+            2,
+            "seul le caractère perdu tombe"
+        );
     }
 
     /// The cmap really is being read: a character the face carries resolves to
@@ -1845,8 +1957,11 @@ pub(crate) mod tests {
 
         /// Every table, in tag order the way a real file lays them out.
         fn tables(&self) -> Vec<([u8; 4], Vec<u8>)> {
-            let mut t: Vec<([u8; 4], Vec<u8>)> =
-                vec![(*b"name", self.name()), (*b"OS/2", self.os2()), (*b"post", self.post())];
+            let mut t: Vec<([u8; 4], Vec<u8>)> = vec![
+                (*b"name", self.name()),
+                (*b"OS/2", self.os2()),
+                (*b"post", self.post()),
+            ];
             if self.bitmap {
                 // Ni head ni hhea : la variante bitmap range les siennes dans
                 // un `bhed`, que rien ici ne lit.
@@ -1899,7 +2014,7 @@ pub(crate) mod tests {
         v.extend_from_slice(&0u16.to_be_bytes()); // reservedPad
         v.extend_from_slice(&debut.to_be_bytes()); // startCode
         v.extend_from_slice(&0xFFFFu16.to_be_bytes());
-        v.extend_from_slice(&(1i32 - i32::from(debut)) .to_be_bytes()[2..]); // idDelta : debut → 1
+        v.extend_from_slice(&(1i32 - i32::from(debut)).to_be_bytes()[2..]); // idDelta : debut → 1
         v.extend_from_slice(&1i16.to_be_bytes()); // 0xFFFF → 0
         v.extend_from_slice(&0u16.to_be_bytes()); // idRangeOffset
         v.extend_from_slice(&0u16.to_be_bytes());
@@ -2008,16 +2123,76 @@ pub(crate) mod tests {
             (face.gras, face.italique)
         };
         assert_eq!(lue(Fonte::neuve()), (false, false), "la romaine");
-        assert_eq!(lue(Fonte { selection: 0x0020, ..Fonte::neuve() }), (true, false), "bit 5");
-        assert_eq!(lue(Fonte { poids: 600, ..Fonte::neuve() }), (true, false), "demi-gras");
-        assert_eq!(lue(Fonte { poids: 700, ..Fonte::neuve() }), (true, false), "gras");
-        assert_eq!(lue(Fonte { poids: 500, ..Fonte::neuve() }), (false, false), "medium");
-        assert_eq!(lue(Fonte { selection: 0x0001, ..Fonte::neuve() }), (false, true), "bit 0");
-        assert_eq!(lue(Fonte { angle: -12, ..Fonte::neuve() }), (false, true), "oblique sans bit");
-        assert_eq!(lue(Fonte { mac: 0x0002, ..Fonte::neuve() }), (false, true), "macStyle seul");
-        assert_eq!(lue(Fonte { mac: 0x0001, ..Fonte::neuve() }), (true, false), "macStyle seul");
         assert_eq!(
-            lue(Fonte { selection: 0x0021, poids: 700, ..Fonte::neuve() }),
+            lue(Fonte {
+                selection: 0x0020,
+                ..Fonte::neuve()
+            }),
+            (true, false),
+            "bit 5"
+        );
+        assert_eq!(
+            lue(Fonte {
+                poids: 600,
+                ..Fonte::neuve()
+            }),
+            (true, false),
+            "demi-gras"
+        );
+        assert_eq!(
+            lue(Fonte {
+                poids: 700,
+                ..Fonte::neuve()
+            }),
+            (true, false),
+            "gras"
+        );
+        assert_eq!(
+            lue(Fonte {
+                poids: 500,
+                ..Fonte::neuve()
+            }),
+            (false, false),
+            "medium"
+        );
+        assert_eq!(
+            lue(Fonte {
+                selection: 0x0001,
+                ..Fonte::neuve()
+            }),
+            (false, true),
+            "bit 0"
+        );
+        assert_eq!(
+            lue(Fonte {
+                angle: -12,
+                ..Fonte::neuve()
+            }),
+            (false, true),
+            "oblique sans bit"
+        );
+        assert_eq!(
+            lue(Fonte {
+                mac: 0x0002,
+                ..Fonte::neuve()
+            }),
+            (false, true),
+            "macStyle seul"
+        );
+        assert_eq!(
+            lue(Fonte {
+                mac: 0x0001,
+                ..Fonte::neuve()
+            }),
+            (true, false),
+            "macStyle seul"
+        );
+        assert_eq!(
+            lue(Fonte {
+                selection: 0x0021,
+                poids: 700,
+                ..Fonte::neuve()
+            }),
             (true, true),
             "gras italique"
         );
@@ -2028,9 +2203,18 @@ pub(crate) mod tests {
     /// sortir du dossier ou se confondre avec la police du livre ne passe.
     #[test]
     fn le_nom_du_fichier_d_un_objet_obeit_a_une_grammaire_fermee() {
-        assert_eq!(fichier_objet("Didot-Bold", Genre::Glyf), "objet-Didot-Bold.ttf");
-        assert_eq!(fichier_objet("Optima-Italic", Genre::Cff), "objet-Optima-Italic.otf");
-        assert_eq!(fichier_objet("Font/Name Bold.x", Genre::Glyf), "objet-Font-Name-Bold-x.ttf");
+        assert_eq!(
+            fichier_objet("Didot-Bold", Genre::Glyf),
+            "objet-Didot-Bold.ttf"
+        );
+        assert_eq!(
+            fichier_objet("Optima-Italic", Genre::Cff),
+            "objet-Optima-Italic.otf"
+        );
+        assert_eq!(
+            fichier_objet("Font/Name Bold.x", Genre::Glyf),
+            "objet-Font-Name-Bold-x.ttf"
+        );
         assert_eq!(fichier_objet("", Genre::Glyf), "objet-face.ttf");
         let long = fichier_objet(&"A".repeat(200), Genre::Glyf);
         assert_eq!(long.len(), "objet-".len() + 64 + ".ttf".len());
@@ -2059,7 +2243,10 @@ pub(crate) mod tests {
         ] {
             assert!(!fichier_objet_valide(mauvais), "{mauvais:?}");
         }
-        assert!(!fichier_objet_valide(&format!("objet-{}.ttf", "A".repeat(65))));
+        assert!(!fichier_objet_valide(&format!(
+            "objet-{}.ttf",
+            "A".repeat(65)
+        )));
     }
 
     /// Une face installée sort de son fichier sous son nom d'objet, se relit,
@@ -2093,8 +2280,14 @@ pub(crate) mod tests {
         // Un chemin écrit à la main dans `album.json` : refusé par la
         // grammaire, avant qu'un `join` n'ait lieu.
         fs::write(systeme.join("x.ttf"), fichier(&[Fonte::neuve()])).unwrap();
-        let fuite = crate::model::Police { fichier: "../x.ttf".into(), ..police };
-        assert_eq!(face_objet(&album, &fuite).defaut, Some(REFUS_FICHIER_ABSENT));
+        let fuite = crate::model::Police {
+            fichier: "../x.ttf".into(),
+            ..police
+        };
+        assert_eq!(
+            face_objet(&album, &fuite).defaut,
+            Some(REFUS_FICHIER_ABSENT)
+        );
         let _ = fs::remove_dir_all(&systeme);
         let _ = fs::remove_dir_all(&album);
     }
@@ -2107,7 +2300,10 @@ pub(crate) mod tests {
         let f = Face::parse(&data, 0).expect("face lisible");
         assert_eq!(f.postscript, "ColophonTest-Regular");
         assert_eq!(f.nom, "Colophon Test Regular");
-        assert_eq!(f.famille, "Colophon Test", "la famille seule, pour le sélecteur");
+        assert_eq!(
+            f.famille, "Colophon Test",
+            "la famille seule, pour le sélecteur"
+        );
 
         assert_eq!(f.genre, Some(Genre::Glyf));
         assert!(!f.variable);
@@ -2157,7 +2353,10 @@ pub(crate) mod tests {
 
         let data = fichier(&[une, deux]);
         assert_eq!(face_count(&data), 2);
-        assert!(sfnt_dir(&data, 0).unwrap() > 0, "le répertoire suit l'en-tête ttcf");
+        assert!(
+            sfnt_dir(&data, 0).unwrap() > 0,
+            "le répertoire suit l'en-tête ttcf"
+        );
 
         let f0 = Face::parse(&data, 0).expect("face 0");
         let f1 = Face::parse(&data, 1).expect("face 1");
@@ -2168,7 +2367,11 @@ pub(crate) mod tests {
         assert_eq!(f1.postscript, "ColophonDeux-Italic");
         assert!(f0.metrics.is_some() && f1.metrics.is_some());
         assert_eq!((chasse(&data, 0), chasse(&data, 1)), (500, 1024));
-        assert_eq!(Face::parse(&data, 2).err(), Some(REFUS_ILLISIBLE), "il n'y a pas de face 2");
+        assert_eq!(
+            Face::parse(&data, 2).err(),
+            Some(REFUS_ILLISIBLE),
+            "il n'y a pas de face 2"
+        );
     }
 
     /// The four verdicts of the arbitration, one fixture per bit, plus the
@@ -2233,7 +2436,10 @@ pub(crate) mod tests {
         // Un fichier tronqué, un fichier qui n'est pas une police.
         let entier = fichier(&[Fonte::neuve()]);
         assert_eq!(Face::parse(&entier[..40], 0).err(), Some(REFUS_ILLISIBLE));
-        assert_eq!(Face::parse(b"pas une police", 0).err(), Some(REFUS_ILLISIBLE));
+        assert_eq!(
+            Face::parse(b"pas une police", 0).err(),
+            Some(REFUS_ILLISIBLE)
+        );
         assert_eq!(Face::parse(&[], 0).err(), Some(REFUS_ILLISIBLE));
 
         // Mordant : inverser le test du bit 0x0002 dans `verdict_fs_type`
@@ -2269,13 +2475,21 @@ pub(crate) mod tests {
     /// Windows one as bytes leaves a row of NULs.
     #[test]
     fn le_nom_se_lit_des_deux_plateformes() {
-        assert_eq!(MACROMAN_HAUT.chars().count(), 128, "la moitié haute de MacRoman");
+        assert_eq!(
+            MACROMAN_HAUT.chars().count(),
+            128,
+            "la moitié haute de MacRoman"
+        );
 
         let mut windows = Fonte::neuve();
         windows.plateformes = &[3];
         let f = Face::parse(&fichier(&[windows]), 0).unwrap();
         assert_eq!(f.postscript, "ColophonTest-Regular");
-        assert!(!f.nom.contains('\0'), "UTF-16BE décodé, pas recopié : {:?}", f.nom);
+        assert!(
+            !f.nom.contains('\0'),
+            "UTF-16BE décodé, pas recopié : {:?}",
+            f.nom
+        );
 
         // Macintosh seul, MacRoman, accents compris.
         let mut mac = Fonte::neuve();
@@ -2302,7 +2516,10 @@ pub(crate) mod tests {
         // Sans aucun nom lisible, il n'y a pas de face à montrer.
         let mut muette = Fonte::neuve();
         muette.plateformes = &[];
-        assert_eq!(Face::parse(&fichier(&[muette]), 0).err(), Some(REFUS_ILLISIBLE));
+        assert_eq!(
+            Face::parse(&fichier(&[muette]), 0).err(),
+            Some(REFUS_ILLISIBLE)
+        );
     }
 
     // --- Ce que l'écrivain doit savoir faire -------------------------------
@@ -2319,8 +2536,22 @@ pub(crate) mod tests {
     /// here rather than at a printer.
     fn identiques(a: &Metrics, b: &Metrics) {
         assert_eq!(
-            (a.bbox, a.ascent, a.descent, a.cap_height, a.italic_angle, a.fs_type),
-            (b.bbox, b.ascent, b.descent, b.cap_height, b.italic_angle, b.fs_type)
+            (
+                a.bbox,
+                a.ascent,
+                a.descent,
+                a.cap_height,
+                a.italic_angle,
+                a.fs_type
+            ),
+            (
+                b.bbox,
+                b.ascent,
+                b.descent,
+                b.cap_height,
+                b.italic_angle,
+                b.fs_type
+            )
         );
     }
 
@@ -2335,14 +2566,22 @@ pub(crate) mod tests {
         let apres = Face::parse(&sortie, 0).expect("la face extraite se relit");
 
         assert_eq!(face_count(&sortie), 1, "un fichier, une face");
-        assert_eq!(&sortie[0..4], b"\x00\x01\x00\x00", "la signature de la face");
+        assert_eq!(
+            &sortie[0..4],
+            b"\x00\x01\x00\x00",
+            "la signature de la face"
+        );
         assert_eq!((apres.nom, apres.postscript), (avant.nom, avant.postscript));
         assert_eq!(apres.genre, Some(Genre::Glyf));
         identiques(&avant.metrics.unwrap(), &apres.metrics.unwrap());
         // Les chasses, glyphe par glyphe et non plus code par code : c'est
         // ce que `/W` portera, donc c'est ce qui doit survivre au voyage.
         let ouverte = |d: &[u8]| Embarquee::depuis(d.to_vec(), 0).expect("face ouverte");
-        assert_eq!(ouverte(&data).avances, ouverte(&sortie).avances, "les chasses");
+        assert_eq!(
+            ouverte(&data).avances,
+            ouverte(&sortie).avances,
+            "les chasses"
+        );
 
         // Mordant : la liste fermée, tag par tag. Oublier une table la fait
         // tomber ici — y compris `loca`, que pas une métrique ne consulte et
@@ -2399,7 +2638,12 @@ pub(crate) mod tests {
         identiques(&metrics().unwrap(), &f.metrics.as_ref().unwrap());
         // Une face déjà seule dans son fichier rétrécit quand même : ce qui
         // part, c'est la composition, pas un glyphe.
-        assert!(sortie.len() < FONT_DATA.len(), "{} contre {}", sortie.len(), FONT_DATA.len());
+        assert!(
+            sortie.len() < FONT_DATA.len(),
+            "{} contre {}",
+            sortie.len(),
+            FONT_DATA.len()
+        );
     }
 
     // --- La face de l'album ----------------------------------------------
@@ -2488,7 +2732,10 @@ pub(crate) mod tests {
         cff.contours = Some(*b"CFF ");
         let data = fichier(&[cff]);
         assert_eq!(Face::parse(&data, 0).unwrap().genre, Some(Genre::Cff));
-        assert_eq!(extraire_pour_album(&data, 0).expect("extraction").0, POLICE_OTF);
+        assert_eq!(
+            extraire_pour_album(&data, 0).expect("extraction").0,
+            POLICE_OTF
+        );
     }
 
     /// The closed list, from the other side: layout, strikes, signature and
@@ -2507,7 +2754,10 @@ pub(crate) mod tests {
         let data = fichier(&[lourde]);
         let sortie = Face::extraire(&data, 0).expect("extraction");
         for tag in ["GSUB", "GPOS", "DSIG", "sbix", "kern", "morx"] {
-            assert!(!tags(&sortie).contains(&tag.to_string()), "{tag} a suivi la face");
+            assert!(
+                !tags(&sortie).contains(&tag.to_string()),
+                "{tag} a suivi la face"
+            );
         }
         // Et le fichier a maigri d'autant : c'est le gain que le report du
         // sous-ensemblage met en banque.
@@ -2548,9 +2798,15 @@ pub(crate) mod tests {
         assert_eq!(tags(&out), ordonnes, "le répertoire est trié par tag");
         // Les hints de recherche binaire : la puissance de deux qui tient.
         let selector = usize::from(u16b(&out, 8).unwrap());
-        assert!(1 << selector <= n && 1 << (selector + 1) > n, "{n} tables, sélecteur {selector}");
+        assert!(
+            1 << selector <= n && 1 << (selector + 1) > n,
+            "{n} tables, sélecteur {selector}"
+        );
         assert_eq!(u16b(&out, 6).unwrap(), (16 << selector) as u16);
-        assert_eq!(u16b(&out, 10).unwrap(), (n * 16) as u16 - u16b(&out, 6).unwrap());
+        assert_eq!(
+            u16b(&out, 10).unwrap(),
+            (n * 16) as u16 - u16b(&out, 6).unwrap()
+        );
 
         assert_eq!(out.len() % 4, 0, "le fichier entier est aligné");
         // Toutes les sommes se prennent sur le fichier dont
@@ -2584,7 +2840,11 @@ pub(crate) mod tests {
             0xB1B0_AFBAu32.wrapping_sub(somme_sfnt(&zero)),
             "l'ajustement du fichier entier"
         );
-        assert_ne!(u32b(&out, head + 8).unwrap(), 0, "elle est calculée, pas laissée vide");
+        assert_ne!(
+            u32b(&out, head + 8).unwrap(),
+            0,
+            "elle est calculée, pas laissée vide"
+        );
     }
 
     /// CFF2 is refused when it is read, not when it is picked — and the
@@ -2602,24 +2862,40 @@ pub(crate) mod tests {
         assert_eq!(f.genre.unwrap().code(), "cff2");
         assert_eq!(f.refus, Some(REFUS_FORMAT_NON_EMBARQUABLE));
         assert!(!f.embeddable());
-        assert_eq!(f.nom, "Colophon Test Regular", "refusée, et nommée quand même");
-        assert_eq!(Face::extraire(&data, 0).err(), Some(REFUS_FORMAT_NON_EMBARQUABLE));
+        assert_eq!(
+            f.nom, "Colophon Test Regular",
+            "refusée, et nommée quand même"
+        );
+        assert_eq!(
+            Face::extraire(&data, 0).err(),
+            Some(REFUS_FORMAT_NON_EMBARQUABLE)
+        );
 
         let mut cff = Fonte::neuve();
         cff.tag = *b"OTTO";
         cff.contours = Some(*b"CFF ");
         let data = fichier(&[cff]);
         let sortie = Face::extraire(&data, 0).expect("un OTTO s'extrait");
-        assert_eq!(&sortie[0..4], b"OTTO", "la signature de la face, jamais la nôtre");
+        assert_eq!(
+            &sortie[0..4],
+            b"OTTO",
+            "la signature de la face, jamais la nôtre"
+        );
         assert!(tags(&sortie).contains(&"CFF ".to_string()));
-        assert!(!tags(&sortie).contains(&"loca".to_string()), "un CFF n'a pas de loca");
+        assert!(
+            !tags(&sortie).contains(&"loca".to_string()),
+            "un CFF n'a pas de loca"
+        );
         assert_eq!(Face::parse(&sortie, 0).unwrap().genre, Some(Genre::Cff));
 
         // Et un refus de licence se dit pareil des deux côtés.
         let mut interdite = Fonte::neuve();
         interdite.fs_type = 0x0002;
         let data = fichier(&[interdite]);
-        assert_eq!(Face::extraire(&data, 0).err(), Some(REFUS_EMBARQUEMENT_INTERDIT));
+        assert_eq!(
+            Face::extraire(&data, 0).err(),
+            Some(REFUS_EMBARQUEMENT_INTERDIT)
+        );
     }
 
     /// The silent trap, made loud. The walk's buffer holds zeros where the
@@ -2639,14 +2915,23 @@ pub(crate) mod tests {
         let sortie = Face::extraire(&entier, 0).expect("extraction");
         let (off, len) = table_range(&sortie, 0, b"glyf").unwrap();
         assert_eq!(len, 20_000);
-        assert!(sortie[off..off + len].iter().all(|b| *b == 0x2a), "les contours du fichier");
+        assert!(
+            sortie[off..off + len].iter().all(|b| *b == 0x2a),
+            "les contours du fichier"
+        );
 
         let (tampon, lus) = lire_tables(&chemin).expect("tables lues");
-        assert!(lus < 4096, "{lus} octets : la découverte lit peu, c'est le sujet");
+        assert!(
+            lus < 4096,
+            "{lus} octets : la découverte lit peu, c'est le sujet"
+        );
         let creuse = Face::extraire(&tampon, 0).expect("elle s'extrait quand même, et c'est ça");
         let (off, len) = table_range(&creuse, 0, b"glyf").unwrap();
         assert_eq!(len, 20_000);
-        assert!(creuse[off..off + len].iter().all(|b| *b == 0), "des zéros, pas un contour");
+        assert!(
+            creuse[off..off + len].iter().all(|b| *b == 0),
+            "des zéros, pas un contour"
+        );
         // Les deux polices se lisent pareil : la métrique ne voit rien.
         identiques(
             &Face::parse(&creuse, 0).unwrap().metrics.unwrap(),
@@ -2702,15 +2987,27 @@ pub(crate) mod tests {
         );
         // Le fichier illisible est listé, avec son code : la session 4
         // l'affichera, elle ne le recalculera pas.
-        let cassee = liste.iter().find(|i| i.chemin.ends_with("cassee.ttf")).unwrap();
+        let cassee = liste
+            .iter()
+            .find(|i| i.chemin.ends_with("cassee.ttf"))
+            .unwrap();
         assert_eq!(cassee.face.refus, Some(REFUS_ILLISIBLE));
         // Aucune face sans verdict.
-        assert!(liste.iter().all(|i| i.face.refus.is_some() || i.face.metrics.is_some()));
+        assert!(liste
+            .iter()
+            .all(|i| i.face.refus.is_some() || i.face.metrics.is_some()));
         assert_eq!(liste.iter().filter(|i| i.face.embeddable()).count(), 4);
         // Le sous-dossier est marché, le caché et le lien ne le sont pas.
-        assert!(liste.iter().any(|i| i.chemin.ends_with("sous-dossier/c.ttc") || i.chemin.ends_with("sous-dossier\\c.ttc")));
+        assert!(liste
+            .iter()
+            .any(|i| i.chemin.ends_with("sous-dossier/c.ttc")
+                || i.chemin.ends_with("sous-dossier\\c.ttc")));
 
-        assert_eq!(adresses(&installed_in(&[dir.clone()])), adresses(&liste), "deux appels, une liste");
+        assert_eq!(
+            adresses(&installed_in(&[dir.clone()])),
+            adresses(&liste),
+            "deux appels, une liste"
+        );
         let _ = fs::remove_dir_all(&dir);
         let _ = fs::remove_dir_all(&dehors);
     }
@@ -2755,7 +3052,10 @@ pub(crate) mod tests {
         let mut grasse = Fonte::neuve();
         grasse.gras = 20_000;
         let data = fichier(&[grasse]);
-        assert!(data.len() > 20_000, "le fichier est du contour, comme une vraie police");
+        assert!(
+            data.len() > 20_000,
+            "le fichier est du contour, comme une vraie police"
+        );
         for i in 0..500 {
             fs::write(dir.join(format!("f{i:03}.ttf")), &data).unwrap();
         }
@@ -2765,7 +3065,10 @@ pub(crate) mod tests {
         let ecoule = t.elapsed();
         assert_eq!(liste.len(), 500);
         assert!(liste.iter().all(|i| i.face.embeddable()));
-        assert!(ecoule.as_secs_f64() < 1.0, "500 faces énumérées en {ecoule:?}");
+        assert!(
+            ecoule.as_secs_f64() < 1.0,
+            "500 faces énumérées en {ecoule:?}"
+        );
 
         let (_, lus) = lire_tables(&dir.join("f000.ttf")).expect("tables lues");
         assert!(
@@ -2799,7 +3102,11 @@ pub(crate) mod tests {
                 None => {
                     assert!(i.face.metrics.is_some(), "une face acceptée est mesurée");
                     assert!(i.face.genre.is_some(), "{}", i.chemin.display());
-                    assert!(!i.face.postscript.is_empty(), "{} sans nom", i.chemin.display());
+                    assert!(
+                        !i.face.postscript.is_empty(),
+                        "{} sans nom",
+                        i.chemin.display()
+                    );
                 }
             }
         }
@@ -2892,8 +3199,10 @@ pub(crate) mod tests {
     #[test]
     #[ignore]
     fn banc_variantes_du_mac() {
-        let famille: Vec<Installee> =
-            installed().into_iter().filter(|i| i.face.famille == "Helvetica Neue").collect();
+        let famille: Vec<Installee> = installed()
+            .into_iter()
+            .filter(|i| i.face.famille == "Helvetica Neue")
+            .collect();
         for i in &famille {
             println!(
                 "{:<6} {:<9} {:<34} {}",
@@ -2943,7 +3252,11 @@ pub(crate) mod tests {
             .into_iter()
             .find(|n| dir.join(n).is_file());
         let choix = face_album(&dir, fichier);
-        assert!(choix.defaut.is_none(), "face illisible : {:?}", choix.defaut);
+        assert!(
+            choix.defaut.is_none(),
+            "face illisible : {:?}",
+            choix.defaut
+        );
 
         // Ce qu'un album met vraiment sur une page : une légende, un titre,
         // des accents, des guillemets, et le polonais du 29/08 — celui qui
@@ -3003,7 +3316,9 @@ pub(crate) mod tests {
                 continue;
             }
             if ouvert.as_ref().is_none_or(|(c, _)| *c != i.chemin) {
-                let Ok(octets) = fs::read(&i.chemin) else { continue };
+                let Ok(octets) = fs::read(&i.chemin) else {
+                    continue;
+                };
                 ouvert = Some((i.chemin.clone(), octets));
             }
             let (_, octets) = ouvert.as_ref().unwrap();
@@ -3030,11 +3345,16 @@ pub(crate) mod tests {
                 avaries.push(format!("nom {} → {}", i.face.postscript, relue.postscript));
             }
             if face_count(&sortie) != 1 {
-                avaries.push(format!("{} faces dans le fichier sorti", face_count(&sortie)));
+                avaries.push(format!(
+                    "{} faces dans le fichier sorti",
+                    face_count(&sortie)
+                ));
             }
             match (&i.face.metrics, &relue.metrics) {
                 (Some(a), Some(b)) => {
-                    if (a.bbox, a.ascent, a.descent, a.cap_height) != (b.bbox, b.ascent, b.descent, b.cap_height) {
+                    if (a.bbox, a.ascent, a.descent, a.cap_height)
+                        != (b.bbox, b.ascent, b.descent, b.cap_height)
+                    {
                         avaries.push("mesures".into());
                     }
                 }
@@ -3057,7 +3377,9 @@ pub(crate) mod tests {
 
             let apres = sortie.len() as u64;
             let part = apres as f64 / avant.max(1) as f64;
-            let e = par_genre.entry(i.face.genre.map(Genre::code).unwrap_or("?")).or_default();
+            let e = par_genre
+                .entry(i.face.genre.map(Genre::code).unwrap_or("?"))
+                .or_default();
             *e = (e.0 + 1, e.1 + avant, e.2 + apres);
             let dans_une_collection = face_count(octets) > 1;
             if dans_une_collection {
@@ -3081,7 +3403,10 @@ pub(crate) mod tests {
             }
         }
 
-        println!("\n{refusees} faces refusées, {cassees} aller-retours cassés, {:?}", t.elapsed());
+        println!(
+            "\n{refusees} faces refusées, {cassees} aller-retours cassés, {:?}",
+            t.elapsed()
+        );
         for (genre, (n, avant, apres)) in &par_genre {
             println!(
                 "{genre:<6} {n:>4} faces, {} Mo de fichiers → {} Mo extraits ({:.1} %)",
@@ -3103,6 +3428,9 @@ pub(crate) mod tests {
             collections.0,
             100.0 * collections.1 / collections.0.max(1) as f64
         );
-        assert_eq!(cassees, 0, "un aller-retour cassé sur une police du système");
+        assert_eq!(
+            cassees, 0,
+            "un aller-retour cassé sur une police du système"
+        );
     }
 }

@@ -84,7 +84,6 @@ struct EnvoiTenu {
     televersements: colophon_core::relais::Televersements,
 }
 
-
 #[derive(Serialize)]
 struct OpenedAlbum {
     album: Album,
@@ -227,10 +226,14 @@ fn ouvrir(path: String, state: State<'_, AppState>, seance: bool) -> Result<Open
     }
     let root = Path::new(&album.root);
     let root_present = root.is_dir();
-    let dossier_a_revoir = cfg!(all(target_os = "macos", feature = "mas")) && !signet::lisible(root);
+    let dossier_a_revoir =
+        cfg!(all(target_os = "macos", feature = "mas")) && !signet::lisible(root);
     *state.acces.lock().unwrap() = acces;
     let thumb_srcs = thumbs.keys().cloned().collect();
-    *state.open.lock().unwrap() = Some(Opened { dir: dir.clone(), thumbs });
+    *state.open.lock().unwrap() = Some(Opened {
+        dir: dir.clone(),
+        thumbs,
+    });
     let voyage = matches!(
         colophon_core::voyage::composition::lecture(Path::new(&album.root)),
         colophon_core::voyage::composition::Lecture::Voyage(_)
@@ -247,7 +250,11 @@ fn ouvrir(path: String, state: State<'_, AppState>, seance: bool) -> Result<Open
 
 /// Les photos posées dans l'album, par leur chemin relatif à `root`.
 fn photos_posees(album: &Album) -> Vec<String> {
-    album.spreads.iter().flat_map(|s| s.slots.iter().map(|sl| sl.src.clone())).collect()
+    album
+        .spreads
+        .iter()
+        .flat_map(|s| s.slots.iter().map(|sl| sl.src.clone()))
+        .collect()
 }
 
 /// Le dossier de photos de l'album ouvert, rechoisi par la personne quand
@@ -317,7 +324,11 @@ fn caption_suggestion(
         .map_err(|e| format!("lecture de album.json : {e}"))?;
     let album: Album =
         serde_json::from_str(&text).map_err(|e| format!("album.json illisible : {e}"))?;
-    Ok(colophon_core::legende::date_de(Path::new(&album.root), &src, langue))
+    Ok(colophon_core::legende::date_de(
+        Path::new(&album.root),
+        &src,
+        langue,
+    ))
 }
 
 /// Ce que le réglage « sous les photos » écrit sous chaque photo, par src
@@ -344,9 +355,11 @@ async fn mentions_photos(
 #[tauri::command]
 async fn dates_fiables(album: Album, langue: String) -> Result<BTreeMap<String, String>, String> {
     let langue = langue_de(&langue)?;
-    tauri::async_runtime::spawn_blocking(move || colophon_core::legende::dates_fiables(&album, langue))
-        .await
-        .map_err(|e| e.to_string())
+    tauri::async_runtime::spawn_blocking(move || {
+        colophon_core::legende::dates_fiables(&album, langue)
+    })
+    .await
+    .map_err(|e| e.to_string())
 }
 
 /// The root the open album names its photos under. Read from the file
@@ -397,7 +410,11 @@ fn reveler(cible: &Path) -> Result<(), String> {
     #[cfg(all(target_os = "macos", feature = "mas"))]
     let run = signet::bureau::reveler(cible);
     #[cfg(all(target_os = "macos", not(feature = "mas")))]
-    let run = std::process::Command::new("open").arg("-R").arg(cible).spawn().map(|_| ());
+    let run = std::process::Command::new("open")
+        .arg("-R")
+        .arg(cible)
+        .spawn()
+        .map(|_| ());
     // explorer wants `/select,<path>` as a single argument, and `std` would
     // wrap a path with a space in quotes around the whole thing, which
     // explorer reads as part of the path. `raw_arg` hands it over verbatim,
@@ -432,12 +449,10 @@ async fn releve_album(
         guard.as_ref().ok_or("aucun album ouvert")?.dir.clone()
     };
     let root = racine_des_photos(&state)?;
-    tauri::async_runtime::spawn_blocking(move || {
-        colophon_core::qualite::releve_album(&dir, &root)
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e| format!("{e:#}"))
+    tauri::async_runtime::spawn_blocking(move || colophon_core::qualite::releve_album(&dir, &root))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| format!("{e:#}"))
 }
 
 /// Templates the spread can switch to, count and orientation both fitting:
@@ -657,7 +672,8 @@ fn ecrire_album(album: Album, state: State<'_, AppState>) -> Result<(), String> 
 #[tauri::command]
 fn album_ouverture(state: State<'_, AppState>) -> Result<Album, String> {
     let f = dossier_ouvert(&state)?.join(colophon_core::build::OUVERTURE);
-    let text = std::fs::read_to_string(&f).map_err(|e| format!("lecture de {} : {e}", f.display()))?;
+    let text =
+        std::fs::read_to_string(&f).map_err(|e| format!("lecture de {} : {e}", f.display()))?;
     serde_json::from_str(&text).map_err(|e| format!("{} illisible : {e}", f.display()))
 }
 
@@ -719,7 +735,11 @@ fn polices_de_la_machine() -> Vec<colophon_core::font::Installee> {
 #[tauri::command]
 fn polices_installees(state: State<'_, AppState>) -> Vec<PoliceOfferte> {
     let faces = polices_de_la_machine();
-    let offertes = faces.iter().enumerate().map(|(rang, i)| PoliceOfferte::de(rang, i)).collect();
+    let offertes = faces
+        .iter()
+        .enumerate()
+        .map(|(rang, i)| PoliceOfferte::de(rang, i))
+        .collect();
     *state.polices.lock().unwrap() = faces;
     offertes
 }
@@ -813,8 +833,7 @@ fn choisir_police(
         let guard = state.open.lock().unwrap();
         guard.as_ref().ok_or("aucun album ouvert")?.dir.clone()
     };
-    colophon_core::build::poser_police(&dir, &source.0, source.1)
-        .map_err(|e| format!("{e:#}"))
+    colophon_core::build::poser_police(&dir, &source.0, source.1).map_err(|e| format!("{e:#}"))
 }
 
 /// What the album is set in, as the screen has to say it.
@@ -884,8 +903,10 @@ fn police_absents(album: Album, state: State<'_, AppState>) -> Result<Vec<String
         let guard = state.open.lock().unwrap();
         guard.as_ref().ok_or("aucun album ouvert")?.dir.clone()
     };
-    let face = colophon_core::font::face_album(&dir, album.police.as_ref().map(|p| p.fichier.as_str()));
-    let mut textes: Vec<(&str, Option<&colophon_core::model::Police>)> = vec![(album.title.as_str(), None)];
+    let face =
+        colophon_core::font::face_album(&dir, album.police.as_ref().map(|p| p.fichier.as_str()));
+    let mut textes: Vec<(&str, Option<&colophon_core::model::Police>)> =
+        vec![(album.title.as_str(), None)];
     if let Some(c) = &album.cover {
         textes.extend([c.title.as_str(), c.subtitle.as_str()].map(|t| (t, None)));
         // La quatrième dans sa face, quand elle en a une (1.2-d).
@@ -894,7 +915,12 @@ fn police_absents(album: Album, state: State<'_, AppState>) -> Result<Vec<String
     for s in &album.spreads {
         textes.extend(s.caption.as_deref().map(|t| (t, None)));
         textes.extend(s.text.as_deref().map(|t| (t, None)));
-        textes.extend(s.slots.iter().filter_map(|sl| sl.caption.as_deref()).map(|t| (t, None)));
+        textes.extend(
+            s.slots
+                .iter()
+                .filter_map(|sl| sl.caption.as_deref())
+                .map(|t| (t, None)),
+        );
         for o in &s.objets {
             if let colophon_core::model::Contenu::Texte { texte, .. } = &o.contenu {
                 textes.push((texte, o.police_texte()));
@@ -911,7 +937,11 @@ fn police_absents(album: Album, state: State<'_, AppState>) -> Result<Vec<String
                 let f = propres
                     .entry(p.fichier.clone())
                     .or_insert_with(|| colophon_core::font::face_objet(&dir, p));
-                if f.defaut.is_none() { &f.face } else { &face.face }
+                if f.defaut.is_none() {
+                    &f.face
+                } else {
+                    &face.face
+                }
             }
             None => &face.face,
         };
@@ -959,7 +989,6 @@ fn police_apercu(
 
 #[derive(Serialize)]
 struct FormatPreset {
-
     name: String,
     w: f64,
     h: f64,
@@ -1014,7 +1043,10 @@ fn album_out_dir(app: &tauri::AppHandle, photos: &Path) -> Result<PathBuf, Strin
     let base = albums_base(app)?;
     Ok(dossier_libre(
         &base,
-        &format!("{name}-{:02x}{:02x}{:02x}{:02x}", empreinte[0], empreinte[1], empreinte[2], empreinte[3]),
+        &format!(
+            "{name}-{:02x}{:02x}{:02x}{:02x}",
+            empreinte[0], empreinte[1], empreinte[2], empreinte[3]
+        ),
     ))
 }
 
@@ -1078,8 +1110,7 @@ fn album_deja_compose(base: &Path, photos: &Path) -> Option<PathBuf> {
 #[tauri::command]
 fn album_existant(photos_dir: String, app: tauri::AppHandle) -> Result<Option<String>, String> {
     let base = albums_base(&app)?;
-    Ok(album_deja_compose(&base, Path::new(&photos_dir))
-        .map(|d| d.to_string_lossy().to_string()))
+    Ok(album_deja_compose(&base, Path::new(&photos_dir)).map(|d| d.to_string_lossy().to_string()))
 }
 
 /// Build an album from a folder of photos, then open it. Progress lines
@@ -1347,10 +1378,20 @@ fn nom_propre(titre: &str) -> String {
     let propre: String = titre
         .trim()
         .chars()
-        .map(|c| if matches!(c, '/' | '\\' | ':') { '-' } else { c })
+        .map(|c| {
+            if matches!(c, '/' | '\\' | ':') {
+                '-'
+            } else {
+                c
+            }
+        })
         .collect();
     let propre = propre.trim_matches('-').trim();
-    if propre.is_empty() { "album".into() } else { propre.into() }
+    if propre.is_empty() {
+        "album".into()
+    } else {
+        propre.into()
+    }
 }
 
 /// Whether an import destination is one this app proposes: a direct child
@@ -1359,9 +1400,12 @@ fn nom_propre(titre: &str) -> String {
 /// it made up is refused before a file is created in it.
 fn dossier_d_import_valide(maison: &Path, dossier: &Path) -> bool {
     let base = maison.join("Pictures").join("Colophon");
-    let composants_surs = dossier
-        .components()
-        .all(|c| !matches!(c, std::path::Component::ParentDir | std::path::Component::CurDir));
+    let composants_surs = dossier.components().all(|c| {
+        !matches!(
+            c,
+            std::path::Component::ParentDir | std::path::Component::CurDir
+        )
+    });
     composants_surs && dossier.parent() == Some(base.as_path())
 }
 
@@ -1435,7 +1479,10 @@ struct ErreurVoyage {
 #[cfg(not(feature = "mas"))]
 impl From<colophon_core::voyage::lien::Erreur> for ErreurVoyage {
     fn from(e: colophon_core::voyage::lien::Erreur) -> Self {
-        ErreurVoyage { genre: e.genre(), detail: e.to_string() }
+        ErreurVoyage {
+            genre: e.genre(),
+            detail: e.to_string(),
+        }
     }
 }
 
@@ -1461,9 +1508,15 @@ struct RapportVoyage {
 #[tauri::command]
 fn voyage_analyser(url: String, app: tauri::AppHandle) -> Result<LienVoyage, ErreurVoyage> {
     let lien = colophon_core::voyage::lien::analyser_url(&url)?;
-    let maison = maison(&app).map_err(|detail| ErreurVoyage { genre: "disque", detail })?;
+    let maison = maison(&app).map_err(|detail| ErreurVoyage {
+        genre: "disque",
+        detail,
+    })?;
     let dossier = photos::dossier_propose(&maison, &format!("Voyage {}", lien.id));
-    Ok(LienVoyage { id: lien.id, dossier: dossier.to_string_lossy().to_string() })
+    Ok(LienVoyage {
+        id: lien.id,
+        dossier: dossier.to_string_lossy().to_string(),
+    })
 }
 
 /// L'import, sans Tauri : le dossier est celui que l'app propose, puis le
@@ -1483,11 +1536,20 @@ fn importer_un_voyage(
     if !dossier_d_import_valide(maison, dossier) {
         return Err(ErreurVoyage {
             genre: "dossier",
-            detail: format!("dossier d'import refusé : {} n'est pas un dossier que Booklibre propose", dossier.display()),
+            detail: format!(
+                "dossier d'import refusé : {} n'est pas un dossier que Booklibre propose",
+                dossier.display()
+            ),
         });
     }
-    let voyage = colophon_core::voyage::lien::importer_annulable(url, dossier, transport, reglages, progres, annuler)?;
-    Ok(RapportVoyage { dossier: dossier.to_string_lossy().to_string(), titre: voyage.titre.clone(), bilan: voyage.bilan() })
+    let voyage = colophon_core::voyage::lien::importer_annulable(
+        url, dossier, transport, reglages, progres, annuler,
+    )?;
+    Ok(RapportVoyage {
+        dossier: dossier.to_string_lossy().to_string(),
+        titre: voyage.titre.clone(),
+        bilan: voyage.bilan(),
+    })
 }
 
 /// Importe un voyage dans `dossier` (celui de `voyage_analyser`). Progression
@@ -1501,7 +1563,10 @@ async fn voyage_importer(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<RapportVoyage, ErreurVoyage> {
-    let maison = maison(&app).map_err(|detail| ErreurVoyage { genre: "disque", detail })?;
+    let maison = maison(&app).map_err(|detail| ErreurVoyage {
+        genre: "disque",
+        detail,
+    })?;
     state.cancel_build.store(false, Ordering::Relaxed);
     let flag = state.cancel_build.clone();
     let emitter = app.clone();
@@ -1519,7 +1584,10 @@ async fn voyage_importer(
         )
     })
     .await
-    .map_err(|e| ErreurVoyage { genre: "disque", detail: e.to_string() })?
+    .map_err(|e| ErreurVoyage {
+        genre: "disque",
+        detail: e.to_string(),
+    })?
 }
 
 // ------------------------------------------------------ les originaux (P-s8)
@@ -1537,7 +1605,10 @@ fn voyage_ouvert(state: &State<'_, AppState>) -> Result<(PathBuf, PathBuf), Stri
     };
     let texte = std::fs::read_to_string(dir.join("album.json")).map_err(|e| e.to_string())?;
     let v: serde_json::Value = serde_json::from_str(&texte).map_err(|e| e.to_string())?;
-    let root = v.get("root").and_then(|r| r.as_str()).ok_or("album.json sans dossier de photos")?;
+    let root = v
+        .get("root")
+        .and_then(|r| r.as_str())
+        .ok_or("album.json sans dossier de photos")?;
     Ok((PathBuf::from(root), dir))
 }
 
@@ -1746,18 +1817,19 @@ async fn export_pdf(
                 match boite.blocking_save_file().map(|c| c.into_path()) {
                     Some(Ok(c)) => c,
                     // L'intérieur est posé ; renoncer à la couverture le dit.
-                    Some(Err(e)) => return Err(format!("couverture : destination illisible : {e}")),
+                    Some(Err(e)) => {
+                        return Err(format!("couverture : destination illisible : {e}"))
+                    }
                     None => {
                         colophon_core::log::line("couverture : enregistrement abandonné");
                         return Ok(written);
                     }
                 }
             };
-            colophon_core::cover::render_cover_pdf(&dir, profil, &cover)
-                .map_err(|e| {
-                    colophon_core::log::line(&format!("couverture en échec : {e:#}"));
-                    format!("couverture : {e:#}")
-                })?;
+            colophon_core::cover::render_cover_pdf(&dir, profil, &cover).map_err(|e| {
+                colophon_core::log::line(&format!("couverture en échec : {e:#}"));
+                format!("couverture : {e:#}")
+            })?;
             written.push(cover.to_string_lossy().to_string());
         }
         colophon_core::log::line("export terminé");
@@ -1866,7 +1938,10 @@ async fn preparer_pour_commande(
 fn dossier_pour_commande(donnees: &Path, titre: &str, imprimeur: &str) -> Result<PathBuf, String> {
     let nom = nom_du_dossier_prepare(titre, imprimeur);
     let mut parts = Path::new(&nom).components();
-    if !matches!((parts.next(), parts.next()), (Some(std::path::Component::Normal(_)), None)) {
+    if !matches!(
+        (parts.next(), parts.next()),
+        (Some(std::path::Component::Normal(_)), None)
+    ) {
         return Err(format!("nom de dossier refusé : {nom}"));
     }
     let commandes = donnees.join("commandes");
@@ -1875,7 +1950,8 @@ fn dossier_pour_commande(donnees: &Path, titre: &str, imprimeur: &str) -> Result
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
         Err(e) => return Err(format!("préparation précédente : {e}")),
     }
-    std::fs::create_dir_all(&commandes).map_err(|e| format!("création de {} : {e}", commandes.display()))?;
+    std::fs::create_dir_all(&commandes)
+        .map_err(|e| format!("création de {} : {e}", commandes.display()))?;
     Ok(commandes.join(nom))
 }
 
@@ -1928,14 +2004,24 @@ async fn preparer_dans(
         acquittement: p.rapport.acquittement.clone(),
     });
     *state.envoi.lock().unwrap() = None;
-    Ok(Preparation { dossier: nom, fichiers: p.fichiers, rapport: p.rapport, commande })
+    Ok(Preparation {
+        dossier: nom,
+        fichiers: p.fichiers,
+        rapport: p.rapport,
+        commande,
+    })
 }
 
 /// Rouvre le dernier dossier préparé. Le chemin est celui que l'app a écrit,
 /// jamais un que la fenêtre envoie.
 #[tauri::command]
 fn montrer_dossier_prepare(state: State<'_, AppState>) -> Result<(), String> {
-    let dest = state.prepare.lock().unwrap().clone().ok_or("aucun dossier préparé")?;
+    let dest = state
+        .prepare
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or("aucun dossier préparé")?;
     ouvrir_dossier(&dest.dossier)
 }
 
@@ -1944,11 +2030,20 @@ fn ouvrir_dossier(dir: &Path) -> Result<(), String> {
     #[cfg(all(target_os = "macos", feature = "mas"))]
     let run = signet::bureau::ouvrir_dossier(dir);
     #[cfg(all(target_os = "macos", not(feature = "mas")))]
-    let run = std::process::Command::new("open").arg(dir).spawn().map(|_| ());
+    let run = std::process::Command::new("open")
+        .arg(dir)
+        .spawn()
+        .map(|_| ());
     #[cfg(target_os = "windows")]
-    let run = std::process::Command::new("explorer").arg(dir).spawn().map(|_| ());
+    let run = std::process::Command::new("explorer")
+        .arg(dir)
+        .spawn()
+        .map(|_| ());
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-    let run = std::process::Command::new("xdg-open").arg(dir).spawn().map(|_| ());
+    let run = std::process::Command::new("xdg-open")
+        .arg(dir)
+        .spawn()
+        .map(|_| ());
     run.map_err(|e| format!("ouverture du dossier : {e}"))
 }
 
@@ -1984,9 +2079,7 @@ fn list_printers() -> &'static [colophon_core::printer::PrinterProfile] {
     colophon_core::printer::PrinterProfile::tous()
 }
 
-fn printer_profile(
-    id: &str,
-) -> Result<&'static colophon_core::printer::PrinterProfile, String> {
+fn printer_profile(id: &str) -> Result<&'static colophon_core::printer::PrinterProfile, String> {
     colophon_core::printer::PrinterProfile::par_id(id)
         .ok_or_else(|| format!("profil imprimeur inconnu : {id}"))
 }
@@ -2018,7 +2111,9 @@ async fn report_data(
     let audit = match dir {
         Some(d) => tauri::async_runtime::spawn_blocking(move || {
             colophon_core::audit::audit(&d)
-                .map_err(|e| colophon_core::log::line(&format!("audit du rapport en échec : {e:#}")))
+                .map_err(|e| {
+                    colophon_core::log::line(&format!("audit du rapport en échec : {e:#}"))
+                })
                 .ok()
         })
         .await
@@ -2063,7 +2158,10 @@ fn navigateur(url: &str) -> Result<(), String> {
     #[cfg(all(target_os = "macos", feature = "mas"))]
     let run = signet::bureau::ouvrir_url(url);
     #[cfg(all(target_os = "macos", not(feature = "mas")))]
-    let run = std::process::Command::new("open").arg(url).spawn().map(|_| ());
+    let run = std::process::Command::new("open")
+        .arg(url)
+        .spawn()
+        .map(|_| ());
     // Never through `cmd /C start`: cmd reads `&` as a command separator,
     // and `std` only quotes an argument that carries a space or is empty —
     // so an issue URL, which is nothing but `&`-separated parameters, was
@@ -2077,7 +2175,10 @@ fn navigateur(url: &str) -> Result<(), String> {
         .spawn()
         .map(|_| ());
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-    let run = std::process::Command::new("xdg-open").arg(url).spawn().map(|_| ());
+    let run = std::process::Command::new("xdg-open")
+        .arg(url)
+        .spawn()
+        .map(|_| ());
     run.map_err(|e| format!("ouverture du navigateur : {e}"))
 }
 
@@ -2105,7 +2206,6 @@ fn url_de_rapport(url: &str) -> Result<(), String> {
     Ok(())
 }
 
-
 // ---- Commander, par le relais (S-s3) ---------------------------------------
 //
 // Tout appel au relais part d'ici, jamais du webview : la CSP `connect-src`
@@ -2115,7 +2215,9 @@ fn url_de_rapport(url: &str) -> Result<(), String> {
 
 /// Le dossier de données de l'app, où vit `commande.json`.
 fn donnees(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    app.path().app_data_dir().map_err(|e| format!("dossier de données introuvable : {e}"))
+    app.path()
+        .app_data_dir()
+        .map_err(|e| format!("dossier de données introuvable : {e}"))
 }
 
 /// L'adresse compilée du relais, ou le refus : un build de release n'en
@@ -2134,7 +2236,13 @@ async fn relais_pays() -> Result<Option<Vec<colophon_core::relais::Pays>>, Strin
     };
     tauri::async_runtime::spawn_blocking(move || {
         let reseau = colophon_core::relais::Reseau::default();
-        colophon_core::relais::Relais { base, transport: &reseau }.pays().map(Some).map_err(|e| e.to_string())
+        colophon_core::relais::Relais {
+            base,
+            transport: &reseau,
+        }
+        .pays()
+        .map(Some)
+        .map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -2174,7 +2282,9 @@ async fn tarifs_lire() -> Result<Option<colophon_core::tarifs::Tarifs>, String> 
                 .duration_since(std::time::UNIX_EPOCH)
                 .map_or(0, |d| d.as_secs() as i64);
             let reseau = colophon_core::relais::Reseau::default();
-            colophon_core::tarifs::lire(base, &reseau, maintenant).map(Some).map_err(|e| e.to_string())
+            colophon_core::tarifs::lire(base, &reseau, maintenant)
+                .map(Some)
+                .map_err(|e| e.to_string())
         })
         .await
         .map_err(|e| e.to_string())?
@@ -2207,25 +2317,41 @@ async fn relais_creer(
     etat_region: Option<String>,
     acquitte: bool,
 ) -> Result<Offre, String> {
-    use colophon_core::relais::{acquittement_pour, coche_le_maintenant, Demande, Relais, Reseau, SEUIL_PPI};
+    use colophon_core::relais::{
+        acquittement_pour, coche_le_maintenant, Demande, Relais, Reseau, SEUIL_PPI,
+    };
     let base = relais_url()?;
-    let p = state.prepare.lock().unwrap().clone().ok_or("aucun dossier préparé")?;
+    let p = state
+        .prepare
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or("aucun dossier préparé")?;
     if !p.ok {
         return Err("le contrôle relu sur le dossier préparé n'est pas vert".into());
     }
     if !p.vendu {
-        return Err("ce format ne se commande pas : l'imprimeur n'a aucun produit à ses cotes".into());
+        return Err(
+            "ce format ne se commande pas : l'imprimeur n'a aucun produit à ses cotes".into(),
+        );
     }
     let acquittement =
-        acquittement_pour(&p.acquittement, SEUIL_PPI, acquitte, &coche_le_maintenant()).map_err(|e| e.to_string())?;
+        acquittement_pour(&p.acquittement, SEUIL_PPI, acquitte, &coche_le_maintenant())
+            .map_err(|e| e.to_string())?;
     let dir = donnees(&app)?;
     let dossier = p.dossier.clone();
     let (demande, intention) = tauri::async_runtime::spawn_blocking(move || {
-        let mut d = Demande::du_dossier(&p.dossier, p.papier, &p.format, p.pages, &pays, etat_region)
-            .map_err(|e| e.to_string())?;
+        let mut d =
+            Demande::du_dossier(&p.dossier, p.papier, &p.format, p.pages, &pays, etat_region)
+                .map_err(|e| e.to_string())?;
         d.acquittement = acquittement;
         let reseau = Reseau::default();
-        let i = Relais { base, transport: &reseau }.creer(&d).map_err(|e| e.to_string())?;
+        let i = Relais {
+            base,
+            transport: &reseau,
+        }
+        .creer(&d)
+        .map_err(|e| e.to_string())?;
         Ok::<_, String>((d, i))
     })
     .await
@@ -2250,12 +2376,19 @@ async fn relais_creer(
         demande,
         televersements: intention.televersements,
     });
-    Ok(Offre { id: intention.id, mode: intention.mode, grille: intention.grille, expire: intention.expire })
+    Ok(Offre {
+        id: intention.id,
+        mode: intention.mode,
+        grille: intention.grille,
+        expire: intention.expire,
+    })
 }
 
 /// Le jour local, `AAAA-MM-JJ`.
 fn chrono_jour() -> String {
-    colophon_core::chrono::Local::now().format("%Y-%m-%d").to_string()
+    colophon_core::chrono::Local::now()
+        .format("%Y-%m-%d")
+        .to_string()
 }
 
 /// Ce que l'écran reçoit pendant l'envoi : le fichier, les octets partis, le
@@ -2298,10 +2431,29 @@ async fn relais_envoyer(
     let emetteur = app.clone();
     let (tenu, issue) = tauri::async_runtime::spawn_blocking(move || {
         let reseau = Reseau::default();
-        let issue = envoyer(&reseau, &tenu.televersements, &tenu.dossier, &tenu.demande, &|fichier, envoyes, total| {
-            let _ = emetteur.emit("relais:progres", Progres { fichier, envoyes, total });
-        })
-        .and_then(|()| Relais { base, transport: &reseau }.fichiers(&tenu.id, &secret));
+        let issue = envoyer(
+            &reseau,
+            &tenu.televersements,
+            &tenu.dossier,
+            &tenu.demande,
+            &|fichier, envoyes, total| {
+                let _ = emetteur.emit(
+                    "relais:progres",
+                    Progres {
+                        fichier,
+                        envoyes,
+                        total,
+                    },
+                );
+            },
+        )
+        .and_then(|()| {
+            Relais {
+                base,
+                transport: &reseau,
+            }
+            .fichiers(&tenu.id, &secret)
+        });
         (tenu, issue)
     })
     .await
@@ -2331,9 +2483,18 @@ fn vue_de(s: &commande::Stock, id: &str) -> Result<commande::IntentionVue, Strin
 /// Garde le niveau d'expédition choisi pour l'intention `id`, dès le choix :
 /// la liste rouvre le paiement avec lui.
 #[tauri::command]
-fn relais_niveau(app: tauri::AppHandle, state: State<'_, AppState>, id: String, niveau: String) -> Result<(), String> {
+fn relais_niveau(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    id: String,
+    niveau: String,
+) -> Result<(), String> {
     commande::modifier(&state.stock, &donnees(&app)?, |s| {
-        let i = s.intentions.iter_mut().find(|i| i.id == id).ok_or("commande inconnue")?;
+        let i = s
+            .intentions
+            .iter_mut()
+            .find(|i| i.id == id)
+            .ok_or("commande inconnue")?;
         i.niveau = Some(niveau);
         Ok(())
     })
@@ -2343,7 +2504,10 @@ fn relais_niveau(app: tauri::AppHandle, state: State<'_, AppState>, id: String, 
 /// chez Stripe toute session ouverte), et l'oubli n'a lieu que sur son 200 ou
 /// son 404 (`commande::abandonner`). Rend la liste, ou le code du refus.
 #[tauri::command]
-async fn relais_oublier(app: tauri::AppHandle, id: String) -> Result<Vec<commande::IntentionVue>, String> {
+async fn relais_oublier(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<Vec<commande::IntentionVue>, String> {
     use colophon_core::relais::{Relais, Reseau, RELAIS_MODE};
     let base = relais_url()?;
     let dir = donnees(&app)?;
@@ -2351,9 +2515,20 @@ async fn relais_oublier(app: tauri::AppHandle, id: String) -> Result<Vec<command
     tauri::async_runtime::spawn_blocking(move || {
         let state = app2.state::<AppState>();
         let reseau = Reseau::default();
-        let relais = Relais { base, transport: &reseau };
-        commande::abandonner(&state.stock, &dir, &relais, RELAIS_MODE, &state.envois, &state.abandons, &id)
-            .map_err(|e| e.to_string())?;
+        let relais = Relais {
+            base,
+            transport: &reseau,
+        };
+        commande::abandonner(
+            &state.stock,
+            &dir,
+            &relais,
+            RELAIS_MODE,
+            &state.envois,
+            &state.abandons,
+            &id,
+        )
+        .map_err(|e| e.to_string())?;
         Ok(commande::Stock::lire(&dir)?.vue(RELAIS_MODE))
     })
     .await
@@ -2373,13 +2548,22 @@ async fn ouvrir_paiement(
     use colophon_core::relais::{Relais, Reseau};
     let base = relais_url()?;
     let i = commande::modifier(&state.stock, &donnees(&app)?, |s| {
-        let i = s.intentions.iter_mut().find(|i| i.id == id).ok_or("commande inconnue")?;
+        let i = s
+            .intentions
+            .iter_mut()
+            .find(|i| i.id == id)
+            .ok_or("commande inconnue")?;
         i.niveau = Some(niveau.clone());
         Ok(i.clone())
     })?;
     let url = tauri::async_runtime::spawn_blocking(move || {
         let reseau = Reseau::default();
-        Relais { base, transport: &reseau }.paiement(&i.id, &i.secret, &niveau).map_err(|e| e.to_string())
+        Relais {
+            base,
+            transport: &reseau,
+        }
+        .paiement(&i.id, &i.secret, &niveau)
+        .map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())??;
@@ -2387,7 +2571,10 @@ async fn ouvrir_paiement(
 }
 
 /// La garde, puis l'ouverture : rien ne s'ouvre quand l'URL est refusée.
-fn ouvrir_si_paiement(url: &str, ouvrir: impl FnOnce(&str) -> Result<(), String>) -> Result<(), String> {
+fn ouvrir_si_paiement(
+    url: &str,
+    ouvrir: impl FnOnce(&str) -> Result<(), String>,
+) -> Result<(), String> {
     if let Err(e) = url_de_paiement(url) {
         commande::journal(commande::Evenement::PaiementRefuse);
         return Err(e);
@@ -2406,7 +2593,9 @@ fn ouvrir_si_paiement(url: &str, ouvrir: impl FnOnce(&str) -> Result<(), String>
 /// URL: a session URL is a payment page someone else could open.
 fn url_de_paiement(url: &str) -> Result<(), String> {
     const BASE: &str = "https://checkout.stripe.com/";
-    let reste = url.strip_prefix(BASE).ok_or("adresse de paiement hors de Stripe Checkout")?;
+    let reste = url
+        .strip_prefix(BASE)
+        .ok_or("adresse de paiement hors de Stripe Checkout")?;
     let permis = |c: char| c.is_ascii_alphanumeric() || "-._~/?#&=%+".contains(c);
     if reste.is_empty() || !reste.chars().all(permis) {
         return Err("caractère refusé dans l'adresse de paiement".into());
@@ -2429,15 +2618,24 @@ async fn relais_relire(app: tauri::AppHandle, id: Option<String>) -> Result<Relu
     use colophon_core::relais::{Relais, Reseau, RELAIS_MODE};
     let dir = donnees(&app)?;
     let Some(base) = colophon_core::relais::RELAIS_URL else {
-        return Ok(Relu { intentions: vec![], erreur: None });
+        return Ok(Relu {
+            intentions: vec![],
+            erreur: None,
+        });
     };
     let app2 = app.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let state = app2.state::<AppState>();
         let reseau = Reseau::default();
-        let relais = Relais { base, transport: &reseau };
+        let relais = Relais {
+            base,
+            transport: &reseau,
+        };
         let erreur = commande::relire(&state.stock, &dir, &relais, RELAIS_MODE, id.as_deref())?;
-        Ok(Relu { intentions: commande::Stock::lire(&dir)?.vue(RELAIS_MODE), erreur })
+        Ok(Relu {
+            intentions: commande::Stock::lire(&dir)?.vue(RELAIS_MODE),
+            erreur,
+        })
     })
     .await
     .map_err(|e| e.to_string())?
@@ -2454,7 +2652,11 @@ async fn relais_annuler(app: tauri::AppHandle, id: String) -> Result<Relu, Strin
     commande::journal(commande::Evenement::Annulee);
     let issue = tauri::async_runtime::spawn_blocking(move || {
         let reseau = Reseau::default();
-        Relais { base, transport: &reseau }.annuler(&i.id, &i.secret)
+        Relais {
+            base,
+            transport: &reseau,
+        }
+        .annuler(&i.id, &i.secret)
     })
     .await
     .map_err(|e| e.to_string())?;
@@ -2534,7 +2736,10 @@ fn nom_apercu(quoi: &str) -> Option<&'static str> {
 /// editor draws in the DOM and the press reads a PDF; those two can never be
 /// identical by construction, so the preview reads the PDF itself.
 #[tauri::command]
-fn album_pdf_bytes(quoi: String, state: State<'_, AppState>) -> Result<tauri::ipc::Response, String> {
+fn album_pdf_bytes(
+    quoi: String,
+    state: State<'_, AppState>,
+) -> Result<tauri::ipc::Response, String> {
     let nom = nom_apercu(&quoi).ok_or_else(|| format!("aperçu inconnu : {quoi}"))?;
     let dir = {
         let guard = state.open.lock().unwrap();
@@ -2603,7 +2808,10 @@ fn colophon_spread(
 /// The album travels from the front rather than being reread from disk: the
 /// title the page prints is the one on screen, unsaved rename and all.
 #[tauri::command]
-fn garde_spread(album: Album, langue: String) -> Result<Option<colophon_core::model::Spread>, String> {
+fn garde_spread(
+    album: Album,
+    langue: String,
+) -> Result<Option<colophon_core::model::Spread>, String> {
     let langue = langue_de(&langue)?;
     let place = colophon_core::garde::place(&colophon_core::pdf::geometry(&album));
     let titre = colophon_core::cover::titre_du_livre(&album).to_string();
@@ -2634,7 +2842,9 @@ fn origin_spread(
         guard.as_ref().ok_or("aucun album ouvert")?.dir.clone()
     };
     let origine = colophon_core::reprise::origine(&dir).map_err(|e| format!("{e:#}"))?;
-    Ok(colophon_core::reprise::spread_origine(&origine, &album, index))
+    Ok(colophon_core::reprise::spread_origine(
+        &origine, &album, index,
+    ))
 }
 
 /// One album folder as the storage panel shows it. The three weights are
@@ -2705,7 +2915,11 @@ fn modified_secs(path: &Path) -> Option<u64> {
 }
 
 fn album_entry(dir: &Path) -> AlbumEntry {
-    let id = dir.file_name().unwrap_or_default().to_string_lossy().to_string();
+    let id = dir
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
     let bytes_thumbs = dir_size(&dir.join(".cache").join("thumbs"));
     let bytes_pdf = ["album.pdf", "album-print.pdf"]
         .iter()
@@ -2805,16 +3019,16 @@ fn resolve_album_dir(root: &Path, id: &str) -> Result<PathBuf, String> {
 /// The photos it was composed from are not touched and cannot be, the folder
 /// this removes is the app's own.
 #[tauri::command]
-fn delete_album(app: tauri::AppHandle, id: String, state: State<'_, AppState>) -> Result<u64, String> {
+fn delete_album(
+    app: tauri::AppHandle,
+    id: String,
+    state: State<'_, AppState>,
+) -> Result<u64, String> {
     let dir = resolve_album_dir(&albums_dir(&app)?, &id)?;
     {
         let guard = state.open.lock().unwrap();
         if let Some(open) = guard.as_ref() {
-            let same = open
-                .dir
-                .canonicalize()
-                .map(|d| d == dir)
-                .unwrap_or(false);
+            let same = open.dir.canonicalize().map(|d| d == dir).unwrap_or(false);
             if same {
                 return Err(
                     "Cet album est ouvert. Fermez-le (Fichier → Fermer l’album) avant de le supprimer."
@@ -2940,7 +3154,8 @@ pub fn run() {
             // interdit à une app du Store de se mettre à jour elle-même, et
             // sa capacité n'y est pas chargée non plus (build.rs).
             #[cfg(not(feature = "mas"))]
-            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+            app.handle()
+                .plugin(tauri_plugin_updater::Builder::new().build())?;
             app.manage(AppState::default());
             // The file log the report channel will quote: errors and long
             // stages, rotating, path-scrubbed. Failing to open it must not
@@ -3042,7 +3257,6 @@ pub fn run() {
             #[cfg(not(feature = "mas"))]
             voyage_importer,
             reveal_data_dir
-
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -3071,11 +3285,19 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("colophon-ecrire-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        let gardes = ["album.resserree.json", "curation.resserree.json", "objet-Orpheline.otf"];
+        let gardes = [
+            "album.resserree.json",
+            "curation.resserree.json",
+            "objet-Orpheline.otf",
+        ];
         for f in gardes {
             std::fs::write(dir.join(f), b"{}").unwrap();
         }
-        let album = Album::new("t", Path::new("/p"), colophon_core::Size { w: 210.0, h: 210.0 });
+        let album = Album::new(
+            "t",
+            Path::new("/p"),
+            colophon_core::Size { w: 210.0, h: 210.0 },
+        );
 
         enregistrer(&dir, &album, false).unwrap();
         assert!(dir.join("album.json").is_file());
@@ -3132,7 +3354,10 @@ mod tests {
                 .expect("album relisible");
         assert_eq!(reread.spreads[idx].template, template);
         assert_eq!(reread.spreads[idx].slots.len(), cap);
-        assert!(!tmp.join("album.json.tmp").exists(), "pas de fichier temporaire orphelin");
+        assert!(
+            !tmp.join("album.json.tmp").exists(),
+            "pas de fichier temporaire orphelin"
+        );
         std::fs::remove_dir_all(&tmp).ok();
     }
 
@@ -3194,10 +3419,7 @@ mod tests {
             "http://github.com/alexis-morain/booklibre/issues/new?template=1-bug.yml".into()
         )
         .is_err());
-        assert!(open_report_url(
-            "https://github.com/autre/depot/issues/new".into()
-        )
-        .is_err());
+        assert!(open_report_url("https://github.com/autre/depot/issues/new".into()).is_err());
         // L'ancien dépôt, renommé en booklibre (R-s1) : GitHub y redirige,
         // mais la garde ne nomme qu'une adresse, et c'est la nouvelle.
         assert!(url_de_rapport("https://github.com/alexis-morain/colophon/issues/new").is_err());
@@ -3262,7 +3484,10 @@ mod tests {
             })
             .unwrap_err();
             assert!(!ouverte.get(), "{mauvaise} a été ouverte");
-            assert!(mauvaise.is_empty() || !e.contains(mauvaise), "le refus cite l'URL : {e}");
+            assert!(
+                mauvaise.is_empty() || !e.contains(mauvaise),
+                "le refus cite l'URL : {e}"
+            );
         }
     }
 
@@ -3279,7 +3504,8 @@ mod tests {
     /// A scratch `albums` root with one album folder inside, plus a decoy
     /// sibling standing in for the photo folder the deletion must never see.
     fn albums_root(tag: &str) -> PathBuf {
-        let base = std::env::temp_dir().join(format!("colophon-albums-{tag}-{}", std::process::id()));
+        let base =
+            std::env::temp_dir().join(format!("colophon-albums-{tag}-{}", std::process::id()));
         std::fs::remove_dir_all(&base).ok();
         std::fs::create_dir_all(base.join("albums").join("corse-2013-abcd1234")).unwrap();
         std::fs::create_dir_all(base.join("photos-de-la-famille")).unwrap();
@@ -3292,7 +3518,10 @@ mod tests {
     #[test]
     fn un_album_ne_s_ecrit_jamais_ou_un_album_est() {
         let base = albums_root("libre").join("albums");
-        assert_eq!(dossier_libre(&base, "corse-2013-abcd1234"), base.join("corse-2013-abcd1234"));
+        assert_eq!(
+            dossier_libre(&base, "corse-2013-abcd1234"),
+            base.join("corse-2013-abcd1234")
+        );
         std::fs::write(base.join("corse-2013-abcd1234").join("album.json"), "{}").unwrap();
         assert_eq!(
             dossier_libre(&base, "corse-2013-abcd1234"),
@@ -3332,8 +3561,12 @@ mod tests {
         std::thread::sleep(std::time::Duration::from_millis(20));
         let second = ecrit("photos-de-la-famille-22222222-2", &photos);
         // En écriture : Windows refuse de dater un fichier ouvert en lecture.
-        let f = std::fs::OpenOptions::new().write(true).open(second.join("album.json")).unwrap();
-        f.set_modified(std::time::SystemTime::now() + std::time::Duration::from_secs(5)).unwrap();
+        let f = std::fs::OpenOptions::new()
+            .write(true)
+            .open(second.join("album.json"))
+            .unwrap();
+        f.set_modified(std::time::SystemTime::now() + std::time::Duration::from_secs(5))
+            .unwrap();
         assert_eq!(album_deja_compose(&base, &photos), Some(second));
         std::fs::remove_dir_all(&racine).ok();
     }
@@ -3345,7 +3578,9 @@ mod tests {
         let maison = Path::new("/Users/qui");
         let ok = |p: &str| dossier_d_import_valide(maison, Path::new(p));
         assert!(ok("/Users/qui/Pictures/Colophon/Corse 2013"));
-        assert!(ok(&photos::dossier_propose(maison, "Été/2013").to_string_lossy()));
+        assert!(ok(
+            &photos::dossier_propose(maison, "Été/2013").to_string_lossy()
+        ));
         // A `.` in the middle is normalised away by `components()` : this is
         // the proposed folder, spelt oddly, and it passes.
         assert!(ok("/Users/qui/Pictures/Colophon/./x"));
@@ -3366,7 +3601,10 @@ mod tests {
     #[test]
     fn le_nom_du_pdf_vient_du_titre() {
         assert_eq!(nom_de_fichier_pdf("Corse 2013"), "Corse 2013.pdf");
-        assert_eq!(nom_de_fichier_pdf(" Été / mer : sable "), "Été - mer - sable.pdf");
+        assert_eq!(
+            nom_de_fichier_pdf(" Été / mer : sable "),
+            "Été - mer - sable.pdf"
+        );
         assert_eq!(nom_de_fichier_pdf(""), "album.pdf");
         assert_eq!(nom_de_fichier_pdf("///"), "album.pdf");
     }
@@ -3376,7 +3614,8 @@ mod tests {
     /// garde existe avant que S-s3 n'y remette un secret d'intention.
     #[test]
     fn le_rapport_ne_cite_jamais_commande_json() {
-        let dir = std::env::temp_dir().join(format!("colophon-rapport-commande-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("colophon-rapport-commande-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         colophon_core::log::init(&dir).unwrap();
@@ -3389,7 +3628,10 @@ mod tests {
         .unwrap();
         colophon_core::log::line("le rapport est bâti");
         let r = serde_json::to_string(&rapport("1.0.0".into(), None)).unwrap();
-        assert!(r.contains("le rapport est bâti"), "le journal a bien été lu : {r}");
+        assert!(
+            r.contains("le rapport est bâti"),
+            "le journal a bien été lu : {r}"
+        );
         for interdit in ["commande.json", cle] {
             assert!(!r.contains(interdit), "{interdit} dans le rapport");
         }
@@ -3400,12 +3642,18 @@ mod tests {
     /// façon qu'un nom de PDF : un titre ne crée jamais un sous-dossier.
     #[test]
     fn le_dossier_prepare_porte_le_titre_et_l_imprimeur() {
-        assert_eq!(nom_du_dossier_prepare("Corse 2013", "Cloudprinter"), "Corse 2013 – Cloudprinter");
+        assert_eq!(
+            nom_du_dossier_prepare("Corse 2013", "Cloudprinter"),
+            "Corse 2013 – Cloudprinter"
+        );
         assert_eq!(
             nom_du_dossier_prepare(" Été / mer ", "Cloudprinter"),
             "Été - mer – Cloudprinter"
         );
-        assert_eq!(nom_du_dossier_prepare("", "Cloudprinter"), "album – Cloudprinter");
+        assert_eq!(
+            nom_du_dossier_prepare("", "Cloudprinter"),
+            "album – Cloudprinter"
+        );
     }
 
     /// « Faire imprimer » écrit dans `<données>/commandes/<nom>`, et nulle
@@ -3414,13 +3662,19 @@ mod tests {
     /// d'un autre titre comprise, au lieu d'empiler 95 Mo à chaque essai.
     #[test]
     fn la_preparation_pour_commande_reste_dans_le_dossier_de_donnees_et_se_remplace() {
-        let donnees = std::env::temp_dir().join(format!("colophon-commandes-{}", std::process::id()));
+        let donnees =
+            std::env::temp_dir().join(format!("colophon-commandes-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&donnees);
         std::fs::create_dir_all(&donnees).unwrap();
         let commandes = donnees.join("commandes");
         for titre in ["Corse 2013", "..", "../../etc", "/", "a/b\\c:d", "", " . "] {
             let dest = dossier_pour_commande(&donnees, titre, "Cloudprinter").unwrap();
-            assert_eq!(dest.parent(), Some(commandes.as_path()), "{titre:?} → {}", dest.display());
+            assert_eq!(
+                dest.parent(),
+                Some(commandes.as_path()),
+                "{titre:?} → {}",
+                dest.display()
+            );
             assert!(
                 matches!(dest.file_name(), Some(n) if n != ".." && n != "."),
                 "{titre:?} → {}",
@@ -3442,9 +3696,15 @@ mod tests {
         let dest = dossier_pour_commande(&donnees, "Corse 2013", "Cloudprinter").unwrap();
         assert_eq!(dest, meme);
         assert!(!vieille.exists(), "la préparation d'un autre titre reste");
-        assert!(!meme.join("album-cover.pdf").exists(), "un fichier d'avant reste");
+        assert!(
+            !meme.join("album-cover.pdf").exists(),
+            "un fichier d'avant reste"
+        );
         assert_eq!(std::fs::read_dir(&commandes).unwrap().count(), 0);
-        assert!(donnees.join("commande.json").exists(), "commande.json a été touché");
+        assert!(
+            donnees.join("commande.json").exists(),
+            "commande.json a été touché"
+        );
         std::fs::remove_dir_all(&donnees).unwrap();
     }
 
@@ -3496,7 +3756,11 @@ mod tests {
         let base = albums_root("poids");
         let dir = base.join("albums").join("corse-2013-abcd1234");
         std::fs::create_dir_all(dir.join(".cache").join("thumbs")).unwrap();
-        std::fs::write(dir.join(".cache").join("thumbs").join("a.jpg"), vec![7u8; 4096]).unwrap();
+        std::fs::write(
+            dir.join(".cache").join("thumbs").join("a.jpg"),
+            vec![7u8; 4096],
+        )
+        .unwrap();
         std::fs::write(dir.join("album.pdf"), vec![0u8; 2048]).unwrap();
         std::fs::write(dir.join("album.json"), "pas du json").unwrap();
 
@@ -3557,22 +3821,41 @@ mod tests {
     /// ne mordrait sur rien. `scripts/mas.sh` refait la preuve sur le binaire.
     #[test]
     fn la_saveur_mas_n_embarque_pas_l_updater() {
-        let mut conf: serde_json::Value = serde_json::from_str(&fichier("tauri.conf.json")).unwrap();
-        let cle = conf["plugins"]["updater"]["pubkey"].as_str().unwrap().to_string();
+        let mut conf: serde_json::Value =
+            serde_json::from_str(&fichier("tauri.conf.json")).unwrap();
+        let cle = conf["plugins"]["updater"]["pubkey"]
+            .as_str()
+            .unwrap()
+            .to_string();
         let flux = "latest.json";
         assert!(conf.to_string().contains(flux) && conf.to_string().contains(&cle));
         let patch: serde_json::Value =
             serde_json::from_str(&fichier("tauri.appstore.conf.json")).unwrap();
         fusionner(&mut conf, &patch);
         let rendu = conf.to_string();
-        assert!(!rendu.contains(flux), "le flux des versions reste dans la saveur mas");
-        assert!(!rendu.contains(&cle), "la clé de l'updater reste dans la saveur mas");
-        assert_eq!(conf["bundle"]["createUpdaterArtifacts"], serde_json::json!(false));
+        assert!(
+            !rendu.contains(flux),
+            "le flux des versions reste dans la saveur mas"
+        );
+        assert!(
+            !rendu.contains(&cle),
+            "la clé de l'updater reste dans la saveur mas"
+        );
+        assert_eq!(
+            conf["bundle"]["createUpdaterArtifacts"],
+            serde_json::json!(false)
+        );
         assert_eq!(conf["bundle"]["targets"], serde_json::json!(["app"]));
-        assert_eq!(conf["bundle"]["macOS"]["entitlements"], "entitlements.mas.plist");
+        assert_eq!(
+            conf["bundle"]["macOS"]["entitlements"],
+            "entitlements.mas.plist"
+        );
 
         let commune = fichier("capabilities/default.json");
-        assert!(!commune.contains("updater"), "la capacité commune nomme l'updater");
+        assert!(
+            !commune.contains("updater"),
+            "la capacité commune nomme l'updater"
+        );
         assert!(fichier("capabilities/maj.json").contains("\"updater:default\""));
         assert!(fichier("build.rs").contains("\"./capabilities/default.json\""));
     }
@@ -3681,14 +3964,21 @@ mod tests {
         impl Transport for Statut {
             fn get(&self, _url: &str, _plafond: u64) -> Result<Reponse, String> {
                 self.1.set(self.1.get() + 1);
-                Ok(Reponse { statut: self.0, corps: Vec::new() })
+                Ok(Reponse {
+                    statut: self.0,
+                    corps: Vec::new(),
+                })
             }
         }
 
         const LIEN: &str = "https://www.polarsteps.com/quelquun/4242-un-voyage";
 
         fn sans_attente() -> Reglages {
-            Reglages { pause: std::time::Duration::ZERO, attente: std::time::Duration::ZERO, ..Default::default() }
+            Reglages {
+                pause: std::time::Duration::ZERO,
+                attente: std::time::Duration::ZERO,
+                ..Default::default()
+            }
         }
 
         fn maison() -> PathBuf {
@@ -3702,7 +3992,16 @@ mod tests {
         #[test]
         fn un_lien_invalide_ne_touche_ni_le_reseau_ni_le_disque() {
             let t = Statut(200, Cell::new(0));
-            let e = importer_un_voyage("https://example.com/x", &propose(), &maison(), &t, &sans_attente(), &|_, _| {}, &|| false).unwrap_err();
+            let e = importer_un_voyage(
+                "https://example.com/x",
+                &propose(),
+                &maison(),
+                &t,
+                &sans_attente(),
+                &|_, _| {},
+                &|| false,
+            )
+            .unwrap_err();
             assert_eq!(e.genre, "url");
             assert_eq!(t.1.get(), 0);
         }
@@ -3710,8 +4009,21 @@ mod tests {
         #[test]
         fn un_dossier_que_l_app_n_a_pas_propose_est_refuse_avant_le_reseau() {
             let t = Statut(200, Cell::new(0));
-            for d in ["/Users/test/Documents", "/Users/test/Pictures/Colophon/../x", "/etc"] {
-                let e = importer_un_voyage(LIEN, Path::new(d), &maison(), &t, &sans_attente(), &|_, _| {}, &|| false).unwrap_err();
+            for d in [
+                "/Users/test/Documents",
+                "/Users/test/Pictures/Colophon/../x",
+                "/etc",
+            ] {
+                let e = importer_un_voyage(
+                    LIEN,
+                    Path::new(d),
+                    &maison(),
+                    &t,
+                    &sans_attente(),
+                    &|_, _| {},
+                    &|| false,
+                )
+                .unwrap_err();
                 assert_eq!(e.genre, "dossier", "{d}");
             }
             assert_eq!(t.1.get(), 0);
@@ -3720,12 +4032,30 @@ mod tests {
         #[test]
         fn un_voyage_prive_se_dit_sans_nouvelle_tentative_et_un_5xx_se_retente() {
             let t = Statut(404, Cell::new(0));
-            let e = importer_un_voyage(LIEN, &propose(), &maison(), &t, &sans_attente(), &|_, _| {}, &|| false).unwrap_err();
+            let e = importer_un_voyage(
+                LIEN,
+                &propose(),
+                &maison(),
+                &t,
+                &sans_attente(),
+                &|_, _| {},
+                &|| false,
+            )
+            .unwrap_err();
             assert_eq!(e.genre, "prive");
             assert!(e.detail.contains("lien de partage"), "{}", e.detail);
             assert_eq!(t.1.get(), 1);
             let t = Statut(503, Cell::new(0));
-            let e = importer_un_voyage(LIEN, &propose(), &maison(), &t, &sans_attente(), &|_, _| {}, &|| false).unwrap_err();
+            let e = importer_un_voyage(
+                LIEN,
+                &propose(),
+                &maison(),
+                &t,
+                &sans_attente(),
+                &|_, _| {},
+                &|| false,
+            )
+            .unwrap_err();
             assert_eq!(e.genre, "indisponible");
             assert_eq!(t.1.get(), 3);
         }

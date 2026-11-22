@@ -172,10 +172,15 @@ pub fn rect_exporte(objet: &Object, g: &SpreadGeometry, pli_mm: f64) -> Rect {
     }
     let pli = g.media_w / 2.0;
     match cote_de(objet, g) {
-        Cote::Gauche if (r.x + r.w - pli).abs() < AU_PLI => Rect { w: r.w + pli_mm, ..r },
-        Cote::Droite if (r.x - pli).abs() < AU_PLI => {
-            Rect { x: r.x - pli_mm, w: r.w + pli_mm, ..r }
-        }
+        Cote::Gauche if (r.x + r.w - pli).abs() < AU_PLI => Rect {
+            w: r.w + pli_mm,
+            ..r
+        },
+        Cote::Droite if (r.x - pli).abs() < AU_PLI => Rect {
+            x: r.x - pli_mm,
+            w: r.w + pli_mm,
+            ..r
+        },
         _ => r,
     }
 }
@@ -228,7 +233,11 @@ fn deplacer(role: &mut Role, dx: f64) {
 /// The preflight's question about the first spread, and only about it: that
 /// page is the one the imposition does not print.
 pub fn objets_a_gauche(scene: &Scene, g: &SpreadGeometry) -> usize {
-    scene.objects.iter().filter(|o| cote_de(o, g) == Cote::Gauche).count()
+    scene
+        .objects
+        .iter()
+        .filter(|o| cote_de(o, g) == Cote::Gauche)
+        .count()
 }
 
 #[cfg(test)]
@@ -240,7 +249,9 @@ mod tests {
     fn planche(template: &str, photos: usize) -> Spread {
         Spread {
             template: template.into(),
-            slots: (0..photos).map(|i| Slot::new(format!("{i}.jpg"), [0.5, 0.5])).collect(),
+            slots: (0..photos)
+                .map(|i| Slot::new(format!("{i}.jpg"), [0.5, 0.5]))
+                .collect(),
             caption: None,
             text: None,
             edited: false,
@@ -267,21 +278,36 @@ mod tests {
         assert_eq!(pages[1], Page::Planche(1, Cote::Gauche), "p2");
         assert_eq!(pages[2], Page::Planche(1, Cote::Droite), "p3");
         assert_eq!(pages[93], Page::Planche(47, Cote::Gauche), "p94");
-        assert_eq!(pages[94], Page::Planche(47, Cote::Droite), "p95, le colophon");
+        assert_eq!(
+            pages[94],
+            Page::Planche(47, Cote::Droite),
+            "p95, le colophon"
+        );
         assert_eq!(pages[95], Page::Blanche, "p96, le verso du colophon");
 
         // La moitié gauche de la première planche est la seule qui ne
         // s'imprime pas, et c'est la seule.
         assert!(!pages.contains(&Page::Planche(0, Cote::Gauche)));
         for p in 1..48 {
-            assert!(pages.contains(&Page::Planche(p, Cote::Gauche)), "{p} à gauche");
-            assert!(pages.contains(&Page::Planche(p, Cote::Droite)), "{p} à droite");
+            assert!(
+                pages.contains(&Page::Planche(p, Cote::Gauche)),
+                "{p} à gauche"
+            );
+            assert!(
+                pages.contains(&Page::Planche(p, Cote::Droite)),
+                "{p} à droite"
+            );
         }
 
         // Les deux pages d'une planche restent adjacentes, et dans l'ordre.
         for (i, p) in pages.iter().enumerate() {
             if let Page::Planche(planche, Cote::Gauche) = p {
-                assert_eq!(pages[i + 1], Page::Planche(*planche, Cote::Droite), "p{}", i + 1);
+                assert_eq!(
+                    pages[i + 1],
+                    Page::Planche(*planche, Cote::Droite),
+                    "p{}",
+                    i + 1
+                );
             }
         }
 
@@ -289,7 +315,10 @@ mod tests {
         // deux rectos, comme dans un livre.
         let recto = |i: usize| (i + 1) % 2 == 1;
         assert!(recto(0) && recto(94));
-        assert!(ordre(0).is_empty(), "un album sans planche n'a pas de blanche");
+        assert!(
+            ordre(0).is_empty(),
+            "un album sans planche n'a pas de blanche"
+        );
     }
 
     /// La feuille d'une page simple : le fond perdu extérieur d'un côté,
@@ -301,7 +330,10 @@ mod tests {
         let gauche = page_simple(&a, Cote::Gauche, 3.0);
         let droite = page_simple(&a, Cote::Droite, 3.0);
         assert_eq!((gauche.media_w, gauche.media_h), (216.0, 216.0));
-        assert_eq!(gauche, droite, "à fond perdu égal les deux feuilles coïncident");
+        assert_eq!(
+            gauche, droite,
+            "à fond perdu égal les deux feuilles coïncident"
+        );
         assert_eq!(gauche.trim, [3.0, 3.0, 213.0, 213.0]);
 
         // Le pli est du côté du pli : à fond perdu inégal la page finie n'est
@@ -310,8 +342,16 @@ mod tests {
         let g = page_simple(&a, Cote::Gauche, 1.0);
         let d = page_simple(&a, Cote::Droite, 1.0);
         assert_eq!((g.media_w, g.media_h), (214.0, 216.0));
-        assert_eq!(g.trim, [3.0, 3.0, 213.0, 213.0], "le pli est à droite d'une page gauche");
-        assert_eq!(d.trim, [1.0, 3.0, 211.0, 213.0], "et à gauche d'une page droite");
+        assert_eq!(
+            g.trim,
+            [3.0, 3.0, 213.0, 213.0],
+            "le pli est à droite d'une page gauche"
+        );
+        assert_eq!(
+            d.trim,
+            [1.0, 3.0, 211.0, 213.0],
+            "et à gauche d'une page droite"
+        );
     }
 
     /// Le fond perdu intérieur : une photo pleine page en donne trois
@@ -323,16 +363,28 @@ mod tests {
         let g = pdf::geometry(&a);
         let scene = Scene::of(&a.spreads[0], &g);
         let photo = &scene.objects[0];
-        assert_eq!((photo.rect.x, photo.rect.w), (213.0, 213.0), "elle s'arrête pile au pli");
+        assert_eq!(
+            (photo.rect.x, photo.rect.w),
+            (213.0, 213.0),
+            "elle s'arrête pile au pli"
+        );
         let r = rect_exporte(photo, &g, 3.0);
-        assert_eq!((r.x, r.w), (210.0, 216.0), "et elle part maintenant 3 mm avant");
+        assert_eq!(
+            (r.x, r.w),
+            (210.0, 216.0),
+            "et elle part maintenant 3 mm avant"
+        );
 
         let a = album("full1_verso", 1); // la même, retournée
         let scene = Scene::of(&a.spreads[0], &g);
         let photo = &scene.objects[0];
         assert_eq!((photo.rect.x, photo.rect.w), (0.0, 213.0));
         let r = rect_exporte(photo, &g, 3.0);
-        assert_eq!((r.x, r.w), (0.0, 216.0), "elle va de la coupe au pli, plus 3");
+        assert_eq!(
+            (r.x, r.w),
+            (0.0, 216.0),
+            "elle va de la coupe au pli, plus 3"
+        );
 
         // Sans pli, rien ne bouge : c'est ce qui rend l'export d'un profil en
         // planches doubles identique à ce qu'il était.
@@ -342,7 +394,11 @@ mod tests {
         // Une case en marge n'atteint pas le pli et ne saigne pas.
         let a = album("duo", 2);
         for o in Scene::of(&a.spreads[0], &g).objects.iter() {
-            assert_eq!(rect_exporte(o, &g, 3.0).w, o.rect.w, "une case margée ne saigne pas");
+            assert_eq!(
+                rect_exporte(o, &g, 3.0).w,
+                o.rect.w,
+                "une case margée ne saigne pas"
+            );
         }
     }
 
@@ -376,8 +432,16 @@ mod tests {
             .iter()
             .find(|o| matches!(o.role, Role::FreeText { .. }))
             .expect("le bloc est dans la scène");
-        assert_eq!(bloc.rect.x + bloc.rect.w, g.media_w / 2.0, "il bute sur le pli");
-        assert_eq!(rect_exporte(bloc, &g, 3.0).w, bloc.rect.w, "et il s'y arrête");
+        assert_eq!(
+            bloc.rect.x + bloc.rect.w,
+            g.media_w / 2.0,
+            "il bute sur le pli"
+        );
+        assert_eq!(
+            rect_exporte(bloc, &g, 3.0).w,
+            bloc.rect.w,
+            "et il s'y arrête"
+        );
     }
 
     /// La découpe : chaque objet part sur sa page, dans les coordonnées de
@@ -393,7 +457,11 @@ mod tests {
 
         let gauche = page(&scene, Cote::Gauche, &g, 3.0);
         let droite = page(&scene, Cote::Droite, &g, 3.0);
-        assert_eq!(gauche.len() + droite.len(), scene.objects.len(), "rien ne se perd");
+        assert_eq!(
+            gauche.len() + droite.len(),
+            scene.objects.len(),
+            "rien ne se perd"
+        );
         assert_eq!(gauche.len(), 2, "une photo et sa légende");
 
         // La page gauche ne bouge pas : son bord extérieur est déjà l'origine.
@@ -402,9 +470,19 @@ mod tests {
         // La page droite est ramenée sur sa propre feuille : le pli, qui était
         // à 213, devient le fond perdu de 3.
         let droite_avant = pdf::page_box(true, &g);
-        assert!((droite[0].rect.x - (droite_avant.x - 210.0)).abs() < 1e-9, "{:?}", droite[0].rect);
-        let Role::PhotoCaption { at, .. } = &droite[1].role else { panic!("une légende") };
-        assert!((at.x - (droite_avant.x - 210.0)).abs() < 1e-9, "l'ancre suit la boîte : {}", at.x);
+        assert!(
+            (droite[0].rect.x - (droite_avant.x - 210.0)).abs() < 1e-9,
+            "{:?}",
+            droite[0].rect
+        );
+        let Role::PhotoCaption { at, .. } = &droite[1].role else {
+            panic!("une légende")
+        };
+        assert!(
+            (at.x - (droite_avant.x - 210.0)).abs() < 1e-9,
+            "l'ancre suit la boîte : {}",
+            at.x
+        );
 
         // Et tout reste dans la feuille de sa page.
         let feuille = page_simple(&a, Cote::Droite, 3.0);
@@ -449,7 +527,11 @@ mod tests {
         }
         let cp = PrinterProfile::par_id("cloudprinter").unwrap();
         assert!(cp.pages_simples, "il relie page par page");
-        assert_eq!(pli_mm(cp), 3.0, "leur gabarit dessine 3 mm sur les quatre bords");
+        assert_eq!(
+            pli_mm(cp),
+            3.0,
+            "leur gabarit dessine 3 mm sur les quatre bords"
+        );
         let gen = PrinterProfile::par_id("generique").unwrap();
         assert_eq!(pli_mm(gen), 0.0, "une planche n'a pas de bord au pli");
     }

@@ -89,7 +89,10 @@ pub const PHRASES: &[(&str, &[&str])] = &[
     ("objet_pli.glisser", &[]),
     ("carte_vide", &["n"]),
     ("carte_vide.supprimer", &[]),
-    ("couverture_resolution", &["src", "ppi", "w_mm", "h_mm", "imprimeur", "min_ppi"]),
+    (
+        "couverture_resolution",
+        &["src", "ppi", "w_mm", "h_mm", "imprimeur", "min_ppi"],
+    ),
     ("couverture_resolution.choisir", &[]),
     ("couverture_vide.titre", &[]),
     ("couverture_vide.dossier", &[]),
@@ -98,7 +101,10 @@ pub const PHRASES: &[(&str, &[&str])] = &[
     ("quatrieme_deborde.raccourcir", &[]),
     ("quatrieme_zone_sure", &["imprimeur", "sure_mm"]),
     ("quatrieme_zone_sure.reduire", &[]),
-    ("quatrieme_resolution", &["src", "ppi", "imprimeur", "min_ppi"]),
+    (
+        "quatrieme_resolution",
+        &["src", "ppi", "imprimeur", "min_ppi"],
+    ),
     ("quatrieme_resolution.choisir", &[]),
     ("dos_nu", &["dos_mm", "min_mm"]),
     ("dos_nu.ajouter", &[]),
@@ -107,8 +113,22 @@ pub const PHRASES: &[(&str, &[&str])] = &[
     ("fichier.illisible", &["fichier", "pourquoi"]),
     ("fichier.page", &["fichier", "n", "imprimeur", "attendues"]),
     ("fichier.pages", &["fichier", "n", "imprimeur", "attendues"]),
-    ("fichier.taille", &["fichier", "page", "w_mm", "h_mm", "imprimeur", "attendu_w_mm", "attendu_h_mm"]),
-    ("fichier_profil", &["fichier", "rendu", "profil", "imprimeur"]),
+    (
+        "fichier.taille",
+        &[
+            "fichier",
+            "page",
+            "w_mm",
+            "h_mm",
+            "imprimeur",
+            "attendu_w_mm",
+            "attendu_h_mm",
+        ],
+    ),
+    (
+        "fichier_profil",
+        &["fichier", "rendu", "profil", "imprimeur"],
+    ),
     ("fichier_perime.album", &["fichier", "avant", "maintenant"]),
     ("fichier_perime.octets", &["fichier", "octets", "rendu"]),
     ("fichier.refaire", &["commande", "profil"]),
@@ -184,7 +204,10 @@ fn pages_sous_seuil(mesures: Vec<(QuelFichier, u32, f64)>, min_ppi: f64) -> Vec<
             .and_modify(|p| *p = (*p).min(ppi))
             .or_insert(ppi);
     }
-    par_page.into_iter().map(|((fichier, page), ppi)| PageSousSeuil { fichier, page, ppi }).collect()
+    par_page
+        .into_iter()
+        .map(|((fichier, page), ppi)| PageSousSeuil { fichier, page, ppi })
+        .collect()
 }
 
 /// Les deux notes du rapport. Des textes fixes : l'app les écrit en anglais
@@ -224,7 +247,11 @@ fn phrase(
         let portees: Vec<&str> = valeurs.keys().copied().collect();
         assert_eq!(portees, attendues, "valeurs de {cause} / {remede}");
     }
-    Phrase { cause, remede, valeurs }
+    Phrase {
+        cause,
+        remede,
+        valeurs,
+    }
 }
 
 /// The sheet handed to whoever receives the PDF. Everything a printer asks
@@ -392,10 +419,7 @@ fn media_box_mm(doc: &lopdf::Document, page: lopdf::ObjectId) -> Option<[f64; 2]
             let n = |i: usize| -> Option<f64> {
                 Some(f64::from(doc.dereference(&a[i]).ok()?.1.as_float().ok()?))
             };
-            return Some([
-                (n(2)? - n(0)?).abs() * PT_MM,
-                (n(3)? - n(1)?).abs() * PT_MM,
-            ]);
+            return Some([(n(2)? - n(0)?).abs() * PT_MM, (n(3)? - n(1)?).abs() * PT_MM]);
         }
         courant = dict.get(b"Parent").ok()?.as_reference().ok()?;
     }
@@ -420,7 +444,13 @@ pub fn prevol_album(dir: &Path, profil: &'static PrinterProfile) -> Result<Prevo
     let (album, dims) = lire_album(dir)?;
     let face = face_de_la_quatrieme(dir, &album);
     let mesure = |s: &str, pt: f64| face.largeur_mm(s, pt);
-    Ok(check_mesure(&album, profil, &dims, &FichiersPoses::default(), &mesure))
+    Ok(check_mesure(
+        &album,
+        profil,
+        &dims,
+        &FichiersPoses::default(),
+        &mesure,
+    ))
 }
 
 /// `album.json` et les tailles de ses originaux.
@@ -451,7 +481,13 @@ pub fn prevol_dossier(
     let (album, dims) = lire_album(dir)?;
     let face = face_de_la_quatrieme(dir, &album);
     let mesure = |s: &str, pt: f64| face.largeur_mm(s, pt);
-    Ok(check_mesure(&album, profil, &dims, &FichiersPoses::lire(fichiers), &mesure))
+    Ok(check_mesure(
+        &album,
+        profil,
+        &dims,
+        &FichiersPoses::lire(fichiers),
+        &mesure,
+    ))
 }
 
 /// La face où la quatrième s'imprime : la sienne si elle en a une et que le
@@ -554,7 +590,12 @@ pub fn check_mesure(
     // not have, and their bounds are written against that total. Two is also
     // the number that has to be declared at the order, and Prodigi puts an
     // order on hold when it disagrees with the file.
-    let pages_fichier = pages + if profil.fichiers == Fichiers::Un { 2 } else { 0 };
+    let pages_fichier = pages
+        + if profil.fichiers == Fichiers::Un {
+            2
+        } else {
+            0
+        };
 
     // 0. Le format. Chez qui l'app commande, un format sans produit ne se
     // relie nulle part : le 13/10 un 28 × 21 se préparait vert pour
@@ -566,7 +607,10 @@ pub fn check_mesure(
         .commande
         .and_then(|_| crate::commande::produit_pour(&crate::format::nom(album.trim_mm)));
     if profil.commande.is_some() && produit.is_none() {
-        let (w, h) = (format!("{:.0}", album.trim_mm.w), format!("{:.0}", album.trim_mm.h));
+        let (w, h) = (
+            format!("{:.0}", album.trim_mm.w),
+            format!("{:.0}", album.trim_mm.h),
+        );
         defauts.push(Defaut {
             regle: "format_sans_produit",
             bloquant: true,
@@ -590,9 +634,11 @@ pub fn check_mesure(
     // every press has a range it will not leave.
     if !profil.pagination_ok(pages_fichier) {
         let multiple = pages_fichier % profil.pas_pagination != 0;
-        let decochable =
-            page_decochable(album).filter(|_| profil.pagination_ok(pages_fichier - 2));
-        let mut valeurs = vec![("pages", pages_fichier.to_string()), ("imprimeur", profil.nom.into())];
+        let decochable = page_decochable(album).filter(|_| profil.pagination_ok(pages_fichier - 2));
+        let mut valeurs = vec![
+            ("pages", pages_fichier.to_string()),
+            ("imprimeur", profil.nom.into()),
+        ];
         let code_cause = if multiple {
             valeurs.push(("pas", profil.pas_pagination.to_string()));
             "pagination.multiple"
@@ -681,15 +727,19 @@ pub fn check_mesure(
                         profil.nom,
                         if objets > 1 { "s" } else { "" }
                     ),
-                    remede: "déplacez ce qui est sur la page de gauche, ou ajoutez la page de garde \
+                    remede:
+                        "déplacez ce qui est sur la page de gauche, ou ajoutez la page de garde \
                              dans l'écran Envoi : elle se pose en tête et sa page de gauche reste \
                              blanche"
-                        .into(),
+                            .into(),
                     phrase: if objets > 1 {
                         phrase(
                             "imposition.objets",
                             "imposition.garde",
-                            vec![("imprimeur", profil.nom.into()), ("objets", objets.to_string())],
+                            vec![
+                                ("imprimeur", profil.nom.into()),
+                                ("objets", objets.to_string()),
+                            ],
                         )
                     } else {
                         phrase(
@@ -744,7 +794,9 @@ pub fn check_mesure(
                 profil.nom,
                 profil.espace.output_intent()
             ),
-            remede: "choisissez un profil qui accepte le RVB, ou demandez à l'imprimeur de convertir".into(),
+            remede:
+                "choisissez un profil qui accepte le RVB, ou demandez à l'imprimeur de convertir"
+                    .into(),
             phrase: phrase(
                 "espace",
                 "espace.choisir",
@@ -793,8 +845,12 @@ pub fn check_mesure(
     for (si, spread) in album.spreads.iter().enumerate() {
         let scene = scene::Scene::of(spread, &g);
         for (ci, object) in scene.objects.iter().enumerate() {
-            let scene::Role::Photo { src, zoom, .. } = &object.role else { continue };
-            let Some(&(ow, oh)) = dims.get(src) else { continue };
+            let scene::Role::Photo { src, zoom, .. } = &object.role else {
+                continue;
+            };
+            let Some(&(ow, oh)) = dims.get(src) else {
+                continue;
+            };
             // The rectangle **this supplier** receives. A photograph that runs
             // to the fold gains the fold bleed on the way out, so it is
             // cover-cropped a little wider for the same pixels: measuring the
@@ -805,8 +861,13 @@ pub fn check_mesure(
             let scale = print::print_scale(rect, ow, oh) * zoom.max(1.0);
             let ppi = print::PRINT_DPI / scale;
             if ppi < profil.min_ppi {
-                let page = 2 * si + usize::from(imposition::cote_de(object, &g) == imposition::Cote::Droite);
-                sous_seuil.push((QuelFichier::Interieur, u32::try_from(page).unwrap_or(u32::MAX), ppi));
+                let page = 2 * si
+                    + usize::from(imposition::cote_de(object, &g) == imposition::Cote::Droite);
+                sous_seuil.push((
+                    QuelFichier::Interieur,
+                    u32::try_from(page).unwrap_or(u32::MAX),
+                    ppi,
+                ));
                 defauts.push(Defaut {
                     regle: "resolution",
                     bloquant: false,
@@ -817,7 +878,8 @@ pub fn check_mesure(
                         "{} imprimerait à {ppi:.0} ppi dans cette case, {} exige {:.0}",
                         slot.src, profil.nom, profil.min_ppi
                     ),
-                    remede: "mettez-la dans une case plus petite, remplacez-la, ou retirez-la".into(),
+                    remede: "mettez-la dans une case plus petite, remplacez-la, ou retirez-la"
+                        .into(),
                     phrase: phrase(
                         "resolution",
                         "resolution.case",
@@ -918,7 +980,9 @@ pub fn check_mesure(
     // is its ink.
     for (si, spread) in album.spreads.iter().enumerate() {
         for objet in scene::Scene::of(spread, &g).objects.iter() {
-            let Some(index) = objet.role.index_libre() else { continue };
+            let Some(index) = objet.role.index_libre() else {
+                continue;
+            };
             let marge = scene::distance_to_trim(&objet.rect, objet.angle, &g);
             if marge < 0.0 {
                 defauts.push(Defaut {
@@ -937,7 +1001,10 @@ pub fn check_mesure(
                     phrase: phrase(
                         "objet_coupe",
                         "objet_coupe.deplacer",
-                        vec![("n", (index + 1).to_string()), ("depasse_mm", format!("{:.1}", -marge))],
+                        vec![
+                            ("n", (index + 1).to_string()),
+                            ("depasse_mm", format!("{:.1}", -marge)),
+                        ],
                     ),
                 });
             }
@@ -953,8 +1020,13 @@ pub fn check_mesure(
                          coupera en deux",
                         index + 1
                     ),
-                    remede: "glissez l'objet d'un seul côté du pli : l'éditeur y bute tout seul".into(),
-                    phrase: phrase("objet_pli", "objet_pli.glisser", vec![("n", (index + 1).to_string())]),
+                    remede: "glissez l'objet d'un seul côté du pli : l'éditeur y bute tout seul"
+                        .into(),
+                    phrase: phrase(
+                        "objet_pli",
+                        "objet_pli.glisser",
+                        vec![("n", (index + 1).to_string())],
+                    ),
                 });
             }
         }
@@ -971,7 +1043,9 @@ pub fn check_mesure(
         let voyage = crate::carte::voyage_de(album);
         for (si, spread) in album.spreads.iter().enumerate() {
             for (index, objet) in spread.objets.iter().enumerate() {
-                let crate::model::Contenu::Carte { debut, fin } = &objet.contenu else { continue };
+                let crate::model::Contenu::Carte { debut, fin } = &objet.contenu else {
+                    continue;
+                };
                 let vide = voyage
                     .as_ref()
                     .is_none_or(|v| crate::carte::dessiner(v, *debut..*fin).is_err());
@@ -987,8 +1061,13 @@ pub fn check_mesure(
                              ou n'a plus ces étapes",
                             index + 1
                         ),
-                        remede: "supprimez la carte, ou rétablissez voyage.json à côté des photos".into(),
-                        phrase: phrase("carte_vide", "carte_vide.supprimer", vec![("n", (index + 1).to_string())]),
+                        remede: "supprimez la carte, ou rétablissez voyage.json à côté des photos"
+                            .into(),
+                        phrase: phrase(
+                            "carte_vide",
+                            "carte_vide.supprimer",
+                            vec![("n", (index + 1).to_string())],
+                        ),
                     });
                 }
             }
@@ -1059,7 +1138,10 @@ pub fn check_mesure(
     if profil.fichiers == Fichiers::Deux {
         let photo = album.cover.as_ref().and_then(|c| c.photo.as_ref());
         if photo.is_none() {
-            let titree = album.cover.as_ref().is_some_and(|c| !c.title.trim().is_empty());
+            let titree = album
+                .cover
+                .as_ref()
+                .is_some_and(|c| !c.title.trim().is_empty());
             defauts.push(Defaut {
                 regle: "couverture_vide",
                 bloquant: true,
@@ -1075,7 +1157,11 @@ pub fn check_mesure(
                 },
                 remede: "choisissez une photo dans Couverture".into(),
                 phrase: phrase(
-                    if titree { "couverture_vide.titre" } else { "couverture_vide.dossier" },
+                    if titree {
+                        "couverture_vide.titre"
+                    } else {
+                        "couverture_vide.dossier"
+                    },
                     "couverture_vide.choisir",
                     vec![],
                 ),
@@ -1180,7 +1266,8 @@ pub fn check_mesure(
         }
         if let (Some(p), Some(cadre)) = (&c.back_photo, &q.cadre) {
             if let Some(&(ow, oh)) = dims.get(p.photo.src.as_str()) {
-                let ppi = print::PRINT_DPI / (print::print_scale(cadre, ow, oh) * p.photo.zoom.max(1.0));
+                let ppi =
+                    print::PRINT_DPI / (print::print_scale(cadre, ow, oh) * p.photo.zoom.max(1.0));
                 if ppi < profil.min_ppi {
                     defauts.push(Defaut {
                         regle: "quatrieme_resolution",
@@ -1214,7 +1301,11 @@ pub fn check_mesure(
     // 8. The spine. Not a defect: a number that travels, and must travel with
     // its provenance attached.
     let dos_mm = profil.dos_mm(pages, GRAMMAGE_DEFAUT);
-    if let Dos::Calcule { certitude: Certitude::Provisoire, .. } = profil.dos {
+    if let Dos::Calcule {
+        certitude: Certitude::Provisoire,
+        ..
+    } = profil.dos
+    {
         if let Some(d) = dos_mm {
             defauts.push(Defaut {
                 regle: "dos",
@@ -1253,9 +1344,13 @@ pub fn check_mesure(
     // ce qu'un fournisseur préfère avertit.
     if let Some(pose) = &poses.interieur {
         let attendues = pages_attendues(album, profil, &g);
-        if let Some((cause, remede, phrase)) =
-            confronter(&pose.lecture, &attendues, LIVRAISON_INTERIEUR, "--print", profil)
-        {
+        if let Some((cause, remede, phrase)) = confronter(
+            &pose.lecture,
+            &attendues,
+            LIVRAISON_INTERIEUR,
+            "--print",
+            profil,
+        ) {
             defauts.push(Defaut {
                 regle: "fichier_interieur",
                 bloquant: true,
@@ -1276,9 +1371,13 @@ pub fn check_mesure(
     if profil.fichiers == Fichiers::Deux {
         if let Some(pose) = &poses.couverture {
             let attendues = vec![[cg.media_w, cg.media_h]];
-            if let Some((cause, remede, phrase)) =
-                confronter(&pose.lecture, &attendues, LIVRAISON_COUVERTURE, "--cover", profil)
-            {
+            if let Some((cause, remede, phrase)) = confronter(
+                &pose.lecture,
+                &attendues,
+                LIVRAISON_COUVERTURE,
+                "--cover",
+                profil,
+            ) {
                 defauts.push(Defaut {
                     regle: "fichier_couverture",
                     bloquant: true,
@@ -1325,7 +1424,9 @@ pub fn check_mesure(
         // Rien de posé : rien à envoyer, donc rien à refuser, même si le
         // manifeste garde le souvenir d'un rendu.
         let Some(pose) = pose else { continue };
-        let Some(note) = poses.manifeste.artefact(fichier) else { continue };
+        let Some(note) = poses.manifeste.artefact(fichier) else {
+            continue;
+        };
         if let Some((regle, cause, remede, phrase)) =
             confronter_manifeste(pose, note, &empreinte, fichier, commande, profil)
         {
@@ -1344,8 +1445,16 @@ pub fn check_mesure(
 
     if cfg!(debug_assertions) {
         for d in &defauts {
-            assert!(REGLES.contains(&d.regle), "règle absente de REGLES : {}", d.regle);
-            assert!(!(d.bloquant && A_VOUS_DE_VOIR.contains(&d.regle)), "{} ne bloque pas", d.regle);
+            assert!(
+                REGLES.contains(&d.regle),
+                "règle absente de REGLES : {}",
+                d.regle
+            );
+            assert!(
+                !(d.bloquant && A_VOUS_DE_VOIR.contains(&d.regle)),
+                "{} ne bloque pas",
+                d.regle
+            );
         }
     }
     let bloquants = defauts.iter().filter(|d| d.bloquant).count();
@@ -1396,8 +1505,20 @@ pub fn check_mesure(
 /// rectangle of no extent: what must survive the cut is measured from the
 /// cut, and it is measured the same way for everyone.
 fn distance_au_rognage(x: f64, y: f64, g: &pdf::SpreadGeometry, bleed: f64) -> f64 {
-    debug_assert!((g.bleed - bleed).abs() < 1e-9, "deux fonds perdus pour une planche");
-    scene::distance_to_trim(&pdf::Rect { x, y, w: 0.0, h: 0.0 }, 0.0, g)
+    debug_assert!(
+        (g.bleed - bleed).abs() < 1e-9,
+        "deux fonds perdus pour une planche"
+    );
+    scene::distance_to_trim(
+        &pdf::Rect {
+            x,
+            y,
+            w: 0.0,
+            h: 0.0,
+        },
+        0.0,
+        g,
+    )
 }
 
 /// Tolérance de comparaison des cotes, en millimètres. Celle qu'écrivent déjà
@@ -1465,8 +1586,12 @@ fn confronter(
     commande: &str,
     profil: &PrinterProfile,
 ) -> Option<(String, String, Phrase)> {
-    let repare =
-        || format!("relancez {commande} --profil {} pour le refaire, ou retirez-le du dossier", profil.id);
+    let repare = || {
+        format!(
+            "relancez {commande} --profil {} pour le refaire, ou retirez-le du dossier",
+            profil.id
+        )
+    };
     let refaire = |code, mut valeurs: Vec<(&'static str, String)>| {
         valeurs.push(("fichier", fichier.to_string()));
         valeurs.push(("commande", commande.to_string()));
@@ -1517,9 +1642,7 @@ fn confronter(
     let (i, page) = pages
         .iter()
         .zip(attendues)
-        .position(|(p, a)| {
-            (p[0] - a[0]).abs() > TOLERANCE_MM || (p[1] - a[1]).abs() > TOLERANCE_MM
-        })
+        .position(|(p, a)| (p[0] - a[0]).abs() > TOLERANCE_MM || (p[1] - a[1]).abs() > TOLERANCE_MM)
         .map(|i| (i, pages[i]))?;
     let a = attendues[i];
     Some((
@@ -1589,7 +1712,10 @@ fn confronter_manifeste(
             repare(),
             refaire(
                 "fichier_profil",
-                vec![("rendu", note.profil.clone()), ("imprimeur", profil.nom.into())],
+                vec![
+                    ("rendu", note.profil.clone()),
+                    ("imprimeur", profil.nom.into()),
+                ],
             ),
         ));
     }
@@ -1604,7 +1730,10 @@ fn confronter_manifeste(
             repare(),
             refaire(
                 "fichier_perime.album",
-                vec![("avant", note.album.clone()), ("maintenant", empreinte.to_string())],
+                vec![
+                    ("avant", note.album.clone()),
+                    ("maintenant", empreinte.to_string()),
+                ],
             ),
         ));
     }
@@ -1619,7 +1748,10 @@ fn confronter_manifeste(
             repare(),
             refaire(
                 "fichier_perime.octets",
-                vec![("octets", pose.octets.to_string()), ("rendu", note.octets.to_string())],
+                vec![
+                    ("octets", pose.octets.to_string()),
+                    ("rendu", note.octets.to_string()),
+                ],
             ),
         ));
     }
@@ -1666,19 +1798,41 @@ mod tests {
     /// un sens. Un 28 × 21 se prépare pour Cloudprinter, mais ne se vend pas.
     #[test]
     fn la_fiche_nomme_le_produit_du_format_ou_rien() {
-        let dims: HashMap<String, (u32, u32)> = (0..24).map(|i| (format!("{i}.jpg"), (5000u32, 5000u32))).collect();
+        let dims: HashMap<String, (u32, u32)> = (0..24)
+            .map(|i| (format!("{i}.jpg"), (5000u32, 5000u32)))
+            .collect();
         let cp = PrinterProfile::par_id("cloudprinter").unwrap();
         let carre = album_de(12, 3.0);
-        assert_eq!(check(&carre, cp, &dims, &FichiersPoses::default()).fiche.produit, Some("photobook_cw_s210_s_fc"));
+        assert_eq!(
+            check(&carre, cp, &dims, &FichiersPoses::default())
+                .fiche
+                .produit,
+            Some("photobook_cw_s210_s_fc")
+        );
         let mut paysage = album_de(12, 3.0);
         paysage.trim_mm = Size { w: 280.0, h: 210.0 };
-        assert_eq!(check(&paysage, cp, &dims, &FichiersPoses::default()).fiche.produit, None);
+        assert_eq!(
+            check(&paysage, cp, &dims, &FichiersPoses::default())
+                .fiche
+                .produit,
+            None
+        );
         let mut libre = album_de(12, 3.0);
         libre.trim_mm = Size { w: 211.0, h: 211.0 };
-        assert_eq!(check(&libre, cp, &dims, &FichiersPoses::default()).fiche.produit, None);
+        assert_eq!(
+            check(&libre, cp, &dims, &FichiersPoses::default())
+                .fiche
+                .produit,
+            None
+        );
         // Prodigi ne se commande pas depuis l'app : pas de produit, même carré.
         let pr = PrinterProfile::par_id("prodigi").unwrap();
-        assert_eq!(check(&carre, pr, &dims, &FichiersPoses::default()).fiche.produit, None);
+        assert_eq!(
+            check(&carre, pr, &dims, &FichiersPoses::default())
+                .fiche
+                .produit,
+            None
+        );
     }
 
     /// Un format que l'imprimeur commandé ne relie pas se dit au prévol, et
@@ -1689,7 +1843,9 @@ mod tests {
     /// vaut mieux qu'un refus inventé.
     #[test]
     fn un_format_sans_produit_bloque_chez_qui_se_commande() {
-        let dims: HashMap<String, (u32, u32)> = (0..24).map(|i| (format!("{i}.jpg"), (5000u32, 5000u32))).collect();
+        let dims: HashMap<String, (u32, u32)> = (0..24)
+            .map(|i| (format!("{i}.jpg"), (5000u32, 5000u32)))
+            .collect();
         let cp = PrinterProfile::par_id("cloudprinter").unwrap();
         let regle = |a: &Album, p: &'static PrinterProfile| {
             check(a, p, &dims, &FichiersPoses::default())
@@ -1705,9 +1861,17 @@ mod tests {
         assert_eq!(d.len(), 1, "{d:?}");
         assert!(d[0].bloquant);
         assert_eq!(d[0].planche, None);
-        assert!(d[0].cause.starts_with("Cloudprinter n'imprime pas ce format"), "{}", d[0].cause);
+        assert!(
+            d[0].cause
+                .starts_with("Cloudprinter n'imprime pas ce format"),
+            "{}",
+            d[0].cause
+        );
         assert!(d[0].cause.contains("280 × 210 mm"), "{}", d[0].cause);
-        assert_eq!(d[0].remede, "choisissez un des formats qu'il imprime dans Format");
+        assert_eq!(
+            d[0].remede,
+            "choisissez un des formats qu'il imprime dans Format"
+        );
         assert_eq!(d[0].phrase.cause, "format_sans_produit");
         assert_eq!(d[0].phrase.remede, "format_sans_produit.choisir");
         assert!(!check(&paysage, cp, &dims, &FichiersPoses::default()).ok);
@@ -1730,8 +1894,8 @@ mod tests {
     /// (`prevol_dossier`) ; la CLI garde `prevol`, qui les lit à côté.
     #[test]
     fn le_prevol_de_l_album_ne_juge_pas_les_fichiers_d_a_cote() {
-        let dir = std::env::temp_dir()
-            .join(format!("colophon-prevol-album-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("colophon-prevol-album-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         let a = album_de(24, 3.0);
@@ -1741,10 +1905,18 @@ mod tests {
         let cp = PrinterProfile::par_id("cloudprinter").unwrap();
 
         let cli = prevol(&dir, cp).unwrap();
-        assert!(cli.defauts.iter().any(|d| d.regle == "fichier_couverture"), "{:?}", cli.defauts);
+        assert!(
+            cli.defauts.iter().any(|d| d.regle == "fichier_couverture"),
+            "{:?}",
+            cli.defauts
+        );
 
         let app = prevol_album(&dir, cp).unwrap();
-        assert!(!app.defauts.iter().any(|d| d.regle.starts_with("fichier")), "{:?}", app.defauts);
+        assert!(
+            !app.defauts.iter().any(|d| d.regle.starts_with("fichier")),
+            "{:?}",
+            app.defauts
+        );
         let sans_fichiers = |r: &PrevolReport| {
             r.defauts
                 .iter()
@@ -1760,7 +1932,10 @@ mod tests {
     /// Un fichier posé dont on ne juge que la géométrie : le manifeste des
     /// tests de #33 est vide, donc les octets ne sont confrontés à rien.
     fn pose(pages: Vec<[f64; 2]>) -> Option<Pose> {
-        Some(Pose { lecture: Lecture::Pages(pages), octets: 0 })
+        Some(Pose {
+            lecture: Lecture::Pages(pages),
+            octets: 0,
+        })
     }
 
     /// La page que l'imposition n'imprime pas doit être vide, et c'est ici que
@@ -1776,33 +1951,75 @@ mod tests {
 
         // `solo` pose sa photo au recto : la page de gauche est blanche et
         // rien ne se perd.
-        let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &FichiersPoses::default());
+        let r = check(
+            &a,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
         assert!(r.ok, "défauts : {:?}", r.defauts);
 
         // `duo` en pose une de chaque côté.
         a.spreads[0].template = "duo".into();
-        a.spreads[0].slots.push(Slot::new("12.jpg".into(), [0.5, 0.5]));
-        let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &FichiersPoses::default());
-        let refus: Vec<&Defaut> =
-            r.defauts.iter().filter(|d| d.regle == "imposition").collect();
+        a.spreads[0]
+            .slots
+            .push(Slot::new("12.jpg".into(), [0.5, 0.5]));
+        let r = check(
+            &a,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
+        let refus: Vec<&Defaut> = r
+            .defauts
+            .iter()
+            .filter(|d| d.regle == "imposition")
+            .collect();
         assert_eq!(refus.len(), 1, "défauts : {:?}", r.defauts);
         assert!(refus[0].bloquant);
         assert_eq!(refus[0].planche, Some(1));
-        assert!(refus[0].remede.contains("page de garde"), "{}", refus[0].remede);
-        assert!(refus[0].remede.starts_with("déplacez"), "{}", refus[0].remede);
+        assert!(
+            refus[0].remede.contains("page de garde"),
+            "{}",
+            refus[0].remede
+        );
+        assert!(
+            refus[0].remede.starts_with("déplacez"),
+            "{}",
+            refus[0].remede
+        );
         assert!(!r.ok);
 
         // La même planche ailleurs dans le livre ne gêne personne : c'est la
         // première, et seulement elle, dont la gauche ne s'imprime pas.
         let mut b = album_de(12, 3.0);
         b.spreads[5].template = "duo".into();
-        b.spreads[5].slots.push(Slot::new("12.jpg".into(), [0.5, 0.5]));
-        assert!(check(&b, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &FichiersPoses::default()).ok);
+        b.spreads[5]
+            .slots
+            .push(Slot::new("12.jpg".into(), [0.5, 0.5]));
+        assert!(
+            check(
+                &b,
+                PrinterProfile::par_id("cloudprinter").unwrap(),
+                &dims,
+                &FichiersPoses::default()
+            )
+            .ok
+        );
 
         // Et chez un imprimeur qui relie des planches, la question ne se pose
         // pas : il n'y a pas de découpe.
-        let r = check(&a, PrinterProfile::par_id("generique").unwrap(), &dims, &FichiersPoses::default());
-        assert!(!r.defauts.iter().any(|d| d.regle == "imposition"), "{:?}", r.defauts);
+        let r = check(
+            &a,
+            PrinterProfile::par_id("generique").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
+        assert!(
+            !r.defauts.iter().any(|d| d.regle == "imposition"),
+            "{:?}",
+            r.defauts
+        );
         assert!(r.ok, "{:?}", r.defauts);
     }
 
@@ -1823,11 +2040,25 @@ mod tests {
             .map(|i| (format!("{i}.jpg"), (2110u32, 3000u32)))
             .collect();
 
-        let r = check(&a, PrinterProfile::par_id("generique").unwrap(), &dims, &FichiersPoses::default());
+        let r = check(
+            &a,
+            PrinterProfile::par_id("generique").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
         assert!(r.ok, "sur la planche composée elle passe : {:?}", r.defauts);
 
-        let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &FichiersPoses::default());
-        let sous: Vec<&Defaut> = r.defauts.iter().filter(|d| d.regle == "resolution").collect();
+        let r = check(
+            &a,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
+        let sous: Vec<&Defaut> = r
+            .defauts
+            .iter()
+            .filter(|d| d.regle == "resolution")
+            .collect();
         assert_eq!(sous.len(), 12, "une par planche : {:?}", r.defauts);
         assert!(sous[0].cause.contains("248 ppi"), "{}", sous[0].cause);
 
@@ -1840,8 +2071,18 @@ mod tests {
         let dims: HashMap<String, (u32, u32)> = (0..12)
             .map(|i| (format!("{i}.jpg"), (2000u32, 3000u32)))
             .collect();
-        let cp = check(&b, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &FichiersPoses::default());
-        let gen = check(&b, PrinterProfile::par_id("generique").unwrap(), &dims, &FichiersPoses::default());
+        let cp = check(
+            &b,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
+        let gen = check(
+            &b,
+            PrinterProfile::par_id("generique").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
         assert_eq!(cp.ok, gen.ok, "cp {:?} / gen {:?}", cp.defauts, gen.defauts);
     }
 
@@ -1884,7 +2125,11 @@ mod tests {
         // Le coin gauche passe sous la coupe.
         a.spreads[0].objets = vec![bloc(g.bleed - 10.0, 60.0)];
         let r = check(&a, profil, &dims, &FichiersPoses::default());
-        let coupe: Vec<&Defaut> = r.defauts.iter().filter(|d| d.regle == "objet_coupe").collect();
+        let coupe: Vec<&Defaut> = r
+            .defauts
+            .iter()
+            .filter(|d| d.regle == "objet_coupe")
+            .collect();
         assert_eq!(coupe.len(), 1, "défauts : {:?}", r.defauts);
         assert!(coupe[0].bloquant);
         assert_eq!(coupe[0].planche, Some(1));
@@ -1893,18 +2138,29 @@ mod tests {
         // À cheval sur le pli.
         a.spreads[0].objets = vec![bloc(g.media_w / 2.0 - 20.0, 60.0)];
         let r = check(&a, profil, &dims, &FichiersPoses::default());
-        let pli: Vec<&Defaut> = r.defauts.iter().filter(|d| d.regle == "objet_pli").collect();
+        let pli: Vec<&Defaut> = r
+            .defauts
+            .iter()
+            .filter(|d| d.regle == "objet_pli")
+            .collect();
         assert_eq!(pli.len(), 1, "défauts : {:?}", r.defauts);
         assert!(pli[0].bloquant);
         assert!(!r.ok);
 
         // Et l'angle compte : droit il s'arrête 5 mm avant le pli, tourné son
         // coin le passe de 10. C'est la scène qui le dit, pas la boîte.
-        let frole = Objet { w: 40.0, h: 60.0, ..bloc(g.media_w / 2.0 - 45.0, 60.0) };
+        let frole = Objet {
+            w: 40.0,
+            h: 60.0,
+            ..bloc(g.media_w / 2.0 - 45.0, 60.0)
+        };
         a.spreads[0].objets = vec![frole.clone()];
         let droit = check(&a, profil, &dims, &FichiersPoses::default());
         assert!(droit.ok, "droit il ne touche rien : {:?}", droit.defauts);
-        a.spreads[0].objets = vec![Objet { angle: 45.0, ..frole }];
+        a.spreads[0].objets = vec![Objet {
+            angle: 45.0,
+            ..frole
+        }];
         let r = check(&a, profil, &dims, &FichiersPoses::default());
         assert!(
             r.defauts.iter().any(|d| d.regle == "objet_pli"),
@@ -1923,11 +2179,21 @@ mod tests {
             .map(|i| (format!("{i}.jpg"), (5000u32, 5000u32)))
             .collect();
 
-        let r = check(&a, PrinterProfile::par_id("generique").unwrap(), &dims, &FichiersPoses::default());
+        let r = check(
+            &a,
+            PrinterProfile::par_id("generique").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
         assert!(r.ok, "défauts : {:?}", r.defauts);
         assert_eq!(r.bloquants, 0);
 
-        let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &FichiersPoses::default());
+        let r = check(
+            &a,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
         assert!(r.ok, "défauts : {:?}", r.defauts);
         assert_eq!(r.bloquants, 0);
         // The spine is no longer announced: Cloudprinter wrote its bulk down,
@@ -1939,7 +2205,9 @@ mod tests {
         assert_eq!(r.avertissements, 0, "{:?}", r.defauts);
         assert!(r.fiche.dos_mm.unwrap() > 0.0);
         assert!(
-            r.reserves.iter().any(|s| s.contains("varient d'un imprimeur")),
+            r.reserves
+                .iter()
+                .any(|s| s.contains("varient d'un imprimeur")),
             "la variance entre sites a quitté le rapport : {:?}",
             r.reserves
         );
@@ -1966,17 +2234,35 @@ mod tests {
         // whoever binds it that way — so it now passes clean. That is the
         // profile going from unusable to deliverable without a number of its
         // own moving.
-        let r = check(&a, PrinterProfile::par_id("prodigi").unwrap(), &dims, &FichiersPoses::default());
+        let r = check(
+            &a,
+            PrinterProfile::par_id("prodigi").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
         assert!(r.ok, "{:?}", r.defauts);
         assert_eq!(r.bloquants, 0, "{:?}", r.defauts);
 
         // Cloudprinter wants 3 mm of bleed we did not render: blocked.
-        let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &FichiersPoses::default());
+        let r = check(
+            &a,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
         assert!(!r.ok);
-        assert!(r.defauts.iter().any(|d| d.regle == "fond_perdu" && d.bloquant));
+        assert!(r
+            .defauts
+            .iter()
+            .any(|d| d.regle == "fond_perdu" && d.bloquant));
 
         // Lulu wants CMYK, which we do not produce, and 32 pages minimum.
-        let r = check(&a, PrinterProfile::par_id("lulu").unwrap(), &dims, &FichiersPoses::default());
+        let r = check(
+            &a,
+            PrinterProfile::par_id("lulu").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
         assert!(!r.ok);
         assert!(r.defauts.iter().any(|d| d.regle == "espace"));
         assert!(r.defauts.iter().any(|d| d.regle == "pagination"));
@@ -2003,7 +2289,12 @@ mod tests {
 
         // Cloudprinter binds the cover separately, so 22 stays 22, under its
         // own minimum of 24.
-        let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &FichiersPoses::default());
+        let r = check(
+            &a,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
         let d = r.defauts.iter().find(|d| d.regle == "pagination").unwrap();
         assert!(d.cause.contains("22 pages"), "{}", d.cause);
     }
@@ -2015,19 +2306,21 @@ mod tests {
     #[test]
     fn la_quatrieme_se_juge_sur_sa_page() {
         use crate::model::{PhotoQuatrieme, PositionQuatrieme, Slot, TailleQuatrieme};
-        let mut dims: HashMap<String, (u32, u32)> =
-            (0..24).map(|i| (format!("{i}.jpg"), (5000u32, 5000u32))).collect();
+        let mut dims: HashMap<String, (u32, u32)> = (0..24)
+            .map(|i| (format!("{i}.jpg"), (5000u32, 5000u32)))
+            .collect();
         dims.insert("couverture.jpg".into(), (6000, 6000));
         dims.insert("dos.jpg".into(), (3000, 3000));
         let cp = PrinterProfile::par_id("cloudprinter").unwrap();
-        let regles_avec = |a: &Album, dims: &HashMap<String, (u32, u32)>| -> Vec<(&'static str, bool)> {
-            check(a, cp, dims, &FichiersPoses::default())
-                .defauts
-                .into_iter()
-                .filter(|d| d.regle.starts_with("quatrieme_"))
-                .map(|d| (d.regle, d.bloquant))
-                .collect()
-        };
+        let regles_avec =
+            |a: &Album, dims: &HashMap<String, (u32, u32)>| -> Vec<(&'static str, bool)> {
+                check(a, cp, dims, &FichiersPoses::default())
+                    .defauts
+                    .into_iter()
+                    .filter(|d| d.regle.starts_with("quatrieme_"))
+                    .map(|d| (d.regle, d.bloquant))
+                    .collect()
+            };
         let regles = |a: &Album| regles_avec(a, &dims);
         let mut a = album_de(24, 3.0);
         let c = a.cover.as_mut().unwrap();
@@ -2050,17 +2343,33 @@ mod tests {
         // plus étroit que la page.
         c.back_text = "M".repeat(75);
         let largeur = crate::font::text_width_mm(&c.back_text, cover::taille_quatrieme(c, 210.0));
-        assert!(largeur > 210.0 - 2.0 * cp.safe_mm && largeur < 210.0, "{largeur}");
+        assert!(
+            largeur > 210.0 - 2.0 * cp.safe_mm && largeur < 210.0,
+            "{largeur}"
+        );
         assert_eq!(regles(&mot), vec![("quatrieme_zone_sure", false)]);
 
         let mut flou = a.clone();
         let mut petites = dims.clone();
         petites.insert("dos.jpg".into(), (800, 800));
-        assert_eq!(regles_avec(&flou, &petites), vec![("quatrieme_resolution", true)]);
+        assert_eq!(
+            regles_avec(&flou, &petites),
+            vec![("quatrieme_resolution", true)]
+        );
         // Un cadre plus petit demande moins de pixels.
-        flou.cover.as_mut().unwrap().back_photo.as_mut().unwrap().taille = TailleQuatrieme::Petite;
+        flou.cover
+            .as_mut()
+            .unwrap()
+            .back_photo
+            .as_mut()
+            .unwrap()
+            .taille = TailleQuatrieme::Petite;
         petites.insert("dos.jpg".into(), (1200, 1200));
-        assert!(regles_avec(&flou, &petites).is_empty(), "{:?}", regles_avec(&flou, &petites));
+        assert!(
+            regles_avec(&flou, &petites).is_empty(),
+            "{:?}",
+            regles_avec(&flou, &petites)
+        );
     }
 
     /// An odd page count cannot be bound, and the message says so in words.
@@ -2068,7 +2377,12 @@ mod tests {
     fn pagination_is_named_in_words() {
         let mut a = album_de(11, 3.0); // 22 pages, under the minimum of 24
         a.bleed_mm = 3.0;
-        let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &HashMap::new(), &FichiersPoses::default());
+        let r = check(
+            &a,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &HashMap::new(),
+            &FichiersPoses::default(),
+        );
         let d = r.defauts.iter().find(|d| d.regle == "pagination").unwrap();
         assert!(d.cause.contains("22 pages"), "{}", d.cause);
         assert!(!d.cause.contains("ERR"), "aucun code dans le message");
@@ -2089,7 +2403,11 @@ mod tests {
         // 400 spreads = 800 pages, exactly the bound: nothing to report.
         let a = album_de(400, 3.0);
         let r = check(&a, pr, &dims, &FichiersPoses::default());
-        assert!(!r.defauts.iter().any(|d| d.regle == "pagination"), "{:?}", r.defauts);
+        assert!(
+            !r.defauts.iter().any(|d| d.regle == "pagination"),
+            "{:?}",
+            r.defauts
+        );
 
         // The colophon page makes 802, and the remedy says which page to drop.
         let mut avec = a.clone();
@@ -2127,7 +2445,10 @@ mod tests {
             compose_le: chrono::NaiveDate::from_ymd_opt(2026, 8, 17).unwrap(),
             carte: false,
         };
-        garde.spreads.insert(0, crate::garde::spread("Corse", &f, 190.0, crate::langue::Langue::Fr));
+        garde.spreads.insert(
+            0,
+            crate::garde::spread("Corse", &f, 190.0, crate::langue::Langue::Fr),
+        );
         let d = check(&garde, pr, &dims, &FichiersPoses::default())
             .defauts
             .into_iter()
@@ -2151,14 +2472,20 @@ mod tests {
     #[test]
     fn sous_le_plancher_le_remede_allonge_le_livre() {
         let pr = PrinterProfile::par_id("cloudprinter").unwrap();
-        let d = check(&album_de(11, 3.0), pr, &HashMap::new(), &FichiersPoses::default())
-            .defauts
-            .into_iter()
-            .find(|d| d.regle == "pagination")
-            .expect("22 pages, sous les 24 de Cloudprinter");
+        let d = check(
+            &album_de(11, 3.0),
+            pr,
+            &HashMap::new(),
+            &FichiersPoses::default(),
+        )
+        .defauts
+        .into_iter()
+        .find(|d| d.regle == "pagination")
+        .expect("22 pages, sous les 24 de Cloudprinter");
         assert!(d.bloquant);
         assert!(
-            d.remede.starts_with("ajoutez des planches ou choisissez un rythme plus aéré"),
+            d.remede
+                .starts_with("ajoutez des planches ou choisissez un rythme plus aéré"),
             "{}",
             d.remede
         );
@@ -2201,7 +2528,9 @@ mod tests {
         let d = vide(&titree, cp);
         assert_eq!(d.len(), 1, "{d:?}");
         assert!(d[0].bloquant);
-        assert!(d[0].cause.starts_with("la couverture n'a pas de photo, elle sortirait blanche"));
+        assert!(d[0]
+            .cause
+            .starts_with("la couverture n'a pas de photo, elle sortirait blanche"));
         assert!(!d[0].cause.contains("nom du dossier"), "{}", d[0].cause);
 
         // Avec une photo, rien.
@@ -2214,7 +2543,10 @@ mod tests {
             assert!(vide(&sans, p).is_empty(), "{id}");
         }
         // Lulu relie deux fichiers, comme Cloudprinter.
-        assert_eq!(vide(&sans, PrinterProfile::par_id("lulu").unwrap()).len(), 1);
+        assert_eq!(
+            vide(&sans, PrinterProfile::par_id("lulu").unwrap()).len(),
+            1
+        );
     }
 
     /// A small original in a full-page cell is caught, and the finding names
@@ -2226,14 +2558,22 @@ mod tests {
             .map(|i| (format!("{i}.jpg"), (5000u32, 5000u32)))
             .collect();
         dims.insert("3.jpg".into(), (600, 600)); // far under print need
-        let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &FichiersPoses::default());
+        let r = check(
+            &a,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
         let d = r.defauts.iter().find(|d| d.regle == "resolution").unwrap();
         assert_eq!(d.planche, Some(4));
         assert_eq!(d.src.as_deref(), Some("3.jpg"));
         assert!(d.cause.contains("ppi"), "{}", d.cause);
         // Vrai pour la CLI comme pour l'app : retirer marche toujours, même
         // quand aucune case n'est assez petite pour cet original.
-        assert_eq!(d.remede, "mettez-la dans une case plus petite, remplacez-la, ou retirez-la");
+        assert_eq!(
+            d.remede,
+            "mettez-la dans une case plus petite, remplacez-la, ou retirez-la"
+        );
         // 1.1-c : à vous de voir, pas un refus de l'imprimeur.
         assert!(!d.bloquant);
         assert!(r.ok, "{:?}", r.defauts);
@@ -2252,7 +2592,9 @@ mod tests {
         a.spreads[0].template = "solo_verso".into();
         // Planche 8 : un duo, une photo par page, 14 et 15.
         a.spreads[7].template = "duo".into();
-        a.spreads[7].slots.push(Slot::new("7b.jpg".into(), [0.5, 0.5]));
+        a.spreads[7]
+            .slots
+            .push(Slot::new("7b.jpg".into(), [0.5, 0.5]));
         let mut dims = dims_de(12);
         for src in ["3.jpg", "5.jpg", "0.jpg", "7.jpg", "7b.jpg"] {
             dims.insert(src.into(), (600, 600));
@@ -2261,22 +2603,40 @@ mod tests {
         let r = check(&a, cp, &dims, &FichiersPoses::default());
         // La seule chose refusée est la photo de la moitié gauche de la
         // planche 1, et pour l'imposition, pas pour sa résolution.
-        let refus: Vec<&str> = r.defauts.iter().filter(|d| d.bloquant).map(|d| d.regle).collect();
+        let refus: Vec<&str> = r
+            .defauts
+            .iter()
+            .filter(|d| d.bloquant)
+            .map(|d| d.regle)
+            .collect();
         assert_eq!(refus, vec!["imposition"]);
-        let res: Vec<&Defaut> = r.defauts.iter().filter(|d| d.regle == "resolution").collect();
+        let res: Vec<&Defaut> = r
+            .defauts
+            .iter()
+            .filter(|d| d.regle == "resolution")
+            .collect();
         assert_eq!(res.len(), 5, "la planche 1 se dit aussi : {res:?}");
         assert!(res.iter().all(|d| !d.bloquant));
-        let pages: Vec<(QuelFichier, u32)> = r.acquittement.iter().map(|p| (p.fichier, p.page)).collect();
+        let pages: Vec<(QuelFichier, u32)> =
+            r.acquittement.iter().map(|p| (p.fichier, p.page)).collect();
         let i = QuelFichier::Interieur;
         assert_eq!(pages, vec![(i, 7), (i, 10), (i, 14), (i, 15)]);
         for p in &r.acquittement {
             assert!(p.ppi >= 1 && p.ppi < 250, "{p:?}");
         }
         // Le ppi est celui du moteur, arrondi vers le bas.
-        let d = res.iter().find(|d| d.src.as_deref() == Some("3.jpg")).unwrap();
+        let d = res
+            .iter()
+            .find(|d| d.src.as_deref() == Some("3.jpg"))
+            .unwrap();
         let entier: u32 = d.phrase.valeurs["ppi"].parse().unwrap();
         let p7 = r.acquittement.iter().find(|p| p.page == 7).unwrap();
-        assert!(p7.ppi == entier || p7.ppi + 1 == entier, "{} / {}", p7.ppi, entier);
+        assert!(
+            p7.ppi == entier || p7.ppi + 1 == entier,
+            "{} / {}",
+            p7.ppi,
+            entier
+        );
     }
 
     /// Deux photos sur une même page : une seule entrée, la plus basse ; un
@@ -2286,11 +2646,29 @@ mod tests {
         let i = QuelFichier::Interieur;
         let c = QuelFichier::Couverture;
         let v = pages_sous_seuil(
-            vec![(c, 1, 120.4), (i, 9, 201.9), (i, 3, 180.0), (i, 9, 187.2), (i, 0, 90.0), (i, 4, 249.99), (i, 5, 0.3)],
+            vec![
+                (c, 1, 120.4),
+                (i, 9, 201.9),
+                (i, 3, 180.0),
+                (i, 9, 187.2),
+                (i, 0, 90.0),
+                (i, 4, 249.99),
+                (i, 5, 0.3),
+            ],
             250.0,
         );
-        let t: Vec<(QuelFichier, u32, u32)> = v.iter().map(|p| (p.fichier, p.page, p.ppi)).collect();
-        assert_eq!(t, vec![(i, 3, 180), (i, 4, 249), (i, 5, 1), (i, 9, 187), (c, 1, 120)]);
+        let t: Vec<(QuelFichier, u32, u32)> =
+            v.iter().map(|p| (p.fichier, p.page, p.ppi)).collect();
+        assert_eq!(
+            t,
+            vec![
+                (i, 3, 180),
+                (i, 4, 249),
+                (i, 5, 1),
+                (i, 9, 187),
+                (c, 1, 120)
+            ]
+        );
     }
 
     /// La couverture sous le seuil est à vous de voir aussi, en page 1 de son
@@ -2300,17 +2678,36 @@ mod tests {
         let a = album_de(24, 3.0);
         let mut dims = dims_de(24);
         dims.insert("couverture.jpg".into(), (1200, 1200));
-        let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &FichiersPoses::default());
-        let d = r.defauts.iter().find(|d| d.regle == "couverture_resolution").unwrap();
+        let r = check(
+            &a,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
+        let d = r
+            .defauts
+            .iter()
+            .find(|d| d.regle == "couverture_resolution")
+            .unwrap();
         assert!(!d.bloquant);
         assert!(r.ok, "{:?}", r.defauts);
         assert_eq!(r.acquittement.len(), 1);
-        assert_eq!((r.acquittement[0].fichier, r.acquittement[0].page), (QuelFichier::Couverture, 1));
+        assert_eq!(
+            (r.acquittement[0].fichier, r.acquittement[0].page),
+            (QuelFichier::Couverture, 1)
+        );
         // Sérialisé : absent quand vide, présent sinon, sans aucun nom de fichier.
         let json = serde_json::to_string(&r.acquittement).unwrap();
         assert!(!json.contains("couverture.jpg"), "{json}");
-        let propre = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims_de(24), &FichiersPoses::default());
-        assert!(!serde_json::to_string(&propre).unwrap().contains("acquittement"));
+        let propre = check(
+            &a,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &dims_de(24),
+            &FichiersPoses::default(),
+        );
+        assert!(!serde_json::to_string(&propre)
+            .unwrap()
+            .contains("acquittement"));
     }
 
     /// Ce que l'imprimeur refuse grise toujours, résolution ou pas.
@@ -2324,7 +2721,12 @@ mod tests {
         a.trim_mm = Size { w: 280.0, h: 210.0 };
         let mut dims = dims_de(12);
         dims.insert("3.jpg".into(), (600, 600));
-        let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &FichiersPoses::default());
+        let r = check(
+            &a,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
         assert!(!r.ok, "le format sans produit reste refusé");
     }
 
@@ -2333,7 +2735,12 @@ mod tests {
     #[test]
     fn unreachable_photos_are_said_out_loud() {
         let a = album_de(12, 3.0);
-        let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &HashMap::new(), &FichiersPoses::default());
+        let r = check(
+            &a,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &HashMap::new(),
+            &FichiersPoses::default(),
+        );
         assert!(r.notes.iter().any(|n| n.contains("résolution")));
     }
 
@@ -2348,13 +2755,25 @@ mod tests {
             .map(|i| (format!("{i}.jpg"), (5000u32, 5000u32)))
             .collect();
 
-        let r = check(&a, PrinterProfile::par_id("prodigi").unwrap(), &dims, &FichiersPoses::default());
+        let r = check(
+            &a,
+            PrinterProfile::par_id("prodigi").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
         assert_eq!(
-            r.defauts.iter().any(|d| d.regle == "conformite" && d.bloquant),
+            r.defauts
+                .iter()
+                .any(|d| d.regle == "conformite" && d.bloquant),
             !crate::pdf::EMITS_PDF_X
         );
 
-        let r = check(&a, PrinterProfile::par_id("generique").unwrap(), &dims, &FichiersPoses::default());
+        let r = check(
+            &a,
+            PrinterProfile::par_id("generique").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
         assert!(!r.defauts.iter().any(|d| d.regle == "conformite"));
     }
 
@@ -2384,13 +2803,15 @@ mod tests {
         let profil = PrinterProfile::par_id("cloudprinter").unwrap();
 
         let avant = check(&a, profil, &dims, &FichiersPoses::default());
-        assert!(!avant.defauts.is_empty(), "le cas doit avoir quelque chose à dire");
+        assert!(
+            !avant.defauts.is_empty(),
+            "le cas doit avoir quelque chose à dire"
+        );
 
         // Vers le paysage A4, que Cloudprinter imprime : un 28 × 21 n'a pas de
         // produit chez lui, et `format_sans_produit` y ajouterait un défaut
         // qui ne vient pas de la bascule mais du format visé.
-        let (basculee, _) =
-            crate::bascule::bascule(&a, Size { w: 297.0, h: 210.0 }, &dims, profil);
+        let (basculee, _) = crate::bascule::bascule(&a, Size { w: 297.0, h: 210.0 }, &dims, profil);
         let apres = check(&basculee, profil, &dims, &FichiersPoses::default());
 
         // Same defects, matched by what they are and where they are.
@@ -2441,8 +2862,17 @@ mod tests {
             .collect();
 
         // Prodigi garde 10 mm, la légende passe à 7 : il le dit, et il livre.
-        let r = check(&a, PrinterProfile::par_id("prodigi").unwrap(), &dims, &FichiersPoses::default());
-        let zs: Vec<&Defaut> = r.defauts.iter().filter(|d| d.regle == "zone_sure").collect();
+        let r = check(
+            &a,
+            PrinterProfile::par_id("prodigi").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
+        let zs: Vec<&Defaut> = r
+            .defauts
+            .iter()
+            .filter(|d| d.regle == "zone_sure")
+            .collect();
         assert_eq!(zs.len(), 23, "une par planche légendée : {:?}", r.defauts);
         assert!(zs.iter().all(|d| !d.bloquant));
         assert!(r.ok, "un album légendé reste livrable : {:?}", r.defauts);
@@ -2458,8 +2888,17 @@ mod tests {
         // Cloudprinter porte enfin son vrai chiffre, et la légende tombe
         // exactement dessus : 7,00 mm contre 7,0 demandés, sur un format dont
         // la marge fait 14. Rien à dire, et rien qui ait été tu.
-        let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &FichiersPoses::default());
-        assert!(!r.defauts.iter().any(|d| d.regle == "zone_sure"), "{:?}", r.defauts);
+        let r = check(
+            &a,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
+        assert!(
+            !r.defauts.iter().any(|d| d.regle == "zone_sure"),
+            "{:?}",
+            r.defauts
+        );
     }
 
     /// Une légende de photo se mesure à sa propre ligne de base, plus à
@@ -2485,12 +2924,24 @@ mod tests {
             })
             .expect("la mention s'imprime sous la case");
         let d = distance_au_rognage(at.x, at.y, &g, a.bleed_mm);
-        assert!((d - 7.0).abs() > 0.5, "la case n'est pas l'ancre du chapitre : {d}");
+        assert!(
+            (d - 7.0).abs() > 0.5,
+            "la case n'est pas l'ancre du chapitre : {d}"
+        );
 
         let lulu = PrinterProfile::par_id("lulu").unwrap();
         let r = check(&a, lulu, &dims, &FichiersPoses::default());
-        let zs: Vec<&Defaut> = r.defauts.iter().filter(|d| d.regle == "zone_sure").collect();
-        assert_eq!(zs.len(), usize::from(d < lulu.safe_mm) * 23, "{:?}", r.defauts);
+        let zs: Vec<&Defaut> = r
+            .defauts
+            .iter()
+            .filter(|d| d.regle == "zone_sure")
+            .collect();
+        assert_eq!(
+            zs.len(),
+            usize::from(d < lulu.safe_mm) * 23,
+            "{:?}",
+            r.defauts
+        );
         if let Some(z) = zs.first() {
             assert!(z.cause.contains(&format!("{d:.1} mm")), "{}", z.cause);
         }
@@ -2538,16 +2989,23 @@ mod tests {
         dims.insert("couv.jpg".into(), (2100, 2300));
         let d = couv(&check(&a, cp, &dims, &FichiersPoses::default())).expect("le cartonné refuse");
         assert!(d.contains("239 × 258"), "{d}");
-        assert!(check(&a, cp, &dims, &FichiersPoses::default()).defauts.iter().any(|d| d.regle
-            == "couverture_resolution"
-            && !d.bloquant));
+        assert!(check(&a, cp, &dims, &FichiersPoses::default())
+            .defauts
+            .iter()
+            .any(|d| d.regle == "couverture_resolution" && !d.bloquant));
 
         // Et la surface exacte est celle du fournisseur, pas une moyenne :
         // 2200 px passent chez Prodigi et pas chez Cloudprinter, avec la même
         // photographie et le même album.
         dims.insert("couv.jpg".into(), (2200, 2400));
-        assert!(couv(&check(&a, cp, &dims, &FichiersPoses::default())).is_some(), "260 ppi sur 239 mm : non");
-        assert!(couv(&check(&a, pr, &dims, &FichiersPoses::default())).is_none(), "258 ppi sur 216 mm : oui");
+        assert!(
+            couv(&check(&a, cp, &dims, &FichiersPoses::default())).is_some(),
+            "260 ppi sur 239 mm : non"
+        );
+        assert!(
+            couv(&check(&a, pr, &dims, &FichiersPoses::default())).is_none(),
+            "258 ppi sur 216 mm : oui"
+        );
 
         // Une couverture sans photo ne se mesure pas, et un album sans
         // couverture non plus.
@@ -2582,8 +3040,17 @@ mod tests {
 
         // Et la question ne se pose pas chez qui fabrique son dos lui-même :
         // il n'y a pas de feuille à plat à décrire.
-        let r = check(&album_de(12, 0.0), PrinterProfile::par_id("prodigi").unwrap(), &dims, &FichiersPoses::default());
-        assert!(!r.defauts.iter().any(|d| d.regle == "dos_nu"), "{:?}", r.defauts);
+        let r = check(
+            &album_de(12, 0.0),
+            PrinterProfile::par_id("prodigi").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
+        assert!(
+            !r.defauts.iter().any(|d| d.regle == "dos_nu"),
+            "{:?}",
+            r.defauts
+        );
     }
 
     /// The spec sheet carries what a printer asks on the phone.
@@ -2593,7 +3060,12 @@ mod tests {
         let dims: HashMap<String, (u32, u32)> = (0..24)
             .map(|i| (format!("{i}.jpg"), (5000u32, 5000u32)))
             .collect();
-        let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &FichiersPoses::default());
+        let r = check(
+            &a,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
         let f = &r.fiche;
         assert_eq!(f.format_page_mm, [210.0, 210.0]);
         assert_eq!(f.pages_interieur, 48);
@@ -2606,10 +3078,18 @@ mod tests {
         let dos = f.dos_mm.unwrap();
         assert_eq!(
             f.feuille_couverture_mm,
-            Some([210.0 * 2.0 + dos + 5.0 * 2.0 + 24.0 * 2.0, 210.0 + 24.0 * 2.0])
+            Some([
+                210.0 * 2.0 + dos + 5.0 * 2.0 + 24.0 * 2.0,
+                210.0 + 24.0 * 2.0
+            ])
         );
         // Et personne ne la donne à qui fabrique la sienne.
-        let r = check(&a, PrinterProfile::par_id("prodigi").unwrap(), &dims, &FichiersPoses::default());
+        let r = check(
+            &a,
+            PrinterProfile::par_id("prodigi").unwrap(),
+            &dims,
+            &FichiersPoses::default(),
+        );
         assert_eq!(r.fiche.feuille_couverture_mm, None);
         // A provisional profile never travels without its reservations.
         assert!(!r.reserves.is_empty());
@@ -2638,8 +3118,16 @@ mod tests {
         // rien autour, là où le cartonné habille un carton.
         let mauvaise = cover::geometry(&a, gen);
         let bonne = cover::geometry(&a, cp);
-        assert!((mauvaise.media_w - 426.0).abs() < 0.01, "{}", mauvaise.media_w);
-        assert!((mauvaise.media_h - 216.0).abs() < 0.01, "{}", mauvaise.media_h);
+        assert!(
+            (mauvaise.media_w - 426.0).abs() < 0.01,
+            "{}",
+            mauvaise.media_w
+        );
+        assert!(
+            (mauvaise.media_h - 216.0).abs() < 0.01,
+            "{}",
+            mauvaise.media_h
+        );
         assert!((bonne.media_w - 490.48).abs() < 0.01, "{}", bonne.media_w);
         assert!((bonne.media_h - 258.0).abs() < 0.01, "{}", bonne.media_h);
 
@@ -2649,8 +3137,11 @@ mod tests {
             couverture: pose(vec![[mauvaise.media_w, mauvaise.media_h]]),
         };
         let r = check(&a, cp, &dims, &poses);
-        let d: Vec<&Defaut> =
-            r.defauts.iter().filter(|d| d.regle == "fichier_couverture").collect();
+        let d: Vec<&Defaut> = r
+            .defauts
+            .iter()
+            .filter(|d| d.regle == "fichier_couverture")
+            .collect();
         assert_eq!(d.len(), 1, "défauts : {:?}", r.defauts);
         assert!(d[0].bloquant);
         assert!(!r.ok);
@@ -2659,7 +3150,11 @@ mod tests {
         assert!(d[0].cause.contains("426.00 × 216.00"), "{}", d[0].cause);
         assert!(d[0].cause.contains("490.48 × 258.00"), "{}", d[0].cause);
         // Et le remède nomme la commande qui répare.
-        assert!(d[0].remede.contains("--cover --profil cloudprinter"), "{}", d[0].remede);
+        assert!(
+            d[0].remede.contains("--cover --profil cloudprinter"),
+            "{}",
+            d[0].remede
+        );
 
         // La bonne feuille au même endroit : plus rien à dire.
         let poses = FichiersPoses {
@@ -2705,13 +3200,20 @@ mod tests {
 
         // Chez Cloudprinter, qui relie page par page, il en faut 96.
         let r = check(&a, cp, &dims, &doubles);
-        let d: Vec<&Defaut> =
-            r.defauts.iter().filter(|d| d.regle == "fichier_interieur").collect();
+        let d: Vec<&Defaut> = r
+            .defauts
+            .iter()
+            .filter(|d| d.regle == "fichier_interieur")
+            .collect();
         assert_eq!(d.len(), 1, "défauts : {:?}", r.defauts);
         assert!(d[0].bloquant);
         assert!(d[0].cause.contains("48 page"), "{}", d[0].cause);
         assert!(d[0].cause.contains("96"), "{}", d[0].cause);
-        assert!(d[0].remede.contains("--print --profil cloudprinter"), "{}", d[0].remede);
+        assert!(
+            d[0].remede.contains("--print --profil cloudprinter"),
+            "{}",
+            d[0].remede
+        );
 
         // Chez Lulu, le même fichier de 48 pages est le bon, alors même que sa
         // fiche en déclare 96 à la commande.
@@ -2746,9 +3248,16 @@ mod tests {
             &a,
             cp,
             &dims,
-            &FichiersPoses { interieur: pose(pages), ..Default::default() },
+            &FichiersPoses {
+                interieur: pose(pages),
+                ..Default::default()
+            },
         );
-        let d = r.defauts.iter().find(|d| d.regle == "fichier_interieur").unwrap();
+        let d = r
+            .defauts
+            .iter()
+            .find(|d| d.regle == "fichier_interieur")
+            .unwrap();
         assert!(d.bloquant);
         assert!(d.cause.contains("page 41"), "{}", d.cause);
     }
@@ -2791,7 +3300,10 @@ mod tests {
             &a,
             pr,
             &dims,
-            &FichiersPoses { interieur: pose(pages), ..Default::default() },
+            &FichiersPoses {
+                interieur: pose(pages),
+                ..Default::default()
+            },
         );
         assert_eq!(r.fiche.pages_fichier, 50);
         assert!(
@@ -2814,8 +3326,8 @@ mod tests {
     /// que ce soit passerait pour juste.
     #[test]
     fn l_apercu_de_la_couverture_n_est_jamais_juge() {
-        let dir = std::env::temp_dir()
-            .join(format!("colophon-prevol-apercu-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("colophon-prevol-apercu-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
 
@@ -2843,12 +3355,22 @@ mod tests {
         fs::rename(&apercu, dir.join("album-cover.pdf")).unwrap();
         let poses = FichiersPoses::lire(&dir);
         assert!(
-            matches!(&poses.couverture, Some(Pose { lecture: Lecture::Pages(_), .. })),
+            matches!(
+                &poses.couverture,
+                Some(Pose {
+                    lecture: Lecture::Pages(_),
+                    ..
+                })
+            ),
             "{:?}",
             poses.couverture
         );
         let r = check(&a, cp, &dims, &poses);
-        let d = r.defauts.iter().find(|d| d.regle == "fichier_couverture").unwrap();
+        let d = r
+            .defauts
+            .iter()
+            .find(|d| d.regle == "fichier_couverture")
+            .unwrap();
         assert!(d.bloquant);
         assert!(d.cause.contains("999.00"), "{}", d.cause);
 
@@ -2908,7 +3430,9 @@ mod tests {
     }
 
     fn dims_de(n: usize) -> HashMap<String, (u32, u32)> {
-        (0..n).map(|i| (format!("{i}.jpg"), (5000u32, 5000u32))).collect()
+        (0..n)
+            .map(|i| (format!("{i}.jpg"), (5000u32, 5000u32)))
+            .collect()
     }
 
     /// Le fichier a la bonne géométrie et sort du mauvais imprimeur.
@@ -2940,14 +3464,22 @@ mod tests {
             "{:?}",
             r.defauts
         );
-        let d: Vec<&Defaut> = r.defauts.iter().filter(|d| d.regle == "fichier_profil").collect();
+        let d: Vec<&Defaut> = r
+            .defauts
+            .iter()
+            .filter(|d| d.regle == "fichier_profil")
+            .collect();
         assert_eq!(d.len(), 1, "défauts : {:?}", r.defauts);
         assert!(d[0].bloquant);
         assert!(!r.ok);
         // Les deux noms, sinon personne ne sait lequel des deux refaire.
         assert!(d[0].cause.contains("generique"), "{}", d[0].cause);
         assert!(d[0].cause.contains("cloudprinter"), "{}", d[0].cause);
-        assert!(d[0].remede.contains("--print --profil cloudprinter"), "{}", d[0].remede);
+        assert!(
+            d[0].remede.contains("--print --profil cloudprinter"),
+            "{}",
+            d[0].remede
+        );
 
         // Le manifeste qui dit vrai : plus rien.
         let poses = FichiersPoses {
@@ -2995,7 +3527,10 @@ mod tests {
         apres.spreads[3].slots[0].caption = Some("Bonifacio, le matin".into());
 
         let poses = FichiersPoses {
-            interieur: Some(Pose { lecture: Lecture::Pages(pages.clone()), octets: 4242 }),
+            interieur: Some(Pose {
+                lecture: Lecture::Pages(pages.clone()),
+                octets: 4242,
+            }),
             couverture: None,
             manifeste: note(LIVRAISON_INTERIEUR, "cloudprinter", &empreinte, 4242),
         };
@@ -3005,7 +3540,11 @@ mod tests {
             "une légende ne déplace aucun MediaBox : {:?}",
             r.defauts
         );
-        let d: Vec<&Defaut> = r.defauts.iter().filter(|d| d.regle == "fichier_perime").collect();
+        let d: Vec<&Defaut> = r
+            .defauts
+            .iter()
+            .filter(|d| d.regle == "fichier_perime")
+            .collect();
         assert_eq!(d.len(), 1, "défauts : {:?}", r.defauts);
         assert!(d[0].bloquant);
         assert!(!r.ok);
@@ -3016,7 +3555,11 @@ mod tests {
             "{}",
             d[0].cause
         );
-        assert!(d[0].remede.contains("--print --profil cloudprinter"), "{}", d[0].remede);
+        assert!(
+            d[0].remede.contains("--print --profil cloudprinter"),
+            "{}",
+            d[0].remede
+        );
 
         // Le même album, non retouché : le manifeste dit vrai et se tait.
         let r = check(&a, cp, &dims, &poses);
@@ -3025,14 +3568,25 @@ mod tests {
         // Un fichier remplacé depuis le rendu : la taille suffit à le dire, et
         // c'est tout ce que `octets` est là pour attraper.
         let poses = FichiersPoses {
-            interieur: Some(Pose { lecture: Lecture::Pages(pages), octets: 4243 }),
+            interieur: Some(Pose {
+                lecture: Lecture::Pages(pages),
+                octets: 4243,
+            }),
             couverture: None,
             manifeste: note(LIVRAISON_INTERIEUR, "cloudprinter", &empreinte, 4242),
         };
         let r = check(&a, cp, &dims, &poses);
-        let d = r.defauts.iter().find(|d| d.regle == "fichier_perime").unwrap();
+        let d = r
+            .defauts
+            .iter()
+            .find(|d| d.regle == "fichier_perime")
+            .unwrap();
         assert!(d.bloquant);
-        assert!(d.cause.contains("4243") && d.cause.contains("4242"), "{}", d.cause);
+        assert!(
+            d.cause.contains("4243") && d.cause.contains("4242"),
+            "{}",
+            d.cause
+        );
 
         // Une entrée au manifeste sans le fichier qu'elle décrit ne dit rien :
         // il n'y a rien à envoyer, donc rien à refuser.
@@ -3067,10 +3621,18 @@ mod tests {
         };
 
         let r = check(&a, cp, &dims, &poses());
-        let d = r.defauts.iter().find(|d| d.regle == "fichier_profil").unwrap();
+        let d = r
+            .defauts
+            .iter()
+            .find(|d| d.regle == "fichier_profil")
+            .unwrap();
         assert!(d.bloquant);
         assert!(d.cause.contains(LIVRAISON_COUVERTURE), "{}", d.cause);
-        assert!(d.remede.contains("--cover --profil cloudprinter"), "{}", d.remede);
+        assert!(
+            d.remede.contains("--cover --profil cloudprinter"),
+            "{}",
+            d.remede
+        );
 
         // Chez Prodigi, la couverture voyage dans l'intérieur : ni la
         // géométrie ni le manifeste ne la jugent.
@@ -3087,8 +3649,8 @@ mod tests {
     /// clair est celle qui s'apprête à commander.
     #[test]
     fn un_fichier_illisible_se_dit_au_lieu_de_paniquer() {
-        let dir = std::env::temp_dir()
-            .join(format!("colophon-prevol-fichiers-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("colophon-prevol-fichiers-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
 
@@ -3096,10 +3658,20 @@ mod tests {
         let vide = FichiersPoses::lire(&dir);
         assert!(vide.interieur.is_none() && vide.couverture.is_none());
 
-        fs::write(dir.join("album-print.pdf"), b"%PDF-1.6\n%\xe2\xe3\xcf\xd3\n1 0 obj").unwrap();
+        fs::write(
+            dir.join("album-print.pdf"),
+            b"%PDF-1.6\n%\xe2\xe3\xcf\xd3\n1 0 obj",
+        )
+        .unwrap();
         let poses = FichiersPoses::lire(&dir);
         assert!(
-            matches!(&poses.interieur, Some(Pose { lecture: Lecture::Illisible(_), .. })),
+            matches!(
+                &poses.interieur,
+                Some(Pose {
+                    lecture: Lecture::Illisible(_),
+                    ..
+                })
+            ),
             "{:?}",
             poses.interieur
         );
@@ -3108,13 +3680,21 @@ mod tests {
         let dims: HashMap<String, (u32, u32)> = (0..24)
             .map(|i| (format!("{i}.jpg"), (5000u32, 5000u32)))
             .collect();
-        let r = check(&a, PrinterProfile::par_id("cloudprinter").unwrap(), &dims, &poses);
-        let d = r.defauts.iter().find(|d| d.regle == "fichier_interieur").unwrap();
+        let r = check(
+            &a,
+            PrinterProfile::par_id("cloudprinter").unwrap(),
+            &dims,
+            &poses,
+        );
+        let d = r
+            .defauts
+            .iter()
+            .find(|d| d.regle == "fichier_interieur")
+            .unwrap();
         assert!(d.bloquant);
         assert!(!r.ok);
         assert!(d.cause.contains("ne se lit pas"), "{}", d.cause);
 
         let _ = fs::remove_dir_all(&dir);
     }
-
 }

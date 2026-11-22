@@ -15,8 +15,17 @@ fn etape(nom: &str, jour: &str, code: Option<&str>, lat: f64, lon: f64, t: Optio
         debut: instant(&format!("{jour}T09:30:00Z")),
         fin: None,
         fuseau: "Europe/Paris".into(),
-        lieu: Lieu { lat, lon, localite: Some(nom.into()), pays: None, code_pays: code.map(String::from) },
-        meteo: t.map(|t| Meteo { condition: Some("rain".into()), temperature: Some(t) }),
+        lieu: Lieu {
+            lat,
+            lon,
+            localite: Some(nom.into()),
+            pays: None,
+            code_pays: code.map(String::from),
+        },
+        meteo: t.map(|t| Meteo {
+            condition: Some("rain".into()),
+            temperature: Some(t),
+        }),
         photos: vec![],
     }
 }
@@ -45,7 +54,11 @@ fn voyage() -> Voyage {
         trace: vec![],
         videos_ignorees: 0,
         couverture: None,
-        provenance: Provenance { source: "test".into(), reference: None, format: None },
+        provenance: Provenance {
+            source: "test".into(),
+            reference: None,
+            format: None,
+        },
     }
 }
 
@@ -69,7 +82,10 @@ fn la_distance_vient_de_la_source_sinon_de_la_somme_des_etapes() {
     assert!(!de_la_source);
     // Paris-Lyon-mer-… à vol d'oiseau : Paris-Lyon seul fait déjà 390 km.
     assert!(km > 1500.0 && km < 4000.0, "{km}");
-    assert!(texte(&v, Langue::Fr).contains(&format!("au moins {} km", groupes(km.round() as u64, Langue::Fr))));
+    assert!(texte(&v, Langue::Fr).contains(&format!(
+        "au moins {} km",
+        groupes(km.round() as u64, Langue::Fr)
+    )));
     // Zéro n'est pas une distance : la source qui dit 0 laisse la somme parler.
     v.distance_km = Some(0.0);
     assert!(!distance_km(&v).unwrap().1);
@@ -90,9 +106,15 @@ fn une_ligne_sans_son_chiffre_n_est_pas_ecrite() {
     v.etapes[0].lieu.code_pays = None;
     v.distance_km = None;
     let t = texte(&v, Langue::Fr);
-    assert_eq!(t, "Le voyage en chiffres\n\nLe 1 juin 2025\n1 jour\n1 étape", "{t}");
+    assert_eq!(
+        t, "Le voyage en chiffres\n\nLe 1 juin 2025\n1 jour\n1 étape",
+        "{t}"
+    );
     // Une seule température : « Température relevée », pas « de 3 à 3 ».
-    v.etapes[0].meteo = Some(Meteo { condition: None, temperature: Some(3.0) });
+    v.etapes[0].meteo = Some(Meteo {
+        condition: None,
+        temperature: Some(3.0),
+    });
     assert!(texte(&v, Langue::Fr).ends_with("Température relevée : 3 °C"));
 }
 
@@ -103,7 +125,10 @@ fn album_du_voyage(nom: &str) -> Album {
     ecrire(&d, &voyage()).unwrap();
     let mut a = Album::new("t", &d, crate::model::Size { w: 210.0, h: 210.0 });
     for t in ["vide", "colophon"] {
-        a.spreads.push(Spread { template: t.into(), ..Spread::vide() });
+        a.spreads.push(Spread {
+            template: t.into(),
+            ..Spread::vide()
+        });
     }
     a
 }
@@ -111,18 +136,34 @@ fn album_du_voyage(nom: &str) -> Album {
 #[test]
 fn la_page_se_coche_se_decoche_et_le_colophon_reste_le_dernier() {
     let mut a = album_du_voyage("coche");
-    assert!(!a.chiffres && !a.spreads.iter().any(est_la_page), "décochée par défaut");
+    assert!(
+        !a.chiffres && !a.spreads.iter().any(est_la_page),
+        "décochée par défaut"
+    );
 
     assert!(regler(&mut a, true, Langue::Fr));
     assert!(a.chiffres);
-    let rangs: Vec<usize> = a.spreads.iter().enumerate().filter(|(_, s)| est_la_page(s)).map(|(i, _)| i).collect();
+    let rangs: Vec<usize> = a
+        .spreads
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| est_la_page(s))
+        .map(|(i, _)| i)
+        .collect();
     assert_eq!(rangs, vec![1], "une seule page, avant le colophon");
-    assert_eq!(a.spreads.last().unwrap().template, crate::colophon::TEMPLATE);
+    assert_eq!(
+        a.spreads.last().unwrap().template,
+        crate::colophon::TEMPLATE
+    );
 
     // Cocher deux fois ne la double pas ; la changer de langue la récrit.
     regler(&mut a, true, Langue::En);
     assert_eq!(a.spreads.iter().filter(|s| est_la_page(s)).count(), 1);
-    assert!(a.spreads[1].text.as_deref().unwrap().starts_with("The trip in numbers"));
+    assert!(a.spreads[1]
+        .text
+        .as_deref()
+        .unwrap()
+        .starts_with("The trip in numbers"));
 
     assert!(regler(&mut a, false, Langue::Fr));
     assert!(!a.chiffres && !a.spreads.iter().any(est_la_page));
@@ -138,7 +179,10 @@ fn sans_voyage_json_rien_ne_change() {
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(&d).unwrap();
     let mut a = Album::new("t", &d, crate::model::Size { w: 210.0, h: 210.0 });
-    a.spreads.push(Spread { template: "colophon".into(), ..Spread::vide() });
+    a.spreads.push(Spread {
+        template: "colophon".into(),
+        ..Spread::vide()
+    });
     assert!(!regler(&mut a, true, Langue::Fr));
     assert!(!a.chiffres && a.spreads.len() == 1);
 }

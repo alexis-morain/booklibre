@@ -30,18 +30,38 @@ pub enum Langue {
 }
 
 const MOIS_FR: [&str; 12] = [
-    "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août",
-    "septembre", "octobre", "novembre", "décembre",
+    "janvier",
+    "février",
+    "mars",
+    "avril",
+    "mai",
+    "juin",
+    "juillet",
+    "août",
+    "septembre",
+    "octobre",
+    "novembre",
+    "décembre",
 ];
 
 const MONTHS_EN: [&str; 12] = [
-    "January", "February", "March", "April", "May", "June", "July", "August",
-    "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
 ];
 
 const MOIS_FR_COURTS: [&str; 12] = [
-    "janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.",
-    "nov.", "déc.",
+    "janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.",
+    "déc.",
 ];
 
 const MONTHS_EN_SHORT: [&str; 12] = [
@@ -68,7 +88,9 @@ impl Langue {
         let (fr, en) = match code.trim().to_ascii_lowercase().as_str() {
             "clear-day" => ("ensoleillé", "sunny"),
             "clear-night" => ("nuit claire", "clear night"),
-            "partly-cloudy-day" | "partly-cloudy-night" => ("partiellement nuageux", "partly cloudy"),
+            "partly-cloudy-day" | "partly-cloudy-night" => {
+                ("partiellement nuageux", "partly cloudy")
+            }
             "cloudy" => ("nuageux", "cloudy"),
             "rain" => ("pluie", "rain"),
             "thunderstorm" => ("orage", "thunderstorm"),
@@ -209,19 +231,23 @@ mod tests {
     fn la_periode_en_anglais() {
         let en = Langue::En;
         assert_eq!(
-            en.periode(Some(j(2013, 10, 27)), Some(j(2013, 11, 3))).as_deref(),
+            en.periode(Some(j(2013, 10, 27)), Some(j(2013, 11, 3)))
+                .as_deref(),
             Some("from 27 October to 3 November 2013")
         );
         assert_eq!(
-            en.periode(Some(j(2013, 10, 21)), Some(j(2013, 10, 29))).as_deref(),
+            en.periode(Some(j(2013, 10, 21)), Some(j(2013, 10, 29)))
+                .as_deref(),
             Some("from 21 to 29 October 2013")
         );
         assert_eq!(
-            en.periode(Some(j(2013, 12, 29)), Some(j(2014, 1, 2))).as_deref(),
+            en.periode(Some(j(2013, 12, 29)), Some(j(2014, 1, 2)))
+                .as_deref(),
             Some("from 29 December 2013 to 2 January 2014")
         );
         assert_eq!(
-            en.periode(Some(j(2013, 10, 21)), Some(j(2013, 10, 21))).as_deref(),
+            en.periode(Some(j(2013, 10, 21)), Some(j(2013, 10, 21)))
+                .as_deref(),
             Some("on 21 October 2013")
         );
         assert_eq!(en.periode(None, Some(j(2013, 10, 21))), None);
@@ -231,11 +257,13 @@ mod tests {
     fn la_periode_en_francais_ne_bouge_pas() {
         let fr = Langue::Fr;
         assert_eq!(
-            fr.periode(Some(j(2013, 10, 27)), Some(j(2013, 11, 3))).as_deref(),
+            fr.periode(Some(j(2013, 10, 27)), Some(j(2013, 11, 3)))
+                .as_deref(),
             Some("du 27 octobre au 3 novembre 2013")
         );
         assert_eq!(
-            fr.periode(Some(j(2013, 10, 21)), Some(j(2013, 10, 21))).as_deref(),
+            fr.periode(Some(j(2013, 10, 21)), Some(j(2013, 10, 21)))
+                .as_deref(),
             Some("le 21 octobre 2013")
         );
     }
@@ -246,12 +274,18 @@ mod tests {
             Langue::En.intervalle(j(2013, 10, 27), j(2013, 11, 3)),
             "27 October \u{2013} 3 November 2013"
         );
-        assert_eq!(Langue::En.intervalle(j(2013, 10, 27), j(2013, 10, 27)), "27 October 2013");
+        assert_eq!(
+            Langue::En.intervalle(j(2013, 10, 27), j(2013, 10, 27)),
+            "27 October 2013"
+        );
     }
 
     #[test]
     fn une_liste_se_joint_par_un_mot() {
-        let v: Vec<String> = ["Calvi", "Lumio", "Algajola"].iter().map(|s| s.to_string()).collect();
+        let v: Vec<String> = ["Calvi", "Lumio", "Algajola"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
         assert_eq!(Langue::Fr.liste(&v), "Calvi, Lumio et Algajola");
         assert_eq!(Langue::En.liste(&v), "Calvi, Lumio and Algajola");
         assert_eq!(Langue::En.liste(&v[..1]), "Calvi");

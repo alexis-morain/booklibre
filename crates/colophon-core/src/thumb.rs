@@ -121,7 +121,12 @@ impl ThumbCache {
             if let Some(p) = &icc {
                 encodeur.set_icc_profile(p.to_vec())?;
             }
-            encodeur.write_image(&rgb, rgb.width(), rgb.height(), image::ExtendedColorType::Rgb8)?;
+            encodeur.write_image(
+                &rgb,
+                rgb.width(),
+                rgb.height(),
+                image::ExtendedColorType::Rgb8,
+            )?;
             fichier.flush()?;
             Ok(())
         };
@@ -158,9 +163,22 @@ mod tests_chemin {
         let dir = Path::new("/albums/x");
         assert_eq!(
             chemin(dir, "0123456789abcdef.jpg"),
-            Some(dir.join(".cache").join("thumbs").join("0123456789abcdef.jpg"))
+            Some(
+                dir.join(".cache")
+                    .join("thumbs")
+                    .join("0123456789abcdef.jpg")
+            )
         );
-        for mauvais in ["../../../../etc/passwd", "a/b.jpg", "a\\b.jpg", "..", ".", "", "/etc/passwd", "a\0b"] {
+        for mauvais in [
+            "../../../../etc/passwd",
+            "a/b.jpg",
+            "a\\b.jpg",
+            "..",
+            ".",
+            "",
+            "/etc/passwd",
+            "a\0b",
+        ] {
             assert!(chemin(dir, mauvais).is_none(), "{mauvais:?} a passé");
         }
     }
@@ -187,7 +205,11 @@ mod tests {
         assert!(racine.join("garde.jpg").is_file());
         assert!(!racine.join("orphelin.jpg").exists());
         assert!(racine.join("sous").is_dir());
-        assert_eq!(cache.elaguer(&gardes).unwrap(), 0, "rien à retirer la seconde fois");
+        assert_eq!(
+            cache.elaguer(&gardes).unwrap(),
+            0,
+            "rien à retirer la seconde fois"
+        );
         fs::remove_dir_all(&dir).ok();
     }
 }

@@ -10,8 +10,8 @@
 
 use crate::analyze;
 use crate::audit::{
-    ASPECT_BETRAYAL, DUP_HAMMING, DUP_PHASH, FACE_MARGIN, FACE_MIN_SHARE,
-    MIN_EFFECTIVE_PPI, OPENING_MIN_PHOTOS, SCENE_SPREAD_COLOR, SCENE_SPREAD_SECONDS,
+    ASPECT_BETRAYAL, DUP_HAMMING, DUP_PHASH, FACE_MARGIN, FACE_MIN_SHARE, MIN_EFFECTIVE_PPI,
+    OPENING_MIN_PHOTOS, SCENE_SPREAD_COLOR, SCENE_SPREAD_SECONDS,
 };
 use crate::model::{Album, Slot, Spread};
 use crate::pdf::{self, Rect, SpreadGeometry};
@@ -37,7 +37,6 @@ const FULL_SEARCH_WINDOW: usize = 4;
 const GROUP_WINDOW: usize = 8;
 /// Never a fourth spread of the same template family in a row.
 const REPEAT_LIMIT: usize = 3;
-
 
 /// How much of the album the composer puts on a spread.
 ///
@@ -236,7 +235,10 @@ impl Composer {
         let mut photos = chapter.photos.clone();
         promote_opening(&mut photos, &|p| self.holds_a_page(p));
         let feature_threshold = quantile(
-            &photos.iter().map(Photo::effective_score).collect::<Vec<_>>(),
+            &photos
+                .iter()
+                .map(Photo::effective_score)
+                .collect::<Vec<_>>(),
             FEATURE_QUANTILE,
         );
 
@@ -244,8 +246,7 @@ impl Composer {
         let mut i = 0;
         'photos: while i < photos.len() {
             let remaining = photos.len() - i;
-            let last_was_feature =
-                spreads.last().is_some_and(|s: &Spread| s.slots.len() == 1);
+            let last_was_feature = spreads.last().is_some_and(|s: &Spread| s.slots.len() == 1);
 
             let mut take = 0usize;
             // A deliberate feature page may go full bleed; a take of one
@@ -371,7 +372,11 @@ impl Composer {
                         }
                         let p = photos.remove(i);
                         self.trop_petites.push(
-                            p.path.strip_prefix(root).unwrap_or(&p.path).to_string_lossy().to_string(),
+                            p.path
+                                .strip_prefix(root)
+                                .unwrap_or(&p.path)
+                                .to_string_lossy()
+                                .to_string(),
                         );
                         continue 'photos;
                     }
@@ -439,7 +444,11 @@ impl Composer {
     /// Zéro, et l'étape se traite comme une étape sans photo (P-s2).
     pub fn photos_posables(&self, chapter: &Chapter, root: &std::path::Path) -> usize {
         let mut essai = self.clone();
-        let posees: usize = essai.compose(chapter, None, root).iter().map(|s| s.slots.len()).sum();
+        let posees: usize = essai
+            .compose(chapter, None, root)
+            .iter()
+            .map(|s| s.slots.len())
+            .sum();
         if posees > 0 {
             return posees;
         }
@@ -469,7 +478,10 @@ impl Composer {
     pub fn barre_d_ouverture(photos: &[Photo]) -> Option<f64> {
         (photos.len() >= OPENING_MIN_PHOTOS).then(|| {
             quantile(
-                &photos.iter().map(|p| p.analysis.score()).collect::<Vec<_>>(),
+                &photos
+                    .iter()
+                    .map(|p| p.analysis.score())
+                    .collect::<Vec<_>>(),
                 OPENING_QUANTILE,
             )
         })
@@ -558,31 +570,33 @@ impl Composer {
                 prises.push(meme);
             }
             for idx in prises {
-            let chunk: Vec<Photo> = idx.iter().map(|&j| photos[j].clone()).collect();
-            let chunk = &chunk[..];
-            for (cap, noms) in candidats.iter().filter(|(c, _)| *c == n) {
-                debug_assert_eq!(*cap, n);
-                for base in noms {
-                    let nom = match texte {
-                        TexteOuvert::Tete(mm) => format!("{base}_t{mm}"),
-                        TexteOuvert::Page => base.clone(),
-                    };
-                    let cells = pdf::slots_for(&nom, n, &self.geom);
-                    if cells.len() != n {
-                        continue;
-                    }
-                    let Some((order, score)) = assign(chunk, &cells) else { continue };
-                    if barre.is_some_and(|b| chunk[order[0]].analysis.score() < b) {
-                        continue;
-                    }
-                    if meilleur.as_ref().is_none_or(|m| score < m.0) {
-                        meilleur = Some((score, nom, order, idx.clone()));
+                let chunk: Vec<Photo> = idx.iter().map(|&j| photos[j].clone()).collect();
+                let chunk = &chunk[..];
+                for (cap, noms) in candidats.iter().filter(|(c, _)| *c == n) {
+                    debug_assert_eq!(*cap, n);
+                    for base in noms {
+                        let nom = match texte {
+                            TexteOuvert::Tete(mm) => format!("{base}_t{mm}"),
+                            TexteOuvert::Page => base.clone(),
+                        };
+                        let cells = pdf::slots_for(&nom, n, &self.geom);
+                        if cells.len() != n {
+                            continue;
+                        }
+                        let Some((order, score)) = assign(chunk, &cells) else {
+                            continue;
+                        };
+                        if barre.is_some_and(|b| chunk[order[0]].analysis.score() < b) {
+                            continue;
+                        }
+                        if meilleur.as_ref().is_none_or(|m| score < m.0) {
+                            meilleur = Some((score, nom, order, idx.clone()));
+                        }
                     }
                 }
-            }
-            if meilleur.is_some() {
-                break;
-            }
+                if meilleur.is_some() {
+                    break;
+                }
             }
             if meilleur.is_some() {
                 break;
@@ -595,7 +609,11 @@ impl Composer {
             .map(|c| {
                 let p = &photos[idx[order[c]]];
                 Slot::new(
-                    p.path.strip_prefix(root).unwrap_or(&p.path).to_string_lossy().to_string(),
+                    p.path
+                        .strip_prefix(root)
+                        .unwrap_or(&p.path)
+                        .to_string_lossy()
+                        .to_string(),
                     face_safe_focal(p, &cells[c]),
                 )
             })
@@ -684,8 +702,7 @@ impl Composer {
     /// printable, faces keepable) with the tightest aspect fit. A family
     /// already three spreads old only wins when nothing else is valid.
     fn pick(&self, chunk: &[Photo]) -> Option<(String, Vec<usize>)> {
-        let blocked = (self.family_run.1 >= REPEAT_LIMIT)
-            .then(|| self.family_run.0.clone());
+        let blocked = (self.family_run.1 >= REPEAT_LIMIT).then(|| self.family_run.0.clone());
         let mut best: Option<(f64, String, Vec<usize>)> = None;
         let mut best_blocked: Option<(f64, String, Vec<usize>)> = None;
         for base in families_for(chunk.len()) {
@@ -717,8 +734,20 @@ fn fits_full_cell(p: &Photo, cell: &Rect) -> bool {
 /// Template families able to hold a chunk of this size.
 fn families_for(n: usize) -> &'static [&'static str] {
     match n {
-        1 => &["solo_etroit", "solo", "solo_carre", "solo_paysage", "solo_pano"],
-        2 => &["duo", "duo_portrait", "duo_paysage", "duo_etroit", "duo_pano"],
+        1 => &[
+            "solo_etroit",
+            "solo",
+            "solo_carre",
+            "solo_paysage",
+            "solo_pano",
+        ],
+        2 => &[
+            "duo",
+            "duo_portrait",
+            "duo_paysage",
+            "duo_etroit",
+            "duo_pano",
+        ],
         3 => &["trio", "trio_portrait"],
         4 => &["quad", "quad_portrait", "quad_etroit", "quad_pano"],
         6 => &["six"],
@@ -797,7 +826,11 @@ pub(crate) fn solo_pour_aspect(a: f64) -> &'static str {
     cells
         .into_iter()
         .min_by(|x, y| {
-            (a / x.1).ln().abs().partial_cmp(&(a / y.1).ln().abs()).unwrap()
+            (a / x.1)
+                .ln()
+                .abs()
+                .partial_cmp(&(a / y.1).ln().abs())
+                .unwrap()
         })
         .unwrap()
         .0
@@ -814,11 +847,17 @@ fn assign(chunk: &[Photo], cells: &[Rect]) -> Option<(Vec<usize>, f64)> {
     }
     let mut ci: Vec<usize> = (0..n).collect();
     ci.sort_by(|&a, &b| {
-        (cells[a].w / cells[a].h).partial_cmp(&(cells[b].w / cells[b].h)).unwrap()
+        (cells[a].w / cells[a].h)
+            .partial_cmp(&(cells[b].w / cells[b].h))
+            .unwrap()
     });
     let mut pi: Vec<usize> = (0..n).collect();
     pi.sort_by(|&a, &b| {
-        chunk[a].analysis.aspect().partial_cmp(&chunk[b].analysis.aspect()).unwrap()
+        chunk[a]
+            .analysis
+            .aspect()
+            .partial_cmp(&chunk[b].analysis.aspect())
+            .unwrap()
     });
     let mut order = vec![0usize; n];
     let mut score = 0.0;
@@ -1084,11 +1123,22 @@ mod tests {
     fn une_photo_sous_le_seuil_meme_seule_ne_prend_pas_de_page() {
         let mut photos: Vec<Photo> = (0..9).map(|n| photo(n, 4000, 3000)).collect();
         photos[4] = photo(4, 960, 960);
-        let chapter = Chapter { start: photos[0].meta.taken, end: photos[8].meta.taken, photos };
-        let album = Album::new("t", std::path::Path::new("/"), crate::model::Size { w: 210.0, h: 210.0 });
+        let chapter = Chapter {
+            start: photos[0].meta.taken,
+            end: photos[8].meta.taken,
+            photos,
+        };
+        let album = Album::new(
+            "t",
+            std::path::Path::new("/"),
+            crate::model::Size { w: 210.0, h: 210.0 },
+        );
         let mut composer = Composer::new(&album);
         let spreads = composer.compose(&chapter, None, std::path::Path::new("/"));
-        let posees: Vec<&str> = spreads.iter().flat_map(|s| s.slots.iter().map(|sl| sl.src.as_str())).collect();
+        let posees: Vec<&str> = spreads
+            .iter()
+            .flat_map(|s| s.slots.iter().map(|sl| sl.src.as_str()))
+            .collect();
         assert!(!posees.contains(&"p04.jpg"), "{posees:?}");
         assert_eq!(posees.len(), 8);
         // 1.1-a2 : et il le dit, pour que le bilan le dise.
@@ -1100,11 +1150,23 @@ mod tests {
     #[test]
     fn un_chapitre_de_photos_trop_petites_ne_produit_rien_et_les_compte() {
         let photos: Vec<Photo> = (0..4).map(|n| photo(n, 960, 960)).collect();
-        let chapter = Chapter { start: photos[0].meta.taken, end: photos[3].meta.taken, photos };
-        let album = Album::new("t", std::path::Path::new("/"), crate::model::Size { w: 210.0, h: 210.0 });
+        let chapter = Chapter {
+            start: photos[0].meta.taken,
+            end: photos[3].meta.taken,
+            photos,
+        };
+        let album = Album::new(
+            "t",
+            std::path::Path::new("/"),
+            crate::model::Size { w: 210.0, h: 210.0 },
+        );
         let mut composer = Composer::new(&album);
         let spreads = composer.compose(&chapter, None, std::path::Path::new("/"));
-        assert!(spreads.is_empty(), "{:?}", spreads.iter().map(|s| &s.template).collect::<Vec<_>>());
+        assert!(
+            spreads.is_empty(),
+            "{:?}",
+            spreads.iter().map(|s| &s.template).collect::<Vec<_>>()
+        );
         assert_eq!(composer.trop_petites.len(), 4);
     }
 
@@ -1114,8 +1176,16 @@ mod tests {
     fn une_photo_qui_tient_sa_page_garde_le_dernier_recours() {
         let mut photos: Vec<Photo> = (0..9).map(|n| photo(n, 4000, 3000)).collect();
         photos[4] = photo(4, 4000, 4000);
-        let chapter = Chapter { start: photos[0].meta.taken, end: photos[8].meta.taken, photos };
-        let album = Album::new("t", std::path::Path::new("/"), crate::model::Size { w: 210.0, h: 210.0 });
+        let chapter = Chapter {
+            start: photos[0].meta.taken,
+            end: photos[8].meta.taken,
+            photos,
+        };
+        let album = Album::new(
+            "t",
+            std::path::Path::new("/"),
+            crate::model::Size { w: 210.0, h: 210.0 },
+        );
         let spreads = Composer::new(&album).compose(&chapter, None, std::path::Path::new("/"));
         let posees = spreads.iter().flat_map(|s| s.slots.iter()).count();
         assert_eq!(posees, 9);

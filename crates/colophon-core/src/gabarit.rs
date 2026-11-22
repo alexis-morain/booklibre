@@ -40,7 +40,11 @@ pub enum Page {
     Pleine,
     /// `cols` × `rangs` cells in the margined box, each centred and fitted
     /// to `ratio`; `None` keeps the raw cell shape (free aspect).
-    Grille { cols: usize, rangs: usize, ratio: Option<f64> },
+    Grille {
+        cols: usize,
+        rangs: usize,
+        ratio: Option<f64>,
+    },
 }
 
 /// How slot indices run across the two pages.
@@ -83,7 +87,11 @@ impl Spec {
 /// The families the generator emits, recto side (lead on the right page).
 /// Order matters: the picker and the dump keep it.
 fn familles() -> Vec<Spec> {
-    let une = |ratio: Option<f64>| Page::Grille { cols: 1, rangs: 1, ratio };
+    let une = |ratio: Option<f64>| Page::Grille {
+        cols: 1,
+        rangs: 1,
+        ratio,
+    };
     // The historic catalogue declares no band and no overlay: its captions
     // keep hunting the free margin spots, exactly as before the sign existed.
     let v = |nom, capacite, gauche, droite, ordre| Spec {
@@ -105,64 +113,144 @@ fn familles() -> Vec<Spec> {
         v("solo_etroit", 1, Vide, une(Some(CELL_ETROIT)), ParPage),
         v("solo_carre", 1, Vide, une(Some(CELL_CARRE)), ParPage),
         v("duo", 2, une(None), une(None), ParPage),
-        v("duo_portrait", 2, une(Some(CELL_PORTRAIT)), une(Some(CELL_PORTRAIT)), ParPage),
-        v("duo_paysage", 2, une(Some(CELL_LANDSCAPE)), une(Some(CELL_LANDSCAPE)), ParPage),
-        v("duo_etroit", 2, une(Some(CELL_ETROIT)), une(Some(CELL_ETROIT)), ParPage),
-        v("duo_pano", 2, une(Some(CELL_PANO)), une(Some(CELL_PANO)), ParPage),
+        v(
+            "duo_portrait",
+            2,
+            une(Some(CELL_PORTRAIT)),
+            une(Some(CELL_PORTRAIT)),
+            ParPage,
+        ),
+        v(
+            "duo_paysage",
+            2,
+            une(Some(CELL_LANDSCAPE)),
+            une(Some(CELL_LANDSCAPE)),
+            ParPage,
+        ),
+        v(
+            "duo_etroit",
+            2,
+            une(Some(CELL_ETROIT)),
+            une(Some(CELL_ETROIT)),
+            ParPage,
+        ),
+        v(
+            "duo_pano",
+            2,
+            une(Some(CELL_PANO)),
+            une(Some(CELL_PANO)),
+            ParPage,
+        ),
         v(
             "trio",
             3,
-            Grille { cols: 1, rangs: 2, ratio: Some(CELL_LANDSCAPE) },
+            Grille {
+                cols: 1,
+                rangs: 2,
+                ratio: Some(CELL_LANDSCAPE),
+            },
             Pleine,
             ParPage,
         ),
         v(
             "trio_portrait",
             3,
-            Grille { cols: 2, rangs: 1, ratio: Some(CELL_PORTRAIT) },
+            Grille {
+                cols: 2,
+                rangs: 1,
+                ratio: Some(CELL_PORTRAIT),
+            },
             Pleine,
             ParPage,
         ),
         v(
             "quad",
             4,
-            Grille { cols: 1, rangs: 2, ratio: Some(CELL_LANDSCAPE) },
-            Grille { cols: 1, rangs: 2, ratio: Some(CELL_LANDSCAPE) },
+            Grille {
+                cols: 1,
+                rangs: 2,
+                ratio: Some(CELL_LANDSCAPE),
+            },
+            Grille {
+                cols: 1,
+                rangs: 2,
+                ratio: Some(CELL_LANDSCAPE),
+            },
             ParRangee,
         ),
         v(
             "quad_portrait",
             4,
-            Grille { cols: 2, rangs: 1, ratio: Some(CELL_PORTRAIT) },
-            Grille { cols: 2, rangs: 1, ratio: Some(CELL_PORTRAIT) },
+            Grille {
+                cols: 2,
+                rangs: 1,
+                ratio: Some(CELL_PORTRAIT),
+            },
+            Grille {
+                cols: 2,
+                rangs: 1,
+                ratio: Some(CELL_PORTRAIT),
+            },
             ParPage,
         ),
         v(
             "quad_etroit",
             4,
-            Grille { cols: 2, rangs: 1, ratio: Some(CELL_ETROIT) },
-            Grille { cols: 2, rangs: 1, ratio: Some(CELL_ETROIT) },
+            Grille {
+                cols: 2,
+                rangs: 1,
+                ratio: Some(CELL_ETROIT),
+            },
+            Grille {
+                cols: 2,
+                rangs: 1,
+                ratio: Some(CELL_ETROIT),
+            },
             ParPage,
         ),
         v(
             "quad_pano",
             4,
-            Grille { cols: 1, rangs: 2, ratio: Some(CELL_PANO) },
-            Grille { cols: 1, rangs: 2, ratio: Some(CELL_PANO) },
+            Grille {
+                cols: 1,
+                rangs: 2,
+                ratio: Some(CELL_PANO),
+            },
+            Grille {
+                cols: 1,
+                rangs: 2,
+                ratio: Some(CELL_PANO),
+            },
             ParRangee,
         ),
         v(
             "six",
             6,
-            Grille { cols: 2, rangs: 2, ratio: None },
-            Grille { cols: 1, rangs: 2, ratio: Some(CELL_LANDSCAPE) },
+            Grille {
+                cols: 2,
+                rangs: 2,
+                ratio: None,
+            },
+            Grille {
+                cols: 1,
+                rangs: 2,
+                ratio: Some(CELL_LANDSCAPE),
+            },
             ParPage,
         ),
         v(
             "octo",
             8,
-            Grille { cols: 2, rangs: 2, ratio: None },
-            Grille { cols: 2, rangs: 2, ratio: None },
+            Grille {
+                cols: 2,
+                rangs: 2,
+                ratio: None,
+            },
+            Grille {
+                cols: 2,
+                rangs: 2,
+                ratio: None,
+            },
             ParPage,
         ),
         // Photo-less spreads the editor inserts, and the two book ends. Zero
@@ -371,10 +459,8 @@ pub fn parse_genere(nom: &str) -> Option<Spec> {
 pub fn combinaisons() -> &'static [Spec] {
     static COMBINAISONS: std::sync::LazyLock<Vec<Spec>> = std::sync::LazyLock::new(|| {
         let etats = etats_page();
-        let historiques: Vec<(Page, Page)> = familles()
-            .iter()
-            .map(|f| (f.gauche, f.droite))
-            .collect();
+        let historiques: Vec<(Page, Page)> =
+            familles().iter().map(|f| (f.gauche, f.droite)).collect();
         let mut out = Vec::new();
         for i in 0..etats.len() {
             for j in i..etats.len() {
@@ -392,9 +478,7 @@ pub fn combinaisons() -> &'static [Spec] {
                         continue;
                     }
                     out.push(Spec {
-                        nom: &*Box::leak(
-                            nom_genere(&gauche, &droite, legende).into_boxed_str(),
-                        ),
+                        nom: &*Box::leak(nom_genere(&gauche, &droite, legende).into_boxed_str()),
                         capacite,
                         gauche,
                         droite,
@@ -718,7 +802,10 @@ pub fn slots(spec: &Spec, n: usize, g: &SpreadGeometry) -> Vec<Rect> {
 /// threshold the composer places with. One rule, engine side: the picker
 /// and the keyboard cycle both read this list, neither rewrites it.
 pub fn compatibles(aspects: &[f64], g: &SpreadGeometry) -> Vec<&'static str> {
-    compatibles_notes(aspects, g).into_iter().map(|(nom, _)| nom).collect()
+    compatibles_notes(aspects, g)
+        .into_iter()
+        .map(|(nom, _)| nom)
+        .collect()
 }
 
 /// [`compatibles`] with each template's betrayal beside it, catalogue order
@@ -804,7 +891,13 @@ mod tests {
     use super::*;
 
     fn geom() -> SpreadGeometry {
-        SpreadGeometry { media_w: 426.0, media_h: 216.0, margin: 14.0, gutter: 7.0, bleed: 3.0 }
+        SpreadGeometry {
+            media_w: 426.0,
+            media_h: 216.0,
+            margin: 14.0,
+            gutter: 7.0,
+            bleed: 3.0,
+        }
     }
 
     /// The historic catalogue declares no band and no overlay: its geometry
@@ -822,7 +915,10 @@ mod tests {
         let g = geom();
         let duo = spec("duo").unwrap();
         let avant = slots(duo, 2, &g);
-        let bande = Spec { legende: 8.0, ..duo.clone() };
+        let bande = Spec {
+            legende: 8.0,
+            ..duo.clone()
+        };
         let apres = slots(&bande, 2, &g);
         for (a, b) in avant.iter().zip(&apres) {
             assert!((b.y - (a.y + 8.0)).abs() < 1e-9);
@@ -838,7 +934,10 @@ mod tests {
     #[test]
     fn la_bande_arrete_le_plein_fond_au_dessus_de_la_coupe() {
         let g = geom();
-        let bande = Spec { legende: 8.0, ..spec("full1").unwrap().clone() };
+        let bande = Spec {
+            legende: 8.0,
+            ..spec("full1").unwrap().clone()
+        };
         let r = slots(&bande, 1, &g)[0];
         assert!((r.y - (g.bleed + 8.0)).abs() < 1e-9);
         assert!((r.y + r.h - g.media_h).abs() < 1e-9);
@@ -860,7 +959,10 @@ mod tests {
             let verso = format!("{nom}_verso");
             let r = crate::pdf::slots_for(&verso, 1, &g);
             let at = crate::pdf::caption_anchor(&verso, &r, &g);
-            assert!(at.x < pli, "{verso} : sa photo est à gauche, sa légende aussi");
+            assert!(
+                at.x < pli,
+                "{verso} : sa photo est à gauche, sa légende aussi"
+            );
         }
         // Une bande sur deux pages garde l'ancre d'hier, à gauche.
         let r = crate::pdf::slots_for("g_1x1q_1x1q_b8", 2, &g);
@@ -878,7 +980,10 @@ mod tests {
         let g = geom();
         let duo = spec("duo").unwrap();
         let avant = slots(duo, 2, &g);
-        let sur = Spec { legende: -6.0, ..duo.clone() };
+        let sur = Spec {
+            legende: -6.0,
+            ..duo.clone()
+        };
         for (a, b) in avant.iter().zip(&slots(&sur, 2, &g)) {
             assert_eq!((a.x, a.y, a.w, a.h), (b.x, b.y, b.w, b.h));
         }
@@ -893,9 +998,18 @@ mod tests {
         let portraits = [0.75, 0.75];
         let c = compatibles(&portraits, &g);
         assert!(c.contains(&"duo_portrait"));
-        assert!(c.contains(&"solo"), "une capacité moindre juge les photos gardées");
-        assert!(!c.contains(&"duo_pano"), "un portrait trahirait la case panorama");
-        assert!(!c.contains(&"trio"), "trois cases pour deux photos, jamais de trou");
+        assert!(
+            c.contains(&"solo"),
+            "une capacité moindre juge les photos gardées"
+        );
+        assert!(
+            !c.contains(&"duo_pano"),
+            "un portrait trahirait la case panorama"
+        );
+        assert!(
+            !c.contains(&"trio"),
+            "trois cases pour deux photos, jamais de trou"
+        );
         let panos = [2.0, 2.0];
         let cp = compatibles(&panos, &g);
         assert!(cp.contains(&"duo_pano"));
@@ -924,10 +1038,16 @@ mod tests {
     #[test]
     fn les_combinaisons_sont_bornees_et_stables() {
         let c = combinaisons();
-        assert!(c.len() >= 1500, "des milliers de combinaisons, pas {}", c.len());
+        assert!(
+            c.len() >= 1500,
+            "des milliers de combinaisons, pas {}",
+            c.len()
+        );
         assert!(c.iter().all(|s| CAPACITES.contains(&s.capacite)));
         assert!(c.iter().all(|s| s.ordre == Ordre::ParPage));
-        assert!(c.iter().all(|s| s.legende == 0.0 || s.legende == BANDE_GENEREE));
+        assert!(c
+            .iter()
+            .all(|s| s.legende == 0.0 || s.legende == BANDE_GENEREE));
         for s in c {
             for f in familles() {
                 let jumeau = s.legende == f.legende
@@ -947,14 +1067,27 @@ mod tests {
     fn le_nom_encode_les_parametres() {
         for s in combinaisons() {
             let p = parse_genere(s.nom).expect(s.nom);
-            assert_eq!((p.capacite, p.gauche, p.droite, p.ordre), (s.capacite, s.gauche, s.droite, s.ordre));
+            assert_eq!(
+                (p.capacite, p.gauche, p.droite, p.ordre),
+                (s.capacite, s.gauche, s.droite, s.ordre)
+            );
             assert_eq!(p.legende, s.legende);
         }
         let v = parse_genere("g_v_2x1q_verso").unwrap();
-        assert_eq!(v.gauche, Page::Grille { cols: 2, rangs: 1, ratio: Some(CELL_PORTRAIT) });
+        assert_eq!(
+            v.gauche,
+            Page::Grille {
+                cols: 2,
+                rangs: 1,
+                ratio: Some(CELL_PORTRAIT)
+            }
+        );
         assert_eq!(v.droite, Page::Vide);
         assert!(parse_genere("g_v_v").is_none(), "capacité zéro");
-        assert!(parse_genere("g_1x1q_1x1q_verso").is_none(), "un symétrique n'a pas de verso");
+        assert!(
+            parse_genere("g_1x1q_1x1q_verso").is_none(),
+            "un symétrique n'a pas de verso"
+        );
         assert!(parse_genere("solo").is_none());
         assert!(parse_genere("g_v_9z9x").is_none());
     }
@@ -977,7 +1110,10 @@ mod tests {
         let g = geom();
         let r = slots(s, 2, &g);
         assert_eq!(r.len(), 2);
-        assert!(spec("g_v_2x1q_b8").unwrap().nom == s.nom, "le cache rend le même Spec");
+        assert!(
+            spec("g_v_2x1q_b8").unwrap().nom == s.nom,
+            "le cache rend le même Spec"
+        );
         assert!(spec("gabarit_inconnu").is_none());
     }
 
@@ -989,13 +1125,38 @@ mod tests {
         assert_eq!(
             noms,
             vec![
-                "full1", "full1_verso", "solo", "solo_verso", "solo_paysage",
-                "solo_paysage_verso", "solo_pano", "solo_pano_verso", "solo_etroit",
-                "solo_etroit_verso", "solo_carre", "solo_carre_verso", "duo",
-                "duo_portrait", "duo_paysage", "duo_etroit", "duo_pano", "trio",
-                "trio_verso", "trio_portrait", "trio_portrait_verso", "quad",
-                "quad_portrait", "quad_etroit", "quad_pano", "six", "six_verso",
-                "octo", "vide", "texte", "colophon", "garde",
+                "full1",
+                "full1_verso",
+                "solo",
+                "solo_verso",
+                "solo_paysage",
+                "solo_paysage_verso",
+                "solo_pano",
+                "solo_pano_verso",
+                "solo_etroit",
+                "solo_etroit_verso",
+                "solo_carre",
+                "solo_carre_verso",
+                "duo",
+                "duo_portrait",
+                "duo_paysage",
+                "duo_etroit",
+                "duo_pano",
+                "trio",
+                "trio_verso",
+                "trio_portrait",
+                "trio_portrait_verso",
+                "quad",
+                "quad_portrait",
+                "quad_etroit",
+                "quad_pano",
+                "six",
+                "six_verso",
+                "octo",
+                "vide",
+                "texte",
+                "colophon",
+                "garde",
             ],
         );
     }

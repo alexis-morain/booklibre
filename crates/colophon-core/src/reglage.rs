@@ -90,8 +90,7 @@ pub fn regler_jpeg(data: &[u8], r: &Reglage, quality: u8) -> anyhow::Result<(Vec
     let mut rgb = img.to_rgb8();
     appliquer(&mut rgb, r);
     let mut out = Vec::new();
-    image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, quality)
-        .encode_image(&rgb)?;
+    image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, quality).encode_image(&rgb)?;
     Ok((out, rgb.width(), rgb.height()))
 }
 
@@ -103,7 +102,11 @@ pub fn dump_luts() -> serde_json::Value {
     let mut grille = Vec::new();
     for expo in pas {
         for contraste in pas {
-            let r = Reglage { expo, contraste, nb: false };
+            let r = Reglage {
+                expo,
+                contraste,
+                nb: false,
+            };
             grille.push(serde_json::json!({
                 "expo": expo,
                 "contraste": contraste,
@@ -123,7 +126,11 @@ mod tests {
     /// mean the same picture.
     #[test]
     fn la_lut_par_defaut_est_lidentite() {
-        let table = lut(&Reglage { expo: 0.0, contraste: 0.0, nb: false });
+        let table = lut(&Reglage {
+            expo: 0.0,
+            contraste: 0.0,
+            nb: false,
+        });
         for (k, v) in table.iter().enumerate() {
             assert_eq!(usize::from(*v), k, "entrée {k}");
         }
@@ -134,24 +141,54 @@ mod tests {
     #[test]
     fn la_formule_est_celle_du_filtre_css() {
         // brightness(2): 128/255 × 2 clamps to 1.
-        assert_eq!(lut(&Reglage { expo: 1.0, contraste: 0.0, nb: false })[128], 255);
+        assert_eq!(
+            lut(&Reglage {
+                expo: 1.0,
+                contraste: 0.0,
+                nb: false
+            })[128],
+            255
+        );
         // brightness(√2): 128/255 × 1,41421… × 255 = 181,02 → 181.
-        assert_eq!(lut(&Reglage { expo: 0.5, contraste: 0.0, nb: false })[128], 181);
+        assert_eq!(
+            lut(&Reglage {
+                expo: 0.5,
+                contraste: 0.0,
+                nb: false
+            })[128],
+            181
+        );
         // contrast(2) around the pivot: (64/255 − 0,5) × 2 + 0,5 = 0,00196…
         // × 255 = 0,4998 → 0.
-        let c = lut(&Reglage { expo: 0.0, contraste: 1.0, nb: false });
+        let c = lut(&Reglage {
+            expo: 0.0,
+            contraste: 1.0,
+            nb: false,
+        });
         assert_eq!(c[64], 0);
         // (200/255 − 0,5) × 2 + 0,5 = 1,068… clamps to 1.
         assert_eq!(c[200], 255);
         // …and the clamp between primitives bites: exposure first saturates,
         // then contrast works on the clamped value, not the raw product.
-        let deux = lut(&Reglage { expo: 1.0, contraste: -1.0, nb: false });
+        let deux = lut(&Reglage {
+            expo: 1.0,
+            contraste: -1.0,
+            nb: false,
+        });
         // 200/255 × 2 clamps to 1 ; (1 − 0,5) × 0,5 + 0,5 = 0,75 → 191.
         assert_eq!(deux[200], 191);
         // Out-of-bounds values from a hand-repaired file clamp to ±1.
         assert_eq!(
-            lut(&Reglage { expo: 4.0, contraste: 0.0, nb: false }),
-            lut(&Reglage { expo: 1.0, contraste: 0.0, nb: false }),
+            lut(&Reglage {
+                expo: 4.0,
+                contraste: 0.0,
+                nb: false
+            }),
+            lut(&Reglage {
+                expo: 1.0,
+                contraste: 0.0,
+                nb: false
+            }),
         );
     }
 
@@ -160,7 +197,14 @@ mod tests {
     #[test]
     fn le_noir_et_blanc_est_le_luma_709() {
         let mut img = image::RgbImage::from_pixel(2, 1, image::Rgb([255, 0, 0]));
-        appliquer(&mut img, &Reglage { expo: 0.0, contraste: 0.0, nb: true });
+        appliquer(
+            &mut img,
+            &Reglage {
+                expo: 0.0,
+                contraste: 0.0,
+                nb: true,
+            },
+        );
         // 0,2126 × 255 = 54,2 → 54, on all three channels.
         assert_eq!(img.get_pixel(0, 0).0, [54, 54, 54]);
 
@@ -170,7 +214,14 @@ mod tests {
         // before the transfer (71,52 → 72) would land on 102: this value is
         // the one that tells the two pipelines apart.
         let mut img = image::RgbImage::from_pixel(1, 1, image::Rgb([0, 100, 0]));
-        appliquer(&mut img, &Reglage { expo: 0.5, contraste: 0.0, nb: true });
+        appliquer(
+            &mut img,
+            &Reglage {
+                expo: 0.5,
+                contraste: 0.0,
+                nb: true,
+            },
+        );
         assert_eq!(img.get_pixel(0, 0).0, [101, 101, 101]);
     }
 
@@ -184,8 +235,16 @@ mod tests {
         image::codecs::jpeg::JpegEncoder::new_with_quality(&mut data, 92)
             .encode_image(&img)
             .unwrap();
-        let (regle, w, h) =
-            regler_jpeg(&data, &Reglage { expo: 0.0, contraste: 0.0, nb: true }, 92).unwrap();
+        let (regle, w, h) = regler_jpeg(
+            &data,
+            &Reglage {
+                expo: 0.0,
+                contraste: 0.0,
+                nb: true,
+            },
+            92,
+        )
+        .unwrap();
         assert_eq!((w, h), (20, 10));
         let back = image::load_from_memory(&regle).unwrap().to_rgb8();
         let p = back.get_pixel(10, 5).0;

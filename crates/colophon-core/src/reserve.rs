@@ -187,7 +187,10 @@ pub fn ranger(
         .iter()
         .filter_map(|r| {
             let fait = faits.get(&r.src)?;
-            if posees.iter().any(|&d| analyze::hamming(d, fait.dhash) <= DUP_HAMMING) {
+            if posees
+                .iter()
+                .any(|&d| analyze::hamming(d, fait.dhash) <= DUP_HAMMING)
+            {
                 return None;
             }
             let ecart = match (jour, fait.taken) {
@@ -234,11 +237,17 @@ pub fn ranger(
 /// non : les cases d'un gabarit ne dépendent pas du nombre de photos posées,
 /// la scène ne fait que s'arrêter à la dernière. `None` au-delà de la
 /// capacité.
-fn rect_de_case(template: &str, cellule: usize, g: &crate::pdf::SpreadGeometry) -> Option<crate::pdf::Rect> {
+fn rect_de_case(
+    template: &str,
+    cellule: usize,
+    g: &crate::pdf::SpreadGeometry,
+) -> Option<crate::pdf::Rect> {
     if cellule >= crate::pdf::template_capacity(template) {
         return None;
     }
-    crate::pdf::slots_for(template, cellule + 1, g).get(cellule).copied()
+    crate::pdf::slots_for(template, cellule + 1, g)
+        .get(cellule)
+        .copied()
 }
 
 /// La réserve d'un dossier d'album pour une planche : ce que l'album ne
@@ -259,9 +268,19 @@ pub fn reserve_classee(
         "planche {planche} hors de l'album ({} planches)",
         album.spreads.len()
     );
-    let posees: Vec<String> = album.spreads[planche].slots.iter().map(|s| s.src.clone()).collect();
-    let Some(Prepare { reserve, mesure, .. }) = preparer(dir, album, &posees)? else {
-        return Ok(Reserve { candidats: Vec::new(), note: Some(SANS_MESURE.into()) });
+    let posees: Vec<String> = album.spreads[planche]
+        .slots
+        .iter()
+        .map(|s| s.src.clone())
+        .collect();
+    let Some(Prepare {
+        reserve, mesure, ..
+    }) = preparer(dir, album, &posees)?
+    else {
+        return Ok(Reserve {
+            candidats: Vec::new(),
+            note: Some(SANS_MESURE.into()),
+        });
     };
     let date_de = |src: &str| mesure.date(src);
     let candidats = classer(album, planche, cellule, &reserve, &mesure.faits, &date_de);
@@ -308,7 +327,10 @@ fn preparer(dir: &Path, album: &Album, posees: &[String]) -> Result<Option<Prepa
         .into_iter()
         .filter(|src| !montrees.contains(src.as_str()))
         .map(|src| {
-            let focal = focal_de.get(src.as_str()).copied().unwrap_or_else(default_focal);
+            let focal = focal_de
+                .get(src.as_str())
+                .copied()
+                .unwrap_or_else(default_focal);
             EnReserve { src, focal }
         })
         .collect();
@@ -316,7 +338,11 @@ fn preparer(dir: &Path, album: &Album, posees: &[String]) -> Result<Option<Prepa
     let mut cibles: Vec<String> = reserve.iter().map(|r| r.src.clone()).collect();
     cibles.extend(posees.iter().cloned());
     let mesure = mesurer(dir, album, releve.as_ref(), &cibles);
-    Ok(Some(Prepare { reserve, mesure, curation }))
+    Ok(Some(Prepare {
+        reserve,
+        mesure,
+        curation,
+    }))
 }
 
 /// Les raisons de curation que le remplissage reconduit, et elles seules :
@@ -373,11 +399,16 @@ pub fn cases_vides(album: &Album) -> Vec<Case> {
         }
         if s.template == "vide" {
             if s.slots.is_empty() && s.objets.is_empty() {
-                cases.push(Case { planche, cellule: 0 });
+                cases.push(Case {
+                    planche,
+                    cellule: 0,
+                });
             }
             continue;
         }
-        let Some(spec) = crate::gabarit::spec(&s.template) else { continue };
+        let Some(spec) = crate::gabarit::spec(&s.template) else {
+            continue;
+        };
         cases.extend((s.slots.len()..spec.capacite).map(|cellule| Case { planche, cellule }));
     }
     cases
@@ -407,7 +438,10 @@ pub fn remplir_avec(
     let (mut poses, mut restees) = (Vec::new(), Vec::new());
     let mut arretee: Option<usize> = None;
     for case in cases_vides(album) {
-        let Case { planche: p, cellule: c } = case;
+        let Case {
+            planche: p,
+            cellule: c,
+        } = case;
         if arretee == Some(p) {
             restees.push(case);
             continue;
@@ -437,7 +471,9 @@ pub fn remplir_avec(
         match choisie {
             Some((cand, (gabarit, ppi))) => {
                 w.spreads[p].template = gabarit.clone();
-                w.spreads[p].slots.push(Slot::new(cand.src.clone(), cand.focal));
+                w.spreads[p]
+                    .slots
+                    .push(Slot::new(cand.src.clone(), cand.focal));
                 reste.retain(|r| r.src != cand.src);
                 poses.push(Pose {
                     planche: p,
@@ -465,7 +501,10 @@ pub fn reconduites(reserve: Vec<EnReserve>, curation: &[Discard]) -> Vec<EnReser
         .filter(|d| RECONDUITES.contains(&d.reason.as_str()))
         .map(|d| d.src.as_str())
         .collect();
-    reserve.into_iter().filter(|r| permises.contains(r.src.as_str())).collect()
+    reserve
+        .into_iter()
+        .filter(|r| permises.contains(r.src.as_str()))
+        .collect()
 }
 
 /// « Remplir les cases vides » sur un dossier d'album : la réserve mesurée
@@ -476,16 +515,32 @@ pub fn remplir(dir: &Path, album: &Album) -> Result<Remplissage> {
     if cases.is_empty() {
         return Ok(Remplissage::default());
     }
-    let posees: Vec<String> =
-        album.spreads.iter().flat_map(|s| s.slots.iter().map(|sl| sl.src.clone())).collect();
-    let Some(Prepare { reserve, mesure, curation }) = preparer(dir, album, &posees)? else {
-        return Ok(Remplissage { poses: Vec::new(), restees: cases, note: Some(SANS_MESURE.into()) });
+    let posees: Vec<String> = album
+        .spreads
+        .iter()
+        .flat_map(|s| s.slots.iter().map(|sl| sl.src.clone()))
+        .collect();
+    let Some(Prepare {
+        reserve,
+        mesure,
+        curation,
+    }) = preparer(dir, album, &posees)?
+    else {
+        return Ok(Remplissage {
+            poses: Vec::new(),
+            restees: cases,
+            note: Some(SANS_MESURE.into()),
+        });
     };
     let reserve = reconduites(reserve, &curation);
     let date_de = |src: &str| mesure.date(src);
     let (poses, restees) = remplir_avec(album, &reserve, &mesure.faits, &date_de);
     let note = (!mesure.notes.is_empty()).then(|| mesure.notes.join(" ; "));
-    Ok(Remplissage { poses, restees, note })
+    Ok(Remplissage {
+        poses,
+        restees,
+        note,
+    })
 }
 
 /// D'où les dates des photos posées se lisent quand elles n'ont pas été
@@ -525,7 +580,12 @@ impl Mesure {
 /// la date venant alors de l'original quand le dossier de photos est là.
 /// Une vignette illisible ou absente ne fait pas échouer : elle manque, et
 /// la note le dit.
-fn mesurer(dir: &Path, album: &Album, releve: Option<&crate::releve::Releve>, srcs: &[String]) -> Mesure {
+fn mesurer(
+    dir: &Path,
+    album: &Album,
+    releve: Option<&crate::releve::Releve>,
+    srcs: &[String],
+) -> Mesure {
     if let Some(r) = releve {
         let fiches: HashMap<String, &crate::pipeline::Photo> =
             r.photos.iter().map(|p| (r.src(&p.path), p)).collect();
@@ -548,7 +608,11 @@ fn mesurer(dir: &Path, album: &Album, releve: Option<&crate::releve::Releve>, sr
             .iter()
             .filter_map(|(src, p)| p.meta.taken_reliable.then(|| (src.clone(), p.meta.taken)))
             .collect();
-        return Mesure { faits, notes: Vec::new(), racine: Racine::Releve(dates) };
+        return Mesure {
+            faits,
+            notes: Vec::new(),
+            racine: Racine::Releve(dates),
+        };
     }
 
     let root = std::path::PathBuf::from(&album.root);
@@ -570,10 +634,21 @@ fn mesurer(dir: &Path, album: &Album, releve: Option<&crate::releve::Releve>, sr
             let (dhash, score) = analyse_de_vignette(&chemin)?;
             let original = root.join(src);
             let meta = root_ok.then(|| crate::meta::read(&original));
-            let taken = meta.as_ref().and_then(|m| m.taken_reliable.then_some(m.taken));
+            let taken = meta
+                .as_ref()
+                .and_then(|m| m.taken_reliable.then_some(m.taken));
             // La seule règle de taille du projet, celle de l'alerte (`qualite.rs`).
-            let orig = meta.and_then(|m| crate::heic::oriented_dimensions(&original, m.orientation).ok());
-            Some((src.clone(), Fait { dhash, score, taken, orig }))
+            let orig =
+                meta.and_then(|m| crate::heic::oriented_dimensions(&original, m.orientation).ok());
+            Some((
+                src.clone(),
+                Fait {
+                    dhash,
+                    score,
+                    taken,
+                    orig,
+                },
+            ))
         })
         .collect();
     let manquantes = mesures.iter().filter(|m| m.is_none()).count();
@@ -591,8 +666,16 @@ fn mesurer(dir: &Path, album: &Album, releve: Option<&crate::releve::Releve>, sr
              l'album pour les retrouver"
         ));
     }
-    let racine = if root_ok { Racine::Dossier(root) } else { Racine::Absente };
-    Mesure { faits, notes, racine }
+    let racine = if root_ok {
+        Racine::Dossier(root)
+    } else {
+        Racine::Absente
+    };
+    Mesure {
+        faits,
+        notes,
+        racine,
+    }
 }
 
 /// Le dHash et le score d'une vignette, mesurés une fois par processus.
@@ -630,8 +713,8 @@ fn lire_curation(dir: &Path) -> Result<Vec<Discard>> {
     if !path.is_file() {
         return Ok(Vec::new());
     }
-    let texte = std::fs::read_to_string(&path)
-        .with_context(|| format!("lecture de {}", path.display()))?;
+    let texte =
+        std::fs::read_to_string(&path).with_context(|| format!("lecture de {}", path.display()))?;
     serde_json::from_str(&texte).context("curation.json illisible")
 }
 
@@ -642,9 +725,11 @@ fn lire_thumbs(dir: &Path) -> Result<Option<HashMap<String, String>>> {
     if !path.is_file() {
         return Ok(None);
     }
-    let texte = std::fs::read_to_string(&path)
-        .with_context(|| format!("lecture de {}", path.display()))?;
-    serde_json::from_str(&texte).map(Some).context("thumbs.json illisible")
+    let texte =
+        std::fs::read_to_string(&path).with_context(|| format!("lecture de {}", path.display()))?;
+    serde_json::from_str(&texte)
+        .map(Some)
+        .context("thumbs.json illisible")
 }
 
 #[cfg(test)]
@@ -659,7 +744,10 @@ mod tests {
     fn planche(srcs: &[&str]) -> Spread {
         Spread {
             template: "duo".into(),
-            slots: srcs.iter().map(|s| Slot::new(s.to_string(), [0.5, 0.42])).collect(),
+            slots: srcs
+                .iter()
+                .map(|s| Slot::new(s.to_string(), [0.5, 0.42]))
+                .collect(),
             caption: None,
             text: None,
             edited: false,
@@ -669,7 +757,11 @@ mod tests {
     }
 
     fn album(planches: Vec<Spread>) -> Album {
-        let mut a = Album::new("test", Path::new("/nulle-part"), Size { w: 210.0, h: 210.0 });
+        let mut a = Album::new(
+            "test",
+            Path::new("/nulle-part"),
+            Size { w: 210.0, h: 210.0 },
+        );
         a.spreads = planches;
         a
     }
@@ -682,21 +774,37 @@ mod tests {
     }
 
     fn fait(n: u64, score: f64, taken: Option<&str>) -> Fait {
-        Fait { dhash: dhash(n), score, taken: taken.map(date), orig: None }
+        Fait {
+            dhash: dhash(n),
+            score,
+            taken: taken.map(date),
+            orig: None,
+        }
     }
 
     /// Une photo dont on connaît la taille de l'original, orientée.
     fn fait_de(n: u64, score: f64, taken: &str, orig: (u32, u32)) -> Fait {
-        Fait { orig: Some(orig), ..fait(n, score, Some(taken)) }
+        Fait {
+            orig: Some(orig),
+            ..fait(n, score, Some(taken))
+        }
     }
 
     /// Une pleine page : la case qui demande le plus de pixels.
     fn pleine_page(srcs: &[&str]) -> Spread {
-        Spread { template: "full1".into(), ..planche(srcs) }
+        Spread {
+            template: "full1".into(),
+            ..planche(srcs)
+        }
     }
 
     fn reserve(srcs: &[&str]) -> Vec<EnReserve> {
-        srcs.iter().map(|s| EnReserve { src: s.to_string(), focal: [0.5, 0.42] }).collect()
+        srcs.iter()
+            .map(|s| EnReserve {
+                src: s.to_string(),
+                focal: [0.5, 0.42],
+            })
+            .collect()
     }
 
     fn date_de(faits: &HashMap<String, Fait>) -> impl Fn(&str) -> Option<NaiveDateTime> + '_ {
@@ -711,14 +819,33 @@ mod tests {
     fn le_meme_jour_gagne_sur_un_meilleur_score_d_un_autre_jour() {
         let a = album(vec![planche(&["p.jpg"])]);
         let faits: HashMap<String, Fait> = [
-            ("p.jpg".to_string(), fait(0, 5.0, Some("2013-10-27 10:00:00"))),
-            ("loin.jpg".to_string(), fait(1, 9.0, Some("2013-10-29 10:00:00"))),
-            ("jour.jpg".to_string(), fait(2, 2.0, Some("2013-10-27 18:00:00"))),
-            ("veille.jpg".to_string(), fait(3, 8.0, Some("2013-10-26 18:00:00"))),
+            (
+                "p.jpg".to_string(),
+                fait(0, 5.0, Some("2013-10-27 10:00:00")),
+            ),
+            (
+                "loin.jpg".to_string(),
+                fait(1, 9.0, Some("2013-10-29 10:00:00")),
+            ),
+            (
+                "jour.jpg".to_string(),
+                fait(2, 2.0, Some("2013-10-27 18:00:00")),
+            ),
+            (
+                "veille.jpg".to_string(),
+                fait(3, 8.0, Some("2013-10-26 18:00:00")),
+            ),
         ]
         .into_iter()
         .collect();
-        let c = classer(&a, 0, None, &reserve(&["loin.jpg", "jour.jpg", "veille.jpg"]), &faits, &date_de(&faits));
+        let c = classer(
+            &a,
+            0,
+            None,
+            &reserve(&["loin.jpg", "jour.jpg", "veille.jpg"]),
+            &faits,
+            &date_de(&faits),
+        );
         assert_eq!(srcs(&c), ["jour.jpg", "veille.jpg", "loin.jpg"]);
         assert_eq!(c[0].raison, Raison::MemeJour);
         assert_eq!(c[1].raison, Raison::Proche);
@@ -729,16 +856,32 @@ mod tests {
     fn un_quasi_doublon_d_une_photo_de_la_planche_est_ecarte() {
         let a = album(vec![planche(&["p.jpg"])]);
         let mut faits: HashMap<String, Fait> = [
-            ("p.jpg".to_string(), fait(0, 5.0, Some("2013-10-27 10:00:00"))),
-            ("autre.jpg".to_string(), fait(1, 5.0, Some("2013-10-27 10:00:00"))),
+            (
+                "p.jpg".to_string(),
+                fait(0, 5.0, Some("2013-10-27 10:00:00")),
+            ),
+            (
+                "autre.jpg".to_string(),
+                fait(1, 5.0, Some("2013-10-27 10:00:00")),
+            ),
         ]
         .into_iter()
         .collect();
         // À 23 bits de la photo posée : doublon au seuil de la curation.
-        let proche = Fait { dhash: dhash(0) ^ ((1u64 << 23) - 1), ..fait(0, 9.0, Some("2013-10-27 11:00:00")) };
+        let proche = Fait {
+            dhash: dhash(0) ^ ((1u64 << 23) - 1),
+            ..fait(0, 9.0, Some("2013-10-27 11:00:00"))
+        };
         assert_eq!(analyze::hamming(proche.dhash, dhash(0)), 23);
         faits.insert("doublon.jpg".into(), proche);
-        let c = classer(&a, 0, None, &reserve(&["doublon.jpg", "autre.jpg"]), &faits, &date_de(&faits));
+        let c = classer(
+            &a,
+            0,
+            None,
+            &reserve(&["doublon.jpg", "autre.jpg"]),
+            &faits,
+            &date_de(&faits),
+        );
         assert_eq!(srcs(&c), ["autre.jpg"]);
     }
 
@@ -746,14 +889,33 @@ mod tests {
     fn a_egalite_de_jour_le_score_departage() {
         let a = album(vec![planche(&["p.jpg"])]);
         let faits: HashMap<String, Fait> = [
-            ("p.jpg".to_string(), fait(0, 5.0, Some("2013-10-27 10:00:00"))),
-            ("faible.jpg".to_string(), fait(1, 1.0, Some("2013-10-27 12:00:00"))),
-            ("forte.jpg".to_string(), fait(2, 7.0, Some("2013-10-27 13:00:00"))),
-            ("moyenne.jpg".to_string(), fait(3, 4.0, Some("2013-10-27 14:00:00"))),
+            (
+                "p.jpg".to_string(),
+                fait(0, 5.0, Some("2013-10-27 10:00:00")),
+            ),
+            (
+                "faible.jpg".to_string(),
+                fait(1, 1.0, Some("2013-10-27 12:00:00")),
+            ),
+            (
+                "forte.jpg".to_string(),
+                fait(2, 7.0, Some("2013-10-27 13:00:00")),
+            ),
+            (
+                "moyenne.jpg".to_string(),
+                fait(3, 4.0, Some("2013-10-27 14:00:00")),
+            ),
         ]
         .into_iter()
         .collect();
-        let c = classer(&a, 0, None, &reserve(&["faible.jpg", "forte.jpg", "moyenne.jpg"]), &faits, &date_de(&faits));
+        let c = classer(
+            &a,
+            0,
+            None,
+            &reserve(&["faible.jpg", "forte.jpg", "moyenne.jpg"]),
+            &faits,
+            &date_de(&faits),
+        );
         assert_eq!(srcs(&c), ["forte.jpg", "moyenne.jpg", "faible.jpg"]);
         assert!(c.iter().all(|c| c.raison == Raison::MemeJour));
     }
@@ -762,18 +924,45 @@ mod tests {
     fn une_planche_sans_photo_prend_le_jour_de_ses_voisines() {
         // Une page de texte entre deux planches : la plus proche datée gagne,
         // et la voisine de gauche à distance 1 l'emporte sur celle à distance 2.
-        let a = album(vec![planche(&["a.jpg"]), planche(&[]), planche(&["b.jpg"]), planche(&["c.jpg"])]);
+        let a = album(vec![
+            planche(&["a.jpg"]),
+            planche(&[]),
+            planche(&["b.jpg"]),
+            planche(&["c.jpg"]),
+        ]);
         let faits: HashMap<String, Fait> = [
-            ("a.jpg".to_string(), fait(0, 5.0, Some("2013-10-20 10:00:00"))),
+            (
+                "a.jpg".to_string(),
+                fait(0, 5.0, Some("2013-10-20 10:00:00")),
+            ),
             ("b.jpg".to_string(), fait(1, 5.0, None)),
-            ("c.jpg".to_string(), fait(2, 5.0, Some("2013-10-29 10:00:00"))),
-            ("r20.jpg".to_string(), fait(3, 1.0, Some("2013-10-20 15:00:00"))),
-            ("r29.jpg".to_string(), fait(4, 9.0, Some("2013-10-29 15:00:00"))),
+            (
+                "c.jpg".to_string(),
+                fait(2, 5.0, Some("2013-10-29 10:00:00")),
+            ),
+            (
+                "r20.jpg".to_string(),
+                fait(3, 1.0, Some("2013-10-20 15:00:00")),
+            ),
+            (
+                "r29.jpg".to_string(),
+                fait(4, 9.0, Some("2013-10-29 15:00:00")),
+            ),
         ]
         .into_iter()
         .collect();
-        assert_eq!(jour_de_reference(&a, 1, &date_de(&faits)), Some(date("2013-10-20 00:00:00").date()));
-        let c = classer(&a, 1, None, &reserve(&["r29.jpg", "r20.jpg"]), &faits, &date_de(&faits));
+        assert_eq!(
+            jour_de_reference(&a, 1, &date_de(&faits)),
+            Some(date("2013-10-20 00:00:00").date())
+        );
+        let c = classer(
+            &a,
+            1,
+            None,
+            &reserve(&["r29.jpg", "r20.jpg"]),
+            &faits,
+            &date_de(&faits),
+        );
         assert_eq!(srcs(&c), ["r20.jpg", "r29.jpg"]);
         assert_eq!(c[0].raison, Raison::MemeJour);
     }
@@ -782,13 +971,25 @@ mod tests {
     fn la_mediane_des_dates_d_une_planche_fait_son_jour() {
         let a = album(vec![planche(&["a.jpg", "b.jpg", "c.jpg"])]);
         let faits: HashMap<String, Fait> = [
-            ("a.jpg".to_string(), fait(0, 1.0, Some("2013-10-01 10:00:00"))),
-            ("b.jpg".to_string(), fait(1, 1.0, Some("2013-10-27 10:00:00"))),
-            ("c.jpg".to_string(), fait(2, 1.0, Some("2013-10-28 10:00:00"))),
+            (
+                "a.jpg".to_string(),
+                fait(0, 1.0, Some("2013-10-01 10:00:00")),
+            ),
+            (
+                "b.jpg".to_string(),
+                fait(1, 1.0, Some("2013-10-27 10:00:00")),
+            ),
+            (
+                "c.jpg".to_string(),
+                fait(2, 1.0, Some("2013-10-28 10:00:00")),
+            ),
         ]
         .into_iter()
         .collect();
-        assert_eq!(jour_de_reference(&a, 0, &date_de(&faits)), Some(date("2013-10-27 00:00:00").date()));
+        assert_eq!(
+            jour_de_reference(&a, 0, &date_de(&faits)),
+            Some(date("2013-10-27 00:00:00").date())
+        );
     }
 
     #[test]
@@ -797,11 +998,21 @@ mod tests {
         let faits: HashMap<String, Fait> = [
             ("p.jpg".to_string(), fait(0, 5.0, None)),
             ("x.jpg".to_string(), fait(1, 2.0, None)),
-            ("y.jpg".to_string(), fait(2, 8.0, Some("2013-10-27 10:00:00"))),
+            (
+                "y.jpg".to_string(),
+                fait(2, 8.0, Some("2013-10-27 10:00:00")),
+            ),
         ]
         .into_iter()
         .collect();
-        let c = classer(&a, 0, None, &reserve(&["x.jpg", "y.jpg"]), &faits, &date_de(&faits));
+        let c = classer(
+            &a,
+            0,
+            None,
+            &reserve(&["x.jpg", "y.jpg"]),
+            &faits,
+            &date_de(&faits),
+        );
         assert_eq!(srcs(&c), ["y.jpg", "x.jpg"]);
         assert!(c.iter().all(|c| c.raison == Raison::Nette));
     }
@@ -810,13 +1021,26 @@ mod tests {
     fn les_photos_sans_date_ferment_la_marche() {
         let a = album(vec![planche(&["p.jpg"])]);
         let faits: HashMap<String, Fait> = [
-            ("p.jpg".to_string(), fait(0, 5.0, Some("2013-10-27 10:00:00"))),
+            (
+                "p.jpg".to_string(),
+                fait(0, 5.0, Some("2013-10-27 10:00:00")),
+            ),
             ("sans.jpg".to_string(), fait(1, 9.0, None)),
-            ("loin.jpg".to_string(), fait(2, 1.0, Some("2013-12-01 10:00:00"))),
+            (
+                "loin.jpg".to_string(),
+                fait(2, 1.0, Some("2013-12-01 10:00:00")),
+            ),
         ]
         .into_iter()
         .collect();
-        let c = classer(&a, 0, None, &reserve(&["sans.jpg", "loin.jpg"]), &faits, &date_de(&faits));
+        let c = classer(
+            &a,
+            0,
+            None,
+            &reserve(&["sans.jpg", "loin.jpg"]),
+            &faits,
+            &date_de(&faits),
+        );
         assert_eq!(srcs(&c), ["loin.jpg", "sans.jpg"]);
         assert_eq!(c[1].raison, Raison::Nette);
     }
@@ -824,17 +1048,35 @@ mod tests {
     #[test]
     fn douze_au_plus_et_une_photo_sans_fait_n_entre_pas() {
         let a = album(vec![planche(&["p.jpg"])]);
-        let mut faits: HashMap<String, Fait> =
-            [("p.jpg".to_string(), fait(0, 5.0, Some("2013-10-27 10:00:00")))].into_iter().collect();
+        let mut faits: HashMap<String, Fait> = [(
+            "p.jpg".to_string(),
+            fait(0, 5.0, Some("2013-10-27 10:00:00")),
+        )]
+        .into_iter()
+        .collect();
         let mut noms: Vec<String> = Vec::new();
         for i in 1..=20u64 {
             let nom = format!("r{i:02}.jpg");
             // Des dHash éloignés les uns des autres et de la photo posée.
-            faits.insert(nom.clone(), Fait { dhash: dhash(i % 9 + 1) ^ (i << 40), score: i as f64, taken: Some(date("2013-10-27 12:00:00")), orig: None });
+            faits.insert(
+                nom.clone(),
+                Fait {
+                    dhash: dhash(i % 9 + 1) ^ (i << 40),
+                    score: i as f64,
+                    taken: Some(date("2013-10-27 12:00:00")),
+                    orig: None,
+                },
+            );
             noms.push(nom);
         }
         noms.push("illisible.jpg".into());
-        let en_reserve: Vec<EnReserve> = noms.iter().map(|s| EnReserve { src: s.clone(), focal: [0.5, 0.42] }).collect();
+        let en_reserve: Vec<EnReserve> = noms
+            .iter()
+            .map(|s| EnReserve {
+                src: s.clone(),
+                focal: [0.5, 0.42],
+            })
+            .collect();
         let c = classer(&a, 0, None, &en_reserve, &faits, &date_de(&faits));
         assert_eq!(c.len(), AU_PLUS);
         assert_eq!(c[0].src, "r20.jpg");
@@ -845,9 +1087,18 @@ mod tests {
     fn avec_une_case_celle_qui_tient_passe_devant_une_plus_proche_qui_ne_tient_pas() {
         let a = album(vec![pleine_page(&["p.jpg"])]);
         let faits: HashMap<String, Fait> = [
-            ("p.jpg".to_string(), fait_de(0, 5.0, "2013-10-27 10:00:00", (6000, 4000))),
-            ("petite.jpg".to_string(), fait_de(1, 9.0, "2013-10-27 12:00:00", (1200, 900))),
-            ("grande.jpg".to_string(), fait_de(2, 1.0, "2013-10-29 12:00:00", (6000, 4000))),
+            (
+                "p.jpg".to_string(),
+                fait_de(0, 5.0, "2013-10-27 10:00:00", (6000, 4000)),
+            ),
+            (
+                "petite.jpg".to_string(),
+                fait_de(1, 9.0, "2013-10-27 12:00:00", (1200, 900)),
+            ),
+            (
+                "grande.jpg".to_string(),
+                fait_de(2, 1.0, "2013-10-29 12:00:00", (6000, 4000)),
+            ),
         ]
         .into_iter()
         .collect();
@@ -865,13 +1116,29 @@ mod tests {
     fn sans_case_l_ordre_et_le_contrat_sont_ceux_d_hier() {
         let a = album(vec![pleine_page(&["p.jpg"])]);
         let faits: HashMap<String, Fait> = [
-            ("p.jpg".to_string(), fait_de(0, 5.0, "2013-10-27 10:00:00", (6000, 4000))),
-            ("petite.jpg".to_string(), fait_de(1, 9.0, "2013-10-27 12:00:00", (1200, 900))),
-            ("grande.jpg".to_string(), fait_de(2, 1.0, "2013-10-29 12:00:00", (6000, 4000))),
+            (
+                "p.jpg".to_string(),
+                fait_de(0, 5.0, "2013-10-27 10:00:00", (6000, 4000)),
+            ),
+            (
+                "petite.jpg".to_string(),
+                fait_de(1, 9.0, "2013-10-27 12:00:00", (1200, 900)),
+            ),
+            (
+                "grande.jpg".to_string(),
+                fait_de(2, 1.0, "2013-10-29 12:00:00", (6000, 4000)),
+            ),
         ]
         .into_iter()
         .collect();
-        let c = classer(&a, 0, None, &reserve(&["petite.jpg", "grande.jpg"]), &faits, &date_de(&faits));
+        let c = classer(
+            &a,
+            0,
+            None,
+            &reserve(&["petite.jpg", "grande.jpg"]),
+            &faits,
+            &date_de(&faits),
+        );
         assert_eq!(srcs(&c), ["petite.jpg", "grande.jpg"]);
         assert!(c.iter().all(|c| c.ppi.is_none()));
         // Sans case, le JSON n'a pas un champ de plus.
@@ -884,21 +1151,45 @@ mod tests {
         // avant le rangement, les douze premières auraient chassé la seule
         // qui tient.
         let a = album(vec![pleine_page(&["p.jpg"])]);
-        let mut faits: HashMap<String, Fait> =
-            [("p.jpg".to_string(), fait_de(0, 5.0, "2013-10-27 10:00:00", (6000, 4000)))].into_iter().collect();
+        let mut faits: HashMap<String, Fait> = [(
+            "p.jpg".to_string(),
+            fait_de(0, 5.0, "2013-10-27 10:00:00", (6000, 4000)),
+        )]
+        .into_iter()
+        .collect();
         let mut noms: Vec<String> = Vec::new();
         for i in 1..=13u64 {
             let nom = format!("petite{i:02}.jpg");
-            faits.insert(nom.clone(), Fait { dhash: dhash(i % 9 + 1) ^ (i << 40), score: i as f64, taken: Some(date("2013-10-27 12:00:00")), orig: Some((1200, 900)) });
+            faits.insert(
+                nom.clone(),
+                Fait {
+                    dhash: dhash(i % 9 + 1) ^ (i << 40),
+                    score: i as f64,
+                    taken: Some(date("2013-10-27 12:00:00")),
+                    orig: Some((1200, 900)),
+                },
+            );
             noms.push(nom);
         }
-        faits.insert("grande.jpg".into(), fait_de(5, 0.5, "2013-11-30 12:00:00", (6000, 4000)));
+        faits.insert(
+            "grande.jpg".into(),
+            fait_de(5, 0.5, "2013-11-30 12:00:00", (6000, 4000)),
+        );
         noms.push("grande.jpg".into());
-        let r: Vec<EnReserve> = noms.iter().map(|s| EnReserve { src: s.clone(), focal: [0.5, 0.42] }).collect();
+        let r: Vec<EnReserve> = noms
+            .iter()
+            .map(|s| EnReserve {
+                src: s.clone(),
+                focal: [0.5, 0.42],
+            })
+            .collect();
         let c = classer(&a, 0, Some(0), &r, &faits, &date_de(&faits));
         assert_eq!(c.len(), AU_PLUS);
         assert_eq!(c[0].src, "grande.jpg");
-        assert_eq!(c[1].src, "petite13.jpg", "les autres gardent l'ordre d'hier");
+        assert_eq!(
+            c[1].src, "petite13.jpg",
+            "les autres gardent l'ordre d'hier"
+        );
     }
 
     #[test]
@@ -906,13 +1197,29 @@ mod tests {
         // Sans original mesuré, pas de ppi : la candidate garde sa place.
         let a = album(vec![pleine_page(&["p.jpg"])]);
         let faits: HashMap<String, Fait> = [
-            ("p.jpg".to_string(), fait(0, 5.0, Some("2013-10-27 10:00:00"))),
-            ("inconnue.jpg".to_string(), fait(1, 9.0, Some("2013-10-27 12:00:00"))),
-            ("grande.jpg".to_string(), fait_de(2, 1.0, "2013-10-27 12:00:00", (6000, 4000))),
+            (
+                "p.jpg".to_string(),
+                fait(0, 5.0, Some("2013-10-27 10:00:00")),
+            ),
+            (
+                "inconnue.jpg".to_string(),
+                fait(1, 9.0, Some("2013-10-27 12:00:00")),
+            ),
+            (
+                "grande.jpg".to_string(),
+                fait_de(2, 1.0, "2013-10-27 12:00:00", (6000, 4000)),
+            ),
         ]
         .into_iter()
         .collect();
-        let c = classer(&a, 0, Some(0), &reserve(&["inconnue.jpg", "grande.jpg"]), &faits, &date_de(&faits));
+        let c = classer(
+            &a,
+            0,
+            Some(0),
+            &reserve(&["inconnue.jpg", "grande.jpg"]),
+            &faits,
+            &date_de(&faits),
+        );
         assert_eq!(srcs(&c), ["inconnue.jpg", "grande.jpg"]);
         assert_eq!(c[0].ppi, None);
     }
@@ -926,32 +1233,49 @@ mod tests {
         ]
         .into_iter()
         .collect();
-        let r = vec![EnReserve { src: "v.jpg".into(), focal: [0.3, 0.2] }];
+        let r = vec![EnReserve {
+            src: "v.jpg".into(),
+            focal: [0.3, 0.2],
+        }];
         let c = classer(&a, 0, None, &r, &faits, &date_de(&faits));
         assert_eq!(c[0].focal, [0.3, 0.2]);
     }
 
     fn vide() -> Spread {
-        Spread { template: "vide".into(), ..planche(&[]) }
+        Spread {
+            template: "vide".into(),
+            ..planche(&[])
+        }
     }
 
     fn cases(c: &[(usize, usize)]) -> Vec<Case> {
-        c.iter().map(|&(planche, cellule)| Case { planche, cellule }).collect()
+        c.iter()
+            .map(|&(planche, cellule)| Case { planche, cellule })
+            .collect()
     }
 
     #[test]
     fn les_cases_vides_sont_la_planche_vide_et_la_case_sans_photo() {
         let mut figee = vide();
         figee.locked = true;
-        let mut texte = Spread { template: "texte".into(), ..planche(&[]) };
+        let mut texte = Spread {
+            template: "texte".into(),
+            ..planche(&[])
+        };
         texte.text = Some("Un mot".into());
         let mut ornee = vide();
-        ornee.objets.push(serde_json::from_value(serde_json::json!({
-            "x": 10.0, "y": 10.0, "w": 20.0, "h": 20.0,
-            "type": "ornement", "pack": "colophon", "id": "fleuron-1"
-        })).unwrap());
+        ornee.objets.push(
+            serde_json::from_value(serde_json::json!({
+                "x": 10.0, "y": 10.0, "w": 20.0, "h": 20.0,
+                "type": "ornement", "pack": "colophon", "id": "fleuron-1"
+            }))
+            .unwrap(),
+        );
         // Un trio réparé à la main avec une seule photo : deux cases sans photo.
-        let trou = Spread { template: "trio".into(), ..planche(&["t.jpg"]) };
+        let trou = Spread {
+            template: "trio".into(),
+            ..planche(&["t.jpg"])
+        };
         // La première planche, la page 1, n'est jamais un trou : rien n'y
         // pose de photo, même vide.
         let a = album(vec![
@@ -963,7 +1287,10 @@ mod tests {
             texte,
             ornee,
             trou,
-            Spread { template: "colophon".into(), ..planche(&[]) },
+            Spread {
+                template: "colophon".into(),
+                ..planche(&[])
+            },
         ]);
         assert_eq!(cases_vides(&a), cases(&[(1, 0), (7, 1), (7, 2)]));
     }
@@ -977,19 +1304,34 @@ mod tests {
 
     #[test]
     fn une_planche_vide_recoit_la_meilleure_du_jour_de_ses_voisines() {
-        let a = album(vec![pleine_page(&["p.jpg"]), vide(), pleine_page(&["q.jpg"])]);
+        let a = album(vec![
+            pleine_page(&["p.jpg"]),
+            vide(),
+            pleine_page(&["q.jpg"]),
+        ]);
         let faits = grandes(&[
             ("p.jpg", 0, 5.0, "2013-10-27 10:00:00"),
             ("q.jpg", 1, 5.0, "2013-10-29 10:00:00"),
             ("loin.jpg", 2, 9.0, "2013-11-20 10:00:00"),
             ("jour.jpg", 3, 2.0, "2013-10-27 18:00:00"),
         ]);
-        let (poses, restees) =
-            remplir_avec(&a, &reserve(&["loin.jpg", "jour.jpg"]), &faits, &date_de(&faits));
+        let (poses, restees) = remplir_avec(
+            &a,
+            &reserve(&["loin.jpg", "jour.jpg"]),
+            &faits,
+            &date_de(&faits),
+        );
         assert!(restees.is_empty());
         assert_eq!(poses.len(), 1);
-        assert_eq!((poses[0].planche, poses[0].cellule, poses[0].src.as_str()), (1, 0, "jour.jpg"));
-        assert!(poses[0].ppi >= crate::audit::MIN_EFFECTIVE_PPI, "{}", poses[0].ppi);
+        assert_eq!(
+            (poses[0].planche, poses[0].cellule, poses[0].src.as_str()),
+            (1, 0, "jour.jpg")
+        );
+        assert!(
+            poses[0].ppi >= crate::audit::MIN_EFFECTIVE_PPI,
+            "{}",
+            poses[0].ppi
+        );
     }
 
     #[test]
@@ -1000,9 +1342,13 @@ mod tests {
             ("x.jpg", 1, 9.0, "2013-10-27 11:00:00"),
             ("y.jpg", 2, 4.0, "2013-10-27 12:00:00"),
         ]);
-        let (poses, restees) = remplir_avec(&a, &reserve(&["x.jpg", "y.jpg"]), &faits, &date_de(&faits));
+        let (poses, restees) =
+            remplir_avec(&a, &reserve(&["x.jpg", "y.jpg"]), &faits, &date_de(&faits));
         assert!(restees.is_empty());
-        assert_eq!(poses.iter().map(|p| p.src.as_str()).collect::<Vec<_>>(), ["x.jpg", "y.jpg"]);
+        assert_eq!(
+            poses.iter().map(|p| p.src.as_str()).collect::<Vec<_>>(),
+            ["x.jpg", "y.jpg"]
+        );
         assert_eq!(poses.iter().map(|p| p.planche).collect::<Vec<_>>(), [1, 2]);
     }
 
@@ -1010,8 +1356,14 @@ mod tests {
     fn une_petite_ou_une_inconnue_laissent_la_case_vide_et_le_disent() {
         let a = album(vec![pleine_page(&["p.jpg"]), vide()]);
         let mut faits = grandes(&[("p.jpg", 0, 5.0, "2013-10-27 10:00:00")]);
-        faits.insert("petite.jpg".into(), fait_de(1, 9.0, "2013-10-27 11:00:00", (1200, 900)));
-        faits.insert("inconnue.jpg".into(), fait(3, 9.0, Some("2013-10-27 11:00:00")));
+        faits.insert(
+            "petite.jpg".into(),
+            fait_de(1, 9.0, "2013-10-27 11:00:00", (1200, 900)),
+        );
+        faits.insert(
+            "inconnue.jpg".into(),
+            fait(3, 9.0, Some("2013-10-27 11:00:00")),
+        );
         let r = reserve(&["petite.jpg", "inconnue.jpg"]);
         let (poses, restees) = remplir_avec(&a, &r, &faits, &date_de(&faits));
         assert!(poses.is_empty(), "{poses:?}");
@@ -1022,17 +1374,37 @@ mod tests {
     fn une_mal_formee_ne_prend_pas_la_case_d_un_gabarit() {
         // La case d'un quad est loin d'un panorama : il la trahit, la
         // photo droite d'un autre jour passe devant lui.
-        let a = album(vec![vide(), Spread { template: "quad".into(), ..planche(&["p.jpg", "q.jpg", "r.jpg"]) }]);
+        let a = album(vec![
+            vide(),
+            Spread {
+                template: "quad".into(),
+                ..planche(&["p.jpg", "q.jpg", "r.jpg"])
+            },
+        ]);
         let mut faits = grandes(&[
             ("p.jpg", 0, 5.0, "2013-10-27 10:00:00"),
             ("q.jpg", 1, 5.0, "2013-10-27 10:00:00"),
             ("r.jpg", 2, 5.0, "2013-10-27 10:00:00"),
             ("droite.jpg", 3, 1.0, "2013-11-27 10:00:00"),
         ]);
-        faits.insert("pano.jpg".into(), fait_de(4, 9.0, "2013-10-27 11:00:00", (12000, 3000)));
-        let (poses, _) = remplir_avec(&a, &reserve(&["pano.jpg", "droite.jpg"]), &faits, &date_de(&faits));
-        assert_eq!(poses.iter().map(|p| p.src.as_str()).collect::<Vec<_>>(), ["droite.jpg"]);
-        assert_eq!(poses[0].gabarit, None, "une case d'un gabarit ne change pas le gabarit");
+        faits.insert(
+            "pano.jpg".into(),
+            fait_de(4, 9.0, "2013-10-27 11:00:00", (12000, 3000)),
+        );
+        let (poses, _) = remplir_avec(
+            &a,
+            &reserve(&["pano.jpg", "droite.jpg"]),
+            &faits,
+            &date_de(&faits),
+        );
+        assert_eq!(
+            poses.iter().map(|p| p.src.as_str()).collect::<Vec<_>>(),
+            ["droite.jpg"]
+        );
+        assert_eq!(
+            poses[0].gabarit, None,
+            "une case d'un gabarit ne change pas le gabarit"
+        );
     }
 
     #[test]
@@ -1042,41 +1414,88 @@ mod tests {
             ("p.jpg", 0, 5.0, "2013-10-27 10:00:00"),
             ("paysage.jpg", 1, 9.0, "2013-10-27 11:00:00"),
         ]);
-        faits.insert("portrait.jpg".into(), fait_de(2, 8.0, "2013-10-27 12:00:00", (4000, 6000)));
-        let (poses, _) = remplir_avec(&a, &reserve(&["paysage.jpg", "portrait.jpg"]), &faits, &date_de(&faits));
-        let pris: Vec<_> = poses.iter().map(|p| (p.src.as_str(), p.gabarit.as_deref())).collect();
-        assert_eq!(pris, [("paysage.jpg", Some("solo_paysage")), ("portrait.jpg", Some("solo"))]);
+        faits.insert(
+            "portrait.jpg".into(),
+            fait_de(2, 8.0, "2013-10-27 12:00:00", (4000, 6000)),
+        );
+        let (poses, _) = remplir_avec(
+            &a,
+            &reserve(&["paysage.jpg", "portrait.jpg"]),
+            &faits,
+            &date_de(&faits),
+        );
+        let pris: Vec<_> = poses
+            .iter()
+            .map(|p| (p.src.as_str(), p.gabarit.as_deref()))
+            .collect();
+        assert_eq!(
+            pris,
+            [
+                ("paysage.jpg", Some("solo_paysage")),
+                ("portrait.jpg", Some("solo"))
+            ]
+        );
     }
 
     #[test]
     fn une_quasi_doublon_de_la_planche_n_est_pas_posee() {
         // Un quad réparé à la main : la case libre ne reçoit pas le quasi-
         // doublon d'une photo qu'il porte déjà.
-        let a = album(vec![vide(), Spread { template: "quad".into(), ..planche(&["p.jpg", "q.jpg", "r.jpg"]) }]);
+        let a = album(vec![
+            vide(),
+            Spread {
+                template: "quad".into(),
+                ..planche(&["p.jpg", "q.jpg", "r.jpg"])
+            },
+        ]);
         let mut faits = grandes(&[
             ("p.jpg", 0, 5.0, "2013-10-27 10:00:00"),
             ("q.jpg", 1, 5.0, "2013-10-27 10:00:00"),
             ("r.jpg", 2, 5.0, "2013-10-27 10:00:00"),
             ("autre.jpg", 3, 1.0, "2013-10-27 12:00:00"),
         ]);
-        let proche = Fait { dhash: dhash(0) ^ 0b111, ..fait_de(0, 9.0, "2013-10-27 11:00:00", (6000, 4000)) };
+        let proche = Fait {
+            dhash: dhash(0) ^ 0b111,
+            ..fait_de(0, 9.0, "2013-10-27 11:00:00", (6000, 4000))
+        };
         faits.insert("doublon.jpg".into(), proche);
-        let (poses, _) = remplir_avec(&a, &reserve(&["doublon.jpg", "autre.jpg"]), &faits, &date_de(&faits));
-        assert_eq!(poses.iter().map(|p| p.src.as_str()).collect::<Vec<_>>(), ["autre.jpg"]);
+        let (poses, _) = remplir_avec(
+            &a,
+            &reserve(&["doublon.jpg", "autre.jpg"]),
+            &faits,
+            &date_de(&faits),
+        );
+        assert_eq!(
+            poses.iter().map(|p| p.src.as_str()).collect::<Vec<_>>(),
+            ["autre.jpg"]
+        );
     }
 
     #[test]
     fn les_cases_d_une_planche_se_remplissent_dans_l_ordre_et_la_premiere_ratee_l_arrete() {
         // Un quad réparé à la main avec une photo : trois cases, deux photos
         // qui tiennent. La troisième case reste vide, et le dit.
-        let a = album(vec![vide(), Spread { template: "quad".into(), ..planche(&["p.jpg"]) }]);
+        let a = album(vec![
+            vide(),
+            Spread {
+                template: "quad".into(),
+                ..planche(&["p.jpg"])
+            },
+        ]);
         let faits = grandes(&[
             ("p.jpg", 0, 5.0, "2013-10-27 10:00:00"),
             ("x.jpg", 1, 9.0, "2013-10-27 11:00:00"),
             ("y.jpg", 2, 4.0, "2013-10-27 12:00:00"),
         ]);
-        let (poses, restees) = remplir_avec(&a, &reserve(&["x.jpg", "y.jpg"]), &faits, &date_de(&faits));
-        assert_eq!(poses.iter().map(|p| (p.cellule, p.src.as_str())).collect::<Vec<_>>(), [(1, "x.jpg"), (2, "y.jpg")]);
+        let (poses, restees) =
+            remplir_avec(&a, &reserve(&["x.jpg", "y.jpg"]), &faits, &date_de(&faits));
+        assert_eq!(
+            poses
+                .iter()
+                .map(|p| (p.cellule, p.src.as_str()))
+                .collect::<Vec<_>>(),
+            [(1, "x.jpg"), (2, "y.jpg")]
+        );
         assert_eq!(restees, cases(&[(1, 3)]));
     }
 
@@ -1089,14 +1508,34 @@ mod tests {
         let mut noms: Vec<String> = Vec::new();
         for i in 1..=13u64 {
             let nom = format!("pano{i:02}.jpg");
-            faits.insert(nom.clone(), Fait { dhash: dhash(i % 9 + 1) ^ (i << 40), score: i as f64, taken: Some(date("2013-10-27 12:00:00")), orig: Some((12000, 3000)) });
+            faits.insert(
+                nom.clone(),
+                Fait {
+                    dhash: dhash(i % 9 + 1) ^ (i << 40),
+                    score: i as f64,
+                    taken: Some(date("2013-10-27 12:00:00")),
+                    orig: Some((12000, 3000)),
+                },
+            );
             noms.push(nom);
         }
-        faits.insert("loin.jpg".into(), fait_de(5, 0.5, "2013-12-01 12:00:00", (4000, 6000)));
+        faits.insert(
+            "loin.jpg".into(),
+            fait_de(5, 0.5, "2013-12-01 12:00:00", (4000, 6000)),
+        );
         noms.push("loin.jpg".into());
-        let r: Vec<EnReserve> = noms.iter().map(|s| EnReserve { src: s.clone(), focal: [0.5, 0.42] }).collect();
+        let r: Vec<EnReserve> = noms
+            .iter()
+            .map(|s| EnReserve {
+                src: s.clone(),
+                focal: [0.5, 0.42],
+            })
+            .collect();
         let (poses, _) = remplir_avec(&a, &r, &faits, &date_de(&faits));
-        assert_eq!(poses.iter().map(|p| p.src.as_str()).collect::<Vec<_>>(), ["loin.jpg"]);
+        assert_eq!(
+            poses.iter().map(|p| p.src.as_str()).collect::<Vec<_>>(),
+            ["loin.jpg"]
+        );
         assert_eq!(poses[0].gabarit.as_deref(), Some("solo"));
     }
 
@@ -1112,14 +1551,31 @@ mod tests {
             ("para.jpg", "parasite"),
         ]
         .iter()
-        .map(|&(src, reason)| Discard { src: src.into(), reason: reason.into(), kept: None, focal: [0.5, 0.42] })
+        .map(|&(src, reason)| Discard {
+            src: src.into(),
+            reason: reason.into(),
+            kept: None,
+            focal: [0.5, 0.42],
+        })
         .collect();
         // `main.jpg` n'a pas d'entrée : retirée à la main, elle reste à la main.
         let r = reconduites(
-            reserve(&["budget.jpg", "moment.jpg", "non.jpg", "orig.jpg", "dbl.jpg", "jum.jpg", "para.jpg", "main.jpg"]),
+            reserve(&[
+                "budget.jpg",
+                "moment.jpg",
+                "non.jpg",
+                "orig.jpg",
+                "dbl.jpg",
+                "jum.jpg",
+                "para.jpg",
+                "main.jpg",
+            ]),
             &curation,
         );
-        assert_eq!(r.iter().map(|r| r.src.as_str()).collect::<Vec<_>>(), ["budget.jpg", "moment.jpg"]);
+        assert_eq!(
+            r.iter().map(|r| r.src.as_str()).collect::<Vec<_>>(),
+            ["budget.jpg", "moment.jpg"]
+        );
     }
 
     #[test]
@@ -1139,7 +1595,10 @@ mod tests {
         let r = remplir(&dir, &a).unwrap();
         assert!(r.poses.is_empty());
         assert_eq!(r.restees, cases(&[(1, 0)]));
-        assert!(r.note.unwrap_or_default().contains("ni relevé ni vignettes"));
+        assert!(r
+            .note
+            .unwrap_or_default()
+            .contains("ni relevé ni vignettes"));
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -1154,8 +1613,15 @@ mod tests {
         let a = album(vec![planche(&["p.jpg"])]);
         let r = reserve_classee(&dir, &a, 0, None).unwrap();
         assert!(r.candidats.is_empty());
-        assert!(r.note.as_deref().unwrap_or("").contains("ni relevé ni vignettes"));
-        assert!(reserve_classee(&dir, &a, 7, None).is_err(), "une planche hors de l'album se refuse");
+        assert!(r
+            .note
+            .as_deref()
+            .unwrap_or("")
+            .contains("ni relevé ni vignettes"));
+        assert!(
+            reserve_classee(&dir, &a, 7, None).is_err(),
+            "une planche hors de l'album se refuse"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -1163,7 +1629,8 @@ mod tests {
     /// netteté et la note dit l'absence de date.
     #[test]
     fn des_vignettes_sans_originaux_classent_sur_la_nettete_et_le_disent() {
-        let dir = std::env::temp_dir().join(format!("colophon-reserve-vignettes-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("colophon-reserve-vignettes-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let cache = dir.join(".cache").join("thumbs");
         std::fs::create_dir_all(&cache).unwrap();
@@ -1179,7 +1646,16 @@ mod tests {
             ("b.jpg", Box::new(|_, y| (y * 4) as u8)),
             // Un dégradé horizontal en haut, son inverse en bas : 32 bits du
             // dHash de a (tout à un) comme de celui de b (tout à zéro).
-            ("c.jpg", Box::new(|x, y| if y < 32 { (x * 4) as u8 } else { 255 - (x * 4) as u8 })),
+            (
+                "c.jpg",
+                Box::new(|x, y| {
+                    if y < 32 {
+                        (x * 4) as u8
+                    } else {
+                        255 - (x * 4) as u8
+                    }
+                }),
+            ),
         ];
         for (nom, f) in dessins {
             let img = image::ImageBuffer::from_fn(64, 64, |x, y| {
@@ -1191,7 +1667,11 @@ mod tests {
             thumbs.insert(nom.to_string(), fichier);
         }
         thumbs.insert("perdue.jpg".to_string(), "v-perdue.jpg".to_string());
-        std::fs::write(dir.join("thumbs.json"), serde_json::to_string(&thumbs).unwrap()).unwrap();
+        std::fs::write(
+            dir.join("thumbs.json"),
+            serde_json::to_string(&thumbs).unwrap(),
+        )
+        .unwrap();
         let a = album(vec![planche(&["a.jpg"])]);
         let r = reserve_classee(&dir, &a, 0, None).unwrap();
         let note = r.note.clone().unwrap_or_default();
@@ -1200,7 +1680,10 @@ mod tests {
         assert!(r.candidats.iter().all(|c| c.raison == Raison::Nette));
         let noms = srcs(&r.candidats);
         assert_eq!(noms.len(), 2, "{noms:?}");
-        assert!(noms.contains(&"b.jpg") && noms.contains(&"c.jpg"), "{noms:?}");
+        assert!(
+            noms.contains(&"b.jpg") && noms.contains(&"c.jpg"),
+            "{noms:?}"
+        );
         assert!(r.candidats[0].score >= r.candidats[1].score);
 
         // La vignette de la photo posée est réécrite en copie de b : le cache

@@ -75,7 +75,11 @@ pub fn survol(dir: &Path, n: usize, limite: Duration) -> Survol {
             }
         }
     }
-    Survol { photos, petit: photos < crate::pipeline::PETIT_DOSSIER, miniatures }
+    Survol {
+        photos,
+        petit: photos < crate::pipeline::PETIT_DOSSIER,
+        miniatures,
+    }
 }
 
 /// Les places que l'écran de création demande : six cases d'aperçu et une
@@ -97,7 +101,9 @@ const COTE_SYSTEME: u32 = 320;
 pub fn miniature(path: &Path) -> Option<DynamicImage> {
     if crate::heic::systeme_requis(path) {
         let d = crate::heic::system()?;
-        let (img, _) = d.preview(path, Some(COTE_SYSTEME), crate::heic::Espace::Srgb).ok()?;
+        let (img, _) = d
+            .preview(path, Some(COTE_SYSTEME), crate::heic::Espace::Srgb)
+            .ok()?;
         let orientation = d.exif(path).and_then(|e| e.orientation).unwrap_or(1);
         return Some(crate::thumb::apply_orientation(img, orientation));
     }
@@ -126,7 +132,10 @@ pub fn miniature(path: &Path) -> Option<DynamicImage> {
 fn encoder(src: String, img: &DynamicImage) -> Option<Miniature> {
     let mut jpeg = Vec::new();
     img.to_rgb8()
-        .write_to(&mut std::io::Cursor::new(&mut jpeg), image::ImageFormat::Jpeg)
+        .write_to(
+            &mut std::io::Cursor::new(&mut jpeg),
+            image::ImageFormat::Jpeg,
+        )
         .ok()?;
     Some(Miniature {
         src,
@@ -139,11 +148,14 @@ fn encoder(src: String, img: &DynamicImage) -> Option<Miniature> {
 /// Base64 standard, avec bourrage (RFC 4648 § 4). Écrit ici plutôt qu'emprunté :
 /// le moteur n'a pas de crate d'encodage et n'en gagne pas un pour vingt lignes.
 pub fn base64(octets: &[u8]) -> String {
-    const ALPHABET: &[u8; 64] =
-        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(octets.len().div_ceil(3) * 4);
     for bloc in octets.chunks(3) {
-        let b = [bloc[0], *bloc.get(1).unwrap_or(&0), *bloc.get(2).unwrap_or(&0)];
+        let b = [
+            bloc[0],
+            *bloc.get(1).unwrap_or(&0),
+            *bloc.get(2).unwrap_or(&0),
+        ];
         let v = (b[0] as u32) << 16 | (b[1] as u32) << 8 | b[2] as u32;
         for i in 0..4 {
             if i <= bloc.len() {
@@ -184,7 +196,10 @@ mod tests {
     fn jpeg_a_miniature(w: u32, h: u32, orientation: u32) -> Vec<u8> {
         let mut petite = Vec::new();
         DynamicImage::new_rgb8(w, h)
-            .write_to(&mut std::io::Cursor::new(&mut petite), image::ImageFormat::Jpeg)
+            .write_to(
+                &mut std::io::Cursor::new(&mut petite),
+                image::ImageFormat::Jpeg,
+            )
             .unwrap();
         let champ = Field {
             tag: Tag::Orientation,
@@ -208,7 +223,8 @@ mod tests {
     }
 
     fn dossier(nom: &str) -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join(format!("colophon-survol-{nom}-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("colophon-survol-{nom}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
@@ -236,14 +252,18 @@ mod tests {
         let dir = dossier("compte");
         std::fs::write(dir.join("a.jpg"), jpeg_a_miniature(32, 16, 1)).unwrap();
         std::fs::write(dir.join("b.jpg"), b"\xff\xd8 sans exif").unwrap();
-        DynamicImage::new_rgb8(4, 4).save(dir.join("c.png")).unwrap();
+        DynamicImage::new_rgb8(4, 4)
+            .save(dir.join("c.png"))
+            .unwrap();
         std::fs::write(dir.join("d.mov"), b"video").unwrap();
         let a = survol(&dir, 3, Duration::from_secs(5));
         assert_eq!(a.photos, 3);
         assert!(a.petit);
         assert_eq!(a.miniatures.len(), 1);
         assert_eq!(a.miniatures[0].src, "a.jpg");
-        assert!(a.miniatures[0].url.starts_with("data:image/jpeg;base64,/9j/"));
+        assert!(a.miniatures[0]
+            .url
+            .starts_with("data:image/jpeg;base64,/9j/"));
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -253,7 +273,11 @@ mod tests {
     fn les_places_se_repartissent_et_glissent_a_la_voisine() {
         let dir = dossier("places");
         for i in 0..10 {
-            let octets = if i == 5 { b"\xff\xd8 rien".to_vec() } else { jpeg_a_miniature(8, 8, 1) };
+            let octets = if i == 5 {
+                b"\xff\xd8 rien".to_vec()
+            } else {
+                jpeg_a_miniature(8, 8, 1)
+            };
             std::fs::write(dir.join(format!("{i:02}.jpg")), octets).unwrap();
         }
         let a = survol(&dir, 3, Duration::from_secs(5));

@@ -153,7 +153,12 @@ pub fn declare(doc: &mut Document, title: &str, stamp: DateTime<Local>) -> Resul
         Object::String(fingerprint, StringFormat::Hexadecimal),
     ]);
 
-    Ok(Declaration { output_intents: Object::Array(vec![intent("GTS_PDFX"), intent("GTS_PDFA1")]), metadata, info, id })
+    Ok(Declaration {
+        output_intents: Object::Array(vec![intent("GTS_PDFX"), intent("GTS_PDFA1")]),
+        metadata,
+        info,
+        id,
+    })
 }
 
 /// A PDF text string. Titles carry accents, so everything goes out as
@@ -325,10 +330,19 @@ mod tests {
     /// ne reste dans ce qu'un PDF déclare de son auteur.
     #[test]
     fn le_pdf_se_dit_ecrit_par_booklibre() {
-        assert_eq!(producer(), format!("Booklibre {}", env!("CARGO_PKG_VERSION")));
+        assert_eq!(
+            producer(),
+            format!("Booklibre {}", env!("CARGO_PKG_VERSION"))
+        );
         let packet = xmp("Corse", stamp());
         assert!(packet.contains(r#"x:xmptk="Booklibre""#), "{packet}");
-        assert!(packet.contains(&format!("<xmp:CreatorTool>{}</xmp:CreatorTool>", producer())), "{packet}");
+        assert!(
+            packet.contains(&format!(
+                "<xmp:CreatorTool>{}</xmp:CreatorTool>",
+                producer()
+            )),
+            "{packet}"
+        );
         assert!(!packet.contains("Colophon"), "{packet}");
     }
 
@@ -338,7 +352,10 @@ mod tests {
     fn l_horodatage_se_lit_dans_l_environnement() {
         let t = stamp_from_epoch("1755000000").expect("epoch lisible");
         assert_eq!(t.timestamp(), 1_755_000_000);
-        assert_eq!(stamp_from_epoch("  1755000000  ").map(|t| t.timestamp()), Some(1_755_000_000));
+        assert_eq!(
+            stamp_from_epoch("  1755000000  ").map(|t| t.timestamp()),
+            Some(1_755_000_000)
+        );
         assert!(stamp_from_epoch("hier").is_none());
         assert!(stamp_from_epoch("").is_none());
     }

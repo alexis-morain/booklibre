@@ -51,9 +51,8 @@ impl Drop for Acces {
 pub fn poser(album: &Path, root: &Path) -> Result<(), String> {
     #[cfg(all(target_os = "macos", feature = "mas"))]
     {
-        let octets = creer(root).ok_or_else(|| {
-            format!("marque-page refusé par le système pour {}", root.display())
-        })?;
+        let octets = creer(root)
+            .ok_or_else(|| format!("marque-page refusé par le système pour {}", root.display()))?;
         std::fs::write(album.join(FICHIER), octets)
             .map_err(|e| format!("écriture de {FICHIER} : {e}"))?;
     }
@@ -102,7 +101,10 @@ pub fn dossier_revu(root: &Path, choisi: &Path, srcs: &[String]) -> Result<(), S
     if manquantes == 0 {
         Ok(())
     } else {
-        Err(format!("refus-revoir:manquantes:{manquantes}:{}", srcs.len()))
+        Err(format!(
+            "refus-revoir:manquantes:{manquantes}:{}",
+            srcs.len()
+        ))
     }
 }
 
@@ -216,7 +218,8 @@ mod tests {
 
     /// `<temp>/colophon-signet-<tag>-<pid>/<nom>`, avec ses photos, neuf.
     fn dossier(tag: &str, nom: &str, photos: &[&str]) -> PathBuf {
-        let base = std::env::temp_dir().join(format!("colophon-signet-{tag}-{}", std::process::id()));
+        let base =
+            std::env::temp_dir().join(format!("colophon-signet-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&base);
         let d = base.join(nom);
         std::fs::create_dir_all(&d).unwrap();
@@ -246,7 +249,11 @@ mod tests {
     #[test]
     fn un_homonyme_sans_les_photos_est_refuse_et_le_dit() {
         let choisi = dossier("homonyme", "corse-2013", &["a.jpg"]);
-        let srcs = vec!["a.jpg".to_string(), "b.jpg".to_string(), "c.jpg".to_string()];
+        let srcs = vec![
+            "a.jpg".to_string(),
+            "b.jpg".to_string(),
+            "c.jpg".to_string(),
+        ];
         let e = dossier_revu(Path::new("/x/corse-2013"), &choisi, &srcs).unwrap_err();
         assert_eq!(e, "refus-revoir:manquantes:2:3");
     }

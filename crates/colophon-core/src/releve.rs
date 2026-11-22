@@ -101,7 +101,11 @@ impl Releve {
             skipped_heic: self.skipped_heic,
             skipped_raw: self.skipped_raw,
             skipped_other: self.skipped_other,
-            illisibles: self.illisibles.iter().map(|p| relatif(p, &self.racine)).collect(),
+            illisibles: self
+                .illisibles
+                .iter()
+                .map(|p| relatif(p, &self.racine))
+                .collect(),
             editees: self
                 .editees
                 .iter()
@@ -278,7 +282,10 @@ mod tests {
         let relu = Releve::lire(&fichier).unwrap();
         assert_eq!(relu.photos.len(), 1);
         assert_eq!(relu.racine, PathBuf::from("vacances"));
-        assert_eq!(relu.photos[0].path, PathBuf::from("vacances/plage/IMG_0001.jpg"));
+        assert_eq!(
+            relu.photos[0].path,
+            PathBuf::from("vacances/plage/IMG_0001.jpg")
+        );
         assert_eq!(relu.illisibles, vec![PathBuf::from("vacances/casse.jpg")]);
         assert_eq!(
             relu.editees,
@@ -293,7 +300,10 @@ mod tests {
         // Bit-for-bit: floats survive the round trip whole, or the identity
         // between the two composition paths dies on eighteen quiet lines.
         let (a, b) = (&releve.photos[0], &relu.photos[0]);
-        assert_eq!(a.analysis.sharpness.to_bits(), b.analysis.sharpness.to_bits());
+        assert_eq!(
+            a.analysis.sharpness.to_bits(),
+            b.analysis.sharpness.to_bits()
+        );
         assert_eq!(a.focal.unwrap()[0].to_bits(), b.focal.unwrap()[0].to_bits());
         // The one float that does not come back whole, on purpose: a fix
         // leaves as coarse as its town allows, and the metre stays on the
@@ -303,7 +313,10 @@ mod tests {
             places::nearest(42.6, 8.7).map(|(c, _)| c.name),
             places::nearest(42.5623, 8.741866999924259).map(|(c, _)| c.name)
         );
-        assert!(!texte.contains("8.741866999924259"), "le GPS au mètre ne sort pas");
+        assert!(
+            !texte.contains("8.741866999924259"),
+            "le GPS au mètre ne sort pas"
+        );
         assert_eq!(a.meta.taken, b.meta.taken);
         assert_eq!(a.orig, b.orig);
 
@@ -338,7 +351,10 @@ mod tests {
         // tenth of a degree even in the densest suburb of the country.
         assert!(grossiers > 0, "aucun point à une décimale");
         // And far from any town, a tenth of a degree is still nowhere.
-        assert_eq!(nom(gps_public((20.1234, -14.5678))), nom((20.1234, -14.5678)));
+        assert_eq!(
+            nom(gps_public((20.1234, -14.5678))),
+            nom((20.1234, -14.5678))
+        );
     }
 
     /// A relevé from another era is refused whole: half-read fiches would

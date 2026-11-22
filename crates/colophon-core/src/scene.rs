@@ -99,7 +99,10 @@ pub fn corners(r: &Rect, angle_deg: f64) -> [Point; 4] {
     if angle_deg == 0.0 {
         return coins.map(|(x, y)| Point { x, y });
     }
-    let centre = Point { x: r.x + r.w / 2.0, y: r.y + r.h / 2.0 };
+    let centre = Point {
+        x: r.x + r.w / 2.0,
+        y: r.y + r.h / 2.0,
+    };
     coins.map(|(x, y)| tourner(Point { x, y }, centre, angle_deg))
 }
 
@@ -112,12 +115,18 @@ pub fn corners(r: &Rect, angle_deg: f64) -> [Point; 4] {
 pub fn tourner(p: Point, centre: Point, angle_deg: f64) -> Point {
     let (sin, cos) = angle_deg.to_radians().sin_cos();
     let (dx, dy) = (p.x - centre.x, p.y - centre.y);
-    Point { x: centre.x + dx * cos - dy * sin, y: centre.y + dx * sin + dy * cos }
+    Point {
+        x: centre.x + dx * cos - dy * sin,
+        y: centre.y + dx * sin + dy * cos,
+    }
 }
 
 /// The centre a free object turns around: the middle of its box.
 pub fn centre(r: &Rect) -> Point {
-    Point { x: r.x + r.w / 2.0, y: r.y + r.h / 2.0 }
+    Point {
+        x: r.x + r.w / 2.0,
+        y: r.y + r.h / 2.0,
+    }
 }
 
 /// Whether an oriented rectangle runs across the fold.
@@ -187,7 +196,10 @@ fn normales(c: &[Point; 4]) -> [Option<Point>; 2] {
     [(c[0], c[1]), (c[0], c[3])].map(|(o, p)| {
         let (dx, dy) = (p.x - o.x, p.y - o.y);
         let len = dx.hypot(dy);
-        (len > 0.0).then(|| Point { x: dx / len, y: dy / len })
+        (len > 0.0).then(|| Point {
+            x: dx / len,
+            y: dy / len,
+        })
     })
 }
 
@@ -208,11 +220,20 @@ fn projeter(c: &[Point; 4], axe: Point) -> (f64, f64) {
 #[serde(tag = "role", rename_all = "snake_case")]
 pub enum Role {
     /// A photograph in its cell, framed by its focal point and manual zoom.
-    Photo { cell: usize, src: String, focal: [f64; 2], zoom: f64 },
+    Photo {
+        cell: usize,
+        src: String,
+        focal: [f64; 2],
+        zoom: f64,
+    },
     /// The caption printed under one photo. `at` is the baseline: a set line
     /// is placed by where it sits, not by the box its ink happens to cover,
     /// and neither derives from the other without re-encoding the convention.
-    PhotoCaption { cell: usize, text: String, at: Point },
+    PhotoCaption {
+        cell: usize,
+        text: String,
+        at: Point,
+    },
     /// The chapter caption of the spread, at its baseline.
     ChapterCaption { text: String, at: Point },
     /// A block of set text: the half-title, a text page, the colophon. The
@@ -251,13 +272,21 @@ pub enum Role {
     /// operators, the screen lays the pack's own path down. The Rust/TypeScript
     /// parity therefore bears on the box, the angle and the identity, not on
     /// thousands of coordinates the two sides would each recompute.
-    Ornement { index: usize, pack: String, id: String },
+    Ornement {
+        index: usize,
+        pack: String,
+        id: String,
+    },
     /// La carte d'un voyage, indexée dans `spread.objets` comme un ornement
     /// et pour la même raison : **la scène ne connaît pas les chemins**. Elle
     /// nomme la plage d'étapes (`debut..fin`) et s'arrête là ; le dessin se
     /// recalcule de chaque côté depuis `voyage.json` et l'actif, et la parité
     /// Rust/TypeScript porte sur la boîte, l'angle et l'identité.
-    Carte { index: usize, debut: usize, fin: usize },
+    Carte {
+        index: usize,
+        debut: usize,
+        fin: usize,
+    },
 }
 
 impl Role {
@@ -269,9 +298,9 @@ impl Role {
     /// compiling while it quietly stopped measuring.
     pub fn index_libre(&self) -> Option<usize> {
         match self {
-            Role::FreeText { index, .. } | Role::Ornement { index, .. } | Role::Carte { index, .. } => {
-                Some(*index)
-            }
+            Role::FreeText { index, .. }
+            | Role::Ornement { index, .. }
+            | Role::Carte { index, .. } => Some(*index),
             _ => None,
         }
     }
@@ -363,8 +392,8 @@ pub fn legende_imprimee(
     g: &SpreadGeometry,
 ) -> Option<String> {
     let caption = slot.caption.as_deref().unwrap_or("");
-    let a_la_place = rect.y - pdf::PHOTO_CAPTION_DROP_MM
-        >= g.bleed + g.margin * pdf::CAPTION_SAFE - 1e-9;
+    let a_la_place =
+        rect.y - pdf::PHOTO_CAPTION_DROP_MM >= g.bleed + g.margin * pdf::CAPTION_SAFE - 1e-9;
     let mention = slot
         .mention
         .as_deref()
@@ -396,7 +425,6 @@ fn ink_box(
         h: size_mm * 1.35,
     }
 }
-
 
 /// The union of two boxes.
 fn union(a: Rect, b: Rect) -> Rect {
@@ -471,23 +499,31 @@ impl Scene {
         let mut reading = spread.slots.len();
 
         for (cell, (slot, rect)) in spread.slots.iter().zip(rects.iter()).enumerate() {
-            let Some(text) = legende_imprimee(slot, rect, g) else { continue };
+            let Some(text) = legende_imprimee(slot, rect, g) else {
+                continue;
+            };
             let text = &text;
             let baseline = rect.y - pdf::PHOTO_CAPTION_DROP_MM;
-            let at = Point { x: rect.x, y: baseline };
+            let at = Point {
+                x: rect.x,
+                y: baseline,
+            };
             objects.push(Object {
                 angle: 0.0,
                 rect: ink_box(at.x, at.y, text, pdf::PHOTO_CAPTION_SIZE_PT, mesure),
 
                 reading,
-                role: Role::PhotoCaption { cell, text: text.clone(), at },
+                role: Role::PhotoCaption {
+                    cell,
+                    text: text.clone(),
+                    at,
+                },
             });
             reading += 1;
         }
 
         if let Some(text) = &spread.text {
             if let Some(block) = text_block(spread, text, g, mesure) {
-
                 objects.push(Object { reading, ..block });
                 reading += 1;
             }
@@ -500,7 +536,10 @@ impl Scene {
                 rect: ink_box(at.x, at.y, text, pdf::SPREAD_CAPTION_SIZE_PT, mesure),
 
                 reading,
-                role: Role::ChapterCaption { text: text.clone(), at },
+                role: Role::ChapterCaption {
+                    text: text.clone(),
+                    at,
+                },
             });
             reading += 1;
         }
@@ -575,12 +614,21 @@ fn text_block(
         // the document will actually be set in.
         let lines = crate::garde::mise_en_page_avec(text, place, mesure)
             .into_iter()
-            .map(|l| Line { text: l.texte, size_pt: l.taille_pt, dy_mm: l.dy_mm, dx_mm: 0.0 })
+            .map(|l| Line {
+                text: l.texte,
+                size_pt: l.taille_pt,
+                dy_mm: l.dy_mm,
+                dx_mm: 0.0,
+            })
             .collect::<Vec<_>>();
         (at, lines)
     } else {
         let colophon = spread.template == crate::colophon::TEMPLATE;
-        let at = if colophon { pdf::colophon_anchor(g) } else { pdf::text_anchor(g) };
+        let at = if colophon {
+            pdf::colophon_anchor(g)
+        } else {
+            pdf::text_anchor(g)
+        };
         let (size_pt, leading) = if colophon {
             (crate::colophon::SIZE_PT, crate::colophon::LEADING_MM)
         } else {
@@ -605,9 +653,13 @@ fn text_block(
     let rect = lines
         .iter()
         .map(|l| ink_box(at.x, at.y - l.dy_mm, &l.text, l.size_pt, mesure))
-
         .reduce(union)?;
-    Some(Object { rect, angle: 0.0, reading: 0, role: Role::Text { at, lines } })
+    Some(Object {
+        rect,
+        angle: 0.0,
+        reading: 0,
+        role: Role::Text { at, lines },
+    })
 }
 
 /// Where a line sits inside the box it was wrapped to, given its alignment.
@@ -635,11 +687,19 @@ fn objet_libre(
     reading: usize,
     mesure: &dyn Fn(&str, f64) -> f64,
 ) -> Object {
-    let rect = Rect { x: objet.x, y: objet.y, w: objet.w, h: objet.h };
+    let rect = Rect {
+        x: objet.x,
+        y: objet.y,
+        w: objet.w,
+        h: objet.h,
+    };
     let (texte, taille_pt, alignement) = match &objet.contenu {
-        crate::model::Contenu::Texte { texte, taille_pt, alignement, .. } => {
-            (texte, taille_pt, alignement)
-        }
+        crate::model::Contenu::Texte {
+            texte,
+            taille_pt,
+            alignement,
+            ..
+        } => (texte, taille_pt, alignement),
         // An ornament is laid out by nothing: its box is its ink, because the
         // box keeps the drawing's own aspect ratio. Nothing to wrap, nothing
         // to measure, and no face to measure it in.
@@ -648,7 +708,11 @@ fn objet_libre(
                 rect,
                 angle: objet.angle,
                 reading,
-                role: Role::Ornement { index, pack: pack.clone(), id: id.clone() },
+                role: Role::Ornement {
+                    index,
+                    pack: pack.clone(),
+                    id: id.clone(),
+                },
             };
         }
         // A map is laid out by nothing either: its box keeps the drawing's
@@ -658,7 +722,11 @@ fn objet_libre(
                 rect,
                 angle: objet.angle,
                 reading,
-                role: Role::Carte { index, debut: *debut, fin: *fin },
+                role: Role::Carte {
+                    index,
+                    debut: *debut,
+                    fin: *fin,
+                },
             };
         }
     };
@@ -672,7 +740,12 @@ fn objet_libre(
         .enumerate()
         .map(|(i, t)| {
             let dx_mm = decalage(*alignement, objet.w, mesure(t, taille_pt));
-            Line { text: t.clone(), size_pt: taille_pt, dy_mm: i as f64 * interligne, dx_mm }
+            Line {
+                text: t.clone(),
+                size_pt: taille_pt,
+                dy_mm: i as f64 * interligne,
+                dx_mm,
+            }
         })
         .collect();
 
@@ -682,7 +755,10 @@ fn objet_libre(
     let hauteur = lines.last().map_or(0.0, |l| l.dy_mm) + taille_mm * 1.35;
     let overflow = hauteur > objet.h + 1e-9;
 
-    let at = Point { x: objet.x, y: objet.y + objet.h - taille_mm };
+    let at = Point {
+        x: objet.x,
+        y: objet.y + objet.h - taille_mm,
+    };
     Object {
         rect,
         angle: objet.angle,
@@ -714,7 +790,10 @@ pub fn album(album: &crate::model::Album) -> Vec<Scene> {
 /// Every template the catalogue offers, as `(name, capacity)`, for the
 /// exhaustive parity test and the dump.
 pub fn offered() -> Vec<(&'static str, usize)> {
-    gabarit::offerts().iter().map(|s| (s.nom, s.capacite)).collect()
+    gabarit::offerts()
+        .iter()
+        .map(|s| (s.nom, s.capacite))
+        .collect()
 }
 
 #[cfg(test)]
@@ -748,13 +827,21 @@ mod tests {
     }
 
     fn geom() -> SpreadGeometry {
-        SpreadGeometry { media_w: 426.0, media_h: 216.0, margin: 14.0, gutter: 7.0, bleed: 3.0 }
+        SpreadGeometry {
+            media_w: 426.0,
+            media_h: 216.0,
+            margin: 14.0,
+            gutter: 7.0,
+            bleed: 3.0,
+        }
     }
 
     fn spread(template: &str, n: usize) -> Spread {
         Spread {
             template: template.into(),
-            slots: (0..n).map(|i| Slot::new(format!("{i}.jpg"), [0.5, 0.42])).collect(),
+            slots: (0..n)
+                .map(|i| Slot::new(format!("{i}.jpg"), [0.5, 0.42]))
+                .collect(),
             caption: None,
             text: None,
             edited: false,
@@ -841,7 +928,10 @@ mod tests {
                 Role::Carte { .. } => "carte",
             })
             .collect();
-        assert_eq!(roles, ["photo", "photo", "legende_photo", "legende_chapitre"]);
+        assert_eq!(
+            roles,
+            ["photo", "photo", "legende_photo", "legende_chapitre"]
+        );
     }
 
     /// The reading order is the template's own slot order, and everything
@@ -861,7 +951,10 @@ mod tests {
             .iter()
             .filter_map(|o| matches!(o.role, Role::Photo { .. }).then_some(o.rect))
             .collect();
-        assert!((cells[0].y - cells[1].y).abs() < 1e-9, "0 et 1 pas sur la même rangée");
+        assert!(
+            (cells[0].y - cells[1].y).abs() < 1e-9,
+            "0 et 1 pas sur la même rangée"
+        );
         assert!(cells[0].x < cells[1].x, "0 doit précéder 1 en travers");
         assert!(cells[2].y < cells[0].y, "la seconde rangée est plus bas");
     }
@@ -899,10 +992,16 @@ mod tests {
         s.slots[1].caption = Some("la plage".into());
         assert_eq!(
             legendes_de(&Scene::of(&s, &g)),
-            [(0, "Calvi, 27 octobre 2013".to_string()), (1, "la plage · 27 octobre 2013".to_string())]
+            [
+                (0, "Calvi, 27 octobre 2013".to_string()),
+                (1, "la plage · 27 octobre 2013".to_string())
+            ]
         );
         s.slots[1].caption = Some("la plage · 27 octobre 2013".into());
-        assert_eq!(legendes_de(&Scene::of(&s, &g))[1].1, "la plage · 27 octobre 2013");
+        assert_eq!(
+            legendes_de(&Scene::of(&s, &g))[1].1,
+            "la plage · 27 octobre 2013"
+        );
         s.slots[1].caption = Some("27 octobre 2013".into());
         assert_eq!(legendes_de(&Scene::of(&s, &g))[1].1, "27 octobre 2013");
     }
@@ -917,7 +1016,10 @@ mod tests {
         s.slots[0].mention = Some("Calvi".into());
         assert!(legendes_de(&Scene::of(&s, &g)).is_empty());
         s.slots[0].caption = Some("la plage".into());
-        assert_eq!(legendes_de(&Scene::of(&s, &g)), [(0, "la plage".to_string())]);
+        assert_eq!(
+            legendes_de(&Scene::of(&s, &g)),
+            [(0, "la plage".to_string())]
+        );
     }
 
     /// The three text pages are one role. The half-title keeps its two type
@@ -933,7 +1035,10 @@ mod tests {
             other => panic!("attendu un bloc de texte, reçu {other:?}"),
         };
         assert_eq!(lines.len(), 3, "titre plus deux lignes calmes");
-        assert!(lines[0].size_pt > lines[1].size_pt, "le titre est plus grand");
+        assert!(
+            lines[0].size_pt > lines[1].size_pt,
+            "le titre est plus grand"
+        );
         assert_eq!(lines[0].dy_mm, 0.0);
 
         let mut texte = spread("texte", 0);
@@ -960,7 +1065,10 @@ mod tests {
         long.caption = Some("Corse, octobre 2013, la traversée".into());
         let l = |s: &Spread| Scene::of(s, &g).objects.last().unwrap().rect.w;
         assert!(l(&long) > l(&court), "l'encre ne suit pas le texte");
-        assert!(l(&long) < g.margin * 3.5, "l'encre vaut le proxy, pas le texte");
+        assert!(
+            l(&long) < g.margin * 3.5,
+            "l'encre vaut le proxy, pas le texte"
+        );
     }
 
     /// A template nobody knows still renders one margined box, silently, the
@@ -972,7 +1080,10 @@ mod tests {
         let s = spread("gabarit-qui-n-existe-pas", 3);
         let scene = Scene::of(&s, &g);
         assert_eq!(scene.objects.len(), 1);
-        assert_eq!(scene.objects[0].rect.x, pdf::slots_for("vide-inconnu", 1, &g)[0].x);
+        assert_eq!(
+            scene.objects[0].rect.x,
+            pdf::slots_for("vide-inconnu", 1, &g)[0].x
+        );
     }
 
     /// The doctrine has one implementation now. A full-bleed photograph runs
@@ -982,7 +1093,10 @@ mod tests {
         let g = geom();
         let pleine = Scene::of(&spread("full1", 1), &g);
         let (_, d) = pleine.closest_to_trim(&g).unwrap();
-        assert!((d + g.bleed).abs() < 1e-9, "une pleine page déborde du fond perdu");
+        assert!(
+            (d + g.bleed).abs() < 1e-9,
+            "une pleine page déborde du fond perdu"
+        );
 
         let margee = Scene::of(&spread("duo_portrait", 2), &g);
         let (_, d) = margee.closest_to_trim(&g).unwrap();
@@ -1033,7 +1147,10 @@ mod tests {
                 }
             }
         }
-        assert!(compares > 10_000, "seulement {compares} rectangles comparés");
+        assert!(
+            compares > 10_000,
+            "seulement {compares} rectangles comparés"
+        );
     }
 
     /// The corners of an upright object are the rectangle's own numbers, to
@@ -1044,7 +1161,12 @@ mod tests {
         // Chosen so that `(x + w/2) - w/2` is *not* `x` in binary floating
         // point — 11.2 comes back 11.200000000000003 — so a rotation applied
         // at zero degrees really would move this box.
-        let r = Rect { x: 11.2, y: 18.2, w: 87.3, h: 140.6 };
+        let r = Rect {
+            x: 11.2,
+            y: 18.2,
+            w: 87.3,
+            h: 140.6,
+        };
         let c = corners(&r, 0.0);
         assert_eq!(c[0].x.to_bits(), r.x.to_bits());
         assert_eq!(c[0].y.to_bits(), r.y.to_bits());
@@ -1064,7 +1186,12 @@ mod tests {
     fn un_bloc_tourne_peut_mordre_la_coupe_qu_il_evitait_droit() {
         let g = geom();
         // A wide, flat block lying just inside the top trim line.
-        let r = Rect { x: 100.0, y: 195.0, w: 120.0, h: 8.0 };
+        let r = Rect {
+            x: 100.0,
+            y: 195.0,
+            w: 120.0,
+            h: 8.0,
+        };
         let droit = distance_to_trim(&r, 0.0, &g);
         assert!(droit > 0.0, "droit, il évite la coupe : {droit}");
         let tourne = distance_to_trim(&r, 30.0, &g);
@@ -1072,7 +1199,12 @@ mod tests {
         // A quarter turn is not a rotation the geometry may forget: the box
         // swaps its dimensions and the distance follows.
         let quart = distance_to_trim(&r, 90.0, &g);
-        let echange = Rect { x: 154.0, y: 139.0, w: 8.0, h: 120.0 };
+        let echange = Rect {
+            x: 154.0,
+            y: 139.0,
+            w: 8.0,
+            h: 120.0,
+        };
         assert!(
             (quart - distance_to_trim(&echange, 0.0, &g)).abs() < 1e-9,
             "un quart de tour vaut le rectangle échangé"
@@ -1085,16 +1217,38 @@ mod tests {
     fn le_pli_se_mesure_sur_les_coins() {
         let g = geom();
         let pli = g.media_w / 2.0;
-        let a_gauche = Rect { x: pli - 60.0, y: 100.0, w: 50.0, h: 10.0 };
+        let a_gauche = Rect {
+            x: pli - 60.0,
+            y: 100.0,
+            w: 50.0,
+            h: 10.0,
+        };
         assert!(!traverse_le_pli(&a_gauche, 0.0, &g));
-        assert!(traverse_le_pli(&Rect { x: pli - 25.0, y: 100.0, w: 50.0, h: 10.0 }, 0.0, &g));
+        assert!(traverse_le_pli(
+            &Rect {
+                x: pli - 25.0,
+                y: 100.0,
+                w: 50.0,
+                h: 10.0
+            },
+            0.0,
+            &g
+        ));
         // Upright it stops 10 mm short of the fold; turned, its corner reaches
         // across. The guard has to see the corner.
         // Upright, its right edge stops 5 mm short of the fold; turned by 45°
         // its corner swings 6.8 mm past it.
-        let frole = Rect { x: pli - 55.0, y: 100.0, w: 50.0, h: 40.0 };
+        let frole = Rect {
+            x: pli - 55.0,
+            y: 100.0,
+            w: 50.0,
+            h: 40.0,
+        };
         assert!(!traverse_le_pli(&frole, 0.0, &g));
-        assert!(traverse_le_pli(&frole, 45.0, &g), "le coin tourné passe le pli");
+        assert!(
+            traverse_le_pli(&frole, 45.0, &g),
+            "le coin tourné passe le pli"
+        );
     }
 
     /// La marge est molle, mais elle se mesure : la zone sûre est celle que
@@ -1105,18 +1259,41 @@ mod tests {
         let g = geom();
         let sur = pdf::CAPTION_SAFE * g.margin;
         // Bien à l'intérieur : rien à dire.
-        let dedans = Rect { x: g.bleed + sur + 5.0, y: g.bleed + sur + 5.0, w: 40.0, h: 20.0 };
+        let dedans = Rect {
+            x: g.bleed + sur + 5.0,
+            y: g.bleed + sur + 5.0,
+            w: 40.0,
+            h: 20.0,
+        };
         assert!(!hors_marge(&dedans, 0.0, &g));
         // Le bord gauche entre dans la bande : on avertit.
-        let bord = Rect { x: g.bleed + 1.0, y: 100.0, w: 40.0, h: 20.0 };
+        let bord = Rect {
+            x: g.bleed + 1.0,
+            y: 100.0,
+            w: 40.0,
+            h: 20.0,
+        };
         assert!(hors_marge(&bord, 0.0, &g));
         // Droit il dégage la bande d'un cheveu ; tourné, son coin y entre.
-        let frole = Rect { x: g.bleed + sur + 0.5, y: 100.0, w: 40.0, h: 30.0 };
+        let frole = Rect {
+            x: g.bleed + sur + 0.5,
+            y: 100.0,
+            w: 40.0,
+            h: 30.0,
+        };
         assert!(!hors_marge(&frole, 0.0, &g));
-        assert!(hors_marge(&frole, 30.0, &g), "le coin tourné entre dans la marge");
+        assert!(
+            hors_marge(&frole, 30.0, &g),
+            "le coin tourné entre dans la marge"
+        );
         // Et un objet que la coupe traverse est hors marge a fortiori : la
         // marge est la bande, le rognage en est le fond.
-        let coupe = Rect { x: g.bleed - 5.0, y: 100.0, w: 40.0, h: 20.0 };
+        let coupe = Rect {
+            x: g.bleed - 5.0,
+            y: 100.0,
+            w: 40.0,
+            h: 20.0,
+        };
         assert!(distance_to_trim(&coupe, 0.0, &g) < 0.0);
         assert!(hors_marge(&coupe, 0.0, &g));
     }
@@ -1126,18 +1303,43 @@ mod tests {
     /// droit, tourné, tangent, disjoint.
     #[test]
     fn le_recouvrement_se_mesure_sur_les_coins() {
-        let photo = Rect { x: 100.0, y: 100.0, w: 60.0, h: 40.0 };
-        let dedans = Rect { x: 110.0, y: 110.0, w: 10.0, h: 10.0 };
+        let photo = Rect {
+            x: 100.0,
+            y: 100.0,
+            w: 60.0,
+            h: 40.0,
+        };
+        let dedans = Rect {
+            x: 110.0,
+            y: 110.0,
+            w: 10.0,
+            h: 10.0,
+        };
         assert!(recouvre(&dedans, 0.0, &photo, 0.0));
-        let loin = Rect { x: 200.0, y: 110.0, w: 10.0, h: 10.0 };
+        let loin = Rect {
+            x: 200.0,
+            y: 110.0,
+            w: 10.0,
+            h: 10.0,
+        };
         assert!(!recouvre(&loin, 0.0, &photo, 0.0));
         // Une tangence ne recouvre pas : deux bords qui se touchent ne
         // laissent pas un millimètre carré d'encre l'un sur l'autre.
-        let tangent = Rect { x: 160.0, y: 110.0, w: 10.0, h: 10.0 };
+        let tangent = Rect {
+            x: 160.0,
+            y: 110.0,
+            w: 10.0,
+            h: 10.0,
+        };
         assert!(!recouvre(&tangent, 0.0, &photo, 0.0));
         // Droit il dégage la photo de deux millimètres ; tourné, son coin y
         // entre. C'est l'angle de l'ornement qui décide, pas sa boîte.
-        let frole = Rect { x: 162.0, y: 95.0, w: 40.0, h: 40.0 };
+        let frole = Rect {
+            x: 162.0,
+            y: 95.0,
+            w: 40.0,
+            h: 40.0,
+        };
         assert!(!recouvre(&frole, 0.0, &photo, 0.0));
         assert!(recouvre(&frole, 45.0, &photo, 0.0));
         // Et la relation est symétrique : l'ordre des deux rectangles ne dit
@@ -1148,7 +1350,12 @@ mod tests {
         // propres normales le disent — sur celles de la photo, les deux
         // projections se chevauchent en x comme en y. Les quatre normales
         // sont donc quatre, pas deux.
-        let coin = Rect { x: 160.0, y: 140.0, w: 20.0, h: 20.0 };
+        let coin = Rect {
+            x: 160.0,
+            y: 140.0,
+            w: 20.0,
+            h: 20.0,
+        };
         assert!(!recouvre(&coin, 45.0, &photo, 0.0));
         assert!(!recouvre(&photo, 0.0, &coin, 45.0));
     }
@@ -1158,7 +1365,12 @@ mod tests {
     /// projection d'un coin sur un axe est sa propre coordonnée, au bit.
     #[test]
     fn a_l_angle_zero_c_est_un_chevauchement_droit() {
-        let photo = Rect { x: 100.0, y: 100.0, w: 60.0, h: 40.0 };
+        let photo = Rect {
+            x: 100.0,
+            y: 100.0,
+            w: 60.0,
+            h: 40.0,
+        };
         let droit = |a: &Rect, b: &Rect| {
             a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
         };
@@ -1201,7 +1413,10 @@ mod tests {
                 Role::Carte { .. } => "carte",
             })
             .collect();
-        assert_eq!(roles, ["photo", "photo", "legende_chapitre", "libre", "libre"]);
+        assert_eq!(
+            roles,
+            ["photo", "photo", "legende_chapitre", "libre", "libre"]
+        );
         // Their order among themselves is their depth, and their index into
         // `spread.objets` is what the editor sends an edit back to.
         let index: Vec<usize> = scene
@@ -1228,16 +1443,30 @@ mod tests {
         // "un deux" (7 chars, 14 mm) but not "un deux trois".
         s.objets = vec![bloc("un deux trois quatre", 30.0, 40.0)];
         let scene = Scene::of_avec(&s, &g, &regle, &sans_face_d_objet);
-        let Role::FreeText { lines, overflow, trop_large, .. } = &scene.objects[2].role else {
+        let Role::FreeText {
+            lines,
+            overflow,
+            trop_large,
+            ..
+        } = &scene.objects[2].role
+        else {
             panic!("attendu un objet libre");
         };
         assert!(lines.len() > 1, "rien n'a été replié");
         for l in lines {
-            assert!(regle(&l.text, 10.0) <= 30.0, "« {} » dépasse la boîte", l.text);
+            assert!(
+                regle(&l.text, 10.0) <= 30.0,
+                "« {} » dépasse la boîte",
+                l.text
+            );
         }
         // Nothing was lost and nothing was invented: the words come back in
         // order, whole.
-        let recolle = lines.iter().map(|l| l.text.clone()).collect::<Vec<_>>().join(" ");
+        let recolle = lines
+            .iter()
+            .map(|l| l.text.clone())
+            .collect::<Vec<_>>()
+            .join(" ");
         assert_eq!(recolle, "un deux trois quatre");
         assert!(!overflow, "quatre lignes tiennent dans 40 mm");
         assert!(!trop_large);
@@ -1267,15 +1496,28 @@ mod tests {
         let faces = |o: &Objet| o.police.as_ref().map(|_| face);
         let scene = Scene::of_avec(&s, &g, &regle, &faces);
         let lignes = |i: usize| match &scene.objects[i].role {
-            Role::FreeText { lines, .. } => lines.iter().map(|l| l.text.clone()).collect::<Vec<_>>(),
+            Role::FreeText { lines, .. } => {
+                lines.iter().map(|l| l.text.clone()).collect::<Vec<_>>()
+            }
             _ => panic!("attendu un objet libre"),
         };
         for l in lignes(2) {
-            assert!(face.largeur_mm(&l, 10.0) <= 30.0, "« {l} » mesurée hors de sa face");
+            assert!(
+                face.largeur_mm(&l, 10.0) <= 30.0,
+                "« {l} » mesurée hors de sa face"
+            );
         }
         let dans_la_regle = replier(texte, 30.0, 10.0, &regle).0;
-        assert_ne!(lignes(2), dans_la_regle, "la face du bloc et la règle coupent ailleurs");
-        assert_eq!(lignes(3), dans_la_regle, "le voisin reste dans la face du livre");
+        assert_ne!(
+            lignes(2),
+            dans_la_regle,
+            "la face du bloc et la règle coupent ailleurs"
+        );
+        assert_eq!(
+            lignes(3),
+            dans_la_regle,
+            "le voisin reste dans la face du livre"
+        );
 
         let sans = Scene::of_avec(&s, &g, &regle, &sans_face_d_objet);
         assert!(matches!(&sans.objects[2].role, Role::FreeText { lines, .. }
@@ -1290,7 +1532,10 @@ mod tests {
         let mut s = spread("duo", 2);
         s.objets = vec![bloc("court anticonstitutionnellement", 30.0, 40.0)];
         let scene = Scene::of_avec(&s, &g, &regle, &sans_face_d_objet);
-        let Role::FreeText { lines, trop_large, .. } = &scene.objects[2].role else {
+        let Role::FreeText {
+            lines, trop_large, ..
+        } = &scene.objects[2].role
+        else {
             panic!("attendu un objet libre");
         };
         assert!(trop_large, "le mot trop large n'est pas signalé");
@@ -1307,17 +1552,28 @@ mod tests {
         let g = geom();
         let mut s = spread("duo", 2);
         let tient = Scene::of_avec(
-            &{ let mut s = s.clone(); s.objets = vec![bloc("un\ndeux", 40.0, 20.0)]; s },
+            &{
+                let mut s = s.clone();
+                s.objets = vec![bloc("un\ndeux", 40.0, 20.0)];
+                s
+            },
             &g,
             &regle,
             &sans_face_d_objet,
         );
-        let Role::FreeText { overflow, .. } = tient.objects[2].role else { panic!() };
+        let Role::FreeText { overflow, .. } = tient.objects[2].role else {
+            panic!()
+        };
         assert!(!overflow, "deux lignes tiennent dans 20 mm");
 
         s.objets = vec![bloc("un\ndeux\ntrois\nquatre\ncinq", 40.0, 20.0)];
         let deborde = Scene::of_avec(&s, &g, &regle, &sans_face_d_objet);
-        let Role::FreeText { overflow, lines, .. } = &deborde.objects[2].role else { panic!() };
+        let Role::FreeText {
+            overflow, lines, ..
+        } = &deborde.objects[2].role
+        else {
+            panic!()
+        };
         assert!(overflow, "cinq lignes ne tiennent pas dans 20 mm");
         assert_eq!(lines.len(), 5, "et rien n'a été retiré pour autant");
     }
@@ -1332,10 +1588,15 @@ mod tests {
         let mut s = spread("duo", 2);
         s.objets = vec![bloc("un\n\ntrois", 40.0, 40.0)];
         let scene = Scene::of_avec(&s, &g, &regle, &sans_face_d_objet);
-        let Role::FreeText { lines, .. } = &scene.objects[2].role else { panic!() };
+        let Role::FreeText { lines, .. } = &scene.objects[2].role else {
+            panic!()
+        };
         assert_eq!(lines.len(), 3, "la ligne vide est là, pour espacer");
         assert_eq!(lines[1].text, "");
-        assert_eq!(lines[2].dy_mm, 10.0, "la troisième ligne est au troisième cran");
+        assert_eq!(
+            lines[2].dy_mm, 10.0,
+            "la troisième ligne est au troisième cran"
+        );
     }
 
     /// The alignment is computed once, here, so the emitter and the two
@@ -1346,12 +1607,18 @@ mod tests {
         let mut s = spread("duo", 2);
         let pose = |a: Alignement| {
             let mut o = bloc("abc", 40.0, 20.0);
-            let Contenu::Texte { alignement, .. } = &mut o.contenu else { unreachable!() };
+            let Contenu::Texte { alignement, .. } = &mut o.contenu else {
+                unreachable!()
+            };
             *alignement = a;
             o
         };
         // "abc" is 6 mm wide at 10 pt: 34 mm of room in a 40 mm box.
-        s.objets = vec![pose(Alignement::Gauche), pose(Alignement::Centre), pose(Alignement::Droite)];
+        s.objets = vec![
+            pose(Alignement::Gauche),
+            pose(Alignement::Centre),
+            pose(Alignement::Droite),
+        ];
         let scene = Scene::of_avec(&s, &g, &regle, &sans_face_d_objet);
         let dx: Vec<f64> = scene
             .objects
@@ -1389,7 +1656,9 @@ mod tests {
     #[test]
     fn l_interligne_absent_est_celui_de_la_taille() {
         let mut o = bloc("un", 40.0, 20.0);
-        let Contenu::Texte { interligne_mm, .. } = &mut o.contenu else { unreachable!() };
+        let Contenu::Texte { interligne_mm, .. } = &mut o.contenu else {
+            unreachable!()
+        };
         *interligne_mm = None;
         assert!((o.interligne() - 10.0 / (72.0 / 25.4) * 1.35).abs() < 1e-12);
     }

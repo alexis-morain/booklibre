@@ -141,10 +141,20 @@ pub fn nom_de_fichier(rang: usize, nom_origine: &str) -> String {
     // chemin dedans écrirait hors du dossier d'import.
     let propre: String = nom_origine
         .chars()
-        .map(|c| if c == '/' || c == '\\' || c == '\0' { '_' } else { c })
+        .map(|c| {
+            if c == '/' || c == '\\' || c == '\0' {
+                '_'
+            } else {
+                c
+            }
+        })
         .collect();
     let propre = propre.trim().trim_start_matches('.');
-    let propre = if propre.is_empty() { "photo.jpg" } else { propre };
+    let propre = if propre.is_empty() {
+        "photo.jpg"
+    } else {
+        propre
+    };
     format!("{:04}-{propre}", rang + 1)
 }
 
@@ -157,7 +167,13 @@ pub fn nom_de_fichier(rang: usize, nom_origine: &str) -> String {
 pub fn dossier_propose(maison: &Path, nom_album: &str) -> PathBuf {
     let propre: String = nom_album
         .chars()
-        .map(|c| if c == '/' || c == '\\' || c == ':' { '-' } else { c })
+        .map(|c| {
+            if c == '/' || c == '\\' || c == ':' {
+                '-'
+            } else {
+                c
+            }
+        })
         .collect();
     let propre = propre.trim();
     let propre = if propre.is_empty() { "Album" } else { propre };
@@ -280,11 +296,19 @@ mod mac {
             Some(s) => s,
             // Le délai a mordu : la bibliothèque ne répond pas. On ne connaît
             // pas son chemin, la phrase générique fera le travail.
-            None => return Etat::Injoignable { chemin: String::new() },
+            None => {
+                return Etat::Injoignable {
+                    chemin: String::new(),
+                }
+            }
         };
         let r: ReponseAlbums = match serde_json::from_str(&brut) {
             Ok(r) => r,
-            Err(_) => return Etat::Injoignable { chemin: String::new() },
+            Err(_) => {
+                return Etat::Injoignable {
+                    chemin: String::new(),
+                }
+            }
         };
         super::classer(r.albums, r.bibliotheque_systeme, r.bibliotheque_presente)
     }
@@ -485,11 +509,20 @@ mod tests {
         let a_demander = serde_json::to_string(&Etat::ADemander).unwrap();
 
         assert!(vide.contains("\"etat\":\"lisible\""), "{vide}");
-        assert!(injoignable.contains("\"etat\":\"injoignable\""), "{injoignable}");
-        assert!(a_demander.contains("\"etat\":\"a-demander\""), "{a_demander}");
+        assert!(
+            injoignable.contains("\"etat\":\"injoignable\""),
+            "{injoignable}"
+        );
+        assert!(
+            a_demander.contains("\"etat\":\"a-demander\""),
+            "{a_demander}"
+        );
         // Et la phrase de l'état injoignable porte le chemin, sans quoi elle
         // n'apprend rien à personne.
-        assert!(injoignable.contains("Photos Library.photoslibrary"), "{injoignable}");
+        assert!(
+            injoignable.contains("Photos Library.photoslibrary"),
+            "{injoignable}"
+        );
     }
 
     fn album(nom: &str) -> AlbumPhotos {
@@ -512,7 +545,10 @@ mod tests {
         };
         let mort = "/Users/x/Pictures/Photos Library.photoslibrary".to_string();
         assert_eq!(classer(vec![album("Colophon test")], mort, false), attendu);
-        assert_eq!(classer(vec![album("Colophon test")], String::new(), false), attendu);
+        assert_eq!(
+            classer(vec![album("Colophon test")], String::new(), false),
+            attendu
+        );
     }
 
     /// Le chemin ne sert qu'à expliquer une liste vide.

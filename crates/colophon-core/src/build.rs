@@ -83,7 +83,6 @@ pub struct BuildOptions {
     pub chiffres: bool,
 }
 
-
 impl Default for BuildOptions {
     fn default() -> Self {
         Self {
@@ -109,7 +108,6 @@ impl Default for BuildOptions {
         }
     }
 }
-
 
 /// One alternative proposal to compose beside the one the caller asked for.
 ///
@@ -151,8 +149,11 @@ impl VarianteResume {
     fn de(spec: &VarianteSpec, album: &model::Album, photos: usize) -> Self {
         // A quarter, a half and three quarters in: three spreads that say
         // what the book looks like, rather than three from its opening.
-        let avec_photo: Vec<&model::Spread> =
-            album.spreads.iter().filter(|s| !s.slots.is_empty()).collect();
+        let avec_photo: Vec<&model::Spread> = album
+            .spreads
+            .iter()
+            .filter(|s| !s.slots.is_empty())
+            .collect();
         let apercu = [1, 2, 3]
             .iter()
             .filter_map(|q| avec_photo.get(avec_photo.len() * q / 4))
@@ -265,7 +266,11 @@ pub fn releve(photos_dir: &Path, out: &Path, opts: &BuildOptions) -> Result<Rele
     // The folder gave nothing to work with: a named refusal, never an album
     // of zero pages presented as a success. Nothing has been written yet.
     if scanned.images.is_empty() {
-        let detail = match (scanned.skipped_heic, scanned.skipped_raw, scanned.skipped_other) {
+        let detail = match (
+            scanned.skipped_heic,
+            scanned.skipped_raw,
+            scanned.skipped_other,
+        ) {
             (0, 0, 0) => "le dossier ne contient aucune image (JPEG, PNG, HEIC ou RAW)".to_string(),
             (h, r, o) => format!(
                 "aucune image lisible : {h} HEIC et {r} RAW que cette machine ne décode pas, \
@@ -373,7 +378,9 @@ pub fn releve(photos_dir: &Path, out: &Path, opts: &BuildOptions) -> Result<Rele
             .iter()
             .take(12)
             .map(|(p, _)| {
-                p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default()
+                p.file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_default()
             })
             .collect();
         anyhow::bail!(
@@ -405,15 +412,17 @@ pub fn releve(photos_dir: &Path, out: &Path, opts: &BuildOptions) -> Result<Rele
 /// folders too, and setting its original aside there would delete a photo
 /// for no reason. Returns the kept images and the (originale, éditée)
 /// pairs, sorted — the relevé serializes them, and fiches are deterministic.
-fn ecarte_originales_editees(
-    images: Vec<PathBuf>,
-) -> (Vec<PathBuf>, Vec<(PathBuf, PathBuf)>) {
+fn ecarte_originales_editees(images: Vec<PathBuf>) -> (Vec<PathBuf>, Vec<(PathBuf, PathBuf)>) {
     let noms: std::collections::HashSet<&PathBuf> = images.iter().collect();
     let mut ecartees: std::collections::HashMap<PathBuf, PathBuf> =
         std::collections::HashMap::new();
     for p in &images {
-        let Some(stem) = p.file_stem().and_then(|s| s.to_str()) else { continue };
-        let Some(racine) = stem.strip_suffix("-edited") else { continue };
+        let Some(stem) = p.file_stem().and_then(|s| s.to_str()) else {
+            continue;
+        };
+        let Some(racine) = stem.strip_suffix("-edited") else {
+            continue;
+        };
         let ext = p
             .extension()
             .map(|e| format!(".{}", e.to_string_lossy()))
@@ -426,8 +435,10 @@ fn ecarte_originales_editees(
     if ecartees.is_empty() {
         return (images, Vec::new());
     }
-    let gardees: Vec<PathBuf> =
-        images.into_iter().filter(|p| !ecartees.contains_key(p)).collect();
+    let gardees: Vec<PathBuf> = images
+        .into_iter()
+        .filter(|p| !ecartees.contains_key(p))
+        .collect();
     let mut paires: Vec<(PathBuf, PathBuf)> = ecartees.into_iter().collect();
     paires.sort();
     (gardees, paires)
@@ -449,13 +460,19 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         crate::voyage::composition::Lecture::Refus(r) => (None, Some(r)),
         crate::voyage::composition::Lecture::Absent => (None, None),
     };
-    let title = opts.title.clone().or_else(|| {
-        voyage.as_ref().map(|v| crate::voyage::composition::sans_emojis(&v.titre).0)
-    }).unwrap_or_else(|| {
-        root.file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_else(|| "Album".into())
-    });
+    let title = opts
+        .title
+        .clone()
+        .or_else(|| {
+            voyage
+                .as_ref()
+                .map(|v| crate::voyage::composition::sans_emojis(&v.titre).0)
+        })
+        .unwrap_or_else(|| {
+            root.file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| "Album".into())
+        });
     fs::create_dir_all(out)?;
 
     let cancelled = || (opts.cancel)();
@@ -480,8 +497,10 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
     let photos = releve.photos;
 
     // Capture times, for re-inserting pinned spreads chronologically.
-    let times: std::collections::HashMap<String, chrono::NaiveDateTime> =
-        photos.iter().map(|p| (rel(&p.path), p.meta.taken)).collect();
+    let times: std::collections::HashMap<String, chrono::NaiveDateTime> = photos
+        .iter()
+        .map(|p| (rel(&p.path), p.meta.taken))
+        .collect();
 
     // 3. drop junk, dedup bursts and scenes, chapter, cap. Every photo set
     // aside is recorded with its reason: curation.json feeds the sorting view.
@@ -491,8 +510,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         .iter()
         .map(|p| (p.path.clone(), p.focal.unwrap_or_else(model::default_focal)))
         .collect();
-    let focal_of =
-        |p: &Path| focals.get(p).copied().unwrap_or_else(model::default_focal);
+    let focal_of = |p: &Path| focals.get(p).copied().unwrap_or_else(model::default_focal);
     let mut discards: Vec<model::Discard> = Vec::new();
 
     // Unreadable files enter the report first: the sorting view shows the
@@ -533,7 +551,10 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         focal: focal_of(&p.path),
     }));
 
-    let starred = photos.iter().filter(|p| p.meta.rating.is_some_and(|r| r >= 1)).count();
+    let starred = photos
+        .iter()
+        .filter(|p| p.meta.rating.is_some_and(|r| r >= 1))
+        .count();
     if starred > 0 {
         say(&format!(
             "notes : {starred} photos étoilées, la curation en tient compte"
@@ -563,7 +584,10 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
     // strays in it: the same filter would set the whole archive aside and
     // refuse the album. The rule switches itself off, says so, and the book
     // follows the file dates.
-    let sans_empreinte = photos.iter().filter(|p| !pipeline::a_une_empreinte(p)).count();
+    let sans_empreinte = photos
+        .iter()
+        .filter(|p| !pipeline::a_une_empreinte(p))
+        .count();
     let signal = pipeline::empreinte_est_un_signal(&photos);
     let (photos, junk) = if petit {
         (photos, Vec::new())
@@ -685,7 +709,8 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                     // Écartée plus haut (définition, panorama) ou tenue par
                     // une planche épinglée : on la sait ailleurs. Seule une
                     // photo que le dossier n'a pas est absente.
-                    None if times.contains_key(&f.fichier) || epinglees.contains(f.fichier.as_str()) => {}
+                    None if times.contains_key(&f.fichier)
+                        || epinglees.contains(f.fichier.as_str()) => {}
                     None => photos_absentes += 1,
                 }
             }
@@ -704,7 +729,10 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         (cs.len(), cs)
     } else {
         let chapters = pipeline::chapters(kept);
-        (chapters.len(), pipeline::merge_chapters(chapters, max_chapters))
+        (
+            chapters.len(),
+            pipeline::merge_chapters(chapters, max_chapters),
+        )
     };
     let twins: Vec<_> = base.iter_mut().flat_map(pipeline::thin_twins).collect();
     // Same-moment capping is a statistical filter: off on small folders,
@@ -760,15 +788,16 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
     // mentions, la mesure du texte dans la face de l'album (la même que
     // l'émetteur et le linter), les étapes dont une planche gardée à la main
     // porte déjà le titre, et le bilan de chaque composition.
-    let reglage_voyage = opts.legendes.unwrap_or_else(|| {
-        crate::voyage::composition::legendes_par_defaut(opts.langue)
-    });
+    let reglage_voyage = opts
+        .legendes
+        .unwrap_or_else(|| crate::voyage::composition::legendes_par_defaut(opts.langue));
     // Le réglage que l'album portera : celui qu'on a demandé ; sinon, pour un
     // voyage à sa première composition, le défaut ; sinon (« Rien »), aucun.
-    let legendes_album = opts
-        .legendes
-        .or_else(|| (voyage.is_some() && opts.legendes_de_voyage_par_defaut).then_some(reglage_voyage));
-    let face_voyage = crate::font::face_album(out, opts.police.as_ref().map(|p| p.fichier.as_str()));
+    let legendes_album = opts.legendes.or_else(|| {
+        (voyage.is_some() && opts.legendes_de_voyage_par_defaut).then_some(reglage_voyage)
+    });
+    let face_voyage =
+        crate::font::face_album(out, opts.police.as_ref().map(|p| p.fichier.as_str()));
     let mesure_face = |t: &str, pt: f64| face_voyage.face.largeur_mm(t, pt);
     let deja_ouvertes: std::collections::HashSet<String> = opts
         .pinned
@@ -787,7 +816,10 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                 .iter()
                 .enumerate()
                 .flat_map(|(i, e)| {
-                    e.photos.iter().enumerate().map(move |(j, p)| (p.fichier.as_str(), (i, j + 1)))
+                    e.photos
+                        .iter()
+                        .enumerate()
+                        .map(move |(j, p)| (p.fichier.as_str(), (i, j + 1)))
                 })
                 .collect()
         })
@@ -822,10 +854,19 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                 .map(|i| (i, 0))
         });
         de_titre
-            .or_else(|| s.slots.first().and_then(|sl| ordre_voyage.get(sl.src.as_str()).copied()))
+            .or_else(|| {
+                s.slots
+                    .first()
+                    .and_then(|sl| ordre_voyage.get(sl.src.as_str()).copied())
+            })
             // Une planche qui ne porte qu'une carte s'ouvre devant l'étape où
             // la carte commence.
-            .or_else(|| s.objets.iter().find_map(plage_de_carte).map(|(debut, _)| (debut, 0)))
+            .or_else(|| {
+                s.objets
+                    .iter()
+                    .find_map(plage_de_carte)
+                    .map(|(debut, _)| (debut, 0))
+            })
     };
 
     let compose_une = |densite: layout::Densite,
@@ -894,13 +935,24 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                     };
                     let mention = legendes_album.and_then(|r| vc::mention(e, &r));
                     let g = *composer.geometrie();
-                    let recit = recit.as_deref().map(str::trim).filter(|r| !r.is_empty()).map(String::from);
-                    let bloc = vc::Bloc { titre: nom.clone(), mention, recit: recit.clone() };
+                    let recit = recit
+                        .as_deref()
+                        .map(str::trim)
+                        .filter(|r| !r.is_empty())
+                        .map(String::from);
+                    let bloc = vc::Bloc {
+                        titre: nom.clone(),
+                        mention,
+                        recit: recit.clone(),
+                    };
                     let legende = Some(nom.clone()).filter(|n| !n.is_empty());
                     let rang = resumes.len();
                     let mut sp = Vec::new();
                     // Les cartes qui s'ouvrent à cette étape, avant elle.
-                    for page in cartes_a_poser.iter().filter(|p| p.debut == etape_de_chapitre[k]) {
+                    for page in cartes_a_poser
+                        .iter()
+                        .filter(|p| p.debut == etape_de_chapitre[k])
+                    {
                         flux.carte(&g, &mesure_face, *page, &mut resumes, &mut sp);
                     }
                     let neuf = |placement| {
@@ -917,16 +969,35 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                     } else if composer.photos_posables(c, &root) > 0 {
                         let placement = match &recit {
                             None => vc::Placement::PhotosSeules,
-                            Some(_) if vc::poids(&bloc, &mesure_face) <= vc::lignes_pour_etre_court(&g) => {
+                            Some(_)
+                                if vc::poids(&bloc, &mesure_face)
+                                    <= vc::lignes_pour_etre_court(&g) =>
+                            {
                                 vc::Placement::ACote
                             }
                             Some(_) => vc::Placement::EnPage,
                         };
                         resumes.push(neuf(placement));
                         if recit.is_some() {
-                            flux.ajouter(&g, &mesure_face, bloc, rang, false, &mut resumes, &mut sp);
+                            flux.ajouter(
+                                &g,
+                                &mesure_face,
+                                bloc,
+                                rang,
+                                false,
+                                &mut resumes,
+                                &mut sp,
+                            );
                         }
-                        flux.ouvrir(&mut composer, &mesure_face, &root, c, legende, &mut resumes, &mut sp);
+                        flux.ouvrir(
+                            &mut composer,
+                            &mesure_face,
+                            &root,
+                            c,
+                            legende,
+                            &mut resumes,
+                            &mut sp,
+                        );
                     } else if recit.is_none() {
                         // Ni photo posable ni récit : rien à poser, le bilan le dit.
                         resumes.push(neuf(vc::Placement::Rien));
@@ -983,9 +1054,8 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         // so already-inserted pinned spreads are transparent to the scan and
         // the original order between them holds.
         if !opts.pinned.is_empty() {
-            let time_of = |s: &model::Spread| {
-                s.slots.first().and_then(|sl| times.get(&sl.src)).copied()
-            };
+            let time_of =
+                |s: &model::Spread| s.slots.first().and_then(|sl| times.get(&sl.src)).copied();
             let mut last_at: Option<usize> = None;
             for (spread, anchor) in &opts.pinned {
                 let at = match anchor {
@@ -1002,7 +1072,13 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                             .spreads
                             .iter()
                             .position(|s| {
-                                rang_de(s).zip(r).is_some_and(|(a, b)| if carte_seule { a >= b } else { a > b })
+                                rang_de(s).zip(r).is_some_and(|(a, b)| {
+                                    if carte_seule {
+                                        a >= b
+                                    } else {
+                                        a > b
+                                    }
+                                })
                             })
                             .unwrap_or(album.spreads.len())
                     }
@@ -1035,8 +1111,11 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         // vignettes n'ont pas d'EXIF, et la page de garde comme la couverture
         // les lisent ici.
         if let (Some(v), Some(f)) = (&voyage, album.colophon.as_mut()) {
-            let jours: Vec<chrono::NaiveDate> =
-                v.etapes.iter().filter_map(crate::voyage::composition::jour_local).collect();
+            let jours: Vec<chrono::NaiveDate> = v
+                .etapes
+                .iter()
+                .filter_map(crate::voyage::composition::jour_local)
+                .collect();
             f.debut = jours.iter().min().copied();
             f.fin = jours.iter().max().copied();
             let mut lieux: Vec<String> = Vec::new();
@@ -1097,7 +1176,10 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         // porterait du texte que l'imprimeur ne tire pas. Le livre s'ouvre alors
         // sur la planche blanche, comme avec une photo.
         let ouvre_sur_du_texte = voyage.is_some()
-            && album.spreads.first().is_some_and(|s| s.template == "vide" && !s.objets.is_empty());
+            && album
+                .spreads
+                .first()
+                .is_some_and(|s| s.template == "vide" && !s.objets.is_empty());
         if album.spreads.first().is_some_and(|s| !s.slots.is_empty()) || ouvre_sur_du_texte {
             album.spreads.insert(0, crate::model::Spread::vide());
         }
@@ -1131,7 +1213,12 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                 .flat_map(|s| s.slots.iter())
                 .filter_map(|sl| {
                     par_src.get(&sl.src).map(|p| {
-                        (sl.src.as_str(), p.effective_score(), p.orig, imprimable(p.orig))
+                        (
+                            sl.src.as_str(),
+                            p.effective_score(),
+                            p.orig,
+                            imprimable(p.orig),
+                        )
                     })
                 })
                 .collect();
@@ -1141,21 +1228,23 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                 .as_ref()
                 .and_then(|v| v.couverture.as_deref())
                 .filter(|f| par_src.contains_key(*f));
-            album.cover = de_la_source.or_else(|| photo_de_couverture(&dans_le_livre)).map(|src| {
-                let focal = par_src[src].focal.unwrap_or_else(model::default_focal);
-                model::Cover {
-                    title: title.clone(),
-                    subtitle: album
-                        .colophon
-                        .as_ref()
-                        .and_then(|f| crate::garde::ligne_des_dates(f, opts.langue))
-                        .unwrap_or_default(),
-                    photo: Some(model::Slot::new(src.to_string(), focal)),
-                    back_text: String::new(),
-                    fond: None,
-                    ..Default::default()
-                }
-            });
+            album.cover = de_la_source
+                .or_else(|| photo_de_couverture(&dans_le_livre))
+                .map(|src| {
+                    let focal = par_src[src].focal.unwrap_or_else(model::default_focal);
+                    model::Cover {
+                        title: title.clone(),
+                        subtitle: album
+                            .colophon
+                            .as_ref()
+                            .and_then(|f| crate::garde::ligne_des_dates(f, opts.langue))
+                            .unwrap_or_default(),
+                        photo: Some(model::Slot::new(src.to_string(), focal)),
+                        back_text: String::new(),
+                        fond: None,
+                        ..Default::default()
+                    }
+                });
         }
 
         // Les dates et les lieux sous les photos, sur les planches de cette
@@ -1219,7 +1308,11 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         if composees.is_empty() {
             ecart = e;
         } else {
-            say(&format!("variante {} : {} planches", spec.id, album.spreads.len()));
+            say(&format!(
+                "variante {} : {} planches",
+                spec.id,
+                album.spreads.len()
+            ));
         }
         composees.push((spec, album, hors_budget, kept));
     }
@@ -1236,11 +1329,19 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
             b.cartes = cartes_a_poser.len();
             b.photos_hors_etapes = hors_etapes.len();
             b.couverture_de_la_source = v.couverture.as_deref().is_some_and(|f| {
-                composees[0].1.cover.as_ref().and_then(|c| c.photo.as_ref()).is_some_and(|p| p.src == f)
+                composees[0]
+                    .1
+                    .cover
+                    .as_ref()
+                    .and_then(|c| c.photo.as_ref())
+                    .is_some_and(|p| p.src == f)
             });
             Some(b)
         }
-        (None, Some(r)) => Some(crate::voyage::composition::Bilan { refus: Some(r), ..Default::default() }),
+        (None, Some(r)) => Some(crate::voyage::composition::Bilan {
+            refus: Some(r),
+            ..Default::default()
+        }),
         (None, None) => None,
     };
     if let Some(b) = &bilan_voyage {
@@ -1284,8 +1385,7 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
         for d in &discards {
             *par_raison.entry(d.reason.as_str()).or_default() += 1;
         }
-        let resume: Vec<String> =
-            par_raison.iter().map(|(r, n)| format!("{n} {r}")).collect();
+        let resume: Vec<String> = par_raison.iter().map(|(r, n)| format!("{n} {r}")).collect();
         anyhow::bail!(
             "aucune photo exploitable : les {photos_scanned} images du dossier \
              ont toutes été écartées ({}) ; aucun album n'a été écrit",
@@ -1367,7 +1467,9 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
     let cache = thumb::ThumbCache::new(out)?;
     let orphelines = write_thumb_index(&album, &discards, &root, &cache, out)?;
     if orphelines > 0 {
-        say(&format!("cache : {orphelines} vignettes orphelines retirées"));
+        say(&format!(
+            "cache : {orphelines} vignettes orphelines retirées"
+        ));
     }
 
     // 6. render PDF from thumbnails (preview quality in P0)
@@ -1394,7 +1496,14 @@ pub fn composer(releve: Releve, out: &Path, opts: BuildOptions) -> Result<BuildR
                         (data, w, h)
                     }
                 };
-                Some(pdf::JpegAsset { data, width: w, height: h, focal: slot.focal, zoom: slot.zoom, icc })
+                Some(pdf::JpegAsset {
+                    data,
+                    width: w,
+                    height: h,
+                    focal: slot.focal,
+                    zoom: slot.zoom,
+                    icc,
+                })
             })
             .collect();
         // A spread that cannot be drawn is an error, not a page that
@@ -1549,8 +1658,7 @@ pub fn write_album_json(dir: &Path, album: &model::Album) -> Result<PathBuf> {
 /// Written the way `album.json` is: temp file then rename, so a crash
 /// halfway never leaves a truncated face beside a book that names it.
 pub fn poser_police(dir: &Path, source: &Path, index: u32) -> Result<model::Police> {
-    let data = fs::read(source)
-        .with_context(|| format!("lecture de {}", source.display()))?;
+    let data = fs::read(source).with_context(|| format!("lecture de {}", source.display()))?;
     let face = crate::font::Face::parse(&data, index)
         .map_err(|c| anyhow::anyhow!("police illisible : {c}"))?;
     let (nom_fichier, octets) = crate::font::extraire_pour_album(&data, index)
@@ -1589,17 +1697,16 @@ pub fn poser_police(dir: &Path, source: &Path, index: u32) -> Result<model::Poli
 /// Écrit comme `album.json`, fichier temporaire puis renommage. `album.json`
 /// n'est pas touché : la fiche entre dans l'album par l'historique de
 /// l'éditeur.
-pub fn poser_police_objet(
-    dir: &Path,
-    installee: &crate::font::Installee,
-) -> Result<model::Police> {
+pub fn poser_police_objet(dir: &Path, installee: &crate::font::Installee) -> Result<model::Police> {
     let (nom_fichier, octets) = crate::font::extraire_pour_objet(installee)
         .map_err(|c| anyhow::anyhow!("police refusée : {c}"))?;
     let face = crate::font::Face::parse(&octets, 0)
         .map_err(|c| anyhow::anyhow!("police illisible : {c}"))?;
 
     let target = dir.join(&nom_fichier);
-    let deja = fs::read(&target).ok().and_then(|d| crate::font::Face::parse(&d, 0).ok());
+    let deja = fs::read(&target)
+        .ok()
+        .and_then(|d| crate::font::Face::parse(&d, 0).ok());
     match deja {
         Some(f) if f.postscript == face.postscript => {}
         Some(f) => anyhow::bail!(
@@ -1614,7 +1721,11 @@ pub fn poser_police_objet(
                 .with_context(|| format!("rename onto {}", target.display()))?;
         }
     }
-    Ok(model::Police { fichier: nom_fichier, postscript: face.postscript, nom: face.nom })
+    Ok(model::Police {
+        fichier: nom_fichier,
+        postscript: face.postscript,
+        nom: face.nom,
+    })
 }
 
 /// Effacer les faces de bloc que plus aucun objet d'aucune planche ne nomme,
@@ -1633,9 +1744,17 @@ pub fn elaguer_polices_objet(dir: &Path, album: &model::Album) -> usize {
         .flat_map(|s| &s.objets)
         .filter_map(|o| o.police.as_ref().map(|p| p.fichier.as_str()))
         // La quatrième peut porter une face de la même grammaire (1.2-d).
-        .chain(album.cover.iter().filter_map(|c| c.back_police.as_ref()).map(|p| p.fichier.as_str()))
+        .chain(
+            album
+                .cover
+                .iter()
+                .filter_map(|c| c.back_police.as_ref())
+                .map(|p| p.fichier.as_str()),
+        )
         .collect();
-    let Ok(entrees) = fs::read_dir(dir) else { return 0 };
+    let Ok(entrees) = fs::read_dir(dir) else {
+        return 0;
+    };
     let mut n = 0;
     for e in entrees.filter_map(std::result::Result::ok) {
         let nom = e.file_name().to_string_lossy().into_owned();
@@ -1754,7 +1873,11 @@ pub fn migrate_album_folder(dir: &Path) -> Result<Option<Migration>> {
     album.version = model::SCHEMA;
     fs::write(&json, serde_json::to_string_pretty(&album)?)
         .with_context(|| format!("write {}", json.display()))?;
-    Ok(Some(Migration { depuis, slots, irresolus }))
+    Ok(Some(Migration {
+        depuis,
+        slots,
+        irresolus,
+    }))
 }
 
 /// The 1 → 2 step: every `focal` of the album, converted from a fraction of
@@ -1835,8 +1958,7 @@ fn focal_du_schema_1(dir: &Path, album: &mut model::Album) -> (usize, usize) {
                 (w > 0 && h > 0).then(|| f64::from(w) / f64::from(h))
             }) {
                 Some(r) => {
-                    slot.focal =
-                        model::point_from_room(rect.w / rect.h, r, slot.focal, slot.zoom)
+                    slot.focal = model::point_from_room(rect.w / rect.h, r, slot.focal, slot.zoom)
                 }
                 None => irresolus += 1,
             }
@@ -1931,7 +2053,14 @@ fn rendre_apercu(dir: &Path, stamp: chrono::DateTime<chrono::Local>) -> Result<P
                         (data, w, h)
                     }
                 };
-                Some(pdf::JpegAsset { data, width: w, height: h, focal: slot.focal, zoom: slot.zoom, icc })
+                Some(pdf::JpegAsset {
+                    data,
+                    width: w,
+                    height: h,
+                    focal: slot.focal,
+                    zoom: slot.zoom,
+                    icc,
+                })
             })
             .collect();
         anyhow::ensure!(
@@ -1972,7 +2101,10 @@ fn write_thumb_index(
     for d in discards {
         add(&d.src);
     }
-    fs::write(out.join("thumbs.json"), serde_json::to_string_pretty(&index)?)?;
+    fs::write(
+        out.join("thumbs.json"),
+        serde_json::to_string_pretty(&index)?,
+    )?;
     // The index is the truth of what the album still reads: everything else
     // in the cache is an orphan — a photo touched, renamed or removed since
     // the last composition — and it used to stay forever.
@@ -2025,9 +2157,7 @@ pub fn chapter_captions(
         let dates = chapter_dates(c, langue);
         let place = chapter_place(c);
         out.push(match (place, dates) {
-            (Some(name), Some(dates)) if previous != Some(name) => {
-                Some(format!("{name}, {dates}"))
-            }
+            (Some(name), Some(dates)) if previous != Some(name) => Some(format!("{name}, {dates}")),
             (Some(name), None) if previous != Some(name) => Some(name.to_string()),
             (_, dates) => dates,
         });
@@ -2081,7 +2211,10 @@ mod tests {
     }
 
     fn options_datees() -> BuildOptions {
-        BuildOptions { aujourdhui: Some(jour_fixe()), ..Default::default() }
+        BuildOptions {
+            aujourdhui: Some(jour_fixe()),
+            ..Default::default()
+        }
     }
 
     /// `album.pdf` rendu à l'instant fixe, sans toucher à l'environnement.
@@ -2178,7 +2311,11 @@ mod tests {
         assert_eq!(cover.title, album.title);
         let photo = cover.photo.as_ref().expect("une photo sur la couverture");
         assert!(
-            album.spreads.iter().flat_map(|s| &s.slots).any(|sl| sl.src == photo.src),
+            album
+                .spreads
+                .iter()
+                .flat_map(|s| &s.slots)
+                .any(|sl| sl.src == photo.src),
             "la photo de couverture est une photo du livre : {}",
             photo.src
         );
@@ -2195,7 +2332,10 @@ mod tests {
             fond: None,
             ..Default::default()
         };
-        let opts = BuildOptions { cover: Some(main.clone()), ..options_datees() };
+        let opts = BuildOptions {
+            cover: Some(main.clone()),
+            ..options_datees()
+        };
         let repris = build_album(&photos, &out, opts).unwrap().album;
         assert_eq!(
             serde_json::to_string(&repris.cover).unwrap(),
@@ -2205,9 +2345,7 @@ mod tests {
 
     /// A throwaway photos folder and its (not yet created) output folder.
     fn dossier_test(name: &str) -> (PathBuf, PathBuf) {
-
-        let base =
-            std::env::temp_dir().join(format!("colophon-{name}-{}", std::process::id()));
+        let base = std::env::temp_dir().join(format!("colophon-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&base);
         let photos = base.join("photos");
         fs::create_dir_all(&photos).unwrap();
@@ -2239,7 +2377,9 @@ mod tests {
             .iter()
             .find(|i| i.face.embeddable() && i.face.nom == voulue)
             .or_else(|| {
-                faces.iter().find(|i| i.face.embeddable() && i.face.nom.contains(&voulue))
+                faces
+                    .iter()
+                    .find(|i| i.face.embeddable() && i.face.nom.contains(&voulue))
             })
         else {
             println!("aucune face acceptée ne s'appelle « {voulue} »");
@@ -2335,7 +2475,9 @@ mod tests {
         )
         .unwrap();
 
-        let m = migrate_album_folder(&out).unwrap().expect("il y avait à migrer");
+        let m = migrate_album_folder(&out)
+            .unwrap()
+            .expect("il y avait à migrer");
         assert_eq!(m.depuis, 1);
         assert_eq!(m.slots, 2);
         assert_eq!(m.irresolus, 0, "les deux vignettes étaient là");
@@ -2347,16 +2489,12 @@ mod tests {
         let g = crate::pdf::geometry(&lu);
         let rects = crate::pdf::slots_for("duo", 2, &g);
         for (i, ratio) in [120.0 / 80.0, 60.0 / 120.0].iter().enumerate() {
-            let attendu = model::point_from_room(
-                rects[i].w / rects[i].h,
-                *ratio,
-                avant[i],
-                1.0,
-            );
+            let attendu = model::point_from_room(rects[i].w / rects[i].h, *ratio, avant[i], 1.0);
             assert!(
                 (lu.spreads[0].slots[i].focal[0] - attendu[0]).abs() < 1e-12
                     && (lu.spreads[0].slots[i].focal[1] - attendu[1]).abs() < 1e-12,
-                "slot {i} : {:?} attendu {attendu:?}", lu.spreads[0].slots[i].focal
+                "slot {i} : {:?} attendu {attendu:?}",
+                lu.spreads[0].slots[i].focal
             );
             assert!(
                 (lu.spreads[0].slots[i].focal[1] - avant[i][1]).abs() > 1e-6,
@@ -2409,7 +2547,9 @@ mod tests {
         )
         .unwrap();
 
-        let m = migrate_album_folder(&out).unwrap().expect("il y avait à migrer");
+        let m = migrate_album_folder(&out)
+            .unwrap()
+            .expect("il y avait à migrer");
         assert_eq!(m.slots, 1, "la couverture est le seul slot");
         assert_eq!(m.irresolus, 0);
 
@@ -2429,7 +2569,9 @@ mod tests {
             (focal[0] - souple[0]).abs() < 1e-12 && (focal[1] - souple[1]).abs() < 1e-12,
             "{focal:?} au lieu de {souple:?}"
         );
-        let ecart = (souple[0] - boitier[0]).abs().max((souple[1] - boitier[1]).abs());
+        let ecart = (souple[0] - boitier[0])
+            .abs()
+            .max((souple[1] - boitier[1]).abs());
         assert!(
             ecart > 1e-3,
             "les deux profils rendent le même point : la sonde ne mord plus ({souple:?} vs {boitier:?})"
@@ -2496,9 +2638,15 @@ mod tests {
         let json = out.join("album.json");
         fs::write(&json, serde_json::to_string_pretty(&album).unwrap()).unwrap();
 
-        let m = migrate_album_folder(&out).unwrap().expect("il y avait à estampiller");
+        let m = migrate_album_folder(&out)
+            .unwrap()
+            .expect("il y avait à estampiller");
         assert_eq!(m.depuis, 2);
-        assert_eq!((m.slots, m.irresolus), (0, 0), "les étapes 2 → 3 et 3 → 4 ne convertissent rien");
+        assert_eq!(
+            (m.slots, m.irresolus),
+            (0, 0),
+            "les étapes 2 → 3 et 3 → 4 ne convertissent rien"
+        );
 
         // Le fichier entier, à l'estampille près.
         album.version = model::SCHEMA;
@@ -2521,8 +2669,14 @@ mod tests {
                 "slot {i} : focal re-converti"
             );
         }
-        assert_eq!(relu.spreads[0].objets, album.spreads[0].objets, "objets intacts");
-        assert!(migrate_album_folder(&out).unwrap().is_none(), "ne re-migre pas");
+        assert_eq!(
+            relu.spreads[0].objets, album.spreads[0].objets,
+            "objets intacts"
+        );
+        assert!(
+            migrate_album_folder(&out).unwrap().is_none(),
+            "ne re-migre pas"
+        );
     }
 
     /// 3 → 4 (P-s5) : le schéma 4 veut dire « ce fichier peut porter une
@@ -2582,9 +2736,15 @@ mod tests {
         let json = out.join("album.json");
         fs::write(&json, serde_json::to_string_pretty(&album).unwrap()).unwrap();
 
-        let m = migrate_album_folder(&out).unwrap().expect("il y avait à estampiller");
+        let m = migrate_album_folder(&out)
+            .unwrap()
+            .expect("il y avait à estampiller");
         assert_eq!(m.depuis, 3);
-        assert_eq!((m.slots, m.irresolus), (0, 0), "l'étape 3 → 4 ne convertit rien");
+        assert_eq!(
+            (m.slots, m.irresolus),
+            (0, 0),
+            "l'étape 3 → 4 ne convertit rien"
+        );
         album.version = 4;
         assert_eq!(
             fs::read_to_string(&json).unwrap(),
@@ -2592,10 +2752,23 @@ mod tests {
             "l'étape 3 → 4 a touché autre chose que la version"
         );
         let relu: model::Album = serde_json::from_str(&fs::read_to_string(&json).unwrap()).unwrap();
-        assert_eq!(relu.spreads[0].slots[0].focal, [0.2, 0.8], "focal re-converti");
-        assert_eq!(relu.spreads[0].objets, album.spreads[0].objets, "objets intacts");
-        assert!(matches!(relu.spreads[0].objets[0].contenu, model::Contenu::Carte { debut: 2, fin: 9 }));
-        assert!(migrate_album_folder(&out).unwrap().is_none(), "ne re-migre pas");
+        assert_eq!(
+            relu.spreads[0].slots[0].focal,
+            [0.2, 0.8],
+            "focal re-converti"
+        );
+        assert_eq!(
+            relu.spreads[0].objets, album.spreads[0].objets,
+            "objets intacts"
+        );
+        assert!(matches!(
+            relu.spreads[0].objets[0].contenu,
+            model::Contenu::Carte { debut: 2, fin: 9 }
+        ));
+        assert!(
+            migrate_album_folder(&out).unwrap().is_none(),
+            "ne re-migre pas"
+        );
     }
 
     /// Un album écrit par un build plus récent est refusé, au lieu d'être
@@ -2623,7 +2796,11 @@ mod tests {
         let msg = format!("{err}");
         assert!(msg.contains(&(model::SCHEMA + 1).to_string()), "{msg}");
         assert!(msg.contains(&model::SCHEMA.to_string()), "{msg}");
-        assert_eq!(fs::read_to_string(&json).unwrap(), ecrit, "le fichier a été réécrit");
+        assert_eq!(
+            fs::read_to_string(&json).unwrap(),
+            ecrit,
+            "le fichier a été réécrit"
+        );
     }
 
     /// Une photo sans vignette garde son focal, et se compte. Un album qui
@@ -2642,13 +2819,18 @@ mod tests {
         )
         .unwrap();
 
-        let m = migrate_album_folder(&out).unwrap().expect("il y avait à migrer");
+        let m = migrate_album_folder(&out)
+            .unwrap()
+            .expect("il y avait à migrer");
         assert_eq!((m.slots, m.irresolus), (1, 1));
         let lu: model::Album =
             serde_json::from_str(&fs::read_to_string(out.join("album.json")).unwrap()).unwrap();
         assert_eq!(lu.version, model::SCHEMA, "estampillé quand même");
         assert_eq!(lu.spreads[0].slots[0].focal, [0.2, 0.8], "gardé tel quel");
-        assert!(migrate_album_folder(&out).unwrap().is_none(), "ne re-migre pas");
+        assert!(
+            migrate_album_folder(&out).unwrap().is_none(),
+            "ne re-migre pas"
+        );
     }
 
     /// The 16/08 case, first form: an empty folder. The old behaviour was a
@@ -2657,7 +2839,9 @@ mod tests {
     #[test]
     fn un_dossier_vide_ne_produit_aucun_fichier() {
         let (photos, out) = dossier_test("vide");
-        let err = build_album(&photos, &out, BuildOptions::default()).err().expect("le build aurait dû refuser");
+        let err = build_album(&photos, &out, BuildOptions::default())
+            .err()
+            .expect("le build aurait dû refuser");
         let msg = format!("{err:#}");
         assert!(msg.contains("aucune photo exploitable"), "{msg}");
         rien_d_ecrit(&out);
@@ -2670,10 +2854,15 @@ mod tests {
         let (photos, out) = dossier_test("corrompu");
         fs::write(photos.join("cassee-1.jpg"), b"pas un jpeg du tout").unwrap();
         fs::write(photos.join("cassee-2.jpg"), &[0xFF, 0xD8, 0xFF, 0x00]).unwrap();
-        let err = build_album(&photos, &out, BuildOptions::default()).err().expect("le build aurait dû refuser");
+        let err = build_album(&photos, &out, BuildOptions::default())
+            .err()
+            .expect("le build aurait dû refuser");
         let msg = format!("{err:#}");
         assert!(msg.contains("aucune photo exploitable"), "{msg}");
-        assert!(msg.contains("cassee-1.jpg"), "les noms font le diagnostic : {msg}");
+        assert!(
+            msg.contains("cassee-1.jpg"),
+            "les noms font le diagnostic : {msg}"
+        );
         rien_d_ecrit(&out);
     }
 
@@ -2685,10 +2874,15 @@ mod tests {
         let (photos, out) = dossier_test("mixte");
         fs::write(photos.join("cassee.jpg"), b"tronquee").unwrap();
         petit_jpeg(&photos.join("minuscule.jpg"), 1);
-        let err = build_album(&photos, &out, BuildOptions::default()).err().expect("le build aurait dû refuser");
+        let err = build_album(&photos, &out, BuildOptions::default())
+            .err()
+            .expect("le build aurait dû refuser");
         let msg = format!("{err:#}");
         assert!(msg.contains("écartées"), "{msg}");
-        assert!(msg.contains("illisible"), "le compte des illisibles manque : {msg}");
+        assert!(
+            msg.contains("illisible"),
+            "le compte des illisibles manque : {msg}"
+        );
         rien_d_ecrit(&out);
     }
 
@@ -2735,13 +2929,15 @@ mod tests {
         }
         let report = build_album(&photos, &out, BuildOptions::default())
             .expect("trois photos font un album, pas un refus");
-        let slots: usize =
-            report.album.spreads.iter().map(|s| s.slots.len()).sum();
+        let slots: usize = report.album.spreads.iter().map(|s| s.slots.len()).sum();
         assert_eq!(slots, 3, "les trois photos sont dans l'album");
         // Les planches de photographies : la garde et le colophon sont deux
         // pages de plus, écrites par la machine sur le livre lui-même.
         let planches = planches_photo(&report.album);
-        assert!((1..=3).contains(&planches), "{planches} planches pour 3 photos");
+        assert!(
+            (1..=3).contains(&planches),
+            "{planches} planches pour 3 photos"
+        );
         assert!(out.join("album.pdf").exists());
     }
 
@@ -2772,8 +2968,8 @@ mod tests {
         // Une vraie face, posée comme l'app la pose : extraite, jamais le
         // fichier système recopié. La face du projet fait l'affaire — ce que
         // le test regarde n'est pas laquelle, c'est que ce soit elle.
-        let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("assets/SourceSans3-Regular.ttf");
+        let source =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/SourceSans3-Regular.ttf");
         let police = poser_police(&out, &source, 0).expect("la face se pose");
         assert_eq!(police.fichier, crate::font::POLICE_TTF);
         assert_eq!(police.postscript, crate::font::FONT_NAME);
@@ -2785,7 +2981,10 @@ mod tests {
         // La recomposition la garde : c'est le champ que rien d'autre ne
         // rattraperait, le fichier restant sur le disque sans que l'album le
         // nomme plus.
-        let opts = BuildOptions { police: Some(police.clone()), ..options_datees() };
+        let opts = BuildOptions {
+            police: Some(police.clone()),
+            ..options_datees()
+        };
         let repris = build_album(&photos, &out, opts).expect("recomposition");
         assert_eq!(repris.album.police.as_ref(), Some(&police));
 
@@ -2819,8 +3018,8 @@ mod tests {
         for i in 0..3 {
             jpeg_imprimable(&photos.join(format!("photo-{i}.jpg")), i);
         }
-        let report = build_album(&photos, &out, options_datees())
-            .expect("trois photos font un album");
+        let report =
+            build_album(&photos, &out, options_datees()).expect("trois photos font un album");
         let src = report
             .album
             .spreads
@@ -2839,12 +3038,20 @@ mod tests {
         let mut opts = options_datees();
         opts.reglages.insert(
             src.clone(),
-            model::Reglage { expo: 1.0, contraste: 0.0, nb: false },
+            model::Reglage {
+                expo: 1.0,
+                contraste: 0.0,
+                nb: false,
+            },
         );
         let repris = build_album(&photos, &out, opts).expect("recomposition");
         assert_eq!(
             repris.album.reglages.get(&src),
-            Some(&model::Reglage { expo: 1.0, contraste: 0.0, nb: false }),
+            Some(&model::Reglage {
+                expo: 1.0,
+                contraste: 0.0,
+                nb: false
+            }),
             "la table survit à la recomposition"
         );
 
@@ -2852,7 +3059,10 @@ mod tests {
         assert_ne!(nu, regle, "le réglage doit atteindre l'aperçu rendu");
 
         let regle_bis = apercu_fixe(&out);
-        assert_eq!(regle, regle_bis, "deux rendus du même album réglé, à l'octet");
+        assert_eq!(
+            regle, regle_bis,
+            "deux rendus du même album réglé, à l'octet"
+        );
 
         // Take the réglage away and the render is today's again: the
         // identity is the default, not a near miss.
@@ -2870,15 +3080,21 @@ mod tests {
         for i in 0..10 {
             jpeg_imprimable(&photos.join(format!("photo-{i}.jpg")), i);
         }
-        let report = build_album(&photos, &out, BuildOptions::default())
-            .expect("dix photos font un album");
-        let slots: usize =
-            report.album.spreads.iter().map(|s| s.slots.len()).sum();
+        let report =
+            build_album(&photos, &out, BuildOptions::default()).expect("dix photos font un album");
+        let slots: usize = report.album.spreads.iter().map(|s| s.slots.len()).sum();
         assert_eq!(slots, 10, "les dix photos sont dans l'album");
         let planches = planches_photo(&report.album);
-        assert!((2..=6).contains(&planches), "{planches} planches pour 10 photos");
+        assert!(
+            (2..=6).contains(&planches),
+            "{planches} planches pour 10 photos"
+        );
         // Le livre s'ouvre sur une page blanche et se ferme sur le colophon.
-        assert!(report.album.spreads[0].slots.is_empty(), "{}", report.album.spreads[0].template);
+        assert!(
+            report.album.spreads[0].slots.is_empty(),
+            "{}",
+            report.album.spreads[0].template
+        );
         assert_eq!(
             report.album.spreads.last().unwrap().template,
             crate::colophon::TEMPLATE
@@ -2904,7 +3120,10 @@ mod tests {
         let report = build_album(&photos, &out, options_datees()).expect("un album");
         let album = &report.album;
         assert!(
-            !album.spreads.iter().any(|s| s.template == crate::garde::TEMPLATE),
+            !album
+                .spreads
+                .iter()
+                .any(|s| s.template == crate::garde::TEMPLATE),
             "aucun faux-titre"
         );
         let premiere = &album.spreads[0];
@@ -2918,8 +3137,14 @@ mod tests {
             "{} porte quelque chose à gauche",
             premiere.template
         );
-        assert!(album.colophon.is_some(), "les faits restent sur le colophon");
-        assert_eq!(album.spreads.last().unwrap().template, crate::colophon::TEMPLATE);
+        assert!(
+            album.colophon.is_some(),
+            "les faits restent sur le colophon"
+        );
+        assert_eq!(
+            album.spreads.last().unwrap().template,
+            crate::colophon::TEMPLATE
+        );
         assert_eq!(
             album.cover.as_ref().map(|c| c.subtitle.clone()),
             album
@@ -2938,7 +3163,11 @@ mod tests {
             .filter(|d| d.bloquant && !propres_au_jeu.contains(&d.regle))
             .collect();
         assert!(reste.is_empty(), "prévol : {reste:?}");
-        assert!(!r.defauts.iter().any(|d| d.regle == "imposition"), "{:?}", r.defauts);
+        assert!(
+            !r.defauts.iter().any(|d| d.regle == "imposition"),
+            "{:?}",
+            r.defauts
+        );
         let _ = fs::remove_dir_all(&out);
     }
 
@@ -2950,8 +3179,13 @@ mod tests {
         for i in 0..10 {
             jpeg_imprimable(&photos.join(format!("photo-{i}.jpg")), i);
         }
-        let opts = BuildOptions { garde: true, ..options_datees() };
-        let avant = build_album(&photos, &out, opts).expect("un album avec garde").album;
+        let opts = BuildOptions {
+            garde: true,
+            ..options_datees()
+        };
+        let avant = build_album(&photos, &out, opts)
+            .expect("un album avec garde")
+            .album;
         assert_eq!(avant.spreads[0].template, crate::garde::TEMPLATE);
 
         let r = crate::recomposition::recomposer(
@@ -2962,7 +3196,11 @@ mod tests {
             },
         );
         let repris = r.expect("recomposition").album;
-        assert_eq!(repris.spreads[0].template, crate::garde::TEMPLATE, "la garde reste");
+        assert_eq!(
+            repris.spreads[0].template,
+            crate::garde::TEMPLATE,
+            "la garde reste"
+        );
         let _ = fs::remove_dir_all(&out);
     }
 
@@ -2998,14 +3236,20 @@ mod tests {
             .expect("tout est trop petit pour imprimer");
         let msg = format!("{err:#}");
         assert!(msg.contains("definition"), "{msg}");
-        assert!(!msg.contains("parasite"), "à 24, le filtre parasite est coupé : {msg}");
+        assert!(
+            !msg.contains("parasite"),
+            "à 24, le filtre parasite est coupé : {msg}"
+        );
 
         let (photos, out) = dossier("bascule25", 25);
         let err = build_album(&photos, &out, BuildOptions::default())
             .err()
             .expect("tout est écarté");
         let msg = format!("{err:#}");
-        assert!(msg.contains("12 parasite"), "à 25, le filtre parasite revient : {msg}");
+        assert!(
+            msg.contains("12 parasite"),
+            "à 25, le filtre parasite revient : {msg}"
+        );
     }
 
     /// The same twenty-five tiny photos with no date at all: the fingerprint
@@ -3023,7 +3267,10 @@ mod tests {
             .expect("tout est trop petit pour imprimer");
         let msg = format!("{err:#}");
         assert!(msg.contains("definition"), "{msg}");
-        assert!(!msg.contains("parasite"), "sans empreinte majoritaire, rien n'est parasite : {msg}");
+        assert!(
+            !msg.contains("parasite"),
+            "sans empreinte majoritaire, rien n'est parasite : {msg}"
+        );
     }
 
     /// Le Takeout de 5.1, en synthétique : des photos sans EXIF dont les
@@ -3063,13 +3310,22 @@ mod tests {
             .iter()
             .flat_map(|s| s.slots.iter().map(|sl| sl.src.clone()))
             .collect();
-        assert_eq!(srcs.len(), 30, "les trente photographies sont dans le livre");
-        assert!(srcs.contains("photo-00-edited.jpg"), "la version éditée gagne");
-        assert!(!srcs.contains("photo-00.jpg"), "l'originale est sortie du livre");
+        assert_eq!(
+            srcs.len(),
+            30,
+            "les trente photographies sont dans le livre"
+        );
+        assert!(
+            srcs.contains("photo-00-edited.jpg"),
+            "la version éditée gagne"
+        );
+        assert!(
+            !srcs.contains("photo-00.jpg"),
+            "l'originale est sortie du livre"
+        );
 
         let curation: Vec<model::Discard> =
-            serde_json::from_str(&fs::read_to_string(out.join("curation.json")).unwrap())
-                .unwrap();
+            serde_json::from_str(&fs::read_to_string(out.join("curation.json")).unwrap()).unwrap();
         let originale = curation
             .iter()
             .find(|d| d.src == "photo-00.jpg")
@@ -3115,12 +3371,26 @@ mod tests {
             .iter()
             .flat_map(|s| s.slots.iter().map(|sl| sl.src.clone()))
             .collect();
-        assert!(posees.iter().all(|s| !s.starts_with("petite-")), "{posees:?}");
+        assert!(
+            posees.iter().all(|s| !s.starts_with("petite-")),
+            "{posees:?}"
+        );
         assert_eq!(report.trop_petites, 6);
-        assert_eq!(report.chapitres_vides.len(), 1, "{:?}", report.chapitres_vides);
-        assert!(!report.chapitres_vides[0].is_empty(), "le chapitre garde son titre");
+        assert_eq!(
+            report.chapitres_vides.len(),
+            1,
+            "{:?}",
+            report.chapitres_vides
+        );
+        assert!(
+            !report.chapitres_vides[0].is_empty(),
+            "le chapitre garde son titre"
+        );
         // La page de fin : une photo écartée pour résolution ne compte pas.
-        assert_eq!(report.album.colophon.as_ref().unwrap().photos_retenues, posees.len());
+        assert_eq!(
+            report.album.colophon.as_ref().unwrap().photos_retenues,
+            posees.len()
+        );
         assert_eq!(report.photos_kept, posees.len());
     }
 
@@ -3147,10 +3417,13 @@ mod tests {
             .iter()
             .flat_map(|s| s.slots.iter().map(|sl| sl.src.clone()))
             .collect();
-        assert_eq!(srcs.len(), 30, "les trente photographies sont dans le livre");
+        assert_eq!(
+            srcs.len(),
+            30,
+            "les trente photographies sont dans le livre"
+        );
         let curation: Vec<model::Discard> =
-            serde_json::from_str(&fs::read_to_string(out.join("curation.json")).unwrap())
-                .unwrap();
+            serde_json::from_str(&fs::read_to_string(out.join("curation.json")).unwrap()).unwrap();
         assert!(
             curation.iter().all(|d| d.reason != "parasite"),
             "rien n'est écarté pour une empreinte que personne n'a"
@@ -3169,10 +3442,12 @@ mod tests {
         let report = build_album(&photos, &out, BuildOptions::default())
             .expect("trois photos font un album");
         let slots: usize = report.album.spreads.iter().map(|s| s.slots.len()).sum();
-        assert_eq!(slots, 3, "aucune photo n'est écartée dans un dossier ordinaire");
+        assert_eq!(
+            slots, 3,
+            "aucune photo n'est écartée dans un dossier ordinaire"
+        );
         let curation: Vec<model::Discard> =
-            serde_json::from_str(&fs::read_to_string(out.join("curation.json")).unwrap())
-                .unwrap();
+            serde_json::from_str(&fs::read_to_string(out.join("curation.json")).unwrap()).unwrap();
         assert!(
             curation.iter().all(|d| d.reason != "originale_editee"),
             "la règle -edited ne s'arme jamais hors d'un Takeout"
@@ -3194,13 +3469,15 @@ mod tests {
             crate::model::Size { w: 210.0, h: 210.0 },
         );
         write_album_json(&dir, &album).unwrap();
-        assert!(!dir.join("album.json.bak").exists(), "premier enregistrement, rien à garder");
+        assert!(
+            !dir.join("album.json.bak").exists(),
+            "premier enregistrement, rien à garder"
+        );
 
         album.title = "v2".into();
         write_album_json(&dir, &album).unwrap();
         let bak: crate::model::Album =
-            serde_json::from_str(&fs::read_to_string(dir.join("album.json.bak")).unwrap())
-                .unwrap();
+            serde_json::from_str(&fs::read_to_string(dir.join("album.json.bak")).unwrap()).unwrap();
         let cur: crate::model::Album =
             serde_json::from_str(&fs::read_to_string(dir.join("album.json")).unwrap()).unwrap();
         assert_eq!(bak.title, "v1");
@@ -3227,8 +3504,15 @@ mod tests {
         let _ = fs::remove_dir_all(&out);
         let avant = crate::heic::decodages_pleins();
         let t = std::time::Instant::now();
-        let rapport = build_album(&dir, &out, BuildOptions { spreads: 4, ..Default::default() })
-            .expect("le dossier RAW compose");
+        let rapport = build_album(
+            &dir,
+            &out,
+            BuildOptions {
+                spreads: 4,
+                ..Default::default()
+            },
+        )
+        .expect("le dossier RAW compose");
         println!(
             "composé en {} ms : {} photos scannées, {} gardées, {} planches",
             t.elapsed().as_millis(),
@@ -3242,7 +3526,11 @@ mod tests {
             "la composition a demandé un dématriçage"
         );
         assert_eq!(rapport.photos_scanned, 8);
-        for p in fs::read_dir(&dir).unwrap().filter_map(Result::ok).map(|e| e.path()) {
+        for p in fs::read_dir(&dir)
+            .unwrap()
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+        {
             if crate::heic::is_raw(&p) {
                 let m = meta::read(&p);
                 assert!(m.taken_reliable, "date au mtime pour {}", p.display());
@@ -3283,8 +3571,14 @@ mod tests {
 
         assert_eq!(n, 2 * IDS_PROPOSITIONS.len(), "les propositions partent");
         for id in IDS_PROPOSITIONS {
-            assert!(!d.join(format!("album.{id}.json")).exists(), "album.{id}.json");
-            assert!(!d.join(format!("curation.{id}.json")).exists(), "curation.{id}.json");
+            assert!(
+                !d.join(format!("album.{id}.json")).exists(),
+                "album.{id}.json"
+            );
+            assert!(
+                !d.join(format!("curation.{id}.json")).exists(),
+                "curation.{id}.json"
+            );
         }
         for nom in [
             "album.json",
@@ -3304,7 +3598,10 @@ mod tests {
     /// ajouté d'un côté laisserait un fichier orphelin de l'autre.
     #[test]
     fn les_identifiants_des_propositions_sont_ceux_que_le_composeur_ecrit() {
-        assert!(IDS_PROPOSITIONS.contains(&"demandee"), "celle qu'on a demandée");
+        assert!(
+            IDS_PROPOSITIONS.contains(&"demandee"),
+            "celle qu'on a demandée"
+        );
         for densite in layout::Densite::offertes() {
             for spec in variantes_offertes(*densite, 40) {
                 assert!(
@@ -3320,7 +3617,10 @@ mod tests {
     /// tourne à chaque enregistrement.
     #[test]
     fn oublier_dans_un_dossier_absent_ne_compte_rien() {
-        assert_eq!(oublier_variantes(&std::env::temp_dir().join("colophon-nulle-part")), 0);
+        assert_eq!(
+            oublier_variantes(&std::env::temp_dir().join("colophon-nulle-part")),
+            0
+        );
     }
     /// La copie d'ouverture est celle de la séance qui commence : une
     /// ouverture suivante l'écrase, octet pour octet.
@@ -3339,7 +3639,11 @@ mod tests {
     }
 
     fn police_d_objet(fichier: &str) -> model::Police {
-        model::Police { fichier: fichier.into(), postscript: "X".into(), nom: "X".into() }
+        model::Police {
+            fichier: fichier.into(),
+            postscript: "X".into(),
+            nom: "X".into(),
+        }
     }
 
     /// L'élagage à la sauvegarde : un fichier d'objet que plus rien ne nomme
@@ -3388,8 +3692,17 @@ mod tests {
         album.spreads = vec![planche(Vec::new()), planche(vec![bloc])];
 
         assert_eq!(elaguer_polices_objet(&dir, &album), 1);
-        assert!(!dir.join("objet-Orpheline.otf").exists(), "l'orpheline part");
-        for reste in ["objet-Garde-Bold.ttf", crate::font::POLICE_TTF, "objet-Orpheline.otf.tmp", "notes.txt", OUVERTURE] {
+        assert!(
+            !dir.join("objet-Orpheline.otf").exists(),
+            "l'orpheline part"
+        );
+        for reste in [
+            "objet-Garde-Bold.ttf",
+            crate::font::POLICE_TTF,
+            "objet-Orpheline.otf.tmp",
+            "notes.txt",
+            OUVERTURE,
+        ] {
             assert!(dir.join(reste).exists(), "{reste} reste");
         }
         // La quatrième nomme la sienne : elle reste, même sans aucun bloc.
@@ -3399,9 +3712,19 @@ mod tests {
             ..Default::default()
         });
         album.spreads.clear();
-        assert_eq!(elaguer_polices_objet(&dir, &album), 1, "plus personne ne la nomme");
-        assert!(dir.join("objet-Quatrieme.ttf").exists(), "celle de la quatrième reste");
-        assert!(dir.join(crate::font::POLICE_TTF).exists(), "le livre n'est jamais touché");
+        assert_eq!(
+            elaguer_polices_objet(&dir, &album),
+            1,
+            "plus personne ne la nomme"
+        );
+        assert!(
+            dir.join("objet-Quatrieme.ttf").exists(),
+            "celle de la quatrième reste"
+        );
+        assert!(
+            dir.join(crate::font::POLICE_TTF).exists(),
+            "le livre n'est jamais touché"
+        );
         assert_eq!(elaguer_polices_objet(&dir.join("absent"), &album), 0);
         let _ = fs::remove_dir_all(&dir);
     }
@@ -3419,10 +3742,19 @@ mod tests {
         let p = poser_police_objet(&dir, &installee).expect("la face se pose");
         assert_eq!(p.fichier, "objet-SourceSans3-Regular.ttf");
         assert_eq!(p.postscript, crate::font::FONT_NAME);
-        let avant = fs::metadata(dir.join(&p.fichier)).unwrap().modified().unwrap();
+        let avant = fs::metadata(dir.join(&p.fichier))
+            .unwrap()
+            .modified()
+            .unwrap();
         let encore = poser_police_objet(&dir, &installee).expect("reposée");
         assert_eq!(encore, p);
-        assert_eq!(fs::metadata(dir.join(&p.fichier)).unwrap().modified().unwrap(), avant);
+        assert_eq!(
+            fs::metadata(dir.join(&p.fichier))
+                .unwrap()
+                .modified()
+                .unwrap(),
+            avant
+        );
 
         // Une autre face dont le nom se réduit au même fichier : la même
         // Source Sans, rebaptisée `SourceSans3_Regular` dans sa table `name`.
@@ -3436,9 +3768,17 @@ mod tests {
                 i += 1;
             }
         };
-        let utf16 = |t: &str| t.encode_utf16().flat_map(u16::to_be_bytes).collect::<Vec<u8>>();
+        let utf16 = |t: &str| {
+            t.encode_utf16()
+                .flat_map(u16::to_be_bytes)
+                .collect::<Vec<u8>>()
+        };
         remplacer(&mut jumelle, b"SourceSans3-Regular", b"SourceSans3_Regular");
-        remplacer(&mut jumelle, &utf16("SourceSans3-Regular"), &utf16("SourceSans3_Regular"));
+        remplacer(
+            &mut jumelle,
+            &utf16("SourceSans3-Regular"),
+            &utf16("SourceSans3_Regular"),
+        );
         fs::create_dir_all(dir.join("autre")).unwrap();
         fs::write(dir.join("autre/jumelle.ttf"), &jumelle).unwrap();
         let jumelle = crate::font::installed_in(&[dir.join("autre")]).remove(0);
@@ -3446,7 +3786,10 @@ mod tests {
         let refus = poser_police_objet(&dir, &jumelle).expect_err("même fichier, autre face");
         assert!(refus.to_string().contains("porte déjà"), "{refus}");
         let reste = fs::read(dir.join(&p.fichier)).unwrap();
-        assert_eq!(crate::font::Face::parse(&reste, 0).unwrap().postscript, crate::font::FONT_NAME);
+        assert_eq!(
+            crate::font::Face::parse(&reste, 0).unwrap().postscript,
+            crate::font::FONT_NAME
+        );
 
         // Un fichier illisible sous ce nom ne protège rien : on le réécrit.
         fs::write(dir.join(&p.fichier), b"pas une police").unwrap();
@@ -3471,15 +3814,24 @@ mod tests {
                 .and_then(|s| s.text.clone())
                 .expect("une page de colophon")
         };
-        let en = BuildOptions { langue: Langue::En, ..options_datees() };
+        let en = BuildOptions {
+            langue: Langue::En,
+            ..options_datees()
+        };
         let album = build_album(&photos, &out, en).unwrap().album;
         let t = colophon_de(&album);
-        assert!(t.contains("Composed on 14 November 2023 with Booklibre"), "{t}");
+        assert!(
+            t.contains("Composed on 14 November 2023 with Booklibre"),
+            "{t}"
+        );
         assert!(t.contains("photographs kept out of"), "{t}");
 
         let album = build_album(&photos, &out, options_datees()).unwrap().album;
         let t = colophon_de(&album);
-        assert!(t.contains("Composé le 14 novembre 2023 avec Booklibre"), "{t}");
+        assert!(
+            t.contains("Composé le 14 novembre 2023 avec Booklibre"),
+            "{t}"
+        );
     }
 
     /// Le réglage « sous les photos » demandé à la création entre dans
@@ -3503,7 +3855,10 @@ mod tests {
             langue: Langue::Fr,
             meteo: false,
         };
-        let opts = BuildOptions { legendes: Some(reglage), ..options_datees() };
+        let opts = BuildOptions {
+            legendes: Some(reglage),
+            ..options_datees()
+        };
         let album = build_album(&photos, &out, opts).unwrap().album;
         assert_eq!(album.legendes, Some(reglage));
         let mentions: Vec<(String, Option<String>)> = album
@@ -3516,7 +3871,10 @@ mod tests {
             mentions.contains(&("photo-0.jpg".into(), Some("Calvi, 10 mai 2020".into()))),
             "{mentions:?}"
         );
-        assert!(mentions.iter().filter(|(s, _)| s != "photo-0.jpg").all(|(_, m)| m.is_none()));
+        assert!(mentions
+            .iter()
+            .filter(|(s, _)| s != "photo-0.jpg")
+            .all(|(_, m)| m.is_none()));
         let ecrit = std::fs::read_to_string(out.join("album.json")).unwrap();
         assert!(ecrit.contains("Calvi, 10 mai 2020"), "le fichier les porte");
 
@@ -3539,6 +3897,9 @@ mod tests {
 
         let sans = build_album(&photos, &out, options_datees()).unwrap().album;
         let ecrit = serde_json::to_string(&sans).unwrap();
-        assert!(!ecrit.contains("\"mention\"") && !ecrit.contains("\"legendes\""), "{ecrit}");
+        assert!(
+            !ecrit.contains("\"mention\"") && !ecrit.contains("\"legendes\""),
+            "{ecrit}"
+        );
     }
 }

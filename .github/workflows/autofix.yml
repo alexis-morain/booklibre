@@ -1,0 +1,39 @@
+# The name must stay "autofix.ci": the service only pushes the diff of a
+# workflow with that name.
+name: autofix.ci
+
+# Formats the Rust code of a pull request, forks included, and autofix.ci
+# pushes the result as one commit. rustfmt only reads the sources: nothing of
+# the contributor runs here, no dependency is fetched, and the token is read
+# only. The app refuses any change under `.github`.
+#
+# `cargo fmt --check` is not in the gate on purpose: a contributor who
+# unticked "Allow edits by maintainers" would stay red with no way for the bot
+# to fix it. The bot formats, the gate judges the code.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: autofix-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  autofix:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same toolchain as `check`, so both format the same way.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - run: cargo fmt --all
+
+      - uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a # v1.3.4
+        with:
+          commit-message: 'style: cargo fmt'

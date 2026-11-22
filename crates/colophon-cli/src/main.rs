@@ -352,7 +352,10 @@ struct Cli {
 
 /// Built once at startup so `--help` can show the format table.
 static FORMAT_HELP: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    format!("Formats de page :\n{}\n\nOu une taille libre, par exemple --format 240x180.", format::help())
+    format!(
+        "Formats de page :\n{}\n\nOu une taille libre, par exemple --format 240x180.",
+        format::help()
+    )
 });
 
 /// The printer profile behind `--profil`, or a message naming the way out.
@@ -394,12 +397,26 @@ fn main() -> Result<()> {
             &|faits, total| eprintln!("originaux lus : {faits}/{total}"),
             &|| false,
         )?;
-        println!("photos : {} dont {} sous le repère de {} px de côté court", avant.photos, avant.photos_sous_seuil, colophon_core::voyage::SEUIL_COTE_COURT_PX);
-        println!("{} photos remplacées par leur original ({} déjà faites avant)", r.remplacees, r.deja);
+        println!(
+            "photos : {} dont {} sous le repère de {} px de côté court",
+            avant.photos,
+            avant.photos_sous_seuil,
+            colophon_core::voyage::SEUIL_COTE_COURT_PX
+        );
+        println!(
+            "{} photos remplacées par leur original ({} déjà faites avant)",
+            r.remplacees, r.deja
+        );
         println!("{} sans original sûr", r.refus.len());
         println!("sous le repère après : {}", r.sous_seuil_apres);
-        println!("{} fichiers illisibles dans le dossier d'originaux", r.illisibles);
-        println!("{} photos réécrites en JPEG (originaux HEIC, PNG)", r.reecrites);
+        println!(
+            "{} fichiers illisibles dans le dossier d'originaux",
+            r.illisibles
+        );
+        println!(
+            "{} photos réécrites en JPEG (originaux HEIC, PNG)",
+            r.reecrites
+        );
         println!("{} HEIC non lisibles sur ce système", r.heic_illisibles);
         println!("{} photos de la réserve ont maintenant leur original : une recomposition peut en ramener", r.revenues_possibles);
         return Ok(());
@@ -442,7 +459,10 @@ fn main() -> Result<()> {
     if cli.dump_geometry {
         let mut album = Album::new("geometry", std::path::Path::new("."), trim);
         album.bleed_mm = cli.bleed;
-        println!("{}", serde_json::to_string_pretty(&pdf::dump_geometry(&album))?);
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&pdf::dump_geometry(&album))?
+        );
         return Ok(());
     }
 
@@ -475,10 +495,15 @@ fn main() -> Result<()> {
             .with_context(|| format!("lecture de {}", cli.out.join("album.json").display()))?;
         let mut album: Album = serde_json::from_str(&json).context("album.json illisible")?;
         if !colophon_core::voyage::chiffres::regler(&mut album, actif, langue) {
-            anyhow::bail!("pas de voyage.json à côté des photos de cet album : pas de page de chiffres");
+            anyhow::bail!(
+                "pas de voyage.json à côté des photos de cet album : pas de page de chiffres"
+            );
         }
         colophon_core::build::write_album_json(&cli.out, &album)?;
-        eprintln!("page « Le voyage en chiffres » : {}", if actif { "ajoutée" } else { "retirée" });
+        eprintln!(
+            "page « Le voyage en chiffres » : {}",
+            if actif { "ajoutée" } else { "retirée" }
+        );
         return Ok(());
     }
 
@@ -541,9 +566,8 @@ fn main() -> Result<()> {
     }
 
     if let Some(planche) = cli.proposition {
-        let album: Album = serde_json::from_str(&std::fs::read_to_string(
-            cli.out.join("album.json"),
-        )?)?;
+        let album: Album =
+            serde_json::from_str(&std::fs::read_to_string(cli.out.join("album.json"))?)?;
         let p = planche
             .checked_sub(1)
             .and_then(|i| colophon_core::legende::proposition(&album, i, langue));
@@ -560,14 +584,16 @@ fn main() -> Result<()> {
     }
 
     if let Some(planche) = cli.reserve {
-        let album: Album = serde_json::from_str(&std::fs::read_to_string(
-            cli.out.join("album.json"),
-        )?)?;
+        let album: Album =
+            serde_json::from_str(&std::fs::read_to_string(cli.out.join("album.json"))?)?;
         let i = planche
             .checked_sub(1)
             .context("--reserve compte les planches à partir de 1")?;
         let cellule = match cli.case {
-            Some(c) => Some(c.checked_sub(1).context("--case compte les cases à partir de 1")?),
+            Some(c) => Some(
+                c.checked_sub(1)
+                    .context("--case compte les cases à partir de 1")?,
+            ),
             None => None,
         };
         let reserve = colophon_core::reserve::reserve_classee(&cli.out, &album, i, cellule)?;
@@ -576,9 +602,8 @@ fn main() -> Result<()> {
     }
 
     if cli.remplir {
-        let album: Album = serde_json::from_str(&std::fs::read_to_string(
-            cli.out.join("album.json"),
-        )?)?;
+        let album: Album =
+            serde_json::from_str(&std::fs::read_to_string(cli.out.join("album.json"))?)?;
         let r = colophon_core::reserve::remplir(&cli.out, &album)?;
         println!("{}", serde_json::to_string(&r)?);
         return Ok(());
@@ -587,12 +612,17 @@ fn main() -> Result<()> {
     if let Some(dir) = &cli.devis {
         use colophon_core::commande;
         let profil = profil("cloudprinter")?;
-        let pages = colophon_core::prevol::prevol(dir, profil)?.fiche.pages_fichier;
+        let pages = colophon_core::prevol::prevol(dir, profil)?
+            .fiche
+            .pages_fichier;
         let livre = commande::Livre::pour(profil, u32::try_from(pages)?)
             .context("le profil cloudprinter n'a pas de codes de commande")?;
         let cle = std::env::var("CLOUDPRINTER_SANDBOX_API_KEY")
             .context("--devis lit la clé dans CLOUDPRINTER_SANDBOX_API_KEY")?;
-        let compte = commande::Compte { cle: commande::Cle::new(cle), mode: commande::Mode::Sandbox };
+        let compte = commande::Compte {
+            cle: commande::Cle::new(cle),
+            mode: commande::Mode::Sandbox,
+        };
         let devis = commande::devis(&commande::Ureq::default(), &compte, &cli.pays, &livre)?;
         println!(
             "{}",
@@ -608,9 +638,8 @@ fn main() -> Result<()> {
     }
 
     if let Some(src) = &cli.fiche {
-        let album: Album = serde_json::from_str(&std::fs::read_to_string(
-            cli.out.join("album.json"),
-        )?)?;
+        let album: Album =
+            serde_json::from_str(&std::fs::read_to_string(cli.out.join("album.json"))?)?;
         let fiche = colophon_core::fiche::fiche(&cli.out, Path::new(&album.root), src)?;
         println!("{}", serde_json::to_string(&fiche)?);
         return Ok(());
@@ -631,18 +660,16 @@ fn main() -> Result<()> {
     }
 
     if cli.releve_album {
-        let album: Album = serde_json::from_str(&std::fs::read_to_string(
-            cli.out.join("album.json"),
-        )?)?;
+        let album: Album =
+            serde_json::from_str(&std::fs::read_to_string(cli.out.join("album.json"))?)?;
         let releve = colophon_core::qualite::releve_album(&cli.out, Path::new(&album.root))?;
         println!("{}", serde_json::to_string(&releve)?);
         return Ok(());
     }
 
     if cli.dates {
-        let album: Album = serde_json::from_str(&std::fs::read_to_string(
-            cli.out.join("album.json"),
-        )?)?;
+        let album: Album =
+            serde_json::from_str(&std::fs::read_to_string(cli.out.join("album.json"))?)?;
         let dates = colophon_core::legende::dates_fiables(&album, langue);
         println!("{}", serde_json::to_string(&dates)?);
         return Ok(());
@@ -650,8 +677,7 @@ fn main() -> Result<()> {
 
     if !cli.banc_gabarits.is_empty() {
         let t0 = std::time::Instant::now();
-        let rapport =
-            colophon_core::banc::banc(&cli.banc_gabarits, &|line| eprintln!("{line}"))?;
+        let rapport = colophon_core::banc::banc(&cli.banc_gabarits, &|line| eprintln!("{line}"))?;
         eprintln!(
             "banc en {:.1?} : {} candidats, {} verts, {} recalés, {} sans essai, {} jeu manquant",
             t0.elapsed(),
@@ -772,9 +798,8 @@ fn main() -> Result<()> {
         )?;
         // The sheet's own dimensions, printed rather than left to be guessed:
         // this is the number that gets checked against the supplier's template.
-        let album: Album = serde_json::from_str(&std::fs::read_to_string(
-            cli.out.join("album.json"),
-        )?)?;
+        let album: Album =
+            serde_json::from_str(&std::fs::read_to_string(cli.out.join("album.json"))?)?;
         // De quel album cette feuille sort, et pour quel imprimeur. Sans cette
         // ligne, une couverture juste de géométrie et vieille de contenu part
         // à la presse sans que rien ne le dise.
@@ -812,16 +837,20 @@ fn main() -> Result<()> {
         // Le manifeste, comme pour la couverture : c'est lui qui rattrape un
         // intérieur rendu avant la dernière retouche, qu'aucune géométrie ne
         // peut voir.
-        let album: Album = serde_json::from_str(&std::fs::read_to_string(
-            cli.out.join("album.json"),
-        )?)?;
+        let album: Album =
+            serde_json::from_str(&std::fs::read_to_string(cli.out.join("album.json"))?)?;
         colophon_core::export::noter(
             &cli.out,
             &album,
             colophon_core::export::LIVRAISON_INTERIEUR,
             profil.id,
         )?;
-        eprintln!("done in {:.1?}: {} ({})", t0.elapsed(), out.display(), profil.nom);
+        eprintln!(
+            "done in {:.1?}: {} ({})",
+            t0.elapsed(),
+            out.display(),
+            profil.nom
+        );
         return Ok(());
     }
 
@@ -913,7 +942,11 @@ fn main() -> Result<()> {
                 ..Default::default()
             },
         )?;
-        eprintln!("done in {:.1?}: {}", t0.elapsed(), report.album_json.display());
+        eprintln!(
+            "done in {:.1?}: {}",
+            t0.elapsed(),
+            report.album_json.display()
+        );
         return Ok(());
     }
 
@@ -946,7 +979,10 @@ fn main() -> Result<()> {
         "done in {:.1?}: {} and {}",
         t0.elapsed(),
         report.album_json.display(),
-        report.album_pdf.expect("le chemin complet rend un PDF").display()
+        report
+            .album_pdf
+            .expect("le chemin complet rend un PDF")
+            .display()
     );
     Ok(())
 }

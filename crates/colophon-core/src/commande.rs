@@ -58,7 +58,12 @@ pub struct CotesProduit {
     pub pages_max: usize,
 }
 
-const fn cotes(produit: &'static str, largeur_mm: f64, hauteur_mm: f64, pages_min: usize) -> CotesProduit {
+const fn cotes(
+    produit: &'static str,
+    largeur_mm: f64,
+    hauteur_mm: f64,
+    pages_min: usize,
+) -> CotesProduit {
     CotesProduit {
         produit,
         largeur_mm,
@@ -83,7 +88,11 @@ pub const COTES_DES_PRODUITS: [CotesProduit; 5] = [
     // Le 8 × 10 pouces : ses cotes sont celles de `products/info` du 03/10.
     // Ses bornes de pages n'ont pas été sondées au devis : ce sont celles du
     // profil, que le devis accepte sur les quatre autres.
-    CotesProduit { pages_min: 24, pages_max: 800, ..cotes("photobook_cw_us_8x10_p_fc", 203.2, 254.0, 24) },
+    CotesProduit {
+        pages_min: 24,
+        pages_max: 800,
+        ..cotes("photobook_cw_us_8x10_p_fc", 203.2, 254.0, 24)
+    },
 ];
 
 /// Le produit Cloudprinter d'un format de Colophon (`format::FORMATS`), ou
@@ -235,8 +244,13 @@ impl fmt::Display for Erreur {
             Erreur::TropTard => {
                 f.write_str("la production a commencé, l'annulation n'est plus possible")
             }
-            Erreur::Introuvable => f.write_str("Cloudprinter ne connaît aucune commande sous cette référence"),
-            Erreur::Statut(s) => write!(f, "Cloudprinter répond {s}, un statut que sa doc ne nomme pas"),
+            Erreur::Introuvable => {
+                f.write_str("Cloudprinter ne connaît aucune commande sous cette référence")
+            }
+            Erreur::Statut(s) => write!(
+                f,
+                "Cloudprinter répond {s}, un statut que sa doc ne nomme pas"
+            ),
             Erreur::Reseau(e) => write!(f, "Cloudprinter injoignable : {e}"),
             Erreur::Reponse(e) => write!(f, "réponse de Cloudprinter illisible : {e}"),
         }
@@ -271,8 +285,14 @@ impl Livre {
     /// commande (`PrinterProfile::commande`), `None` chez les autres, à un
     /// exemplaire du produit convenu.
     pub fn pour(profil: &PrinterProfile, pages: u32) -> Option<Livre> {
-        let OptionsCommande { papier, couverture, finition } = profil.commande?;
-        Some(Livre::choisi(PRODUIT, papier, couverture, finition, pages, 1))
+        let OptionsCommande {
+            papier,
+            couverture,
+            finition,
+        } = profil.commande?;
+        Some(Livre::choisi(
+            PRODUIT, papier, couverture, finition, pages, 1,
+        ))
     }
 
     /// Le livre tel que l'écran Commander le compose : un produit, et les
@@ -287,7 +307,10 @@ impl Livre {
         pages: u32,
         exemplaires: u32,
     ) -> Livre {
-        let option = |o: &str, compte| OptionLivre { option: o.to_string(), compte };
+        let option = |o: &str, compte| OptionLivre {
+            option: o.to_string(),
+            compte,
+        };
         Livre {
             produit: produit.to_string(),
             options: vec![
@@ -313,7 +336,12 @@ fn options_json(livre: &Livre) -> Value {
 
 /// Envoie `corps` (la clé y est ajoutée) à `point` et rend le corps d'un
 /// 200 ou d'un 201, ou l'erreur typée de tout autre statut.
-fn appeler(http: &dyn Http, compte: &Compte, point: &str, mut corps: Value) -> Result<String, Erreur> {
+fn appeler(
+    http: &dyn Http,
+    compte: &Compte,
+    point: &str,
+    mut corps: Value,
+) -> Result<String, Erreur> {
     corps["apikey"] = Value::String(compte.cle.secret().to_string());
     let (statut, texte) = http
         .post_json(&format!("{BASE}{point}"), &corps)
@@ -355,7 +383,9 @@ fn texte_ou_nombre<'de, D: Deserializer<'de>>(d: D) -> Result<String, D::Error> 
     match Value::deserialize(d)? {
         Value::String(s) => Ok(s),
         Value::Number(n) => Ok(n.to_string()),
-        autre => Err(serde::de::Error::custom(format!("ni texte ni nombre : {autre}"))),
+        autre => Err(serde::de::Error::custom(format!(
+            "ni texte ni nombre : {autre}"
+        ))),
     }
 }
 
@@ -364,7 +394,9 @@ fn texte_ou_nombre_opt<'de, D: Deserializer<'de>>(d: D) -> Result<Option<String>
         None | Some(Value::Null) => Ok(None),
         Some(Value::String(s)) => Ok(Some(s)),
         Some(Value::Number(n)) => Ok(Some(n.to_string())),
-        Some(autre) => Err(serde::de::Error::custom(format!("ni texte ni nombre : {autre}"))),
+        Some(autre) => Err(serde::de::Error::custom(format!(
+            "ni texte ni nombre : {autre}"
+        ))),
     }
 }
 
@@ -392,7 +424,11 @@ pub struct Devis {
 /// Une expédition du devis : un colis, et les façons de l'envoyer.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Expedition {
-    #[serde(rename(deserialize = "total_weight"), default, deserialize_with = "texte_ou_nombre_opt")]
+    #[serde(
+        rename(deserialize = "total_weight"),
+        default,
+        deserialize_with = "texte_ou_nombre_opt"
+    )]
     pub poids_g: Option<String>,
     #[serde(rename(deserialize = "quotes"), default)]
     pub offres: Vec<Offre>,
@@ -490,13 +526,19 @@ pub struct InfosProduit {
 
 impl InfosProduit {
     /// Les options d'un type, dans l'ordre où l'API les rend.
-    pub fn options_de<'a>(&'a self, type_: &'a str) -> impl Iterator<Item = &'a OptionProduit> + 'a {
+    pub fn options_de<'a>(
+        &'a self,
+        type_: &'a str,
+    ) -> impl Iterator<Item = &'a OptionProduit> + 'a {
         self.options.iter().filter(move |o| o.type_ == type_)
     }
 
     /// La valeur d'une cote, telle qu'écrite.
     pub fn spec(&self, reference: &str) -> Option<&str> {
-        self.specs.iter().find(|s| s.reference == reference).map(|s| s.value.as_str())
+        self.specs
+            .iter()
+            .find(|s| s.reference == reference)
+            .map(|s| s.value.as_str())
     }
 }
 
@@ -511,8 +553,20 @@ fn drapeau<'de, D: Deserializer<'de>>(d: D) -> Result<bool, D::Error> {
 }
 
 /// Les options et les cotes d'un produit.
-pub fn infos_produit(http: &dyn Http, compte: &Compte, reference: &str) -> Result<InfosProduit, Erreur> {
-    lire(compte, &appeler(http, compte, "products/info", json!({"reference": reference}))?)
+pub fn infos_produit(
+    http: &dyn Http,
+    compte: &Compte,
+    reference: &str,
+) -> Result<InfosProduit, Erreur> {
+    lire(
+        compte,
+        &appeler(
+            http,
+            compte,
+            "products/info",
+            json!({"reference": reference}),
+        )?,
+    )
 }
 
 /// Un pays où Cloudprinter livre.
@@ -523,13 +577,20 @@ pub struct Pays {
     #[serde(rename(deserialize = "note"))]
     pub nom: String,
     /// Le pays demande un État ou une province dans l'adresse.
-    #[serde(rename(deserialize = "require_state"), default, deserialize_with = "drapeau")]
+    #[serde(
+        rename(deserialize = "require_state"),
+        default,
+        deserialize_with = "drapeau"
+    )]
     pub etat_requis: bool,
 }
 
 /// Les pays de livraison (`shipping/countries`).
 pub fn pays(http: &dyn Http, compte: &Compte) -> Result<Vec<Pays>, Erreur> {
-    lire(compte, &appeler(http, compte, "shipping/countries", json!({}))?)
+    lire(
+        compte,
+        &appeler(http, compte, "shipping/countries", json!({}))?,
+    )
 }
 
 // ---- la commande -------------------------------------------------------------
@@ -560,7 +621,10 @@ impl FichierCommande {
     /// Le fichier posé à `url`, dont le MD5 se lit sur `chemin` par
     /// [`crate::export::md5_du_fichier`], le hachage de K-s1 et pas un autre.
     pub fn depuis(url: impl Into<String>, chemin: &Path) -> anyhow::Result<FichierCommande> {
-        Ok(FichierCommande { url: url.into(), md5: crate::export::md5_du_fichier(chemin)? })
+        Ok(FichierCommande {
+            url: url.into(),
+            md5: crate::export::md5_du_fichier(chemin)?,
+        })
     }
 }
 
@@ -595,7 +659,8 @@ pub fn commander(http: &dyn Http, compte: &Compte, commande: &Commande) -> Resul
     if let Some(rue2) = &a.rue2 {
         adresse["street2"] = Value::String(rue2.clone());
     }
-    let fichier = |type_: &str, f: &FichierCommande| json!({"type": type_, "url": f.url, "md5sum": f.md5});
+    let fichier =
+        |type_: &str, f: &FichierCommande| json!({"type": type_, "url": f.url, "md5sum": f.md5});
     let corps = json!({
         "reference": commande.reference,
         "email": a.email,
@@ -670,19 +735,30 @@ pub fn etat(http: &dyn Http, compte: &Compte, reference: &str) -> Result<Etat, E
         #[serde(deserialize_with = "texte_ou_nombre")]
         state: String,
     }
-    let r: Reponse = lire(compte, &appeler(http, compte, "orders/info", json!({"reference": reference}))?)?;
-    let code = r
-        .state
-        .trim()
-        .parse()
-        .map_err(|_| Erreur::Reponse(compte.cle.masquer(&format!("state n'est pas un entier : {}", r.state))))?;
+    let r: Reponse = lire(
+        compte,
+        &appeler(http, compte, "orders/info", json!({"reference": reference}))?,
+    )?;
+    let code = r.state.trim().parse().map_err(|_| {
+        Erreur::Reponse(
+            compte
+                .cle
+                .masquer(&format!("state n'est pas un entier : {}", r.state)),
+        )
+    })?;
     Ok(Etat::du_code(code))
 }
 
 /// Annule la commande `reference` (`orders/cancel`). Un 409 dit que la
 /// production a commencé.
 pub fn annuler(http: &dyn Http, compte: &Compte, reference: &str) -> Result<(), Erreur> {
-    appeler(http, compte, "orders/cancel", json!({"reference": reference})).map(|_| ())
+    appeler(
+        http,
+        compte,
+        "orders/cancel",
+        json!({"reference": reference}),
+    )
+    .map(|_| ())
 }
 
 // ---- K10, les causes d'annulation --------------------------------------------
@@ -759,13 +835,23 @@ mod tests {
         let imprimables = formats_imprimables();
         assert_eq!(
             imprimables,
-            ["carre-21", "carre-30", "portrait-a4", "paysage-a4", "portrait-20x25"]
+            [
+                "carre-21",
+                "carre-30",
+                "portrait-a4",
+                "paysage-a4",
+                "portrait-20x25"
+            ]
         );
         for nom in &imprimables {
             assert!(produit_pour(nom).is_some(), "{nom} sans produit");
         }
         for (nom, ..) in crate::format::FORMATS {
-            assert_eq!(imprimables.contains(nom), produit_pour(nom).is_some(), "{nom}");
+            assert_eq!(
+                imprimables.contains(nom),
+                produit_pour(nom).is_some(),
+                "{nom}"
+            );
         }
         assert!(!imprimables.contains(&"paysage-28x21"));
     }
@@ -779,7 +865,10 @@ mod tests {
 
     impl Faux {
         fn new(statut: u16, corps: &str) -> Faux {
-            Faux { reponse: (statut, corps.to_string()), recu: RefCell::new(Vec::new()) }
+            Faux {
+                reponse: (statut, corps.to_string()),
+                recu: RefCell::new(Vec::new()),
+            }
         }
 
         fn dernier(&self) -> (String, Value) {
@@ -789,7 +878,9 @@ mod tests {
 
     impl Http for Faux {
         fn post_json(&self, url: &str, corps: &Value) -> Result<(u16, String), String> {
-            self.recu.borrow_mut().push((url.to_string(), corps.clone()));
+            self.recu
+                .borrow_mut()
+                .push((url.to_string(), corps.clone()));
             Ok(self.reponse.clone())
         }
     }
@@ -803,7 +894,10 @@ mod tests {
     }
 
     fn compte() -> Compte {
-        Compte { cle: Cle::new(CLE), mode: Mode::Sandbox }
+        Compte {
+            cle: Cle::new(CLE),
+            mode: Mode::Sandbox,
+        }
     }
 
     fn livre() -> Livre {
@@ -861,10 +955,19 @@ mod tests {
     fn le_livre_cloudprinter_porte_ses_trois_codes_et_ses_pages() {
         let l = livre();
         assert_eq!(l.produit, PRODUIT);
-        let opts: Vec<(&str, u32)> = l.options.iter().map(|o| (o.option.as_str(), o.compte)).collect();
+        let opts: Vec<(&str, u32)> = l
+            .options
+            .iter()
+            .map(|o| (o.option.as_str(), o.compte))
+            .collect();
         assert_eq!(
             opts,
-            [("pageblock_150mcs", 96), ("cover_130mcg", 1), ("cover_finish_matte", 1), ("total_pages", 96)]
+            [
+                ("pageblock_150mcs", 96),
+                ("cover_130mcg", 1),
+                ("cover_finish_matte", 1),
+                ("total_pages", 96)
+            ]
         );
         assert!(Livre::pour(PrinterProfile::par_id("prodigi").unwrap(), 96).is_none());
     }
@@ -873,7 +976,10 @@ mod tests {
     fn le_devis_parle_la_langue_de_l_api() {
         let http = Faux::new(200, DEVIS);
         let d = devis(&http, &compte(), "FR", &livre()).unwrap();
-        assert_eq!((d.prix.as_str(), d.tva.as_str(), d.devise.as_str()), ("11.8333", "2.3667", "EUR"));
+        assert_eq!(
+            (d.prix.as_str(), d.tva.as_str(), d.devise.as_str()),
+            ("11.8333", "2.3667", "EUR")
+        );
         assert_eq!(d.expire_date, "2026-09-28T21:00:00.000000Z");
         assert_eq!(d.production_jours, Some(4));
         assert_eq!(d.expeditions.len(), 1);
@@ -882,8 +988,14 @@ mod tests {
         // Les niveaux tels que rendus, y compris celui qu'aucune doc ne nomme.
         let niveaux: Vec<&str> = offres.iter().map(|o| o.niveau.as_str()).collect();
         assert_eq!(niveaux, ["cp_limited", "cp_jamais_vu"]);
-        assert_eq!(offres[0].transporteur.as_deref(), Some("Chronopost - France"));
-        assert_eq!((offres[0].prix.as_str(), offres[1].prix.as_str()), ("5.6320", "9.5"));
+        assert_eq!(
+            offres[0].transporteur.as_deref(),
+            Some("Chronopost - France")
+        );
+        assert_eq!(
+            (offres[0].prix.as_str(), offres[1].prix.as_str()),
+            ("5.6320", "9.5")
+        );
 
         let (url, corps) = http.dernier();
         assert_eq!(url, format!("{BASE}orders/quote"));
@@ -907,7 +1019,10 @@ mod tests {
     #[test]
     fn un_devis_illisible_est_une_erreur_de_reponse() {
         let http = Faux::new(200, r#"{"price": "1"}"#);
-        assert!(matches!(devis(&http, &compte(), "FR", &livre()), Err(Erreur::Reponse(_))));
+        assert!(matches!(
+            devis(&http, &compte(), "FR", &livre()),
+            Err(Erreur::Reponse(_))
+        ));
     }
 
     #[test]
@@ -924,7 +1039,15 @@ mod tests {
         let a = &corps["addresses"][0];
         assert_eq!(a["type"], "delivery");
         assert_eq!(
-            (&a["firstname"], &a["lastname"], &a["street1"], &a["zip"], &a["city"], &a["country"], &a["phone"]),
+            (
+                &a["firstname"],
+                &a["lastname"],
+                &a["street1"],
+                &a["zip"],
+                &a["city"],
+                &a["country"],
+                &a["phone"]
+            ),
             (
                 &json!("Alexis"),
                 &json!("Morain"),
@@ -935,11 +1058,17 @@ mod tests {
                 &json!("+33100000000")
             )
         );
-        assert!(a.get("street2").is_none(), "pas de seconde ligne vide : {a}");
+        assert!(
+            a.get("street2").is_none(),
+            "pas de seconde ligne vide : {a}"
+        );
         let item = &corps["items"][0];
         assert_eq!(item["product"], PRODUIT);
         assert_eq!(item["quote"], "a1b2");
-        assert!(item.get("shipping_level").is_none(), "le quote remplace le niveau : {item}");
+        assert!(
+            item.get("shipping_level").is_none(),
+            "le quote remplace le niveau : {item}"
+        );
         assert_eq!(item["count"], "1");
         assert_eq!(
             item["files"],
@@ -948,13 +1077,19 @@ mod tests {
                 {"type": "book", "url": c.interieur.url, "md5sum": c.interieur.md5}
             ])
         );
-        assert_eq!(item["options"][3], json!({"type": "total_pages", "count": "96"}));
+        assert_eq!(
+            item["options"][3],
+            json!({"type": "total_pages", "count": "96"})
+        );
     }
 
     #[test]
     fn un_identifiant_de_commande_numerique_se_lit_aussi() {
         let http = Faux::new(200, r#"{"order": 98765}"#);
-        assert_eq!(commander(&http, &compte(), &commande_exemple()).unwrap(), "98765");
+        assert_eq!(
+            commander(&http, &compte(), &commande_exemple()).unwrap(),
+            "98765"
+        );
     }
 
     #[test]
@@ -996,21 +1131,35 @@ mod tests {
             r#"{"reference": "colophon-a", "state": "501", "state_code": "order_state_sandbox_done"}"#,
         ] {
             let http = Faux::new(200, corps);
-            assert_eq!(etat(&http, &compte(), "colophon-a").unwrap(), Etat::SandboxTerminee);
+            assert_eq!(
+                etat(&http, &compte(), "colophon-a").unwrap(),
+                Etat::SandboxTerminee
+            );
             let (url, envoye) = http.dernier();
             assert_eq!(url, format!("{BASE}orders/info"));
             assert_eq!(envoye, json!({"apikey": CLE, "reference": "colophon-a"}));
         }
         let http = Faux::new(200, r#"{"state": 8, "state_code": "order_state_x"}"#);
-        assert_eq!(etat(&http, &compte(), "colophon-a").unwrap(), Etat::Inconnu(8));
+        assert_eq!(
+            etat(&http, &compte(), "colophon-a").unwrap(),
+            Etat::Inconnu(8)
+        );
         let http = Faux::new(200, r#"{"state_code": "order_state_sandbox_done"}"#);
-        assert!(matches!(etat(&http, &compte(), "colophon-a"), Err(Erreur::Reponse(_))));
+        assert!(matches!(
+            etat(&http, &compte(), "colophon-a"),
+            Err(Erreur::Reponse(_))
+        ));
     }
 
     #[test]
     fn seul_l_etat_501_dit_le_mode() {
         assert_eq!(Etat::SandboxTerminee.mode(), Some(Mode::Sandbox));
-        for e in [Etat::Nouvelle, Etat::Expediee, Etat::Annulee, Etat::Inconnu(501 + 1)] {
+        for e in [
+            Etat::Nouvelle,
+            Etat::Expediee,
+            Etat::Annulee,
+            Etat::Inconnu(501 + 1),
+        ] {
             assert_eq!(e.mode(), None, "{e:?}");
         }
     }
@@ -1025,7 +1174,10 @@ mod tests {
 
         let e = annuler(&Faux::new(409, ""), &compte(), "colophon-a").unwrap_err();
         assert_eq!(e, Erreur::TropTard);
-        assert_eq!(e.to_string(), "la production a commencé, l'annulation n'est plus possible");
+        assert_eq!(
+            e.to_string(),
+            "la production a commencé, l'annulation n'est plus possible"
+        );
     }
 
     #[test]
@@ -1037,11 +1189,26 @@ mod tests {
                 "missing_required_parameter : The required parameter 'reference' is missing".into()
             )
         );
-        assert_eq!(etat(&Faux::new(403, ""), &compte(), "x").unwrap_err(), Erreur::Cle);
-        assert_eq!(etat(&Faux::new(409, ""), &compte(), "x").unwrap_err(), Erreur::TropTard);
-        assert_eq!(etat(&Faux::new(410, ""), &compte(), "x").unwrap_err(), Erreur::Introuvable);
-        assert_eq!(etat(&Faux::new(502, "<html>"), &compte(), "x").unwrap_err(), Erreur::Statut(502));
-        assert!(matches!(etat(&Coupe, &compte(), "x").unwrap_err(), Erreur::Reseau(_)));
+        assert_eq!(
+            etat(&Faux::new(403, ""), &compte(), "x").unwrap_err(),
+            Erreur::Cle
+        );
+        assert_eq!(
+            etat(&Faux::new(409, ""), &compte(), "x").unwrap_err(),
+            Erreur::TropTard
+        );
+        assert_eq!(
+            etat(&Faux::new(410, ""), &compte(), "x").unwrap_err(),
+            Erreur::Introuvable
+        );
+        assert_eq!(
+            etat(&Faux::new(502, "<html>"), &compte(), "x").unwrap_err(),
+            Erreur::Statut(502)
+        );
+        assert!(matches!(
+            etat(&Coupe, &compte(), "x").unwrap_err(),
+            Erreur::Reseau(_)
+        ));
     }
 
     #[test]
@@ -1058,7 +1225,13 @@ mod tests {
         let mut erreurs = vec![
             etat(&Faux::new(400, &echo), &c, "x").unwrap_err(),
             etat(&Coupe, &c, "x").unwrap_err(),
-            devis(&Faux::new(200, &format!("pas du json {CLE}")), &c, "FR", &livre()).unwrap_err(),
+            devis(
+                &Faux::new(200, &format!("pas du json {CLE}")),
+                &c,
+                "FR",
+                &livre(),
+            )
+            .unwrap_err(),
         ];
         for statut in [403, 409, 410, 502] {
             erreurs.push(annuler(&Faux::new(statut, &echo), &c, "x").unwrap_err());
@@ -1069,7 +1242,11 @@ mod tests {
         }
         let http = Faux::new(400, &echo);
         let _ = etat(&http, &c, "x");
-        assert_eq!(http.dernier().1["apikey"], CLE, "la clé voyage dans le corps");
+        assert_eq!(
+            http.dernier().1["apikey"],
+            CLE,
+            "la clé voyage dans le corps"
+        );
         assert!(!http.dernier().0.contains(CLE), "jamais dans l'URL");
     }
 
@@ -1079,8 +1256,10 @@ mod tests {
     /// lus par `products/info` égalent au dixième ceux du profil.
     #[test]
     fn chaque_format_a_son_produit_ou_aucun() {
-        let table: Vec<(&str, Option<&str>)> =
-            crate::format::FORMATS.iter().map(|(f, ..)| (*f, produit_pour(f))).collect();
+        let table: Vec<(&str, Option<&str>)> = crate::format::FORMATS
+            .iter()
+            .map(|(f, ..)| (*f, produit_pour(f)))
+            .collect();
         assert_eq!(
             table,
             [
@@ -1100,27 +1279,51 @@ mod tests {
         // retenir, égales au profil au dixième.
         let p = PrinterProfile::par_id("cloudprinter").unwrap();
         for (format, w, h, ..) in crate::format::FORMATS {
-            let Some(produit) = produit_pour(format) else { continue };
-            let c = COTES_DES_PRODUITS.iter().find(|c| c.produit == produit).expect(produit);
+            let Some(produit) = produit_pour(format) else {
+                continue;
+            };
+            let c = COTES_DES_PRODUITS
+                .iter()
+                .find(|c| c.produit == produit)
+                .expect(produit);
             let egal = |a: f64, b: f64| (a - b).abs() < 0.05;
             assert!(egal(c.largeur_mm, *w) && egal(c.hauteur_mm, *h), "{format}");
             assert!(egal(c.fond_perdu_mm, p.bleed_mm.max()), "{format}");
             assert!(egal(c.squeeze_mm, p.mors_mm), "{format}");
             assert!(egal(c.overlap_mm, p.debord_mm), "{format}");
             assert!(egal(c.wrap_mm, p.rempli_mm), "{format}");
-            assert!(c.pages_min <= p.pages_min && c.pages_max >= p.pages_max, "{format}");
+            assert!(
+                c.pages_min <= p.pages_min && c.pages_max >= p.pages_max,
+                "{format}"
+            );
         }
     }
 
     #[test]
     fn un_livre_se_choisit_par_produit_papier_et_finition() {
-        let l = Livre::choisi("photobook_cw_a4_p_fc", "pageblock_170mcg", "cover_130mcg", "cover_finish_gloss", 48, 3);
+        let l = Livre::choisi(
+            "photobook_cw_a4_p_fc",
+            "pageblock_170mcg",
+            "cover_130mcg",
+            "cover_finish_gloss",
+            48,
+            3,
+        );
         assert_eq!(l.produit, "photobook_cw_a4_p_fc");
         assert_eq!(l.exemplaires, 3);
-        let opts: Vec<(&str, u32)> = l.options.iter().map(|o| (o.option.as_str(), o.compte)).collect();
+        let opts: Vec<(&str, u32)> = l
+            .options
+            .iter()
+            .map(|o| (o.option.as_str(), o.compte))
+            .collect();
         assert_eq!(
             opts,
-            [("pageblock_170mcg", 48), ("cover_130mcg", 1), ("cover_finish_gloss", 1), ("total_pages", 48)]
+            [
+                ("pageblock_170mcg", 48),
+                ("cover_130mcg", 1),
+                ("cover_finish_gloss", 1),
+                ("total_pages", 48)
+            ]
         );
         // Le livre du profil reste celui de K-s2, à un exemplaire.
         assert_eq!(livre().exemplaires, 1);
@@ -1200,11 +1403,16 @@ mod tests {
         let i = infos_produit(&http, &compte(), "photobook_cw_s210_s_fc").unwrap();
         assert_eq!(http.dernier().1["reference"], "photobook_cw_s210_s_fc");
         let refs = |t: &str| -> Vec<(String, bool)> {
-            i.options_de(t).map(|o| (o.reference.clone(), o.defaut)).collect()
+            i.options_de(t)
+                .map(|o| (o.reference.clone(), o.defaut))
+                .collect()
         };
         assert_eq!(
             refs(TYPE_PAPIER),
-            [("pageblock_200mcg".to_string(), true), ("pageblock_150mcs".to_string(), false)]
+            [
+                ("pageblock_200mcg".to_string(), true),
+                ("pageblock_150mcs".to_string(), false)
+            ]
         );
         assert_eq!(refs(TYPE_COUVERTURE), [("cover_130mcg".to_string(), true)]);
         assert_eq!(refs(TYPE_FINITION).len(), 2);
@@ -1221,7 +1429,14 @@ mod tests {
         );
         let p = pays(&http, &compte()).unwrap();
         assert_eq!(http.dernier().0, format!("{BASE}shipping/countries"));
-        assert_eq!(p[0], Pays { code: "FR".into(), nom: "France".into(), etat_requis: false });
+        assert_eq!(
+            p[0],
+            Pays {
+                code: "FR".into(),
+                nom: "France".into(),
+                etat_requis: false
+            }
+        );
         assert!(p[1].etat_requis);
     }
 
@@ -1230,8 +1445,16 @@ mod tests {
     /// d'adresse, et toute occurrence d'un des secrets.
     fn expurger(v: &Value, secrets: &[&str]) -> Value {
         const PERSONNEL: [&str; 10] = [
-            "addresses", "email", "phone", "firstname", "lastname", "street1", "street2", "zip",
-            "city", "name",
+            "addresses",
+            "email",
+            "phone",
+            "firstname",
+            "lastname",
+            "street1",
+            "street2",
+            "zip",
+            "city",
+            "name",
         ];
         match v {
             Value::String(s) if s.starts_with("http") => Value::String("<url>".into()),
@@ -1269,7 +1492,8 @@ mod tests {
     fn banc_commande_sandbox() {
         use crate::depot::{Acces, Depot, Reglages};
         use crate::export::{LIVRAISON_COUVERTURE, LIVRAISON_INTERIEUR};
-        let env = |n: &str| std::env::var(n).unwrap_or_else(|_| panic!("{n} absente de l'environnement"));
+        let env =
+            |n: &str| std::env::var(n).unwrap_or_else(|_| panic!("{n} absente de l'environnement"));
         let (cle, compte_r2, seau, acces, secret) = (
             env("CLOUDPRINTER_SANDBOX_API_KEY"),
             env("R2_ACCOUNT_ID"),
@@ -1277,8 +1501,16 @@ mod tests {
             env("R2_ACCESS_KEY_ID"),
             env("R2_SECRET_ACCESS_KEY"),
         );
-        let secrets = [cle.as_str(), compte_r2.as_str(), acces.as_str(), secret.as_str()];
-        let compte = Compte { cle: Cle::new(cle.clone()), mode: Mode::Sandbox };
+        let secrets = [
+            cle.as_str(),
+            compte_r2.as_str(),
+            acces.as_str(),
+            secret.as_str(),
+        ];
+        let compte = Compte {
+            cle: Cle::new(cle.clone()),
+            mode: Mode::Sandbox,
+        };
         let depot = Depot::new(Reglages {
             endpoint: format!("https://{compte_r2}.r2.cloudflarestorage.com"),
             region: "auto".into(),
@@ -1287,12 +1519,19 @@ mod tests {
             secret_key: Acces::new(secret.clone()),
         })
         .unwrap();
-        let papier = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.albums/papier");
+        let papier =
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.albums/papier");
         let profil = PrinterProfile::par_id("cloudprinter").unwrap();
-        let pages = crate::prevol::prevol(&papier, profil).unwrap().fiche.pages_fichier as u32;
+        let pages = crate::prevol::prevol(&papier, profil)
+            .unwrap()
+            .fiche
+            .pages_fichier as u32;
         let livre = Livre::pour(profil, pages).unwrap();
         let debut = std::time::Instant::now();
-        let reference = format!("colophon-banc-{}", chrono::Utc::now().format("%Y%m%d%H%M%S"));
+        let reference = format!(
+            "colophon-banc-{}",
+            chrono::Utc::now().format("%Y%m%d%H%M%S")
+        );
         let http = Ureq::default();
 
         let mut deposes = Vec::new();
@@ -1309,7 +1548,9 @@ mod tests {
             for nom in [LIVRAISON_INTERIEUR, LIVRAISON_COUVERTURE] {
                 let chemin = papier.join(nom);
                 let t = std::time::Instant::now();
-                let objet = depot.deposer(&reference, &chemin).map_err(|e| format!("{e:#}"))?;
+                let objet = depot
+                    .deposer(&reference, &chemin)
+                    .map_err(|e| format!("{e:#}"))?;
                 let octets = std::fs::metadata(&chemin).unwrap().len();
                 let f = FichierCommande::depuis(depot.url_de_lecture(&objet), &chemin).unwrap();
                 mesure["fichiers"][nom] = json!({
@@ -1352,15 +1593,23 @@ mod tests {
             // Dix minutes, la borne de la décision 8 ; `COLOPHON_BANC_LIMITE_S`
             // la raccourcit quand le banc doit tenir dans une fenêtre plus courte.
             let limite = std::time::Duration::from_secs(
-                std::env::var("COLOPHON_BANC_LIMITE_S").ok().and_then(|s| s.parse().ok()).unwrap_or(600),
+                std::env::var("COLOPHON_BANC_LIMITE_S")
+                    .ok()
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(600),
             );
             let t0 = std::time::Instant::now();
             loop {
                 let (statut, corps) = http
-                    .post_json(&format!("{BASE}orders/info"), &json!({"apikey": cle, "reference": reference}))
+                    .post_json(
+                        &format!("{BASE}orders/info"),
+                        &json!({"apikey": cle, "reference": reference}),
+                    )
                     .map_err(|e| compte.cle.masquer(&e))?;
                 let lu: Value = serde_json::from_str(&corps).unwrap_or(Value::Null);
-                let code = lu["state"].as_i64().or_else(|| lu["state"].as_str()?.parse().ok());
+                let code = lu["state"]
+                    .as_i64()
+                    .or_else(|| lu["state"].as_str()?.parse().ok());
                 if code != dernier {
                     etats.push(json!({
                         "apres_s": t0.elapsed().as_secs(),
@@ -1369,7 +1618,8 @@ mod tests {
                         "state_code": lu["state_code"],
                         "etat": format!("{:?}", code.map(Etat::du_code)),
                     }));
-                    mesure["orders_info_au_passage"][code.map_or("aucun".to_string(), |c| c.to_string())] =
+                    mesure["orders_info_au_passage"]
+                        [code.map_or("aucun".to_string(), |c| c.to_string())] =
                         expurger(&lu, &secrets);
                     dernier = code;
                 }
@@ -1378,18 +1628,28 @@ mod tests {
                 }
                 std::thread::sleep(std::time::Duration::from_secs(3));
             }
-            assert_eq!(etat(&http, &compte, &reference).ok(), dernier.map(Etat::du_code));
+            assert_eq!(
+                etat(&http, &compte, &reference).ok(),
+                dernier.map(Etat::du_code)
+            );
             mesure["etats"] = Value::Array(etats);
             let (_, log) = http
-                .post_json(&format!("{BASE}orders/log"), &json!({"apikey": cle, "reference": reference}))
+                .post_json(
+                    &format!("{BASE}orders/log"),
+                    &json!({"apikey": cle, "reference": reference}),
+                )
                 .map_err(|e| compte.cle.masquer(&e))?;
             let log: Value = serde_json::from_str(&log).unwrap_or(Value::Null);
             // Combien de temps l'étape des fichiers (10 à 15) a duré avant le
             // rendu (30 et plus) : Cloudprinter y tire les deux URL.
             let quand = |pred: &dyn Fn(i64) -> bool| {
-                log.as_array()?.iter().find(|l| l["state"].as_i64().is_some_and(pred))?["create_date"]
+                log.as_array()?
+                    .iter()
+                    .find(|l| l["state"].as_i64().is_some_and(pred))?["create_date"]
                     .as_str()
-                    .and_then(|d| chrono::NaiveDateTime::parse_from_str(d, "%Y-%m-%d %H:%M:%S").ok())
+                    .and_then(|d| {
+                        chrono::NaiveDateTime::parse_from_str(d, "%Y-%m-%d %H:%M:%S").ok()
+                    })
             };
             if let (Some(a), Some(b)) = (quand(&|e| (10..=15).contains(&e)), quand(&|e| e >= 30)) {
                 mesure["etape_fichiers_s"] = json!((b - a).num_seconds());
@@ -1404,7 +1664,10 @@ mod tests {
         }
         mesure["objets_retires"] = Value::Array(retires);
         mesure["duree_s"] = json!(debut.elapsed().as_secs());
-        mesure["resultat"] = json!(resultat.as_ref().map(|_| "ok".to_string()).unwrap_or_else(|e| e.clone()));
+        mesure["resultat"] = json!(resultat
+            .as_ref()
+            .map(|_| "ok".to_string())
+            .unwrap_or_else(|e| e.clone()));
         let mut texte = serde_json::to_string_pretty(&mesure).unwrap();
         for s in secrets.iter().filter(|s| !s.is_empty()) {
             texte = texte.replace(s, "***");
@@ -1416,8 +1679,10 @@ mod tests {
 
     #[test]
     fn la_table_des_causes_d_annulation_est_epinglee() {
-        let table: Vec<(&str, Option<&str>)> =
-            CAUSES_D_ANNULATION.iter().map(|c| (c.code, c.regle)).collect();
+        let table: Vec<(&str, Option<&str>)> = CAUSES_D_ANNULATION
+            .iter()
+            .map(|c| (c.code, c.regle))
+            .collect();
         assert_eq!(
             table,
             [
@@ -1434,7 +1699,10 @@ mod tests {
         for c in &CAUSES_D_ANNULATION {
             assert!(!c.pourquoi.is_empty(), "{} dit pourquoi", c.code);
             if let Some(r) = c.regle {
-                assert!(prevol.contains(&format!("regle: \"{r}\"")), "{r} n'est pas une règle du prévol");
+                assert!(
+                    prevol.contains(&format!("regle: \"{r}\"")),
+                    "{r} n'est pas une règle du prévol"
+                );
             }
         }
     }

@@ -203,15 +203,26 @@ impl Voyage {
 
 impl std::fmt::Display for Bilan {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "étapes : {} ({} sans photo, {} avec météo)", self.etapes, self.etapes_sans_photo, self.etapes_avec_meteo)?;
+        writeln!(
+            f,
+            "étapes : {} ({} sans photo, {} avec météo)",
+            self.etapes, self.etapes_sans_photo, self.etapes_avec_meteo
+        )?;
         writeln!(f, "pays : {}", self.pays)?;
-        writeln!(f, "photos : {} ({} sous le repère de {} px de côté court)", self.photos, self.photos_sous_seuil, SEUIL_COTE_COURT_PX)?;
+        writeln!(
+            f,
+            "photos : {} ({} sous le repère de {} px de côté court)",
+            self.photos, self.photos_sous_seuil, SEUIL_COTE_COURT_PX
+        )?;
         writeln!(f, "vidéos ignorées : {}", self.videos_ignorees)?;
         writeln!(f, "trajets : {}", self.segments)?;
         if self.trace_presente {
             write!(f, "trace : {} points", self.points_de_trace)
         } else {
-            write!(f, "trace : absente (la carte se repliera sur la suite des étapes)")
+            write!(
+                f,
+                "trace : absente (la carte se repliera sur la suite des étapes)"
+            )
         }
     }
 }
@@ -222,7 +233,9 @@ pub enum ErreurFichier {
     Io(String),
     Illisible(String),
     /// Écrit par un Booklibre plus récent.
-    TropRecent { trouvee: u32 },
+    TropRecent {
+        trouvee: u32,
+    },
 }
 
 impl std::fmt::Display for ErreurFichier {
@@ -243,7 +256,8 @@ impl std::error::Error for ErreurFichier {}
 /// Écrit `voyage.json` dans `dossier`, d'un bloc (fichier voisin puis
 /// renommage) : un fichier à moitié écrit ne se lit jamais.
 pub fn ecrire(dossier: &Path, voyage: &Voyage) -> Result<(), ErreurFichier> {
-    let texte = serde_json::to_string_pretty(voyage).map_err(|e| ErreurFichier::Io(e.to_string()))?;
+    let texte =
+        serde_json::to_string_pretty(voyage).map_err(|e| ErreurFichier::Io(e.to_string()))?;
     let tmp = dossier.join(format!("{FICHIER}.part"));
     std::fs::write(&tmp, texte).map_err(|e| ErreurFichier::Io(e.to_string()))?;
     std::fs::rename(&tmp, dossier.join(FICHIER)).map_err(|e| ErreurFichier::Io(e.to_string()))
@@ -251,16 +265,20 @@ pub fn ecrire(dossier: &Path, voyage: &Voyage) -> Result<(), ErreurFichier> {
 
 /// Lit `voyage.json` dans `dossier`.
 pub fn lire(dossier: &Path) -> Result<Voyage, ErreurFichier> {
-    let texte = std::fs::read_to_string(dossier.join(FICHIER)).map_err(|e| ErreurFichier::Io(e.to_string()))?;
+    let texte = std::fs::read_to_string(dossier.join(FICHIER))
+        .map_err(|e| ErreurFichier::Io(e.to_string()))?;
     // La version d'abord, seule : un format plus récent peut avoir changé de
     // forme, et l'erreur à dire est « trop récent », pas « champ manquant ».
     #[derive(Deserialize)]
     struct Entete {
         version: u32,
     }
-    let entete: Entete = serde_json::from_str(&texte).map_err(|e| ErreurFichier::Illisible(e.to_string()))?;
+    let entete: Entete =
+        serde_json::from_str(&texte).map_err(|e| ErreurFichier::Illisible(e.to_string()))?;
     if entete.version > VERSION {
-        return Err(ErreurFichier::TropRecent { trouvee: entete.version });
+        return Err(ErreurFichier::TropRecent {
+            trouvee: entete.version,
+        });
     }
     serde_json::from_str(&texte).map_err(|e| ErreurFichier::Illisible(e.to_string()))
 }
@@ -286,20 +304,50 @@ mod tests {
                 debut: instant("2024-05-01T06:15:00.123456+00:00"),
                 fin: None,
                 fuseau: "Europe/Paris".into(),
-                lieu: Lieu { lat: 45.7485, lon: 4.8467, localite: Some("Lyon".into()), pays: None, code_pays: Some("FR".into()) },
-                meteo: Some(Meteo { condition: Some("rain".into()), temperature: Some(12.5) }),
-                photos: vec![Photo { fichier: "e001-p01-aaaaaaaa.jpg".into(), largeur: 960, hauteur: 1280 }],
+                lieu: Lieu {
+                    lat: 45.7485,
+                    lon: 4.8467,
+                    localite: Some("Lyon".into()),
+                    pays: None,
+                    code_pays: Some("FR".into()),
+                },
+                meteo: Some(Meteo {
+                    condition: Some("rain".into()),
+                    temperature: Some(12.5),
+                }),
+                photos: vec![Photo {
+                    fichier: "e001-p01-aaaaaaaa.jpg".into(),
+                    largeur: 960,
+                    hauteur: 1280,
+                }],
             }],
-            segments: vec![Segment { mode: Some("flight".into()), de: Some(0), a: None, polyligne: vec![Point { lat: 0.1, lon: -0.2 }] }],
-            trace: vec![PointDeTrace { lat: 45.0, lon: 4.0, instant: instant("2024-05-01T06:00:00+00:00") }],
+            segments: vec![Segment {
+                mode: Some("flight".into()),
+                de: Some(0),
+                a: None,
+                polyligne: vec![Point {
+                    lat: 0.1,
+                    lon: -0.2,
+                }],
+            }],
+            trace: vec![PointDeTrace {
+                lat: 45.0,
+                lon: 4.0,
+                instant: instant("2024-05-01T06:00:00+00:00"),
+            }],
             videos_ignorees: 2,
             couverture: None,
-            provenance: Provenance { source: "polarsteps-lien".into(), reference: Some("4242".into()), format: Some("api-62".into()) },
+            provenance: Provenance {
+                source: "polarsteps-lien".into(),
+                reference: Some("4242".into()),
+                format: Some("api-62".into()),
+            },
         }
     }
 
     fn dossier(nom: &str) -> std::path::PathBuf {
-        let d = std::env::temp_dir().join(format!("booklibre-voyage-mod-{nom}-{}", std::process::id()));
+        let d =
+            std::env::temp_dir().join(format!("booklibre-voyage-mod-{nom}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
         std::fs::create_dir_all(&d).unwrap();
         d
@@ -313,7 +361,9 @@ mod tests {
         assert_eq!(lire(&d).unwrap(), v);
         // Lisible à la main : indenté, versionné, les accents tels quels.
         let texte = std::fs::read_to_string(d.join(FICHIER)).unwrap();
-        assert!(texte.contains("\"version\": 1") && texte.contains("Départ 🎒") && texte.contains('\n'));
+        assert!(
+            texte.contains("\"version\": 1") && texte.contains("Départ 🎒") && texte.contains('\n')
+        );
         assert!(!d.join("voyage.json.part").exists());
         let _ = std::fs::remove_dir_all(&d);
     }
@@ -323,7 +373,10 @@ mod tests {
         let d = dossier("recent");
         // Même si le reste a changé de forme : on dit « trop récent », pas « champ manquant ».
         std::fs::write(d.join(FICHIER), r#"{"version": 2, "tout": "autre"}"#).unwrap();
-        assert!(matches!(lire(&d), Err(ErreurFichier::TropRecent { trouvee: 2 })));
+        assert!(matches!(
+            lire(&d),
+            Err(ErreurFichier::TropRecent { trouvee: 2 })
+        ));
         let _ = std::fs::remove_dir_all(&d);
     }
 
@@ -347,7 +400,15 @@ mod tests {
         let lu = lire(&d).unwrap();
         assert!(lu.trace.is_empty() && lu.segments.is_empty() && lu.etapes[0].meteo.is_none());
         let b = lu.bilan();
-        assert_eq!((b.photos, b.photos_sous_seuil, b.videos_ignorees, b.trace_presente), (1, 1, 2, false));
+        assert_eq!(
+            (
+                b.photos,
+                b.photos_sous_seuil,
+                b.videos_ignorees,
+                b.trace_presente
+            ),
+            (1, 1, 2, false)
+        );
         let _ = std::fs::remove_dir_all(&d);
     }
 }

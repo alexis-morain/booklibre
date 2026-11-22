@@ -17,13 +17,23 @@ fn etape(rang: usize, nom: &str, lat: f64, lon: f64) -> Etape {
         debut: instant(&format!("2024-05-{:02}T12:00:00Z", rang + 1)),
         fin: None,
         fuseau: "UTC".into(),
-        lieu: Lieu { lat, lon, localite: None, pays: None, code_pays: None },
+        lieu: Lieu {
+            lat,
+            lon,
+            localite: None,
+            pays: None,
+            code_pays: None,
+        },
         meteo: None,
         photos: vec![],
     }
 }
 
-fn voyage(etapes: Vec<(&str, f64, f64)>, segments: Vec<Trajet>, trace: Vec<PointDeTrace>) -> Voyage {
+fn voyage(
+    etapes: Vec<(&str, f64, f64)>,
+    segments: Vec<Trajet>,
+    trace: Vec<PointDeTrace>,
+) -> Voyage {
     Voyage {
         version: VERSION,
         titre: "Test".into(),
@@ -33,23 +43,40 @@ fn voyage(etapes: Vec<(&str, f64, f64)>, segments: Vec<Trajet>, trace: Vec<Point
         fuseau: None,
         distance_km: None,
         pays: vec![],
-        etapes: etapes.into_iter().enumerate().map(|(i, (n, la, lo))| etape(i, n, la, lo)).collect(),
+        etapes: etapes
+            .into_iter()
+            .enumerate()
+            .map(|(i, (n, la, lo))| etape(i, n, la, lo))
+            .collect(),
         segments,
         trace,
         videos_ignorees: 0,
         couverture: None,
-        provenance: Provenance { source: "test".into(), reference: None, format: None },
+        provenance: Provenance {
+            source: "test".into(),
+            reference: None,
+            format: None,
+        },
     }
 }
 
 fn vol(de: usize, a: usize) -> Trajet {
-    Trajet { mode: Some("flight".into()), de: Some(de), a: Some(a), polyligne: vec![] }
+    Trajet {
+        mode: Some("flight".into()),
+        de: Some(de),
+        a: Some(a),
+        polyligne: vec![],
+    }
 }
 
 /// USA, Fidji, Nouvelle-Zélande : le voyage passe l'antiméridien.
 fn pacifique() -> Voyage {
     voyage(
-        vec![("Los Angeles", 34.05, -118.24), ("Nadi", -17.80, 177.42), ("Auckland", -36.85, 174.76)],
+        vec![
+            ("Los Angeles", 34.05, -118.24),
+            ("Nadi", -17.80, 177.42),
+            ("Auckland", -36.85, 174.76),
+        ],
         vec![vol(0, 1), vol(1, 2)],
         vec![],
     )
@@ -58,7 +85,12 @@ fn pacifique() -> Voyage {
 /// Quatre villes de France, d'un jour à l'autre, sans trajet : la suite des étapes.
 fn france() -> Voyage {
     voyage(
-        vec![("Paris", 48.857, 2.352), ("Lyon", 45.764, 4.836), ("Marseille", 43.296, 5.370), ("Bordeaux", 44.838, -0.579)],
+        vec![
+            ("Paris", 48.857, 2.352),
+            ("Lyon", 45.764, 4.836),
+            ("Marseille", 43.296, 5.370),
+            ("Bordeaux", 44.838, -0.579),
+        ],
         vec![],
         vec![],
     )
@@ -66,13 +98,27 @@ fn france() -> Voyage {
 
 /// Trois points de Lisbonne, à quelques kilomètres l'un de l'autre.
 fn lisbonne() -> Voyage {
-    voyage(vec![("Belém", 38.697, -9.206), ("Alfama", 38.711, -9.130), ("Parc des Nations", 38.768, -9.094)], vec![], vec![])
+    voyage(
+        vec![
+            ("Belém", 38.697, -9.206),
+            ("Alfama", 38.711, -9.130),
+            ("Parc des Nations", 38.768, -9.094),
+        ],
+        vec![],
+        vec![],
+    )
 }
 
 /// Le tour du monde : la couture passe par la Russie, sur la route Paris-Tokyo.
 fn tour_du_monde() -> Voyage {
     voyage(
-        vec![("Paris", 48.857, 2.352), ("Tokyo", 35.68, 139.69), ("Nadi", -17.80, 177.42), ("Los Angeles", 34.05, -118.24), ("New York", 40.71, -74.0)],
+        vec![
+            ("Paris", 48.857, 2.352),
+            ("Tokyo", 35.68, 139.69),
+            ("Nadi", -17.80, 177.42),
+            ("Los Angeles", 34.05, -118.24),
+            ("New York", 40.71, -74.0),
+        ],
         vec![],
         vec![],
     )
@@ -83,7 +129,15 @@ fn tour_du_monde() -> Voyage {
 /// départ laisse un vide, et la couture s'y pose sans rien couper.)
 fn tour_du_monde_boucle() -> Voyage {
     voyage(
-        vec![("Paris", 48.857, 2.352), ("Tokyo", 35.68, 139.69), ("Nadi", -17.80, 177.42), ("Los Angeles", 34.05, -118.24), ("New York", 40.71, -74.0), ("Paris, retour", 48.857, 2.352), ("Tokyo, encore", 35.68, 139.69)],
+        vec![
+            ("Paris", 48.857, 2.352),
+            ("Tokyo", 35.68, 139.69),
+            ("Nadi", -17.80, 177.42),
+            ("Los Angeles", 34.05, -118.24),
+            ("New York", 40.71, -74.0),
+            ("Paris, retour", 48.857, 2.352),
+            ("Tokyo, encore", 35.68, 139.69),
+        ],
         vec![],
         vec![],
     )
@@ -92,7 +146,10 @@ fn tour_du_monde_boucle() -> Voyage {
 fn dans_le_cadre(d: &Dessin) {
     let (w, h) = (d.viewbox[2], d.viewbox[3]);
     for (x, y) in d.points() {
-        assert!(x >= 0.0 && x <= w && y >= 0.0 && y <= h, "({x}, {y}) hors de {w} × {h}");
+        assert!(
+            x >= 0.0 && x <= w && y >= 0.0 && y <= h,
+            "({x}, {y}) hors de {w} × {h}"
+        );
     }
 }
 
@@ -137,16 +194,27 @@ fn le_monde_qui_traverse_l_antimeridien() {
     // va toujours vers l'ouest, pas une ligne qui revient d'un bord de la carte
     // à l'autre.
     let vol = d.calque(Role::Vol).unwrap();
-    assert_eq!(vol.chemins.len(), 1, "un seul tracé aérien, de Los Angeles à Auckland");
-    let xs: Vec<f64> = vol.chemins[0].segments.iter().filter_map(|s| match *s {
-        Segment::Vers { x, .. } | Segment::Ligne { x, .. } => Some(x),
-        _ => None,
-    }).collect();
+    assert_eq!(
+        vol.chemins.len(),
+        1,
+        "un seul tracé aérien, de Los Angeles à Auckland"
+    );
+    let xs: Vec<f64> = vol.chemins[0]
+        .segments
+        .iter()
+        .filter_map(|s| match *s {
+            Segment::Vers { x, .. } | Segment::Ligne { x, .. } => Some(x),
+            _ => None,
+        })
+        .collect();
     assert!(xs.len() > 3);
     // Equal Earth rétrécit un parallèle en s'éloignant de l'équateur : de Nadi
     // à Auckland, `x` peut regagner une fraction de millimètre sans que le
     // trait revienne. Un tour de carte, lui, se compterait en dizaines.
-    assert!(xs.windows(2).all(|w| w[1] <= w[0] + 0.5), "le tracé revient en arrière : {xs:?}");
+    assert!(
+        xs.windows(2).all(|w| w[1] <= w[0] + 0.5),
+        "le tracé revient en arrière : {xs:?}"
+    );
     assert_eq!(d.reperes.len(), 3);
     assert_eq!(d.empreinte(), dessiner(&v, 0..3).unwrap().empreinte());
     assert_eq!(d.empreinte(), EMPREINTE_PACIFIQUE);
@@ -161,11 +229,18 @@ fn un_pays() {
     dans_le_cadre(&d);
     // Le fond 1:10m : terre, côtes et frontières (l'Espagne, la Suisse…) y sont.
     for r in [Role::Terre, Role::Cotes, Role::Frontieres] {
-        assert!(d.calque(r).is_some_and(|c| !c.chemins.is_empty()), "{r:?} manque");
+        assert!(
+            d.calque(r).is_some_and(|c| !c.chemins.is_empty()),
+            "{r:?} manque"
+        );
     }
     // Des étapes à un jour d'écart, à moins de 250 km/h : le sol, jamais un vol.
     assert!(d.calque(Role::Vol).is_none());
-    assert_eq!(d.calque(Role::Trace).unwrap().chemins.len(), 1, "les trois jambes se recollent en un trait");
+    assert_eq!(
+        d.calque(Role::Trace).unwrap().chemins.len(),
+        1,
+        "les trois jambes se recollent en un trait"
+    );
     assert_eq!(d.empreinte(), dessiner(&v, 0..4).unwrap().empreinte());
     assert_eq!(d.empreinte(), "c65d750d7c011b68");
 }
@@ -190,7 +265,10 @@ fn une_seule_etape_donne_une_carte_d_au_moins_trente_kilometres() {
     assert_eq!(d.niveau, Niveau::Ville);
     assert_eq!(d.reperes.len(), 1);
     // Un repère au milieu, et un fond qui n'est pas vide.
-    assert!((d.reperes[0].x - d.viewbox[2] / 2.0).abs() < 0.01 && (d.reperes[0].y - d.viewbox[3] / 2.0).abs() < 0.01);
+    assert!(
+        (d.reperes[0].x - d.viewbox[2] / 2.0).abs() < 0.01
+            && (d.reperes[0].y - d.viewbox[3] / 2.0).abs() < 0.01
+    );
     assert!(d.calque(Role::Terre).is_some());
     dans_le_cadre(&d);
 }
@@ -199,7 +277,10 @@ fn une_seule_etape_donne_une_carte_d_au_moins_trente_kilometres() {
 fn la_plage_choisit_les_etapes_et_une_plage_vide_se_refuse() {
     let v = tour_du_monde();
     let d = dessiner(&v, 1..3).unwrap();
-    assert_eq!(d.reperes.iter().map(|r| r.etape).collect::<Vec<_>>(), vec![1, 2]);
+    assert_eq!(
+        d.reperes.iter().map(|r| r.etape).collect::<Vec<_>>(),
+        vec![1, 2]
+    );
     // Une plage qui dépasse le voyage est rognée à ses étapes.
     assert_eq!(dessiner(&v, 3..99).unwrap().reperes.len(), 2);
     assert_eq!(dessiner(&v, 5..9).unwrap_err(), Erreur::PlageVide);
@@ -212,24 +293,53 @@ fn la_plage_choisit_les_etapes_et_une_plage_vide_se_refuse() {
 fn le_vol_suit_le_grand_cercle() {
     // Paris - Tokyo : le grand cercle monte vers la Sibérie. Une corde droite
     // entre les deux villes ne passerait jamais au nord des deux.
-    let v = voyage(vec![("Paris", 48.857, 2.352), ("Tokyo", 35.68, 139.69)], vec![vol(0, 1)], vec![]);
+    let v = voyage(
+        vec![("Paris", 48.857, 2.352), ("Tokyo", 35.68, 139.69)],
+        vec![vol(0, 1)],
+        vec![],
+    );
     let d = dessiner(&v, 0..2).unwrap();
     assert_eq!(d.niveau, Niveau::Monde);
-    let haut = d.calque(Role::Vol).unwrap().chemins.iter().flat_map(|c| c.segments.iter()).filter_map(|s| match *s {
-        Segment::Vers { y, .. } | Segment::Ligne { y, .. } => Some(y),
-        _ => None,
-    }).fold(f64::MAX, f64::min);
+    let haut = d
+        .calque(Role::Vol)
+        .unwrap()
+        .chemins
+        .iter()
+        .flat_map(|c| c.segments.iter())
+        .filter_map(|s| match *s {
+            Segment::Vers { y, .. } | Segment::Ligne { y, .. } => Some(y),
+            _ => None,
+        })
+        .fold(f64::MAX, f64::min);
     let villes = d.reperes.iter().map(|r| r.y).fold(f64::MAX, f64::min);
-    assert!(villes - haut > 5.0, "l'arc monte de {} mm au-dessus de la plus septentrionale des deux villes", villes - haut);
+    assert!(
+        villes - haut > 5.0,
+        "l'arc monte de {} mm au-dessus de la plus septentrionale des deux villes",
+        villes - haut
+    );
 }
 
 #[test]
 fn sans_mode_la_vitesse_fait_l_avion() {
     // Un jour entre Paris et Tokyo : 400 km/h. Un jour entre Paris et Lyon : 20 km/h.
-    let v = voyage(vec![("Paris", 48.857, 2.352), ("Tokyo", 35.68, 139.69), ("Kyoto", 35.01, 135.77)], vec![], vec![]);
+    let v = voyage(
+        vec![
+            ("Paris", 48.857, 2.352),
+            ("Tokyo", 35.68, 139.69),
+            ("Kyoto", 35.01, 135.77),
+        ],
+        vec![],
+        vec![],
+    );
     let d = dessiner(&v, 0..3).unwrap();
-    assert!(d.calque(Role::Vol).is_some(), "Paris-Tokyo en un jour est un vol");
-    assert!(d.calque(Role::Trace).is_some(), "Tokyo-Kyoto est un trajet au sol");
+    assert!(
+        d.calque(Role::Vol).is_some(),
+        "Paris-Tokyo en un jour est un vol"
+    );
+    assert!(
+        d.calque(Role::Trace).is_some(),
+        "Tokyo-Kyoto est un trajet au sol"
+    );
 }
 
 #[test]
@@ -240,26 +350,61 @@ fn une_couture_qui_traverse_le_trace_le_coupe_et_le_ramene() {
     // Plus d'un tour : aucun vide ne le laisse intact, la couture le traverse
     // quelque part et ce qu'elle traverse est coupé et ramené.
     dans_le_cadre(&d);
-    assert!(plus_long_segment_de(&d, Role::Vol) < 0.2 * d.viewbox[2], "un trait a traversé la couture : {}", plus_long_segment_de(&d, Role::Vol));
-    assert!(d.calque(Role::Vol).unwrap().chemins.len() >= 2, "le tracé est coupé à la couture");
+    assert!(
+        plus_long_segment_de(&d, Role::Vol) < 0.2 * d.viewbox[2],
+        "un trait a traversé la couture : {}",
+        plus_long_segment_de(&d, Role::Vol)
+    );
+    assert!(
+        d.calque(Role::Vol).unwrap().chemins.len() >= 2,
+        "le tracé est coupé à la couture"
+    );
 }
 
 #[test]
 fn les_trajets_de_la_source_gardent_leur_mode_et_la_plage_les_trie() {
-    let pl = |a: (f64, f64), b: (f64, f64)| vec![crate::voyage::Point { lat: a.0, lon: a.1 }, crate::voyage::Point { lat: b.0, lon: b.1 }];
-    let v = voyage(
-        vec![("Paris", 48.857, 2.352), ("Lyon", 45.764, 4.836), ("Genève", 46.204, 6.143), ("Tokyo", 35.68, 139.69)],
+    let pl = |a: (f64, f64), b: (f64, f64)| {
         vec![
-            Trajet { mode: Some("car".into()), de: Some(0), a: Some(1), polyligne: pl((48.857, 2.352), (45.764, 4.836)) },
+            crate::voyage::Point { lat: a.0, lon: a.1 },
+            crate::voyage::Point { lat: b.0, lon: b.1 },
+        ]
+    };
+    let v = voyage(
+        vec![
+            ("Paris", 48.857, 2.352),
+            ("Lyon", 45.764, 4.836),
+            ("Genève", 46.204, 6.143),
+            ("Tokyo", 35.68, 139.69),
+        ],
+        vec![
+            Trajet {
+                mode: Some("car".into()),
+                de: Some(0),
+                a: Some(1),
+                polyligne: pl((48.857, 2.352), (45.764, 4.836)),
+            },
             // Sans `de` ni `a` : l'étape la plus proche de chaque bout les donne.
-            Trajet { mode: None, de: None, a: None, polyligne: pl((45.77, 4.84), (46.2, 6.14)) },
-            Trajet { mode: Some("flight".into()), de: Some(2), a: Some(3), polyligne: pl((46.204, 6.143), (35.68, 139.69)) },
+            Trajet {
+                mode: None,
+                de: None,
+                a: None,
+                polyligne: pl((45.77, 4.84), (46.2, 6.14)),
+            },
+            Trajet {
+                mode: Some("flight".into()),
+                de: Some(2),
+                a: Some(3),
+                polyligne: pl((46.204, 6.143), (35.68, 139.69)),
+            },
         ],
         vec![],
     );
     // Les trois premières étapes : deux trajets au sol, le vol vers Tokyo est hors plage.
     let d = dessiner(&v, 0..3).unwrap();
-    assert!(d.calque(Role::Vol).is_none(), "le vol n'est pas de cette plage");
+    assert!(
+        d.calque(Role::Vol).is_none(),
+        "le vol n'est pas de cette plage"
+    );
     assert!(d.calque(Role::Trace).is_some());
     // Tout le voyage : le vol en est.
     assert!(dessiner(&v, 0..4).unwrap().calque(Role::Vol).is_some());
@@ -267,9 +412,22 @@ fn les_trajets_de_la_source_gardent_leur_mode_et_la_plage_les_trie() {
 
 #[test]
 fn la_trace_ne_sert_que_sans_trajet_et_se_coupe_sur_la_fenetre_de_la_plage() {
-    let t = |h: u32, lat: f64, lon: f64| PointDeTrace { lat, lon, instant: instant(&format!("2024-05-01T{h:02}:00:00Z")) };
-    let trace = vec![t(8, 48.0, 2.0), t(9, 48.2, 2.2), t(10, 48.4, 2.4), t(11, 48.6, 2.6)];
-    let mut v = voyage(vec![("Départ", 48.0, 2.0), ("Arrivée", 48.6, 2.6)], vec![], trace);
+    let t = |h: u32, lat: f64, lon: f64| PointDeTrace {
+        lat,
+        lon,
+        instant: instant(&format!("2024-05-01T{h:02}:00:00Z")),
+    };
+    let trace = vec![
+        t(8, 48.0, 2.0),
+        t(9, 48.2, 2.2),
+        t(10, 48.4, 2.4),
+        t(11, 48.6, 2.6),
+    ];
+    let mut v = voyage(
+        vec![("Départ", 48.0, 2.0), ("Arrivée", 48.6, 2.6)],
+        vec![],
+        trace,
+    );
     v.etapes[0].debut = instant("2024-05-01T08:00:00Z");
     v.etapes[1].debut = instant("2024-05-01T11:00:00Z");
     let d = dessiner(&v, 0..2).unwrap();
@@ -283,7 +441,9 @@ fn un_trace_de_milliers_de_points_tient_sous_le_plafond() {
     // Une marche au hasard (congruentielle, donc la même partout) de 5 000 points.
     let mut graine = 12345u64;
     let mut alea = || {
-        graine = graine.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        graine = graine
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((graine >> 33) as f64 / (1u64 << 31) as f64) - 0.5
     };
     let (mut lat, mut lon) = (45.0, 5.0);
@@ -291,7 +451,11 @@ fn un_trace_de_milliers_de_points_tient_sous_le_plafond() {
     for i in 0..5000u32 {
         lat += alea() * 0.04;
         lon += alea() * 0.04 + 0.0004;
-        trace.push(PointDeTrace { lat, lon, instant: instant("2024-05-01T00:00:00Z") + chrono::Duration::seconds(i as i64 * 60) });
+        trace.push(PointDeTrace {
+            lat,
+            lon,
+            instant: instant("2024-05-01T00:00:00Z") + chrono::Duration::seconds(i as i64 * 60),
+        });
     }
     let mut v = voyage(vec![("A", 45.0, 5.0), ("B", lat, lon)], vec![], trace);
     v.etapes[1].debut = instant("2024-06-01T00:00:00Z");
@@ -314,10 +478,18 @@ fn trace_simplifie_sans_plafond(v: &Voyage) -> usize {
     let lon0 = longitude_mediane(&v.etapes.iter().map(|e| e.lieu.lon).collect::<Vec<_>>());
     let proj = d.projection;
     let _ = lon0;
-    let pts: Vec<P> = pieces[0].points.iter().map(|&(la, lo)| proj.projeter(envelopper(lo - proj.lon0()), la)).collect();
+    let pts: Vec<P> = pieces[0]
+        .points
+        .iter()
+        .map(|&(la, lo)| proj.projeter(envelopper(lo - proj.lon0()), la))
+        .collect();
     // Échelle du dessin : 180 mm sur le grand côté de la boîte de ses points.
-    let (x0, x1) = pts.iter().fold((f64::MAX, f64::MIN), |(a, b), p| (a.min(p.0), b.max(p.0)));
-    let (y0, y1) = pts.iter().fold((f64::MAX, f64::MIN), |(a, b), p| (a.min(p.1), b.max(p.1)));
+    let (x0, x1) = pts
+        .iter()
+        .fold((f64::MAX, f64::MIN), |(a, b), p| (a.min(p.0), b.max(p.0)));
+    let (y0, y1) = pts
+        .iter()
+        .fold((f64::MAX, f64::MIN), |(a, b), p| (a.min(p.1), b.max(p.1)));
     let echelle = COTE_MM / ((x1 - x0).max(y1 - y0) * (1.0 + 2.0 * MARGE));
     let mm: Vec<P> = pts.iter().map(|p| (p.0 * echelle, p.1 * echelle)).collect();
     douglas_peucker(&mm, TOLERANCE_TRACE_MM).len()
@@ -339,10 +511,18 @@ fn un_trajet_au_sol_par_dessus_l_antimeridien_reste_court() {
     // Nadi et Apia, à 1 100 km de part et d'autre des 180°, un jour d'écart : un trajet
     // au sol. Si la corde faisait le tour du monde, la boîte s'étendrait à 350° et les
     // deux repères se toucheraient.
-    let v = voyage(vec![("Nadi", -17.80, 177.42), ("Apia", -13.83, -171.76)], vec![], vec![]);
+    let v = voyage(
+        vec![("Nadi", -17.80, 177.42), ("Apia", -13.83, -171.76)],
+        vec![],
+        vec![],
+    );
     let d = dessiner(&v, 0..2).unwrap();
     assert_eq!(d.niveau, Niveau::Region);
-    assert!(ecart_des_reperes(&d) > 0.6 * COTE_MM, "repères à {} mm : le tracé a fait le tour du monde", ecart_des_reperes(&d));
+    assert!(
+        ecart_des_reperes(&d) > 0.6 * COTE_MM,
+        "repères à {} mm : le tracé a fait le tour du monde",
+        ecart_des_reperes(&d)
+    );
     assert_eq!(d.calque(Role::Trace).unwrap().chemins.len(), 1);
 }
 
@@ -350,14 +530,31 @@ fn un_trajet_au_sol_par_dessus_l_antimeridien_reste_court() {
 fn une_polyligne_de_vol_a_plusieurs_points_passe_l_antimeridien_sans_saut() {
     let p = |lat: f64, lon: f64| crate::voyage::Point { lat, lon };
     let v = voyage(
-        vec![("Nadi", -17.80, 177.42), ("Apia", -13.83, -171.76), ("Tongatapu", -21.14, -175.20)],
-        vec![Trajet { mode: Some("flight".into()), de: Some(0), a: Some(2), polyligne: vec![p(-17.80, 177.42), p(-13.83, -171.76), p(-21.14, -175.20)] }],
+        vec![
+            ("Nadi", -17.80, 177.42),
+            ("Apia", -13.83, -171.76),
+            ("Tongatapu", -21.14, -175.20),
+        ],
+        vec![Trajet {
+            mode: Some("flight".into()),
+            de: Some(0),
+            a: Some(2),
+            polyligne: vec![p(-17.80, 177.42), p(-13.83, -171.76), p(-21.14, -175.20)],
+        }],
         vec![],
     );
     let d = dessiner(&v, 0..3).unwrap();
     assert_eq!(d.niveau, Niveau::Region);
-    assert!(ecart_des_reperes(&d) > 0.6 * COTE_MM, "repères à {} mm", ecart_des_reperes(&d));
-    assert_eq!(d.calque(Role::Vol).unwrap().chemins.len(), 1, "un seul tracé aérien continu");
+    assert!(
+        ecart_des_reperes(&d) > 0.6 * COTE_MM,
+        "repères à {} mm",
+        ecart_des_reperes(&d)
+    );
+    assert_eq!(
+        d.calque(Role::Vol).unwrap().chemins.len(),
+        1,
+        "un seul tracé aérien continu"
+    );
 }
 
 #[test]
@@ -380,7 +577,10 @@ fn le_cadre_garde_la_marge_et_le_rapport() {
     assert!(w.max(h) / w.min(h) <= RAPPORT_MAX + 1e-6);
     // Les repères ne touchent pas les bords : la marge est de 10 %.
     for r in &d.reperes {
-        assert!(r.x > 0.05 * w && r.x < 0.95 * w && r.y > 0.05 * h && r.y < 0.95 * h, "{r:?} dans {w} × {h}");
+        assert!(
+            r.x > 0.05 * w && r.x < 0.95 * w && r.y > 0.05 * h && r.y < 0.95 * h,
+            "{r:?} dans {w} × {h}"
+        );
     }
 }
 
@@ -397,7 +597,11 @@ fn le_dessin_se_serialise() {
 
 #[test]
 fn l_actif_embarque_est_lisible_et_sous_le_plafond() {
-    assert!(ACTIF.len() < 6_000_000, "{} octets : le plafond du plan est de 6 Mo", ACTIF.len());
+    assert!(
+        ACTIF.len() < 6_000_000,
+        "{} octets : le plafond du plan est de 6 Mo",
+        ACTIF.len()
+    );
     let a = Actif::lire(ACTIF).unwrap();
     for c in Couche::TOUTES {
         let n = a.nombre_de_parties(c);
@@ -407,7 +611,9 @@ fn l_actif_embarque_est_lisible_et_sous_le_plafond() {
             let p = p.unwrap();
             let pts = p.points().unwrap();
             assert!(pts.len() >= if c.est_surface() { 3 } else { 2 });
-            assert!(pts.iter().all(|&(x, y)| (-180.0..=180.0).contains(&x) && (-90.0..=90.0).contains(&y)));
+            assert!(pts
+                .iter()
+                .all(|&(x, y)| (-180.0..=180.0).contains(&x) && (-90.0..=90.0).contains(&y)));
             vues += 1;
         }
         assert_eq!(vues, n);
@@ -417,9 +623,21 @@ fn l_actif_embarque_est_lisible_et_sous_le_plafond() {
 #[test]
 fn l_actif_correspond_a_sa_provenance() {
     let source = include_str!("../../assets/carte/SOURCE.md");
-    let attendue = source.lines().find_map(|l| l.split("`").nth(1).filter(|_| l.contains("Empreinte"))).expect("SOURCE.md porte l'empreinte");
-    assert_eq!(compilation::empreinte(ACTIF), attendue, "carte.bin a changé sans que SOURCE.md le dise : scripts/carte.sh compiler");
-    for mot in ["domaine public", "Natural Earth", "ne_10m_coastline", "SHA-256"] {
+    let attendue = source
+        .lines()
+        .find_map(|l| l.split("`").nth(1).filter(|_| l.contains("Empreinte")))
+        .expect("SOURCE.md porte l'empreinte");
+    assert_eq!(
+        compilation::empreinte(ACTIF),
+        attendue,
+        "carte.bin a changé sans que SOURCE.md le dise : scripts/carte.sh compiler"
+    );
+    for mot in [
+        "domaine public",
+        "Natural Earth",
+        "ne_10m_coastline",
+        "SHA-256",
+    ] {
         assert!(source.contains(mot), "{mot}");
     }
 }
@@ -428,7 +646,10 @@ fn l_actif_correspond_a_sa_provenance() {
 #[ignore = "recompile Natural Earth (hors dépôt) : scripts/carte.sh verifier le fait dans le gate local"]
 fn l_actif_se_recompile_a_l_identique() {
     let dossier = std::env::var("COLOPHON_NATURAL_EARTH").unwrap_or_else(|_| {
-        format!("{}/Documents/08_IA/02_Outputs/colophon/travail/natural-earth", std::env::var("HOME").unwrap())
+        format!(
+            "{}/Documents/08_IA/02_Outputs/colophon/travail/natural-earth",
+            std::env::var("HOME").unwrap()
+        )
     });
     let lire = |n: &str| std::fs::read(format!("{dossier}/{n}/{n}.shp")).unwrap();
     let (a, b, c, d, e, f) = (
@@ -439,10 +660,23 @@ fn l_actif_se_recompile_a_l_identique() {
         lire("ne_10m_lakes"),
         lire("ne_10m_rivers_lake_centerlines"),
     );
-    let src = compilation::Sources { land50: &a, countries50: &b, countries10: &c, coastline10: &d, lakes10: &e, rivers10: &f };
+    let src = compilation::Sources {
+        land50: &a,
+        countries50: &b,
+        countries10: &c,
+        coastline10: &d,
+        lakes10: &e,
+        rivers10: &f,
+    };
     let une = compilation::compiler(&src, &compilation::Reglages::default()).unwrap();
-    assert!(une == ACTIF, "l'actif versionné n'est pas ce que ce code compile");
-    assert!(une == compilation::compiler(&src, &compilation::Reglages::default()).unwrap(), "deux compilations diffèrent");
+    assert!(
+        une == ACTIF,
+        "l'actif versionné n'est pas ce que ce code compile"
+    );
+    assert!(
+        une == compilation::compiler(&src, &compilation::Reglages::default()).unwrap(),
+        "deux compilations diffèrent"
+    );
 }
 
 // ── le rendu, pour les yeux ────────────────────────────────────────────────
@@ -478,7 +712,10 @@ fn svg(d: &Dessin) -> String {
         s += &format!("<path d='{dd}' {attrs}/>\n");
     }
     for r in &d.reperes {
-        s += &format!("<circle cx='{}' cy='{}' r='1.1' fill='#222' stroke='white' stroke-width='0.3'/>\n", r.x, r.y);
+        s += &format!(
+            "<circle cx='{}' cy='{}' r='1.1' fill='#222' stroke='white' stroke-width='0.3'/>\n",
+            r.x, r.y
+        );
     }
     s + "</svg>\n"
 }
@@ -493,20 +730,36 @@ fn ecrire_svg(nom: &str, d: &Dessin) {
 #[test]
 #[ignore = "écrit les SVG des cas dans $COLOPHON_CARTE_RENDU, pour les yeux"]
 fn le_rendu_des_cas() {
-    ecrire_svg("1-monde-antimeridien", &dessiner(&pacifique(), 0..3).unwrap());
+    ecrire_svg(
+        "1-monde-antimeridien",
+        &dessiner(&pacifique(), 0..3).unwrap(),
+    );
     ecrire_svg("2-pays-france", &dessiner(&france(), 0..4).unwrap());
     ecrire_svg("3-ville-lisbonne", &dessiner(&lisbonne(), 0..3).unwrap());
-    ecrire_svg("4-tour-du-monde-couture", &dessiner(&tour_du_monde(), 0..5).unwrap());
+    ecrire_svg(
+        "4-tour-du-monde-couture",
+        &dessiner(&tour_du_monde(), 0..5).unwrap(),
+    );
 }
 
 #[test]
 #[ignore = "le voyage réel d'Alexis (hors dépôt) : $COLOPHON_VOYAGE_REEL"]
 fn le_voyage_reel() {
-    let dossier = std::path::PathBuf::from(std::env::var("COLOPHON_VOYAGE_REEL").expect("COLOPHON_VOYAGE_REEL"));
+    let dossier = std::path::PathBuf::from(
+        std::env::var("COLOPHON_VOYAGE_REEL").expect("COLOPHON_VOYAGE_REEL"),
+    );
     let v = crate::voyage::lire(&dossier).unwrap();
     let t0 = std::time::Instant::now();
     let d = dessiner(&v, 0..v.etapes.len()).unwrap();
-    eprintln!("tout le voyage : {:?}, niveau {:?}, {} sommets de tracé, {} × {} mm, empreinte {}", t0.elapsed(), d.niveau, d.sommets_du_trace(), d.viewbox[2], d.viewbox[3], d.empreinte());
+    eprintln!(
+        "tout le voyage : {:?}, niveau {:?}, {} sommets de tracé, {} × {} mm, empreinte {}",
+        t0.elapsed(),
+        d.niveau,
+        d.sommets_du_trace(),
+        d.viewbox[2],
+        d.viewbox[3],
+        d.empreinte()
+    );
     dans_le_cadre(&d);
     assert!(d.sommets_du_trace() <= SOMMETS_MAX);
     ecrire_svg("5-voyage-reel-entier", &d);
@@ -520,7 +773,14 @@ fn le_voyage_reel() {
         }
         let t = std::time::Instant::now();
         let p = dessiner(&v, debut..fin).unwrap();
-        eprintln!("{:?} {debut}..{fin} : {:?} {:?}, {} sommets, {:?}", code, p.niveau, p.viewbox, p.sommets_du_trace(), t.elapsed());
+        eprintln!(
+            "{:?} {debut}..{fin} : {:?} {:?}, {} sommets, {:?}",
+            code,
+            p.niveau,
+            p.viewbox,
+            p.sommets_du_trace(),
+            t.elapsed()
+        );
         dans_le_cadre(&p);
         if fin - debut >= 3 {
             ecrire_svg(&format!("6-pays-{}-{debut}", code.unwrap_or_default()), &p);
@@ -529,11 +789,11 @@ fn le_voyage_reel() {
     }
 }
 
-
 /// Les longitudes d'un voyage d'un an, en gros : beaucoup d'Europe et d'Asie,
 /// l'Océanie, et deux villes des États-Unis. Leur médiane est à 73° E.
 const LONGITUDES_DU_REEL: [f64; 15] = [
-    -122.4, -87.6, 28.9, 35.2, 55.3, 72.8, 73.4, 77.2, 77.6, 100.5, 103.8, 106.7, 139.7, 151.2, 174.8,
+    -122.4, -87.6, 28.9, 35.2, 55.3, 72.8, 73.4, 77.2, 77.6, 100.5, 103.8, 106.7, 139.7, 151.2,
+    174.8,
 ];
 
 #[test]
@@ -543,19 +803,37 @@ fn la_couture_du_monde_tombe_dans_le_plus_grand_vide_pas_entre_deux_etapes() {
     // couture, à son antipode, tombe entre San Francisco et Chicago.
     let mediane = longitude_mediane(&LONGITUDES_DU_REEL);
     let ancienne = geometrie::envelopper(mediane + 180.0);
-    assert!(ancienne > -122.4 && ancienne < -87.6, "précondition : la couture de la médiane était à {ancienne}");
+    assert!(
+        ancienne > -122.4 && ancienne < -87.6,
+        "précondition : la couture de la médiane était à {ancienne}"
+    );
     // Le plus grand vide est celui de Chicago (-87,6°) à 28,9° E : 116,5°. C'est
     // lui qui reçoit la couture, en son milieu.
     let centre = centre_du_monde(&points);
     let couture = geometrie::envelopper(centre + 180.0);
-    assert!((couture - (-87.6 + 116.5 / 2.0)).abs() < 1e-9, "couture {couture}");
+    assert!(
+        (couture - (-87.6 + 116.5 / 2.0)).abs() < 1e-9,
+        "couture {couture}"
+    );
     // Aucune étape n'est de l'autre côté de la couture : toutes tiennent dans
     // le tour moins le vide.
-    let rel: Vec<f64> = LONGITUDES_DU_REEL.iter().map(|&l| geometrie::envelopper(l - centre)).collect();
-    let (mn, mx) = rel.iter().fold((f64::MAX, f64::MIN), |(a, b), &r| (a.min(r), b.max(r)));
-    assert!((mx - mn) < 360.0 - 116.5 + 1e-9, "les étapes occupent {}° du tour", mx - mn);
+    let rel: Vec<f64> = LONGITUDES_DU_REEL
+        .iter()
+        .map(|&l| geometrie::envelopper(l - centre))
+        .collect();
+    let (mn, mx) = rel
+        .iter()
+        .fold((f64::MAX, f64::MIN), |(a, b), &r| (a.min(r), b.max(r)));
+    assert!(
+        (mx - mn) < 360.0 - 116.5 + 1e-9,
+        "les étapes occupent {}° du tour",
+        mx - mn
+    );
     // San Francisco et Chicago sont voisines sur la carte, à 34,8° l'une de l'autre.
-    let (sf, chi) = (geometrie::envelopper(-122.4 - centre), geometrie::envelopper(-87.6 - centre));
+    let (sf, chi) = (
+        geometrie::envelopper(-122.4 - centre),
+        geometrie::envelopper(-87.6 - centre),
+    );
     assert!((chi - sf - 34.8).abs() < 1e-9, "{sf} {chi}");
 }
 
@@ -595,9 +873,16 @@ fn un_tour_du_monde_ne_coupe_pas_ses_etapes_entre_deux_villes_voisines() {
     assert_eq!(d.niveau, Niveau::Monde);
     // La couture est dans l'Atlantique : entre Oslo (10,75° E) et Lima (77° O).
     let couture = geometrie::envelopper(d.projection.lon0() + 180.0);
-    assert!(couture < 10.75 && couture > -77.04, "couture à {couture}° E");
+    assert!(
+        couture < 10.75 && couture > -77.04,
+        "couture à {couture}° E"
+    );
     // Chicago et San Francisco sont voisines sur la page, pas aux deux bords.
     let (chicago, sf) = (d.reperes[0], d.reperes[1]);
-    assert!((chicago.x - sf.x).abs() < 0.3 * d.viewbox[2], "{} mm entre les deux villes", (chicago.x - sf.x).abs());
+    assert!(
+        (chicago.x - sf.x).abs() < 0.3 * d.viewbox[2],
+        "{} mm entre les deux villes",
+        (chicago.x - sf.x).abs()
+    );
     dans_le_cadre(&d);
 }

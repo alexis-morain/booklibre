@@ -20,17 +20,26 @@ const LAT_MAX_MERCATOR: f64 = 85.0;
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 #[serde(tag = "projection", rename_all = "snake_case")]
 pub enum Projection {
-    Mercator { lon0: f64 },
+    Mercator {
+        lon0: f64,
+    },
     /// `x = Δλ · cos(lat_ref)`, `y = φ` : la latitude de référence est celle
     /// du milieu de l'emprise.
-    Equirectangulaire { lon0: f64, lat_ref: f64 },
-    EqualEarth { lon0: f64 },
+    Equirectangulaire {
+        lon0: f64,
+        lat_ref: f64,
+    },
+    EqualEarth {
+        lon0: f64,
+    },
 }
 
 impl Projection {
     pub fn lon0(&self) -> f64 {
         match *self {
-            Projection::Mercator { lon0 } | Projection::Equirectangulaire { lon0, .. } | Projection::EqualEarth { lon0 } => lon0,
+            Projection::Mercator { lon0 }
+            | Projection::Equirectangulaire { lon0, .. }
+            | Projection::EqualEarth { lon0 } => lon0,
         }
     }
 
@@ -42,11 +51,14 @@ impl Projection {
                 let phi = lat.clamp(-LAT_MAX_MERCATOR, LAT_MAX_MERCATOR).to_radians();
                 (l, (std::f64::consts::FRAC_PI_4 + phi / 2.0).tan().ln())
             }
-            Projection::Equirectangulaire { lat_ref, .. } => (l * lat_ref.to_radians().cos(), lat.to_radians()),
+            Projection::Equirectangulaire { lat_ref, .. } => {
+                (l * lat_ref.to_radians().cos(), lat.to_radians())
+            }
             Projection::EqualEarth { .. } => {
                 let theta = (3f64.sqrt() / 2.0 * lat.to_radians().sin()).asin();
                 let (t2, t6) = (theta * theta, theta.powi(6));
-                let x = 2.0 * 3f64.sqrt() * l * theta.cos() / (3.0 * (9.0 * A4 * t6 * t2 + 7.0 * A3 * t6 + 3.0 * A2 * t2 + A1));
+                let x = 2.0 * 3f64.sqrt() * l * theta.cos()
+                    / (3.0 * (9.0 * A4 * t6 * t2 + 7.0 * A3 * t6 + 3.0 * A2 * t2 + A1));
                 let y = theta * (A1 + A2 * t2 + t6 * (A3 + A4 * t2));
                 (x, y)
             }
@@ -58,7 +70,10 @@ impl Projection {
     pub fn inverse(&self, x: f64, y: f64) -> Option<(f64, f64)> {
         match *self {
             Projection::Mercator { .. } => Some((x.to_degrees(), y.sinh().atan().to_degrees())),
-            Projection::Equirectangulaire { lat_ref, .. } => Some(((x / lat_ref.to_radians().cos()).to_degrees(), y.to_degrees())),
+            Projection::Equirectangulaire { lat_ref, .. } => Some((
+                (x / lat_ref.to_radians().cos()).to_degrees(),
+                y.to_degrees(),
+            )),
             Projection::EqualEarth { .. } => None,
         }
     }
@@ -95,7 +110,10 @@ mod tests {
 
     #[test]
     fn l_equirectangulaire_corrige_la_largeur_par_le_cosinus() {
-        let p = Projection::Equirectangulaire { lon0: 0.0, lat_ref: 60.0 };
+        let p = Projection::Equirectangulaire {
+            lon0: 0.0,
+            lat_ref: 60.0,
+        };
         let (x, y) = p.projeter(10.0, 30.0);
         assert!((x - 10f64.to_radians() * 0.5).abs() < 1e-12);
         assert!((y - 30f64.to_radians()).abs() < 1e-12);
@@ -130,7 +148,10 @@ mod tests {
             let mut s = 0.0;
             for i in 0..n {
                 for j in 0..n {
-                    let (a, b) = (lon0 + (lon1 - lon0) * (i as f64 + 0.5) / n as f64, lat0 + (lat1 - lat0) * (j as f64 + 0.5) / n as f64);
+                    let (a, b) = (
+                        lon0 + (lon1 - lon0) * (i as f64 + 0.5) / n as f64,
+                        lat0 + (lat1 - lat0) * (j as f64 + 0.5) / n as f64,
+                    );
                     let h = 1e-4;
                     let (xa, ya) = p.projeter(a + h, b);
                     let (xb, yb) = p.projeter(a - h, b);
@@ -140,18 +161,25 @@ mod tests {
                     let j21 = (ya - yb) / (2.0 * h);
                     let j12 = (xc - xd) / (2.0 * h);
                     let j22 = (yc - yd) / (2.0 * h);
-                    s += (j11 * j22 - j12 * j21).abs() * ((lon1 - lon0) / n as f64) * ((lat1 - lat0) / n as f64);
+                    s += (j11 * j22 - j12 * j21).abs()
+                        * ((lon1 - lon0) / n as f64)
+                        * ((lat1 - lat0) / n as f64);
                 }
             }
             s
         };
         // Sphère : aire d'un fuseau [lat0, lat1] sur Δλ = Δλ·(sin lat1 − sin lat0) (en radians).
-        let attendu = |lon0: f64, lon1: f64, lat0: f64, lat1: f64| (lon1 - lon0).to_radians() * (lat1.to_radians().sin() - lat0.to_radians().sin());
+        let attendu = |lon0: f64, lon1: f64, lat0: f64, lat1: f64| {
+            (lon1 - lon0).to_radians() * (lat1.to_radians().sin() - lat0.to_radians().sin())
+        };
         // Le rapport entre l'aire du plan et celle de la sphère est le même
         // partout : c'est ce que « équivalente » veut dire.
         let r1 = aire(0.0, 10.0, 0.0, 10.0) / attendu(0.0, 10.0, 0.0, 10.0);
         let r2 = aire(20.0, 50.0, 50.0, 70.0) / attendu(20.0, 50.0, 50.0, 70.0);
         let r3 = aire(-90.0, -60.0, -40.0, -10.0) / attendu(-90.0, -60.0, -40.0, -10.0);
-        assert!((r1 - r2).abs() < 2e-3 * r1 && (r1 - r3).abs() < 2e-3 * r1, "{r1} {r2} {r3}");
+        assert!(
+            (r1 - r2).abs() < 2e-3 * r1 && (r1 - r3).abs() < 2e-3 * r1,
+            "{r1} {r2} {r3}"
+        );
     }
 }

@@ -91,7 +91,9 @@ pub fn system() -> Option<&'static dyn SystemDecoder> {
 }
 
 pub fn is_heic(path: &Path) -> bool {
-    extension(path).map(|e| e == "heic" || e == "heif").unwrap_or(false)
+    extension(path)
+        .map(|e| e == "heic" || e == "heif")
+        .unwrap_or(false)
 }
 
 /// The RAW containers the scan admits, a closed list: the codec's own list
@@ -104,7 +106,9 @@ pub const RAW: [&str; 13] = [
 ];
 
 pub fn is_raw(path: &Path) -> bool {
-    extension(path).map(|e| RAW.contains(&e.as_str())).unwrap_or(false)
+    extension(path)
+        .map(|e| RAW.contains(&e.as_str()))
+        .unwrap_or(false)
 }
 
 /// Whether the file can only be read by the system decoder.
@@ -155,7 +159,9 @@ fn decoder(path: &Path, espace: Espace) -> Result<Pixels> {
         decodeur(path)?.decode(path, espace)
     } else {
         let img = image::open(path).with_context(|| format!("décodage de {}", path.display()))?;
-        let icc = (espace == Espace::Source).then(|| crate::icc::du_fichier(path)).flatten();
+        let icc = (espace == Espace::Source)
+            .then(|| crate::icc::du_fichier(path))
+            .flatten();
         Ok((img, icc))
     }
 }
@@ -294,11 +300,8 @@ mod imageio {
             the_type: isize,
             value_ptr: *const c_void,
         ) -> *const c_void;
-        fn CFNumberGetValue(
-            number: *const c_void,
-            the_type: isize,
-            value_ptr: *mut c_void,
-        ) -> bool;
+        fn CFNumberGetValue(number: *const c_void, the_type: isize, value_ptr: *mut c_void)
+            -> bool;
         fn CFStringGetCString(
             string: *const c_void,
             buffer: *mut u8,
@@ -318,10 +321,7 @@ mod imageio {
 
     #[link(name = "ImageIO", kind = "framework")]
     extern "C" {
-        fn CGImageSourceCreateWithURL(
-            url: *const c_void,
-            options: *const c_void,
-        ) -> *const c_void;
+        fn CGImageSourceCreateWithURL(url: *const c_void, options: *const c_void) -> *const c_void;
         fn CGImageSourceCreateImageAtIndex(
             source: *const c_void,
             index: usize,
@@ -464,9 +464,20 @@ mod imageio {
             anyhow::ensure!(w > 0 && h > 0, "image vide : {}", path.display());
 
             let contexte = |space: *const c_void| {
-                CGBitmapContextCreate(std::ptr::null_mut(), w, h, 8, w * 4, space, BITMAP_INFO_RGBX)
+                CGBitmapContextCreate(
+                    std::ptr::null_mut(),
+                    w,
+                    h,
+                    8,
+                    w * 4,
+                    space,
+                    BITMAP_INFO_RGBX,
+                )
             };
-            let srgb = Released(CGColorSpaceCreateWithName(kCGColorSpaceSRGB), CGColorSpaceRelease);
+            let srgb = Released(
+                CGColorSpaceCreateWithName(kCGColorSpaceSRGB),
+                CGColorSpaceRelease,
+            );
             let mut profil = None;
             let mut ctx = std::ptr::null();
             if espace == Espace::Source {
@@ -488,7 +499,12 @@ mod imageio {
             let ctx = Released(ctx, CGContextRelease);
             CGContextDrawImage(
                 ctx.0,
-                CGRect { x: 0.0, y: 0.0, w: w as f64, h: h as f64 },
+                CGRect {
+                    x: 0.0,
+                    y: 0.0,
+                    w: w as f64,
+                    h: h as f64,
+                },
                 img,
             );
             let data = CGBitmapContextGetData(ctx.0);
@@ -630,8 +646,7 @@ mod imageio {
         fn decode(&self, path: &Path, espace: Espace) -> Result<Pixels> {
             let source = image_source(path)?;
             unsafe {
-                let img =
-                    CGImageSourceCreateImageAtIndex(source.0, 0, std::ptr::null());
+                let img = CGImageSourceCreateImageAtIndex(source.0, 0, std::ptr::null());
                 if img.is_null() {
                     return Err(anyhow!("décodage refusé par ImageIO : {}", path.display()));
                 }
@@ -654,15 +669,23 @@ mod imageio {
 
         fn preview(&self, path: &Path, max_px: Option<u32>, espace: Espace) -> Result<Pixels> {
             match max_px {
-                Some(max) => {
-                    vignette(path, max.min(SANS_PLAFOND as u32) as i32, Some(false), espace)
-                }
+                Some(max) => vignette(
+                    path,
+                    max.min(SANS_PLAFOND as u32) as i32,
+                    Some(false),
+                    espace,
+                ),
                 None => vignette(path, SANS_PLAFOND, None, espace),
             }
         }
 
         fn preview_calcule(&self, path: &Path, max_px: u32, espace: Espace) -> Result<Pixels> {
-            vignette(path, max_px.min(SANS_PLAFOND as u32) as i32, Some(true), espace)
+            vignette(
+                path,
+                max_px.min(SANS_PLAFOND as u32) as i32,
+                Some(true),
+                espace,
+            )
         }
 
         fn exif(&self, path: &Path) -> Option<ExifSysteme> {
@@ -745,7 +768,10 @@ mod tests {
     fn un_raw_se_reconnait_a_son_extension() {
         for ext in RAW {
             assert!(is_raw(Path::new(&format!("a.{ext}"))), "{ext}");
-            assert!(is_raw(Path::new(&format!("a.{}", ext.to_uppercase()))), "{ext}");
+            assert!(
+                is_raw(Path::new(&format!("a.{}", ext.to_uppercase()))),
+                "{ext}"
+            );
             assert!(!is_heic(Path::new(&format!("a.{ext}"))));
         }
         for ext in ["jpg", "jpeg", "png", "heic", "tif", "xmp", "json"] {
@@ -757,11 +783,9 @@ mod tests {
     /// Both spellings of an EXIF date, and the refusals.
     #[test]
     fn une_date_exif_se_lit_dans_ses_deux_orthographes() {
-        let attendu = chrono::NaiveDateTime::parse_from_str(
-            "2019-11-29 13:07:45",
-            "%Y-%m-%d %H:%M:%S",
-        )
-        .unwrap();
+        let attendu =
+            chrono::NaiveDateTime::parse_from_str("2019-11-29 13:07:45", "%Y-%m-%d %H:%M:%S")
+                .unwrap();
         assert_eq!(date_exif("2019:11:29 13:07:45"), Some(attendu));
         assert_eq!(date_exif("2019-11-29 13:07:45"), Some(attendu));
         assert_eq!(date_exif("  2019:11:29 13:07:45 "), Some(attendu));
@@ -817,12 +841,21 @@ mod tests {
             let t = std::time::Instant::now();
             let (vg, _) = apercu_vignette(p, crate::thumb::THUMB_SIZE).unwrap();
             let ms_vg = t.elapsed().as_millis();
-            assert_eq!(decodages_pleins(), avant, "l'aperçu a coûté un décodage plein : {}", p.display());
+            assert_eq!(
+                decodages_pleins(),
+                avant,
+                "l'aperçu a coûté un décodage plein : {}",
+                p.display()
+            );
             let ex = exif(p).expect("le système lit les métadonnées");
             assert!(ex.prise.is_some(), "date absente : {}", p.display());
             assert!(ex.modele.is_some(), "modèle absent : {}", p.display());
             assert!(ex.marque.is_some(), "marque absente : {}", p.display());
-            assert!(ex.temps_de_pose.is_some(), "temps de pose absent : {}", p.display());
+            assert!(
+                ex.temps_de_pose.is_some(),
+                "temps de pose absent : {}",
+                p.display()
+            );
             // Measured on 02/10: ImageIO exposes no ISO for the CR3 (Spotlight
             // says null too, exiftool reads 800), and the ORF writes f/0 and
             // 0 mm for a lens without contacts. All read as absent, never as
@@ -860,9 +893,16 @@ mod tests {
                 ex.modele.unwrap()
             );
         }
-        assert_eq!(conteneurs_hors_tiff, 4, "les quatre conteneurs que le crate exif refuse");
+        assert_eq!(
+            conteneurs_hors_tiff, 4,
+            "les quatre conteneurs que le crate exif refuse"
+        );
         assert_eq!(iso_absents, ["IMG_6310.CR3"], "l'ISO ne manque qu'au CR3");
-        assert_eq!(sans_objectif, ["PB290154.ORF"], "ouverture et focale ne manquent qu'à l'ORF (f/0, 0 mm)");
+        assert_eq!(
+            sans_objectif,
+            ["PB290154.ORF"],
+            "ouverture et focale ne manquent qu'à l'ORF (f/0, 0 mm)"
+        );
     }
 
     /// The pixels of a P3 photo stay its P3 numbers when they keep their
@@ -880,18 +920,27 @@ mod tests {
         let rgb = image::RgbImage::from_pixel(16, 16, image::Rgb([200, 100, 50]));
         let mut enc = image::codecs::png::PngEncoder::new(std::fs::File::create(&path).unwrap());
         enc.set_icc_profile(p3.clone()).unwrap();
-        enc.write_image(&rgb, 16, 16, image::ExtendedColorType::Rgb8).unwrap();
+        enc.write_image(&rgb, 16, 16, image::ExtendedColorType::Rgb8)
+            .unwrap();
 
         let d = system().unwrap();
         let (img, icc) = d.decode(&path, Espace::Source).unwrap();
         let px = img.to_rgb8().get_pixel(8, 8).0;
-        assert!(px.iter().zip([200u8, 100, 50]).all(|(a, b)| a.abs_diff(b) <= 1), "{px:?}");
+        assert!(
+            px.iter()
+                .zip([200u8, 100, 50])
+                .all(|(a, b)| a.abs_diff(b) <= 1),
+            "{px:?}"
+        );
         assert!(crate::icc::a_declarer(icc.unwrap().to_vec()).is_some());
 
         let (img, icc) = d.decode(&path, Espace::Srgb).unwrap();
         let px = img.to_rgb8().get_pixel(8, 8).0;
         assert!(icc.is_none());
-        assert!(px[0] > 205, "converti en sRGB, le rouge sort plus fort : {px:?}");
+        assert!(
+            px[0] > 205,
+            "converti en sRGB, le rouge sort plus fort : {px:?}"
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 }

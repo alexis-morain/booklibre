@@ -39,7 +39,10 @@ pub fn codes_json() -> String {
         phrases: prevol::PHRASES.iter().copied().collect(),
         propositions: build::IDS_PROPOSITIONS,
         regles: prevol::REGLES,
-        reserves: printer::PrinterProfile::tous().iter().map(|p| (p.id, p.reserves)).collect(),
+        reserves: printer::PrinterProfile::tous()
+            .iter()
+            .map(|p| (p.id, p.reserves))
+            .collect(),
     };
     let mut s = serde_json::to_string_pretty(&codes).expect("du JSON fait de chaînes");
     s.push('\n');
@@ -50,7 +53,10 @@ pub fn codes_json() -> String {
 mod tests {
     use super::*;
 
-    const FIXTURE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../colophon-app/src/moteur.codes.json");
+    const FIXTURE: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../colophon-app/src/moteur.codes.json"
+    );
 
     /// La copie de l'app suit le moteur. Comparée en contenu, pas en fins de
     /// ligne : git rend un `.json` en CRLF sur Windows (voir `LICENCES.md`).
@@ -82,10 +88,17 @@ mod tests {
     #[test]
     fn chaque_code_de_phrase_est_emis() {
         let source = include_str!("prevol.rs");
-        let corps = source.split("pub const PHRASES").next().unwrap().to_string()
+        let corps = source
+            .split("pub const PHRASES")
+            .next()
+            .unwrap()
+            .to_string()
             + source.split("fn phrase(").nth(1).unwrap();
         for (code, _) in prevol::PHRASES {
-            assert!(corps.contains(&format!("\"{code}\"")), "{code} n'est émis nulle part");
+            assert!(
+                corps.contains(&format!("\"{code}\"")),
+                "{code} n'est émis nulle part"
+            );
         }
     }
 
@@ -99,16 +112,31 @@ mod tests {
     fn chaque_regle_du_prevol_est_listee_et_emise() {
         let source = include_str!("prevol.rs");
         let corps = source.split("pub const REGLES").next().unwrap().to_string()
-            + source.split("fn phrase(").nth(1).unwrap().split("#[cfg(test)]").next().unwrap();
+            + source
+                .split("fn phrase(")
+                .nth(1)
+                .unwrap()
+                .split("#[cfg(test)]")
+                .next()
+                .unwrap();
         for regle in prevol::REGLES {
-            assert!(corps.contains(&format!("\"{regle}\"")), "{regle} n'est émise nulle part");
+            assert!(
+                corps.contains(&format!("\"{regle}\"")),
+                "{regle} n'est émise nulle part"
+            );
         }
         for (i, _) in corps.match_indices("regle: \"") {
             let reste = &corps[i + "regle: \"".len()..];
             let regle = &reste[..reste.find('"').unwrap()];
-            assert!(prevol::REGLES.contains(&regle), "{regle} manque à prevol::REGLES");
+            assert!(
+                prevol::REGLES.contains(&regle),
+                "{regle} manque à prevol::REGLES"
+            );
         }
         let codes: serde_json::Value = serde_json::from_str(&codes_json()).unwrap();
-        assert_eq!(codes["regles"].as_array().map(Vec::len), Some(prevol::REGLES.len()));
+        assert_eq!(
+            codes["regles"].as_array().map(Vec::len),
+            Some(prevol::REGLES.len())
+        );
     }
 }
