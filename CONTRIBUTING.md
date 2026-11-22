@@ -49,7 +49,7 @@ other process may be writing into `.albums/`.
 ## Four traps worth knowing before you touch anything
 
 **The two geometries, and there are two pairs.** Slot geometry exists twice, in
-`pdf.rs::slots_for` and in `album.ts::slotsBottomUp`, including the fallback
+`pdf.rs::slots_for` and in `album.ts::slotsFor`, including the fallback
 table, the template list, the anchors and the caption box. The cover sheet
 exists twice as well, spine included: `cover.rs::geometry` and
 `album.ts::coverSheet`. The Rust side draws the PDF, the TypeScript side draws

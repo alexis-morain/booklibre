@@ -40,8 +40,13 @@ jobs:
             ];
             // Verrous, hors du compte de taille.
             const DERIVES = /(^|\/)(Cargo\.lock|package-lock\.json)$/;
-            // Les deux géométries vivent en double : toucher un côté sans l'autre se signale.
-            const GEOMETRIE = /(pdf|cover)\.rs$|album\.ts$/;
+            // Les deux géométries vivent en double (pdf.rs::slots_for et ::geometry,
+            // cover.rs::geometry, album.ts::slotsFor, ::spreadGeometry, ::coverSheet) :
+            // le label part quand le diff de ces fichiers nomme l'une de ces fonctions,
+            // dans ses lignes ou dans l'en-tête de contexte d'un bloc (`@@ … fn …`).
+            // Un patch trop gros pour l'API arrive sans `patch` : on le signale par prudence.
+            const GEOMETRIE = /^crates\/colophon-(core\/src\/(pdf|cover)\.rs|app\/src\/album\.ts)$/;
+            const FONCTIONS = /\b(slots_for|slotsFor|geometry|spreadGeometry|coverSheet)\b/;
             const ACCUEIL = [
               'Thanks for this pull request!',
               '',
@@ -69,7 +74,7 @@ jobs:
               if (zone) labels.add(zone[0]);
               if (!DERIVES.test(f.filename)) lignes += f.additions + f.deletions;
             }
-            if (fichiers.some((f) => GEOMETRIE.test(f.filename))) labels.add('geometry');
+            if (fichiers.some((f) => GEOMETRIE.test(f.filename) && (f.patch === undefined || FONCTIONS.test(f.patch)))) labels.add('geometry');
             const taille = lignes < 10 ? 'XS' : lignes < 50 ? 'S' : lignes < 200 ? 'M' : lignes < 600 ? 'L' : 'XL';
             const TAILLES = ['size/XS', 'size/S', 'size/M', 'size/L', 'size/XL'];
             const exterieur = pr.user.login !== PROPRIETAIRE && pr.user.type !== 'Bot';
