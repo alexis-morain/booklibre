@@ -87,7 +87,9 @@ pub struct Depot {
 
 impl fmt::Debug for Depot {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Depot").field("reglages", &self.reglages).finish_non_exhaustive()
+        f.debug_struct("Depot")
+            .field("reglages", &self.reglages)
+            .finish_non_exhaustive()
     }
 }
 
@@ -97,8 +99,13 @@ impl Depot {
             .endpoint
             .parse()
             .with_context(|| format!("adresse du dépôt illisible : {}", reglages.endpoint))?;
-        let seau = Bucket::new(endpoint, UrlStyle::Path, reglages.bucket.clone(), reglages.region.clone())
-            .map_err(|e| anyhow::anyhow!("adresse du dépôt refusée ({e:?}) : {}", reglages.endpoint))?;
+        let seau = Bucket::new(
+            endpoint,
+            UrlStyle::Path,
+            reglages.bucket.clone(),
+            reglages.region.clone(),
+        )
+        .map_err(|e| anyhow::anyhow!("adresse du dépôt refusée ({e:?}) : {}", reglages.endpoint))?;
         // Pas de délai global : 95 Mo sur une ligne lente dépassent n'importe
         // quel chiffre qu'on choisirait. La connexion, elle, se borne.
         let agent: ureq::Agent = ureq::Agent::config_builder()
@@ -106,11 +113,18 @@ impl Depot {
             .timeout_connect(Some(Duration::from_secs(30)))
             .build()
             .into();
-        Ok(Depot { reglages, seau, agent })
+        Ok(Depot {
+            reglages,
+            seau,
+            agent,
+        })
     }
 
     fn acces(&self) -> Credentials {
-        Credentials::new(self.reglages.access_key.0.clone(), self.reglages.secret_key.0.clone())
+        Credentials::new(
+            self.reglages.access_key.0.clone(),
+            self.reglages.secret_key.0.clone(),
+        )
     }
 
     /// Retire les deux accès d'un texte venu du transport. Une URL présignée
@@ -128,8 +142,13 @@ impl Depot {
 
     /// Envoie une requête présignée et rend son statut, sans jamais citer
     /// l'URL dans une erreur.
-    fn envoyer(&self, geste: &str, requete: Result<ureq::http::Response<ureq::Body>, ureq::Error>) -> Result<u16> {
-        let reponse = requete.map_err(|e| anyhow::anyhow!("{geste} : {}", self.masquer(&e.to_string())))?;
+    fn envoyer(
+        &self,
+        geste: &str,
+        requete: Result<ureq::http::Response<ureq::Body>, ureq::Error>,
+    ) -> Result<u16> {
+        let reponse =
+            requete.map_err(|e| anyhow::anyhow!("{geste} : {}", self.masquer(&e.to_string())))?;
         Ok(reponse.status().as_u16())
     }
 
@@ -142,21 +161,31 @@ impl Depot {
             bail!("le dépôt ne reçoit que {LIVRAISON_INTERIEUR} et {LIVRAISON_COUVERTURE}, pas « {nom} »");
         }
         let sure = !reference.is_empty()
-            && reference.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
+            && reference
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
         if !sure {
             bail!("référence de commande refusée pour un nom d'objet : « {reference} » (lettres, chiffres, - et _ seulement)");
         }
-        Ok(Objet { cle: format!("{PREFIXE}/{reference}/{nom}") })
+        Ok(Objet {
+            cle: format!("{PREFIXE}/{reference}/{nom}"),
+        })
     }
 
     /// Pose `fichier` sous la référence de sa commande, par PUT présigné.
     pub fn deposer(&self, reference: &str, fichier: &Path) -> Result<Objet> {
-        let nom = fichier.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+        let nom = fichier
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or_default();
         let objet = Depot::objet(reference, nom)?;
         let corps = std::fs::File::open(fichier)
             .with_context(|| format!("lecture de {}", fichier.display()))?;
         let acces = self.acces();
-        let url = self.seau.put_object(Some(&acces), &objet.cle).sign(DUREE_DU_GESTE);
+        let url = self
+            .seau
+            .put_object(Some(&acces), &objet.cle)
+            .sign(DUREE_DU_GESTE);
         // Le fichier ouvert est le corps : le transport le lit au fil de
         // l'envoi et annonce sa longueur.
         let statut = self.envoyer("dépôt", self.agent.put(url.as_str()).send(corps))?;
@@ -170,9 +199,14 @@ impl Depot {
     /// `colophon/verification`, puis le retire. C'est le bouton « Vérifier »
     /// des préférences ; il ne touche à aucun objet d'une commande.
     pub fn verifier(&self) -> Result<()> {
-        let objet = Objet { cle: format!("{PREFIXE}/verification") };
+        let objet = Objet {
+            cle: format!("{PREFIXE}/verification"),
+        };
         let acces = self.acces();
-        let url = self.seau.put_object(Some(&acces), &objet.cle).sign(DUREE_DU_GESTE);
+        let url = self
+            .seau
+            .put_object(Some(&acces), &objet.cle)
+            .sign(DUREE_DU_GESTE);
         let statut = self.envoyer("vérification", self.agent.put(url.as_str()).send(&[][..]))?;
         if !(200..300).contains(&statut) {
             bail!("le dépôt refuse un objet de vérification : statut {statut}");
@@ -197,7 +231,10 @@ impl Depot {
     /// une erreur : S3 rend 204 dans les deux cas.
     pub fn retirer(&self, objet: &Objet) -> Result<()> {
         let acces = self.acces();
-        let url = self.seau.delete_object(Some(&acces), &objet.cle).sign(DUREE_DU_GESTE);
+        let url = self
+            .seau
+            .delete_object(Some(&acces), &objet.cle)
+            .sign(DUREE_DU_GESTE);
         let statut = self.envoyer("retrait", self.agent.delete(url.as_str()).call())?;
         if !(200..300).contains(&statut) {
             bail!("le dépôt refuse de retirer {} : statut {statut}", objet.cle);
@@ -274,11 +311,17 @@ mod tests {
                     }
                 }
             }
-            let octets_recus =
-                std::io::copy(&mut (&mut lecteur).take(longueur.unwrap_or(0)), &mut std::io::sink())
-                    .unwrap();
+            let octets_recus = std::io::copy(
+                &mut (&mut lecteur).take(longueur.unwrap_or(0)),
+                &mut std::io::sink(),
+            )
+            .unwrap();
             let mut flux = flux;
-            write!(flux, "HTTP/1.1 {statut}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").unwrap();
+            write!(
+                flux,
+                "HTTP/1.1 {statut}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+            )
+            .unwrap();
             tx.send(Vu {
                 methode,
                 chemin: chemin.to_string(),
@@ -326,7 +369,11 @@ mod tests {
                 )
                 .unwrap();
                 let mut flux = flux;
-                write!(flux, "HTTP/1.1 {statut}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").unwrap();
+                write!(
+                    flux,
+                    "HTTP/1.1 {statut}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                )
+                .unwrap();
                 let _ = tx.send(Vu {
                     methode,
                     chemin: chemin.to_string(),
@@ -342,18 +389,28 @@ mod tests {
     #[test]
     fn la_cle_d_objet_porte_la_reference_et_le_nom_de_livraison() {
         assert_eq!(
-            Depot::objet("colophon-2026-10-03-a", LIVRAISON_INTERIEUR).unwrap().cle,
+            Depot::objet("colophon-2026-10-03-a", LIVRAISON_INTERIEUR)
+                .unwrap()
+                .cle,
             "colophon/colophon-2026-10-03-a/album-print.pdf"
         );
         assert_eq!(
             Depot::objet("CP_42", LIVRAISON_COUVERTURE).unwrap().cle,
             "colophon/CP_42/album-cover.pdf"
         );
-        for nom in ["album.pdf", "album-cover.apercu.pdf", "../album-print.pdf", ""] {
+        for nom in [
+            "album.pdf",
+            "album-cover.apercu.pdf",
+            "../album-print.pdf",
+            "",
+        ] {
             assert!(Depot::objet("a", nom).is_err(), "{nom}");
         }
         for reference in ["", "..", "a/b", "a b", "../x", "é"] {
-            assert!(Depot::objet(reference, LIVRAISON_INTERIEUR).is_err(), "{reference:?}");
+            assert!(
+                Depot::objet(reference, LIVRAISON_INTERIEUR).is_err(),
+                "{reference:?}"
+            );
         }
     }
 
@@ -392,8 +449,10 @@ mod tests {
             "us-east-1",
         )
         .unwrap();
-        let acces =
-            Credentials::new("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
+        let acces = Credentials::new(
+            "AKIAIOSFODNN7EXAMPLE",
+            "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+        );
         let quand: jiff::Timestamp = "2013-05-24T00:00:00Z".parse().unwrap();
         let url = seau
             .get_object(Some(&acces), "test.txt")
@@ -443,7 +502,10 @@ mod tests {
         assert_eq!(objet.cle, "colophon/colophon-2026-10-03-a/album-print.pdf");
         let vu = vu.recv().unwrap();
         assert_eq!(vu.methode, "PUT");
-        assert_eq!(vu.chemin, "/albums/colophon/colophon-2026-10-03-a/album-print.pdf");
+        assert_eq!(
+            vu.chemin,
+            "/albums/colophon/colophon-2026-10-03-a/album-print.pdf"
+        );
         assert_eq!(vu.longueur_annoncee, Some(taille as u64));
         assert_eq!(vu.octets_recus, taille as u64);
         assert!(vu.requete.contains("X-Amz-Signature="), "{}", vu.requete);
@@ -453,7 +515,8 @@ mod tests {
     fn un_put_refuse_est_une_erreur_qui_ne_dit_pas_les_acces() {
         let (adresse, _vu) = serveur("403 Forbidden");
         let depot = Depot::new(reglages(&adresse)).unwrap();
-        let dossier = std::env::temp_dir().join(format!("colophon-depot-refus-{}", std::process::id()));
+        let dossier =
+            std::env::temp_dir().join(format!("colophon-depot-refus-{}", std::process::id()));
         std::fs::create_dir_all(&dossier).unwrap();
         let fichier = dossier.join(LIVRAISON_COUVERTURE);
         std::fs::write(&fichier, b"%PDF-1.6").unwrap();
@@ -470,10 +533,16 @@ mod tests {
         let depot = Depot::new(reglages(&adresse)).unwrap();
         depot.verifier().unwrap();
         let put = vu.recv().unwrap();
-        assert_eq!((put.methode.as_str(), put.chemin.as_str()), ("PUT", "/albums/colophon/verification"));
+        assert_eq!(
+            (put.methode.as_str(), put.chemin.as_str()),
+            ("PUT", "/albums/colophon/verification")
+        );
         assert_eq!((put.longueur_annoncee, put.octets_recus), (Some(0), 0));
         let del = vu.recv().unwrap();
-        assert_eq!((del.methode.as_str(), del.chemin.as_str()), ("DELETE", "/albums/colophon/verification"));
+        assert_eq!(
+            (del.methode.as_str(), del.chemin.as_str()),
+            ("DELETE", "/albums/colophon/verification")
+        );
     }
 
     #[test]
@@ -490,7 +559,9 @@ mod tests {
     fn retirer_envoie_un_delete_presigne() {
         let (adresse, vu) = serveur("204 No Content");
         let depot = Depot::new(reglages(&adresse)).unwrap();
-        depot.retirer(&Depot::objet("a", LIVRAISON_COUVERTURE).unwrap()).unwrap();
+        depot
+            .retirer(&Depot::objet("a", LIVRAISON_COUVERTURE).unwrap())
+            .unwrap();
         let vu = vu.recv().unwrap();
         assert_eq!(vu.methode, "DELETE");
         assert_eq!(vu.chemin, "/albums/colophon/a/album-cover.pdf");
@@ -509,14 +580,18 @@ mod tests {
         let adresse = format!("http://{}", ferme.local_addr().unwrap());
         drop(ferme);
         let depot = Depot::new(reglages(&adresse)).unwrap();
-        let e = depot.retirer(&Depot::objet("a", LIVRAISON_INTERIEUR).unwrap()).unwrap_err();
+        let e = depot
+            .retirer(&Depot::objet("a", LIVRAISON_INTERIEUR).unwrap())
+            .unwrap_err();
         let texte = format!("{e:?} {e:#}");
         assert!(!texte.contains(ACCES) && !texte.contains(SECRET), "{texte}");
         // Un message de transport qui recopierait l'URL présignée (la clé
         // d'accès y est en clair) passe par le masque. Le port fermé ne le
         // provoque pas, d'où l'appel direct.
         assert_eq!(
-            depot.masquer(&format!("PUT {adresse}/?X-Amz-Credential={ACCES}%2F… {SECRET}")),
+            depot.masquer(&format!(
+                "PUT {adresse}/?X-Amz-Credential={ACCES}%2F… {SECRET}"
+            )),
             format!("PUT {adresse}/?X-Amz-Credential=***%2F… ***")
         );
         // Une adresse qui n'est pas une URL est refusée à la construction.

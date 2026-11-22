@@ -53,7 +53,13 @@ static GAZETTEER: LazyLock<Vec<City>> = LazyLock::new(|| {
             let lon = f.next()?.parse().ok()?;
             let country = f.next()?;
             let population = f.next()?.parse().ok()?;
-            Some(City { name, lat, lon, country, population })
+            Some(City {
+                name,
+                lat,
+                lon,
+                country,
+                population,
+            })
         })
         .collect()
 });
@@ -130,7 +136,9 @@ pub fn place_of(points: &[(f64, f64)]) -> Option<&'static City> {
     }
     let mut votes: Vec<(&'static City, usize)> = Vec::new();
     for (lat, lon) in points {
-        let Some((city, _)) = nearest(*lat, *lon) else { continue };
+        let Some((city, _)) = nearest(*lat, *lon) else {
+            continue;
+        };
         match votes.iter_mut().find(|(c, _)| std::ptr::eq(*c, city)) {
             Some((_, n)) => *n += 1,
             None => votes.push((city, 1)),
@@ -206,7 +214,12 @@ mod tests {
     /// optimisation is exactly the kind that silently drops the right town.
     #[test]
     fn the_band_lookup_agrees_with_the_whole_list() {
-        for (lat, lon) in [(41.591, 9.279), (48.8566, 2.3522), (-33.86, 151.2), (64.14, -21.94)] {
+        for (lat, lon) in [
+            (41.591, 9.279),
+            (48.8566, 2.3522),
+            (-33.86, 151.2),
+            (64.14, -21.94),
+        ] {
             let mut brute: Vec<&City> = gazetteer()
                 .iter()
                 .filter(|c| distance_km(lat, lon, c.lat, c.lon) <= MAX_KM)

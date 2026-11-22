@@ -76,8 +76,8 @@ fn plages_de_cartes(album: &Album) -> Vec<(usize, usize)> {
 /// et l'`album.json` d'avant survit en `.bak`, comme à chaque écriture.
 pub fn recomposer(dir: &Path, opts: Recomposition) -> Result<BuildReport> {
     let json = dir.join("album.json");
-    let text = std::fs::read_to_string(&json)
-        .with_context(|| format!("lecture de {}", json.display()))?;
+    let text =
+        std::fs::read_to_string(&json).with_context(|| format!("lecture de {}", json.display()))?;
     let mut album: Album = serde_json::from_str(&text).context("album.json illisible")?;
     let root = PathBuf::from(&album.root);
     if !root.is_dir() {
@@ -136,9 +136,15 @@ pub fn recomposer(dir: &Path, opts: Recomposition) -> Result<BuildReport> {
         densite: opts.densite.unwrap_or(album.densite),
         // Same reasoning for the colophon page: somebody who took it away
         // must not have to take it away again after every recomposition.
-        colophon: album.spreads.iter().any(|s| s.template == crate::colophon::TEMPLATE),
+        colophon: album
+            .spreads
+            .iter()
+            .any(|s| s.template == crate::colophon::TEMPLATE),
         // And the half-title at the head of the book, on the same rule.
-        garde: album.spreads.iter().any(|s| s.template == crate::garde::TEMPLATE),
+        garde: album
+            .spreads
+            .iter()
+            .any(|s| s.template == crate::garde::TEMPLATE),
         // A recomposition is not a choice of album: the user already made
         // that one, and a second offer would throw away every hand edit that
         // the pinned spreads were kept for.
@@ -184,8 +190,10 @@ mod tests {
 
     /// Un dossier de photos jetable et son dossier d'album, pas encore créé.
     fn dossier(nom: &str) -> (PathBuf, PathBuf) {
-        let base = std::env::temp_dir()
-            .join(format!("colophon-recomposition-{nom}-{}", std::process::id()));
+        let base = std::env::temp_dir().join(format!(
+            "colophon-recomposition-{nom}-{}",
+            std::process::id()
+        ));
         let _ = fs::remove_dir_all(&base);
         let photos = base.join("photos");
         fs::create_dir_all(&photos).unwrap();
@@ -246,7 +254,10 @@ mod tests {
     }
 
     fn composer(photos: &Path, album: &Path) -> Album {
-        let opts = BuildOptions { aujourdhui: Some(jour_fixe()), ..Default::default() };
+        let opts = BuildOptions {
+            aujourdhui: Some(jour_fixe()),
+            ..Default::default()
+        };
         build_album(photos, album, opts).expect("un album").album
     }
 
@@ -296,13 +307,15 @@ mod tests {
                     f64::from(w) / f64::from(h)
                 })
                 .collect();
-            let trahi = crate::gabarit::compatibles(&aspects, &ici).into_iter().find(|nom| {
-                crate::gabarit::spec(nom).is_some_and(|sp| {
-                    sp.capacite == aspects.len()
-                        && crate::gabarit::trahison(sp, &aspects, &la_bas)
-                            > crate::audit::ASPECT_BETRAYAL
-                })
-            });
+            let trahi = crate::gabarit::compatibles(&aspects, &ici)
+                .into_iter()
+                .find(|nom| {
+                    crate::gabarit::spec(nom).is_some_and(|sp| {
+                        sp.capacite == aspects.len()
+                            && crate::gabarit::trahison(sp, &aspects, &la_bas)
+                                > crate::audit::ASPECT_BETRAYAL
+                    })
+                });
             if let Some(nom) = trahi {
                 s.template = nom.to_string();
                 s.edited = true;
@@ -339,8 +352,14 @@ mod tests {
             pinned,
             cover: album.cover.clone(),
             densite: album.densite,
-            colophon: album.spreads.iter().any(|s| s.template == crate::colophon::TEMPLATE),
-            garde: album.spreads.iter().any(|s| s.template == crate::garde::TEMPLATE),
+            colophon: album
+                .spreads
+                .iter()
+                .any(|s| s.template == crate::colophon::TEMPLATE),
+            garde: album
+                .spreads
+                .iter()
+                .any(|s| s.template == crate::garde::TEMPLATE),
             variantes: Vec::new(),
             reglages: album.reglages.clone(),
             police: album.police.clone(),
@@ -367,7 +386,10 @@ mod tests {
         build_album(&photos, &a, options_d_avant(&avant)).expect("l'ancien chemin");
         recomposer(
             &b,
-            Recomposition { aujourdhui: Some(jour_fixe()), ..Default::default() },
+            Recomposition {
+                aujourdhui: Some(jour_fixe()),
+                ..Default::default()
+            },
         )
         .expect("le nouveau chemin");
 
@@ -407,7 +429,10 @@ mod tests {
         voyage(&photos);
         composer(&photos, &dir);
         let verrouillees = verrouiller(&dir);
-        assert!(verrouillees.len() >= 2, "un jeu qui verrouille quelque chose");
+        assert!(
+            verrouillees.len() >= 2,
+            "un jeu qui verrouille quelque chose"
+        );
         let a4 = Size { w: 297.0, h: 210.0 };
         // Une planche éditée à la main : un gabarit que le sélecteur offre au
         // carré et que l'A4 paysage trahit. C'est elle que la bascule doit
@@ -427,14 +452,24 @@ mod tests {
             "la planche éditée doit se replier : {:?}",
             bilan.replis
         );
-        let attendues: Vec<model::Spread> =
-            basculee.spreads.iter().filter(|s| s.pinned()).cloned().collect();
+        let attendues: Vec<model::Spread> = basculee
+            .spreads
+            .iter()
+            .filter(|s| s.pinned())
+            .cloned()
+            .collect();
         assert_ne!(
             basculee.spreads[editee].template, avant.spreads[editee].template,
             "repliée"
         );
 
-        let geometrie = ["fond_perdu", "imposition", "objet_coupe", "objet_pli", "format_sans_produit"];
+        let geometrie = [
+            "fond_perdu",
+            "imposition",
+            "objet_coupe",
+            "objet_pli",
+            "format_sans_produit",
+        ];
         let codes = |dir: &Path| -> std::collections::BTreeSet<&'static str> {
             crate::prevol::prevol_album(dir, profil)
                 .unwrap()
@@ -462,14 +497,25 @@ mod tests {
         // Comparées comme ensembles : une planche gardée revient à sa date,
         // et la recomposition peut la poser à un autre rang.
         let json = |s: &model::Spread| serde_json::to_string(s).unwrap();
-        let mut gardees: Vec<String> =
-            r.album.spreads.iter().filter(|s| s.pinned()).map(json).collect();
+        let mut gardees: Vec<String> = r
+            .album
+            .spreads
+            .iter()
+            .filter(|s| s.pinned())
+            .map(json)
+            .collect();
         let mut attendues: Vec<String> = attendues.iter().map(json).collect();
         gardees.sort();
         attendues.sort();
-        assert_eq!(gardees, attendues, "les planches gardées sont celles que la bascule rend");
+        assert_eq!(
+            gardees, attendues,
+            "les planches gardées sont celles que la bascule rend"
+        );
         let nouveaux: Vec<_> = codes(&dir).difference(&defauts_avant).copied().collect();
-        assert!(nouveaux.is_empty(), "défauts de géométrie nouveaux : {nouveaux:?}");
+        assert!(
+            nouveaux.is_empty(),
+            "défauts de géométrie nouveaux : {nouveaux:?}"
+        );
     }
 
     /// Un format donné égal au format courant ne change rien de ce qu'un
@@ -483,8 +529,14 @@ mod tests {
         let b = a.with_file_name("album-b");
         copier(&a, &b);
         let trim = lire(&a).trim_mm;
-        recomposer(&a, Recomposition { aujourdhui: Some(jour_fixe()), ..Default::default() })
-            .unwrap();
+        recomposer(
+            &a,
+            Recomposition {
+                aujourdhui: Some(jour_fixe()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
         recomposer(
             &b,
             Recomposition {

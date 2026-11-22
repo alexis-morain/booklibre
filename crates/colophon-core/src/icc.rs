@@ -71,7 +71,10 @@ fn parse(d: &[u8]) -> Result<Header> {
     // Bytes 36..40 are the mandatory `acsp` signature. Its absence means the
     // asset is not an ICC profile at all: an HTML error page saved under the
     // right name, which is exactly how this one nearly shipped.
-    ensure!(&d[36..40] == b"acsp", "signature acsp absente : ce n'est pas un profil ICC");
+    ensure!(
+        &d[36..40] == b"acsp",
+        "signature acsp absente : ce n'est pas un profil ICC"
+    );
 
     let size = u32::from_be_bytes([d[0], d[1], d[2], d[3]]);
     ensure!(
@@ -110,7 +113,10 @@ pub fn a_declarer(profil: Vec<u8>) -> Option<std::sync::Arc<[u8]>> {
     }
     let srgb = colorants(ICC_DATA)?;
     let est_srgb = colorants(&profil).is_some_and(|c| {
-        c.iter().flatten().zip(srgb.iter().flatten()).all(|(a, b)| (a - b).abs() <= TOLERANCE_SRGB)
+        c.iter()
+            .flatten()
+            .zip(srgb.iter().flatten())
+            .all(|(a, b)| (a - b).abs() <= TOLERANCE_SRGB)
     });
     (!est_srgb).then(|| profil.into())
 }
@@ -135,11 +141,16 @@ pub fn du_fichier(path: &std::path::Path) -> Option<std::sync::Arc<[u8]>> {
 /// `rXYZ`, `gXYZ`, `bXYZ` from the tag table, `None` when one is missing
 /// (a LUT-only profile): then nothing says it is sRGB, and it is declared.
 fn colorants(d: &[u8]) -> Option<[[f64; 3]; 3]> {
-    let be = |o: usize| d.get(o..o + 4).map(|b| u32::from_be_bytes([b[0], b[1], b[2], b[3]]));
+    let be = |o: usize| {
+        d.get(o..o + 4)
+            .map(|b| u32::from_be_bytes([b[0], b[1], b[2], b[3]]))
+    };
     let n = be(128)? as usize;
     let mut out = [[0.0; 3]; 3];
     for (i, sig) in [b"rXYZ", b"gXYZ", b"bXYZ"].iter().enumerate() {
-        let entree = (0..n.min(1024)).map(|k| 132 + 12 * k).find(|&e| d.get(e..e + 4) == Some(&sig[..]))?;
+        let entree = (0..n.min(1024))
+            .map(|k| 132 + 12 * k)
+            .find(|&e| d.get(e..e + 4) == Some(&sig[..]))?;
         let o = be(entree + 4)? as usize;
         if d.get(o..o + 4)? != b"XYZ " {
             return None;
@@ -185,8 +196,16 @@ pub fn jpeg_icc(data: &[u8]) -> Option<Vec<u8>> {
     let n = total?;
     morceaux.sort_by_key(|(seq, _)| *seq);
     let complet = morceaux.len() == usize::from(n)
-        && morceaux.iter().enumerate().all(|(k, (seq, _))| usize::from(*seq) == k + 1);
-    complet.then(|| morceaux.iter().flat_map(|(_, m)| m.iter().copied()).collect())
+        && morceaux
+            .iter()
+            .enumerate()
+            .all(|(k, (seq, _))| usize::from(*seq) == k + 1);
+    complet.then(|| {
+        morceaux
+            .iter()
+            .flat_map(|(_, m)| m.iter().copied())
+            .collect()
+    })
 }
 
 #[cfg(test)]
@@ -213,14 +232,21 @@ mod tests {
     /// The profile of a phone: sRGB2014 with its three colorants moved to
     /// Display P3's, which is all `a_declarer` reads beyond the header.
     fn faux_p3() -> Vec<u8> {
-        let p3 = [[0.5151, 0.2412, -0.0011], [0.2920, 0.6922, 0.0419], [0.1571, 0.0666, 0.7841]];
+        let p3 = [
+            [0.5151, 0.2412, -0.0011],
+            [0.2920, 0.6922, 0.0419],
+            [0.1571, 0.0666, 0.7841],
+        ];
         poser_colorants(ICC_DATA.to_vec(), p3)
     }
 
     fn poser_colorants(mut d: Vec<u8>, c: [[f64; 3]; 3]) -> Vec<u8> {
         let n = u32::from_be_bytes(d[128..132].try_into().unwrap()) as usize;
         for (i, sig) in [b"rXYZ", b"gXYZ", b"bXYZ"].iter().enumerate() {
-            let e = (0..n).map(|k| 132 + 12 * k).find(|&e| &d[e..e + 4] == &sig[..]).unwrap();
+            let e = (0..n)
+                .map(|k| 132 + 12 * k)
+                .find(|&e| &d[e..e + 4] == &sig[..])
+                .unwrap();
             let o = u32::from_be_bytes(d[e + 4..e + 8].try_into().unwrap()) as usize;
             for j in 0..3 {
                 let v = ((c[i][j] * 65536.0).round() as i32).to_be_bytes();
@@ -238,12 +264,28 @@ mod tests {
         let dans_l_ordre: Vec<usize> = (1..=n).collect();
         assert_eq!(jpeg_icc(&jpeg_avec(&p, 1000, &dans_l_ordre)).unwrap(), p);
         let renverse: Vec<usize> = (1..=n).rev().collect();
-        assert_eq!(jpeg_icc(&jpeg_avec(&p, 1000, &renverse)).unwrap(), p, "segments dans le désordre");
+        assert_eq!(
+            jpeg_icc(&jpeg_avec(&p, 1000, &renverse)).unwrap(),
+            p,
+            "segments dans le désordre"
+        );
         let manquant: Vec<usize> = (2..=n).collect();
-        assert_eq!(jpeg_icc(&jpeg_avec(&p, 1000, &manquant)), None, "un segment manque");
+        assert_eq!(
+            jpeg_icc(&jpeg_avec(&p, 1000, &manquant)),
+            None,
+            "un segment manque"
+        );
         let double: Vec<usize> = std::iter::once(1).chain(1..n).collect();
-        assert_eq!(jpeg_icc(&jpeg_avec(&p, 1000, &double)), None, "un segment en double");
-        assert_eq!(jpeg_icc(&[0xFF, 0xD8, 0xFF, 0xDA, 0, 2]), None, "aucun profil");
+        assert_eq!(
+            jpeg_icc(&jpeg_avec(&p, 1000, &double)),
+            None,
+            "un segment en double"
+        );
+        assert_eq!(
+            jpeg_icc(&[0xFF, 0xD8, 0xFF, 0xDA, 0, 2]),
+            None,
+            "aucun profil"
+        );
         assert_eq!(jpeg_icc(b"\x89PNG"), None);
     }
 
@@ -278,11 +320,16 @@ mod tests {
     #[cfg(target_os = "macos")]
     #[test]
     fn les_profils_du_systeme_se_classent() {
-        let lire = |n: &str| std::fs::read(format!("/System/Library/ColorSync/Profiles/{n}")).unwrap();
+        let lire =
+            |n: &str| std::fs::read(format!("/System/Library/ColorSync/Profiles/{n}")).unwrap();
         for n in ["sRGB Profile.icc", "ITU-709.icc"] {
             assert!(a_declarer(lire(n)).is_none(), "{n}");
         }
-        for n in ["Display P3.icc", "AdobeRGB1998.icc", "Generic RGB Profile.icc"] {
+        for n in [
+            "Display P3.icc",
+            "AdobeRGB1998.icc",
+            "Generic RGB Profile.icc",
+        ] {
             assert!(a_declarer(lire(n)).is_some(), "{n}");
         }
         assert!(a_declarer(lire("Generic CMYK Profile.icc")).is_none());
@@ -309,7 +356,10 @@ mod tests {
     fn the_profile_carries_its_identification() {
         let s = String::from_utf8_lossy(ICC_DATA);
         assert!(s.contains("sRGB2014"), "description absente");
-        assert!(s.contains("International Color Consortium"), "copyright absent");
+        assert!(
+            s.contains("International Color Consortium"),
+            "copyright absent"
+        );
     }
 
     /// A truncated or mislabelled profile is refused, not embedded.

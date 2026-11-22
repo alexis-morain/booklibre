@@ -24,7 +24,11 @@ pub fn new_detector() -> Box<dyn Detector> {
 /// (0,0) = top-left. The composer keeps them clear of crop edges and the
 /// linter counts the ones that end up cut anyway.
 pub fn face_boxes(det: &mut dyn Detector, img: &DynamicImage) -> Vec<[f64; 4]> {
-    let small = img.resize(DETECT_SIZE, DETECT_SIZE, image::imageops::FilterType::Triangle);
+    let small = img.resize(
+        DETECT_SIZE,
+        DETECT_SIZE,
+        image::imageops::FilterType::Triangle,
+    );
     let gray = small.to_luma8();
     let (w, h) = (gray.width(), gray.height());
     let data = ImageData::new(gray.as_raw(), w, h);

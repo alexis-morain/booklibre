@@ -93,7 +93,10 @@ pub fn releve_album(dir: &Path, root: &Path) -> Result<ReleveAlbum> {
         None => depuis_les_vignettes(dir, root)?,
     };
     let nettetes: Vec<f64> = photos.values().map(|m| m.nettete).collect();
-    Ok(ReleveAlbum { seuil_flou: seuil_de_flou(&nettetes), photos })
+    Ok(ReleveAlbum {
+        seuil_flou: seuil_de_flou(&nettetes),
+        photos,
+    })
 }
 
 /// Chaque photo de `thumbs.json` — tout le dossier, réserve comprise :
@@ -122,7 +125,12 @@ fn par_la_vignette(dir: &Path, root: &Path, src: &str, nom: &str) -> Option<Mesu
     let original = root.join(src);
     let m = crate::meta::read(&original);
     let (largeur, hauteur) = crate::heic::oriented_dimensions(&original, m.orientation).ok()?;
-    Some(Mesure { largeur, hauteur, nettete, exposition })
+    Some(Mesure {
+        largeur,
+        hauteur,
+        nettete,
+        exposition,
+    })
 }
 
 /// Ce que l'alerte lit d'une seule photo, par les deux mêmes chemins que
@@ -130,12 +138,16 @@ fn par_la_vignette(dir: &Path, root: &Path, src: &str, nom: &str) -> Option<Mesu
 /// sinon. Pour la fiche d'une photo, qui n'a pas à rouvrir tout le dossier.
 pub fn mesure_photo(dir: &Path, root: &Path, src: &str) -> Result<Option<Mesure>> {
     if let Some(releve) = Releve::dans_album(dir)? {
-        return Ok(releve.photos.iter().find(|p| releve.src(&p.path) == src).map(|p| Mesure {
-            largeur: p.orig.0,
-            hauteur: p.orig.1,
-            nettete: p.analysis.sharpness,
-            exposition: p.analysis.exposure,
-        }));
+        return Ok(releve
+            .photos
+            .iter()
+            .find(|p| releve.src(&p.path) == src)
+            .map(|p| Mesure {
+                largeur: p.orig.0,
+                hauteur: p.orig.1,
+                nettete: p.analysis.sharpness,
+                exposition: p.analysis.exposure,
+            }));
     }
     let index = dir.join("thumbs.json");
     if !index.is_file() {
@@ -143,7 +155,9 @@ pub fn mesure_photo(dir: &Path, root: &Path, src: &str) -> Result<Option<Mesure>
     }
     let thumbs: HashMap<String, String> =
         serde_json::from_str(&std::fs::read_to_string(&index)?).context("thumbs.json illisible")?;
-    Ok(thumbs.get(src).and_then(|nom| par_la_vignette(dir, root, src, nom)))
+    Ok(thumbs
+        .get(src)
+        .and_then(|nom| par_la_vignette(dir, root, src, nom)))
 }
 
 #[cfg(test)]
@@ -153,7 +167,8 @@ mod tests {
     use std::path::PathBuf;
 
     fn dossier(nom: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("colophon-qualite-{nom}-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("colophon-qualite-{nom}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -222,9 +237,7 @@ mod tests {
         let dir = dossier("releve");
         let racine = dir.join("vacances");
         let photos = (0..30)
-            .map(|i| {
-                photo(&racine, &format!("p{i:02}.jpg"), f64::from(i) + 0.5)
-            })
+            .map(|i| photo(&racine, &format!("p{i:02}.jpg"), f64::from(i) + 0.5))
             .collect();
         let releve = Releve {
             version: crate::releve::VERSION,
@@ -242,7 +255,12 @@ mod tests {
         assert_eq!(r.photos.len(), 30);
         assert_eq!(
             r.photos["p00.jpg"],
-            Mesure { largeur: 4000, hauteur: 3000, nettete: 0.5, exposition: 0.25 }
+            Mesure {
+                largeur: 4000,
+                hauteur: 3000,
+                nettete: 0.5,
+                exposition: 0.25
+            }
         );
         assert_eq!(r.seuil_flou, Some(2.5));
         let _ = fs::remove_dir_all(&dir);
@@ -259,7 +277,11 @@ mod tests {
         fs::create_dir_all(&cache).unwrap();
         fs::create_dir_all(&root).unwrap();
         let rayures = image::ImageBuffer::from_fn(64, 48, |x, _| {
-            image::Rgb(if x % 2 == 0 { [0u8, 0, 0] } else { [255, 255, 255] })
+            image::Rgb(if x % 2 == 0 {
+                [0u8, 0, 0]
+            } else {
+                [255, 255, 255]
+            })
         });
         let uni = image::ImageBuffer::from_fn(64, 48, |_, _| image::Rgb([128u8, 128, 128]));
         rayures.save(cache.join("v-nette.png")).unwrap();
@@ -279,7 +301,11 @@ mod tests {
         ]
         .into_iter()
         .collect();
-        fs::write(dir.join("thumbs.json"), serde_json::to_string(&thumbs).unwrap()).unwrap();
+        fs::write(
+            dir.join("thumbs.json"),
+            serde_json::to_string(&thumbs).unwrap(),
+        )
+        .unwrap();
 
         let r = releve_album(&dir, &root).unwrap();
         assert_eq!(r.photos.len(), 2, "{:?}", r.photos.keys());
@@ -340,7 +366,8 @@ mod tests {
                     let m = crate::meta::read(p);
                     let img = cache.get(p, m.orientation).ok()?;
                     let net = |i: &image::DynamicImage| analyze::nettete_et_exposition(i).0;
-                    let flou = |s: f32| image::DynamicImage::ImageRgba8(image::imageops::blur(&img, s));
+                    let flou =
+                        |s: f32| image::DynamicImage::ImageRgba8(image::imageops::blur(&img, s));
                     Some((net(&img), net(&flou(1.5)), net(&flou(3.0))))
                 })
                 .collect();
@@ -401,7 +428,11 @@ mod tests {
             "jeux": jeux_json,
         });
         if let Ok(chemin) = std::env::var("COLOPHON_MESURE") {
-            fs::write(&chemin, serde_json::to_string_pretty(&mesure).unwrap() + "\n").unwrap();
+            fs::write(
+                &chemin,
+                serde_json::to_string_pretty(&mesure).unwrap() + "\n",
+            )
+            .unwrap();
             println!("écrit : {chemin}");
         }
     }
@@ -456,7 +487,8 @@ mod tests {
                 )
                 .unwrap();
                 let album: Album =
-                    serde_json::from_str(&fs::read_to_string(out.join("album.json")).unwrap()).unwrap();
+                    serde_json::from_str(&fs::read_to_string(out.join("album.json")).unwrap())
+                        .unwrap();
                 let fiche: HashMap<String, (u32, u32)> = Releve::dans_album(&out)
                     .unwrap()
                     .map(|r| r.photos.iter().map(|p| (r.src(&p.path), p.orig)).collect())
@@ -479,7 +511,10 @@ mod tests {
                     let scene = crate::scene::Scene::of(spread, &g);
                     let gabarit = crate::pdf::slots_for(&spread.template, spread.slots.len(), &g);
                     for o in &scene.objects {
-                        let crate::scene::Role::Photo { cell, src, zoom, .. } = &o.role else {
+                        let crate::scene::Role::Photo {
+                            cell, src, zoom, ..
+                        } = &o.role
+                        else {
                             continue;
                         };
                         cases += 1;
@@ -512,14 +547,26 @@ mod tests {
                             let (w, h) = fiche[&c.src];
                             effective_ppi(&o.rect, w, h, 1.0)
                         };
-                        let avant = crate::reserve::reserve_classee(&out, &album, si, None).unwrap();
-                        let apres = crate::reserve::reserve_classee(&out, &album, si, Some(*cell)).unwrap();
-                        let (a, b) = (avant.candidats.first().map(ppi_de), apres.candidats.first().map(ppi_de));
+                        let avant =
+                            crate::reserve::reserve_classee(&out, &album, si, None).unwrap();
+                        let apres =
+                            crate::reserve::reserve_classee(&out, &album, si, Some(*cell)).unwrap();
+                        let (a, b) = (
+                            avant.candidats.first().map(ppi_de),
+                            apres.candidats.first().map(ppi_de),
+                        );
                         tete_avant += usize::from(a.is_some_and(|p| p < MIN_EFFECTIVE_PPI));
                         tete_apres += usize::from(b.is_some_and(|p| p < MIN_EFFECTIVE_PPI));
                     }
                 }
-                for (t, n) in total.iter_mut().zip([cases, sous_moteur, pleines, pleines_sous, tete_avant, tete_apres]) {
+                for (t, n) in total.iter_mut().zip([
+                    cases,
+                    sous_moteur,
+                    pleines,
+                    pleines_sous,
+                    tete_avant,
+                    tete_apres,
+                ]) {
                     *t += n;
                 }
                 eprintln!(

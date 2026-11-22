@@ -40,41 +40,146 @@ use std::sync::OnceLock;
 /// refuse un manifeste qui nomme un fichier absent de cette liste.
 const MANIFESTE: &str = include_str!("../assets/ornements/pack.toml");
 const SVG: [(&str, &str); 35] = [
-    ("filet-flare.svg", include_str!("../assets/ornements/filet-flare.svg")),
-    ("filet-fleche.svg", include_str!("../assets/ornements/filet-fleche.svg")),
-    ("filet-losange.svg", include_str!("../assets/ornements/filet-losange.svg")),
-    ("fleuron-lierre.svg", include_str!("../assets/ornements/fleuron-lierre.svg")),
-    ("fleuron-vrilles.svg", include_str!("../assets/ornements/fleuron-vrilles.svg")),
-    ("fleuron-bouquet.svg", include_str!("../assets/ornements/fleuron-bouquet.svg")),
-    ("fleuron-arabesque.svg", include_str!("../assets/ornements/fleuron-arabesque.svg")),
-    ("fleuron-grappe.svg", include_str!("../assets/ornements/fleuron-grappe.svg")),
-    ("fleuron-rose.svg", include_str!("../assets/ornements/fleuron-rose.svg")),
-    ("fleuron-trophee.svg", include_str!("../assets/ornements/fleuron-trophee.svg")),
-    ("fleuron-lys.svg", include_str!("../assets/ornements/fleuron-lys.svg")),
-    ("fleuron-crosse.svg", include_str!("../assets/ornements/fleuron-crosse.svg")),
-    ("fleuron-ramage.svg", include_str!("../assets/ornements/fleuron-ramage.svg")),
-    ("fleuron-vigne.svg", include_str!("../assets/ornements/fleuron-vigne.svg")),
-    ("fleuron-tourbillon.svg", include_str!("../assets/ornements/fleuron-tourbillon.svg")),
-    ("fleuron-oiseau.svg", include_str!("../assets/ornements/fleuron-oiseau.svg")),
-    ("fleuron-brin.svg", include_str!("../assets/ornements/fleuron-brin.svg")),
-    ("filet-fuseaux.svg", include_str!("../assets/ornements/filet-fuseaux.svg")),
-    ("filet-olive.svg", include_str!("../assets/ornements/filet-olive.svg")),
-    ("filet-noeud.svg", include_str!("../assets/ornements/filet-noeud.svg")),
-    ("filet-perle.svg", include_str!("../assets/ornements/filet-perle.svg")),
-    ("filet-ondule.svg", include_str!("../assets/ornements/filet-ondule.svg")),
-    ("filet-effile.svg", include_str!("../assets/ornements/filet-effile.svg")),
-    ("filet-brindille.svg", include_str!("../assets/ornements/filet-brindille.svg")),
-    ("filet-frise.svg", include_str!("../assets/ornements/filet-frise.svg")),
-    ("filet-fleurettes.svg", include_str!("../assets/ornements/filet-fleurettes.svg")),
-    ("filet-feuillage.svg", include_str!("../assets/ornements/filet-feuillage.svg")),
-    ("separateur-spirales.svg", include_str!("../assets/ornements/separateur-spirales.svg")),
-    ("separateur-boucles.svg", include_str!("../assets/ornements/separateur-boucles.svg")),
-    ("separateur-rinceaux.svg", include_str!("../assets/ornements/separateur-rinceaux.svg")),
-    ("separateur-rameaux.svg", include_str!("../assets/ornements/separateur-rameaux.svg")),
-    ("separateur-palmette.svg", include_str!("../assets/ornements/separateur-palmette.svg")),
-    ("separateur-pointes.svg", include_str!("../assets/ornements/separateur-pointes.svg")),
-    ("separateur-vague.svg", include_str!("../assets/ornements/separateur-vague.svg")),
-    ("separateur-volutes.svg", include_str!("../assets/ornements/separateur-volutes.svg")),
+    (
+        "filet-flare.svg",
+        include_str!("../assets/ornements/filet-flare.svg"),
+    ),
+    (
+        "filet-fleche.svg",
+        include_str!("../assets/ornements/filet-fleche.svg"),
+    ),
+    (
+        "filet-losange.svg",
+        include_str!("../assets/ornements/filet-losange.svg"),
+    ),
+    (
+        "fleuron-lierre.svg",
+        include_str!("../assets/ornements/fleuron-lierre.svg"),
+    ),
+    (
+        "fleuron-vrilles.svg",
+        include_str!("../assets/ornements/fleuron-vrilles.svg"),
+    ),
+    (
+        "fleuron-bouquet.svg",
+        include_str!("../assets/ornements/fleuron-bouquet.svg"),
+    ),
+    (
+        "fleuron-arabesque.svg",
+        include_str!("../assets/ornements/fleuron-arabesque.svg"),
+    ),
+    (
+        "fleuron-grappe.svg",
+        include_str!("../assets/ornements/fleuron-grappe.svg"),
+    ),
+    (
+        "fleuron-rose.svg",
+        include_str!("../assets/ornements/fleuron-rose.svg"),
+    ),
+    (
+        "fleuron-trophee.svg",
+        include_str!("../assets/ornements/fleuron-trophee.svg"),
+    ),
+    (
+        "fleuron-lys.svg",
+        include_str!("../assets/ornements/fleuron-lys.svg"),
+    ),
+    (
+        "fleuron-crosse.svg",
+        include_str!("../assets/ornements/fleuron-crosse.svg"),
+    ),
+    (
+        "fleuron-ramage.svg",
+        include_str!("../assets/ornements/fleuron-ramage.svg"),
+    ),
+    (
+        "fleuron-vigne.svg",
+        include_str!("../assets/ornements/fleuron-vigne.svg"),
+    ),
+    (
+        "fleuron-tourbillon.svg",
+        include_str!("../assets/ornements/fleuron-tourbillon.svg"),
+    ),
+    (
+        "fleuron-oiseau.svg",
+        include_str!("../assets/ornements/fleuron-oiseau.svg"),
+    ),
+    (
+        "fleuron-brin.svg",
+        include_str!("../assets/ornements/fleuron-brin.svg"),
+    ),
+    (
+        "filet-fuseaux.svg",
+        include_str!("../assets/ornements/filet-fuseaux.svg"),
+    ),
+    (
+        "filet-olive.svg",
+        include_str!("../assets/ornements/filet-olive.svg"),
+    ),
+    (
+        "filet-noeud.svg",
+        include_str!("../assets/ornements/filet-noeud.svg"),
+    ),
+    (
+        "filet-perle.svg",
+        include_str!("../assets/ornements/filet-perle.svg"),
+    ),
+    (
+        "filet-ondule.svg",
+        include_str!("../assets/ornements/filet-ondule.svg"),
+    ),
+    (
+        "filet-effile.svg",
+        include_str!("../assets/ornements/filet-effile.svg"),
+    ),
+    (
+        "filet-brindille.svg",
+        include_str!("../assets/ornements/filet-brindille.svg"),
+    ),
+    (
+        "filet-frise.svg",
+        include_str!("../assets/ornements/filet-frise.svg"),
+    ),
+    (
+        "filet-fleurettes.svg",
+        include_str!("../assets/ornements/filet-fleurettes.svg"),
+    ),
+    (
+        "filet-feuillage.svg",
+        include_str!("../assets/ornements/filet-feuillage.svg"),
+    ),
+    (
+        "separateur-spirales.svg",
+        include_str!("../assets/ornements/separateur-spirales.svg"),
+    ),
+    (
+        "separateur-boucles.svg",
+        include_str!("../assets/ornements/separateur-boucles.svg"),
+    ),
+    (
+        "separateur-rinceaux.svg",
+        include_str!("../assets/ornements/separateur-rinceaux.svg"),
+    ),
+    (
+        "separateur-rameaux.svg",
+        include_str!("../assets/ornements/separateur-rameaux.svg"),
+    ),
+    (
+        "separateur-palmette.svg",
+        include_str!("../assets/ornements/separateur-palmette.svg"),
+    ),
+    (
+        "separateur-pointes.svg",
+        include_str!("../assets/ornements/separateur-pointes.svg"),
+    ),
+    (
+        "separateur-vague.svg",
+        include_str!("../assets/ornements/separateur-vague.svg"),
+    ),
+    (
+        "separateur-volutes.svg",
+        include_str!("../assets/ornements/separateur-volutes.svg"),
+    ),
 ];
 
 /// Les licences qu'un ornement a le droit de porter, et il n'y en aura pas de
@@ -182,7 +287,14 @@ pub enum Segment {
     /// `l` en PDF.
     Ligne { x: f64, y: f64 },
     /// `c` en PDF : deux contrôles et un point.
-    Courbe { x1: f64, y1: f64, x2: f64, y2: f64, x: f64, y: f64 },
+    Courbe {
+        x1: f64,
+        y1: f64,
+        x2: f64,
+        y2: f64,
+        x: f64,
+        y: f64,
+    },
     /// `h` en PDF.
     Ferme,
 }
@@ -203,7 +315,10 @@ pub enum Refus {
     /// `transform` ou `style` : ce qui se replierait dans la géométrie si
     /// quelqu'un le repliait, et qui reste sinon une seconde façon de bouger
     /// un point.
-    Attribut { balise: String, attribut: String },
+    Attribut {
+        balise: String,
+        attribut: String,
+    },
     /// Une commande de chemin hors du sous-ensemble : un arc, une cubique
     /// lisse, une quadratique.
     Commande(char),
@@ -302,7 +417,10 @@ impl fmt::Display for RefusPack {
                  (fleuron, filet ou separateur)"
             ),
             RefusPack::Fichier { id, fichier } => {
-                write!(f, "l'ornement « {id} » nomme « {fichier} », qui n'est pas compilé")
+                write!(
+                    f,
+                    "l'ornement « {id} » nomme « {fichier} », qui n'est pas compilé"
+                )
             }
             RefusPack::Svg { fichier, refus } => write!(f, "{fichier} : {refus}"),
             RefusPack::Doublon(id) => write!(f, "deux ornements portent l'identifiant « {id} »"),
@@ -323,7 +441,10 @@ pub fn lire_pack(manifeste: &str, fichiers: &[(&str, &str)]) -> Result<Vec<Ornem
             e.get(c)
                 .filter(|v| !v.is_empty())
                 .cloned()
-                .ok_or_else(|| RefusPack::Champ { id: e.get("id").cloned().unwrap_or_default(), champ: c })
+                .ok_or_else(|| RefusPack::Champ {
+                    id: e.get("id").cloned().unwrap_or_default(),
+                    champ: c,
+                })
         };
         let id = champ("id")?;
         let fichier = champ("fichier")?;
@@ -336,7 +457,10 @@ pub fn lire_pack(manifeste: &str, fichiers: &[(&str, &str)]) -> Result<Vec<Ornem
             return Err(RefusPack::Licence { id, licence });
         }
         let Some(famille) = Famille::lire(&famille_brute) else {
-            return Err(RefusPack::Famille { id, famille: famille_brute });
+            return Err(RefusPack::Famille {
+                id,
+                famille: famille_brute,
+            });
         };
         if ornements.iter().any(|o: &Ornement| o.id == id) {
             return Err(RefusPack::Doublon(id));
@@ -344,7 +468,10 @@ pub fn lire_pack(manifeste: &str, fichiers: &[(&str, &str)]) -> Result<Vec<Ornem
         let Some((_, svg)) = fichiers.iter().find(|(n, _)| *n == fichier) else {
             return Err(RefusPack::Fichier { id, fichier });
         };
-        let dessin = lire_svg(svg).map_err(|refus| RefusPack::Svg { fichier: fichier.clone(), refus })?;
+        let dessin = lire_svg(svg).map_err(|refus| RefusPack::Svg {
+            fichier: fichier.clone(),
+            refus,
+        })?;
 
         ornements.push(Ornement {
             id,
@@ -466,7 +593,10 @@ pub fn lire_svg(src: &str) -> Result<Dessin, Refus> {
 fn refuse_habillage(balise: &str, attributs: &[(String, String)]) -> Result<(), Refus> {
     for (k, _) in attributs {
         if k == "transform" || k == "style" {
-            return Err(Refus::Attribut { balise: balise.into(), attribut: k.clone() });
+            return Err(Refus::Attribut {
+                balise: balise.into(),
+                attribut: k.clone(),
+            });
         }
     }
     Ok(())
@@ -655,7 +785,14 @@ pub fn lire_chemin(d: &str) -> Result<Vec<Segment>, Refus> {
                 let y2 = lex.nombre()? + oy;
                 let x = lex.nombre()? + ox;
                 let y = lex.nombre()? + oy;
-                segments.push(Segment::Courbe { x1, y1, x2, y2, x, y });
+                segments.push(Segment::Courbe {
+                    x1,
+                    y1,
+                    x2,
+                    y2,
+                    x,
+                    y,
+                });
                 (cx, cy) = (x, y);
             }
             'Z' => {
@@ -664,7 +801,10 @@ pub fn lire_chemin(d: &str) -> Result<Vec<Segment>, Refus> {
             }
             _ => return Err(Refus::Commande(c)),
         }
-        if segments.first().is_some_and(|s| !matches!(s, Segment::Vers { .. })) {
+        if segments
+            .first()
+            .is_some_and(|s| !matches!(s, Segment::Vers { .. }))
+        {
             return Err(Refus::SansDepart);
         }
     }
@@ -684,7 +824,10 @@ struct Lexeur {
 
 impl Lexeur {
     fn new(s: &str) -> Self {
-        Lexeur { o: s.chars().collect(), i: 0 }
+        Lexeur {
+            o: s.chars().collect(),
+            i: 0,
+        }
     }
 
     fn fini(&self) -> bool {
@@ -792,7 +935,10 @@ mod tests {
     /// monde. Le précédent est `lib.rs::nom_apercu` et sa table jumelle.
     #[test]
     fn le_nom_du_pack_est_ecrit_des_deux_cotes() {
-        assert_eq!(PACK_INTERNE, "colophon", "miroir : ornement.ts::PACK_INTERNE");
+        assert_eq!(
+            PACK_INTERNE, "colophon",
+            "miroir : ornement.ts::PACK_INTERNE"
+        );
     }
 
     /// Le pack livré se lit, et il se lit **entièrement** : trente-cinq actifs,
@@ -801,13 +947,32 @@ mod tests {
     #[test]
     fn le_pack_livre_est_conforme() {
         let p = pack();
-        assert_eq!(p.len(), 35, "trois de démonstration et trente-deux de Commons");
-        for (famille, n) in [(Famille::Fleuron, 14), (Famille::Filet, 13), (Famille::Separateur, 8)] {
-            assert_eq!(p.iter().filter(|o| o.famille == famille).count(), n, "{famille:?}");
+        assert_eq!(
+            p.len(),
+            35,
+            "trois de démonstration et trente-deux de Commons"
+        );
+        for (famille, n) in [
+            (Famille::Fleuron, 14),
+            (Famille::Filet, 13),
+            (Famille::Separateur, 8),
+        ] {
+            assert_eq!(
+                p.iter().filter(|o| o.famille == famille).count(),
+                n,
+                "{famille:?}"
+            );
         }
         for o in p {
-            assert!(LICENCES.contains(&o.licence.as_str()), "{} : {}", o.id, o.licence);
-            assert!(o.source.starts_with("https://commons.wikimedia.org/wiki/File:"));
+            assert!(
+                LICENCES.contains(&o.licence.as_str()),
+                "{} : {}",
+                o.id,
+                o.licence
+            );
+            assert!(o
+                .source
+                .starts_with("https://commons.wikimedia.org/wiki/File:"));
             assert!(!o.auteur.is_empty());
             assert!(!o.titre_fr.is_empty() && !o.titre_en.is_empty());
             assert!(!o.dessin.chemins.is_empty());
@@ -922,7 +1087,15 @@ mod tests {
     #[test]
     fn les_nombres_colles_se_lisent() {
         let s = lire_chemin("M0,0c0,0.931-33.845,3.722-59.23,3.722").unwrap();
-        let Segment::Courbe { x1, y1, x2, y2, x, y } = s[1] else {
+        let Segment::Courbe {
+            x1,
+            y1,
+            x2,
+            y2,
+            x,
+            y,
+        } = s[1]
+        else {
             panic!("attendu une cubique, vu {:?}", s[1]);
         };
         assert_eq!((x1, y1), (0.0, 0.931));
@@ -960,7 +1133,10 @@ mod tests {
             let _ = lire_svg(tronque);
         }
         assert_eq!(lire_chemin("M0,0 Z5").unwrap_err(), Refus::ApresFermeture);
-        assert_eq!(lire_chemin("M0,0 z 5,5").unwrap_err(), Refus::ApresFermeture);
+        assert_eq!(
+            lire_chemin("M0,0 z 5,5").unwrap_err(),
+            Refus::ApresFermeture
+        );
         // Et un `Z` suivi d'une vraie commande reste légitime : c'est la
         // forme qu'un chemin à plusieurs sous-chemins prend.
         assert_eq!(lire_chemin("M0,0 H1 Z M5,5 H6 Z").unwrap().len(), 6);
@@ -979,7 +1155,12 @@ mod tests {
                    <!-- ancien <path/> <path d=\"M9,9 L8,8\"/> -->\n\
                    <path d=\"M2,2 L3,3\"/>\n</svg>";
         let d = lire_svg(svg).unwrap();
-        assert_eq!(d.chemins.len(), 1, "le commenté est entré : {:?}", d.chemins);
+        assert_eq!(
+            d.chemins.len(),
+            1,
+            "le commenté est entré : {:?}",
+            d.chemins
+        );
         assert_eq!(d.chemins[0].segments[0], Segment::Vers { x: 2.0, y: 2.0 });
 
         // Un commentaire non fermé avale la fin du fichier, ce qui est
@@ -1018,10 +1199,9 @@ mod tests {
     /// plein est une tache noire.
     #[test]
     fn la_regle_de_remplissage_voyage() {
-        let d = lire_svg(
-            r#"<svg viewBox="0 0 10 10"><path fill-rule="evenodd" d="M0,0 H1 Z"/></svg>"#,
-        )
-        .unwrap();
+        let d =
+            lire_svg(r#"<svg viewBox="0 0 10 10"><path fill-rule="evenodd" d="M0,0 H1 Z"/></svg>"#)
+                .unwrap();
         assert!(d.chemins[0].evenodd);
         assert!(!lire_svg(CARRE).unwrap().chemins[0].evenodd);
     }
@@ -1068,5 +1248,3 @@ mod tests {
         assert!(matches!(toml_ornements(m), Err(RefusPack::Manifeste(_))));
     }
 }
-
-

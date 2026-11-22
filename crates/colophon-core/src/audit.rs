@@ -101,7 +101,12 @@ pub struct Counter {
 impl Counter {
     /// Un compteur qui décide : au-dessus de son seuil, l'album est rouge.
     fn new(seuil: usize, dur: bool, details: Vec<Finding>) -> Self {
-        Self { count: details.len(), seuil: Some(seuil), dur, details }
+        Self {
+            count: details.len(),
+            seuil: Some(seuil),
+            dur,
+            details,
+        }
     }
 
     /// Un compteur qui avertit : il compte et il détaille, il ne décide pas.
@@ -109,7 +114,12 @@ impl Counter {
     /// C'est « le pli bute, la marge avertit » porté au linter. Le refus, lui,
     /// reste au prévol, et seulement sur la coupe et le pli.
     fn avertit(details: Vec<Finding>) -> Self {
-        Self { count: details.len(), seuil: None, dur: false, details }
+        Self {
+            count: details.len(),
+            seuil: None,
+            dur: false,
+            details,
+        }
     }
 
     pub fn passes(&self) -> bool {
@@ -277,7 +287,13 @@ fn faces_des_objets(
 ) -> std::collections::BTreeMap<String, std::borrow::Cow<'static, crate::font::Embarquee>> {
     let mut out = std::collections::BTreeMap::new();
     let quatrieme = album.cover.iter().filter_map(|c| c.back_police.as_ref());
-    for p in album.spreads.iter().flat_map(|s| &s.objets).filter_map(|o| o.police_texte()).chain(quatrieme) {
+    for p in album
+        .spreads
+        .iter()
+        .flat_map(|s| &s.objets)
+        .filter_map(|o| o.police_texte())
+        .chain(quatrieme)
+    {
         if out.contains_key(&p.fichier) {
             continue;
         }
@@ -327,46 +343,48 @@ pub(crate) fn mesure_photos(
     let thumbs: HashMap<String, String> =
         serde_json::from_str(&fs::read_to_string(dir.join("thumbs.json"))?)
             .context("thumbs.json illisible")?;
-    srcs
-        .par_iter()
-        .map_init(face::new_detector, |det, src| -> Result<(String, PhotoInfo)> {
-            let name = thumbs
-                .get(src)
-                .with_context(|| format!("{src} absent de thumbs.json"))?;
-            let path = crate::thumb::chemin(dir, name)
-                .with_context(|| format!("vignette de {src} : nom refusé dans thumbs.json"))?;
-            let img = image::open(&path)
-                .with_context(|| format!("vignette illisible pour {src}, régénérez l'album"))?;
-            let analysis = analyze::analyze(&img);
-            let faces = face::face_boxes(det.as_mut(), &img);
-            let p = root.join(src);
-            let m = meta::read(&p);
-            // A photo whose header will not give its size is named and
-            // refused, never averaged over: the counter it feeds is the one
-            // that keeps a book above 250 ppi.
-            let orig = crate::heic::oriented_dimensions(&p, m.orientation)
-                .with_context(|| {
-                    format!("taille d'origine illisible pour {src}, régénérez l'album")
-                })?;
-            let (taken, rating) = (m.taken_reliable.then_some(m.taken), m.rating);
-            Ok((
-                src.clone(),
-                PhotoInfo {
-                    w: f64::from(analysis.width),
-                    h: f64::from(analysis.height),
-                    dhash: analysis.dhash,
-                    phash: analysis.phash,
-                    colorsig: analysis.colorsig,
-                    // Same score the composer ranked the chapter with, stars
-                    // included: the opening counter judges the choice that
-                    // was actually available to it.
-                    score: analysis.score() * rating_factor(rating),
-                    faces,
-                    orig,
-                    taken,
-                },
-            ))
-        })
+    srcs.par_iter()
+        .map_init(
+            face::new_detector,
+            |det, src| -> Result<(String, PhotoInfo)> {
+                let name = thumbs
+                    .get(src)
+                    .with_context(|| format!("{src} absent de thumbs.json"))?;
+                let path = crate::thumb::chemin(dir, name)
+                    .with_context(|| format!("vignette de {src} : nom refusé dans thumbs.json"))?;
+                let img = image::open(&path)
+                    .with_context(|| format!("vignette illisible pour {src}, régénérez l'album"))?;
+                let analysis = analyze::analyze(&img);
+                let faces = face::face_boxes(det.as_mut(), &img);
+                let p = root.join(src);
+                let m = meta::read(&p);
+                // A photo whose header will not give its size is named and
+                // refused, never averaged over: the counter it feeds is the one
+                // that keeps a book above 250 ppi.
+                let orig =
+                    crate::heic::oriented_dimensions(&p, m.orientation).with_context(|| {
+                        format!("taille d'origine illisible pour {src}, régénérez l'album")
+                    })?;
+                let (taken, rating) = (m.taken_reliable.then_some(m.taken), m.rating);
+                Ok((
+                    src.clone(),
+                    PhotoInfo {
+                        w: f64::from(analysis.width),
+                        h: f64::from(analysis.height),
+                        dhash: analysis.dhash,
+                        phash: analysis.phash,
+                        colorsig: analysis.colorsig,
+                        // Same score the composer ranked the chapter with, stars
+                        // included: the opening counter judges the choice that
+                        // was actually available to it.
+                        score: analysis.score() * rating_factor(rating),
+                        faces,
+                        orig,
+                        taken,
+                    },
+                ))
+            },
+        )
         .collect::<Result<_>>()
         .map(|infos| (infos, Vec::new()))
 }
@@ -378,8 +396,11 @@ fn depuis_releve(
     releve: &crate::releve::Releve,
     srcs: &[String],
 ) -> Result<HashMap<String, PhotoInfo>> {
-    let par_src: HashMap<String, &crate::pipeline::Photo> =
-        releve.photos.iter().map(|p| (releve.src(&p.path), p)).collect();
+    let par_src: HashMap<String, &crate::pipeline::Photo> = releve
+        .photos
+        .iter()
+        .map(|p| (releve.src(&p.path), p))
+        .collect();
     srcs.iter()
         .map(|src| {
             let p = par_src.get(src).with_context(|| {
@@ -434,7 +455,14 @@ pub(crate) fn compteurs_avec(
     // projet : c'est elle que `text_width_mm` mesure et que l'export pose.
     let projet = crate::font::face_projet();
     let absents = |s: &str| projet.absents(s);
-    compteurs_avec_face(album, infos, g, mesure, &absents, &crate::scene::sans_face_d_objet)
+    compteurs_avec_face(
+        album,
+        infos,
+        g,
+        mesure,
+        &absents,
+        &crate::scene::sans_face_d_objet,
+    )
 }
 
 /// [`compteurs_avec`] plus la question que seule la face peut trancher :
@@ -458,12 +486,11 @@ pub(crate) fn compteurs_avec_face<'f>(
     // does not contain. The scenes are kept rather than thrown away, the
     // free-object counters below reading the very same walk — and the bench
     // re-runs all of this after every candidate substitution.
-    let scenes: Vec<crate::scene::Scene> =
-        album
-            .spreads
-            .iter()
-            .map(|s| crate::scene::Scene::of_avec(s, g, mesure, face_objet))
-            .collect();
+    let scenes: Vec<crate::scene::Scene> = album
+        .spreads
+        .iter()
+        .map(|s| crate::scene::Scene::of_avec(s, g, mesure, face_objet))
+        .collect();
     let rects_of: Vec<Vec<pdf::Rect>> = scenes
         .iter()
         .map(|scene| {
@@ -489,7 +516,10 @@ pub(crate) fn compteurs_avec_face<'f>(
                     planche: si + 1,
                     case_idx: Some(ci),
                     src: Some(slot.src.clone()),
-                    info: format!("visage à moins de {:.0} % du bord {side}", FACE_MARGIN * 100.0),
+                    info: format!(
+                        "visage à moins de {:.0} % du bord {side}",
+                        FACE_MARGIN * 100.0
+                    ),
                 });
             }
 
@@ -566,9 +596,7 @@ pub(crate) fn compteurs_avec_face<'f>(
         // de texte d'une étape sans photo est un chapitre d'une planche voulu
         // (P-s2), pas un chapitre que le Composer a laissé maigre. Partout
         // ailleurs le compteur reste ce qu'il était, au chiffre près.
-        .filter(|r| {
-            r.len() == 1 && (!album.spreads[r.start].slots.is_empty() || !est_voyage)
-        })
+        .filter(|r| r.len() == 1 && (!album.spreads[r.start].slots.is_empty() || !est_voyage))
         .map(|r| Finding {
             planche: r.start + 1,
             case_idx: None,
@@ -664,8 +692,7 @@ pub(crate) fn compteurs_avec_face<'f>(
         .iter()
         .enumerate()
         .filter(|(si, s)| {
-            s.caption.is_some()
-                && pdf::caption_height(&s.template, &rects_of[*si], g) < 0.0
+            s.caption.is_some() && pdf::caption_height(&s.template, &rects_of[*si], g) < 0.0
         })
         .map(|(si, _)| Finding {
             planche: si + 1,
@@ -701,7 +728,9 @@ pub(crate) fn compteurs_avec_face<'f>(
         // définition de « la case d'une photo ».
         let cases = &rects_of[si];
         for objet in &scene.objects {
-            let Some(index) = objet.role.index_libre() else { continue };
+            let Some(index) = objet.role.index_libre() else {
+                continue;
+            };
             if matches!(objet.role, crate::scene::Role::Ornement { .. }) {
                 // Une seule ligne par ornement, quel que soit le nombre de
                 // cases qu'il mord : ce qui se répare est l'ornement.
@@ -719,9 +748,11 @@ pub(crate) fn compteurs_avec_face<'f>(
                 }
             }
             let (overflow, trop_large) = match &objet.role {
-                crate::scene::Role::FreeText { overflow, trop_large, .. } => {
-                    (*overflow, *trop_large)
-                }
+                crate::scene::Role::FreeText {
+                    overflow,
+                    trop_large,
+                    ..
+                } => (*overflow, *trop_large),
                 _ => (false, false),
             };
             if crate::scene::hors_marge(&objet.rect, objet.angle, g) {
@@ -741,7 +772,10 @@ pub(crate) fn compteurs_avec_face<'f>(
                     planche: si + 1,
                     case_idx: None,
                     src: None,
-                    info: format!("le texte de l'objet libre n° {} dépasse sa boîte", index + 1),
+                    info: format!(
+                        "le texte de l'objet libre n° {} dépasse sa boîte",
+                        index + 1
+                    ),
                 });
             } else if trop_large {
                 deborde.push(Finding {
@@ -763,27 +797,40 @@ pub(crate) fn compteurs_avec_face<'f>(
     // écrit lui-même (garde, colophon) sont dans la scène comme les autres :
     // un nom de lieu s'y imprime aussi.
     let mut absents_trouves = Vec::new();
-    let mut signale = |planche: usize, quoi: &str, texte: &str, propre: Option<&crate::font::Embarquee>| {
-        let manquent = match propre {
-            Some(face) => face.absents(texte),
-            None => absents(texte),
+    let mut signale =
+        |planche: usize, quoi: &str, texte: &str, propre: Option<&crate::font::Embarquee>| {
+            let manquent = match propre {
+                Some(face) => face.absents(texte),
+                None => absents(texte),
+            };
+            if manquent.is_empty() {
+                return;
+            }
+            let liste: Vec<String> = manquent
+                .iter()
+                .take(8)
+                .map(|c| format!("« {c} »"))
+                .collect();
+            let suite = if manquent.len() > 8 {
+                format!(" et {} autres", manquent.len() - 8)
+            } else {
+                String::new()
+            };
+            absents_trouves.push(Finding {
+                planche,
+                case_idx: None,
+                src: None,
+                info: format!(
+                    "{quoi} : {}{suite} ne se dessinent pas dans {}, imprimés « ? »",
+                    liste.join(", "),
+                    if propre.is_some() {
+                        "sa police"
+                    } else {
+                        "la police du livre"
+                    }
+                ),
+            });
         };
-        if manquent.is_empty() {
-            return;
-        }
-        let liste: Vec<String> = manquent.iter().take(8).map(|c| format!("« {c} »")).collect();
-        let suite = if manquent.len() > 8 { format!(" et {} autres", manquent.len() - 8) } else { String::new() };
-        absents_trouves.push(Finding {
-            planche,
-            case_idx: None,
-            src: None,
-            info: format!(
-                "{quoi} : {}{suite} ne se dessinent pas dans {}, imprimés « ? »",
-                liste.join(", "),
-                if propre.is_some() { "sa police" } else { "la police du livre" }
-            ),
-        });
-    };
     if let Some(cover) = &album.cover {
         signale(0, "titre de couverture", &cover.title, None);
         signale(0, "sous-titre de couverture", &cover.subtitle, None);
@@ -812,9 +859,12 @@ pub(crate) fn compteurs_avec_face<'f>(
     for (si, scene) in scenes.iter().enumerate() {
         for objet in &scene.objects {
             match &objet.role {
-                crate::scene::Role::PhotoCaption { cell, text, .. } => {
-                    signale(si + 1, &format!("légende de la case {}", cell + 1), text, None)
-                }
+                crate::scene::Role::PhotoCaption { cell, text, .. } => signale(
+                    si + 1,
+                    &format!("légende de la case {}", cell + 1),
+                    text,
+                    None,
+                ),
                 crate::scene::Role::ChapterCaption { text, .. } => {
                     signale(si + 1, "titre de chapitre", text, None)
                 }
@@ -825,7 +875,12 @@ pub(crate) fn compteurs_avec_face<'f>(
                 crate::scene::Role::FreeText { index, lines, .. } => {
                     let tout: Vec<&str> = lines.iter().map(|l| l.text.as_str()).collect();
                     let propre = album.spreads[si].objets.get(*index).and_then(face_objet);
-                    signale(si + 1, &format!("objet libre n° {}", index + 1), &tout.join("\n"), propre)
+                    signale(
+                        si + 1,
+                        &format!("objet libre n° {}", index + 1),
+                        &tout.join("\n"),
+                        propre,
+                    )
                 }
                 _ => {}
             }
@@ -903,7 +958,9 @@ fn face_cuts(
 /// range, and the missing-caption counter reports it separately.
 fn chapter_ranges(album: &Album) -> Vec<Range<usize>> {
     let n = album.spreads.len();
-    let Some(debut) = premiere_photo(album) else { return Vec::new() };
+    let Some(debut) = premiere_photo(album) else {
+        return Vec::new();
+    };
     let mut starts: Vec<usize> = album
         .spreads
         .iter()
@@ -1059,7 +1116,12 @@ mod tests {
     #[test]
     fn face_cut_only_counts_cropped_edges() {
         // Square cell over a landscape image: crop cuts left and right only.
-        let rect = pdf::Rect { x: 0.0, y: 0.0, w: 100.0, h: 100.0 };
+        let rect = pdf::Rect {
+            x: 0.0,
+            y: 0.0,
+            w: 100.0,
+            h: 100.0,
+        };
         // Face against the left edge of the visible window: cut.
         let faces = [[0.05, 0.4, 0.2, 0.3]];
         let cuts = face_cuts(&rect, 2000.0, 1000.0, [0.5, 0.5], 1.0, &faces);
@@ -1139,12 +1201,14 @@ mod tests {
         let tient = compteurs_avec(&a, &HashMap::new(), &g, &etroite);
         assert_eq!(
             tient.objet_deborde.count, 0,
-            "dans une face étroite le bloc tient : {:?}", tient.objet_deborde.details
+            "dans une face étroite le bloc tient : {:?}",
+            tient.objet_deborde.details
         );
         let deborde = compteurs_avec(&a, &HashMap::new(), &g, &large);
         assert_eq!(
             deborde.objet_deborde.count, 1,
-            "dans une face large le même bloc déborde : {:?}", deborde.objet_deborde.details
+            "dans une face large le même bloc déborde : {:?}",
+            deborde.objet_deborde.details
         );
 
         // Et `compteurs` est bien le même sous la face du projet : le doublet
@@ -1181,18 +1245,37 @@ mod tests {
         };
         a.spreads = vec![planche(None), planche(Some("Le vif zéphyr"))];
         let c = compteurs(&a, &HashMap::new(), &g);
-        assert_eq!(c.caractere_absent.count, 0, "{:?}", c.caractere_absent.details);
+        assert_eq!(
+            c.caractere_absent.count, 0,
+            "{:?}",
+            c.caractere_absent.details
+        );
 
         a.title = "日本の旅".into();
         a.spreads[1].caption = Some("東京 → 京都".into());
         let c = compteurs(&a, &HashMap::new(), &g);
-        assert_eq!(c.caractere_absent.count, 2, "{:?}", c.caractere_absent.details);
-        assert_eq!(c.caractere_absent.details[0].planche, 0, "la couverture d'abord");
-        assert!(c.caractere_absent.details[0].info.contains("« 日 »"), "{}", c.caractere_absent.details[0].info);
+        assert_eq!(
+            c.caractere_absent.count, 2,
+            "{:?}",
+            c.caractere_absent.details
+        );
+        assert_eq!(
+            c.caractere_absent.details[0].planche, 0,
+            "la couverture d'abord"
+        );
+        assert!(
+            c.caractere_absent.details[0].info.contains("« 日 »"),
+            "{}",
+            c.caractere_absent.details[0].info
+        );
         assert_eq!(c.caractere_absent.details[1].planche, 2);
         // La face du projet dessine la flèche, pas le kanji : c'est lui qui
         // est nommé, et lui seul.
-        assert!(c.caractere_absent.details[1].info.contains("« 東 »"), "{}", c.caractere_absent.details[1].info);
+        assert!(
+            c.caractere_absent.details[1].info.contains("« 東 »"),
+            "{}",
+            c.caractere_absent.details[1].info
+        );
         assert!(!c.caractere_absent.details[1].info.contains("« → »"));
         assert!(c.caractere_absent.passes(), "il avertit, il ne décide pas");
     }
@@ -1205,7 +1288,8 @@ mod tests {
     #[test]
     fn un_bloc_se_compte_dans_sa_police_et_une_police_absente_ne_casse_rien() {
         use crate::model::{Alignement, Contenu, Objet, Police};
-        let dir = std::env::temp_dir().join(format!("colophon-audit-police-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("colophon-audit-police-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         let nom = "objet-ColophonTest-Regular.ttf";
@@ -1224,13 +1308,14 @@ mod tests {
                 alignement: Alignement::Gauche,
             },
             couleur: None,
-            police: Some(Police { fichier: fichier.into(), postscript: "X".into(), nom: "X".into() }),
+            police: Some(Police {
+                fichier: fichier.into(),
+                postscript: "X".into(),
+                nom: "X".into(),
+            }),
         };
-        let mut a = crate::model::Album::new(
-            "Calvi",
-            &dir,
-            crate::model::Size { w: 210.0, h: 210.0 },
-        );
+        let mut a =
+            crate::model::Album::new("Calvi", &dir, crate::model::Size { w: 210.0, h: 210.0 });
         a.spreads = vec![crate::model::Spread {
             template: "texte".into(),
             slots: Vec::new(),
@@ -1246,13 +1331,25 @@ mod tests {
         let rapport = audit(&dir).expect("une police absente ne fait pas échouer le linter");
         let c = &rapport.compteurs.caractere_absent;
         assert_eq!(c.count, 1, "{:?}", c.details);
-        assert!(c.details[0].info.starts_with("objet libre n° 1"), "{}", c.details[0].info);
+        assert!(
+            c.details[0].info.starts_with("objet libre n° 1"),
+            "{}",
+            c.details[0].info
+        );
         assert!(c.details[0].info.contains("« ł »"), "{}", c.details[0].info);
-        assert!(c.details[0].info.contains("sa police"), "{}", c.details[0].info);
+        assert!(
+            c.details[0].info.contains("sa police"),
+            "{}",
+            c.details[0].info
+        );
 
         // Sans la face du bloc, tout se compte dans celle du livre : rien.
         let c = compteurs(&a, &HashMap::new(), &pdf::geometry(&a));
-        assert_eq!(c.caractere_absent.count, 0, "{:?}", c.caractere_absent.details);
+        assert_eq!(
+            c.caractere_absent.count, 0,
+            "{:?}",
+            c.caractere_absent.details
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -1311,7 +1408,11 @@ mod tests {
         ];
 
         let c = compteurs(&a, &HashMap::new(), &g);
-        assert_eq!(c.objet_hors_marge.count, 1, "{:?}", c.objet_hors_marge.details);
+        assert_eq!(
+            c.objet_hors_marge.count, 1,
+            "{:?}",
+            c.objet_hors_marge.details
+        );
         assert_eq!(c.objet_deborde.count, 1, "{:?}", c.objet_deborde.details);
         assert_eq!(c.objet_hors_marge.details[0].planche, 1);
         assert_eq!(c.objet_deborde.details[0].planche, 2);
@@ -1381,7 +1482,11 @@ mod tests {
         }];
 
         let c = compteurs(&a, &HashMap::new(), &g);
-        assert_eq!(c.objet_hors_marge.count, 1, "{:?}", c.objet_hors_marge.details);
+        assert_eq!(
+            c.objet_hors_marge.count, 1,
+            "{:?}",
+            c.objet_hors_marge.details
+        );
         assert!(
             c.all().iter().all(|c| c.passes()),
             "un objet posé à la main ne décide pas du verdict"
@@ -1396,8 +1501,12 @@ mod tests {
     /// la règle.
     #[test]
     fn un_compteur_qui_avertit_ne_rougit_jamais() {
-        let trouvaille =
-            || Finding { planche: 1, case_idx: None, src: None, info: "x".into() };
+        let trouvaille = || Finding {
+            planche: 1,
+            case_idx: None,
+            src: None,
+            info: "x".into(),
+        };
 
         let avertit = Counter::avertit(vec![trouvaille(), trouvaille(), trouvaille()]);
         assert_eq!(avertit.count, 3);
@@ -1486,7 +1595,9 @@ mod tests {
         let g = pdf::geometry(&a);
         let planche = |objets: Vec<Objet>| crate::model::Spread {
             template: "duo".into(),
-            slots: (0..2).map(|i| Slot::new(format!("{i}.jpg"), [0.5, 0.5])).collect(),
+            slots: (0..2)
+                .map(|i| Slot::new(format!("{i}.jpg"), [0.5, 0.5]))
+                .collect(),
             caption: None,
             text: None,
             edited: false,
@@ -1531,8 +1642,10 @@ mod tests {
                 )
             })
             .collect();
-        let ornement =
-            || Contenu::Ornement { pack: "colophon".into(), id: "filet-simple".into() };
+        let ornement = || Contenu::Ornement {
+            pack: "colophon".into(),
+            id: "filet-simple".into(),
+        };
         let texte = || Contenu::Texte {
             texte: "un titre".into(),
             taille_pt: 10.0,
@@ -1540,16 +1653,26 @@ mod tests {
             alignement: Alignement::Gauche,
         };
 
-        a.spreads = vec![planche(vec![boite(ornement())]), planche(vec![boite(texte())])];
+        a.spreads = vec![
+            planche(vec![boite(ornement())]),
+            planche(vec![boite(texte())]),
+        ];
         let c = compteurs(&a, &infos, &g);
-        assert_eq!(c.ornement_sur_photo.count, 1, "{:?}", c.ornement_sur_photo.details);
+        assert_eq!(
+            c.ornement_sur_photo.count, 1,
+            "{:?}",
+            c.ornement_sur_photo.details
+        );
         assert_eq!(c.ornement_sur_photo.details[0].planche, 1);
         // Et il avertit comme ses deux voisins : poser un fleuron sur une
         // photo est un choix douteux, pas un album qu'on refuse d'imprimer.
         // Le verdict entier ne se lit pas ici — cet album de deux planches
         // synthétiques n'a jamais été composé et fâche des compteurs du
         // Composer —, c'est celui de ce compteur-là qui se prouve.
-        assert!(c.ornement_sur_photo.passes(), "il compte 1 et laisse passer");
+        assert!(
+            c.ornement_sur_photo.passes(),
+            "il compte 1 et laisse passer"
+        );
 
         // Posé au pli, le même ornement ne touche plus aucune case : c'est le
         // recouvrement qui compte, pas la présence d'un ornement.
@@ -1569,4 +1692,3 @@ mod tests {
         assert_eq!(quantile(&s, 0.75), 3.0);
     }
 }
-

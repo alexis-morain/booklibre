@@ -54,12 +54,11 @@ pub mod thumb;
 pub mod voyage;
 
 pub use build::{
-    build_album, composer, releve, render_album_pdf, write_album_json, BuildOptions,
-    BuildReport,
+    build_album, composer, releve, render_album_pdf, write_album_json, BuildOptions, BuildReport,
 };
-pub use releve::Releve;
-pub use print::render_print_pdf;
 pub use model::{Album, Size, Slot, Spread};
+pub use print::render_print_pdf;
+pub use releve::Releve;
 // The shells reason about capture times (pinned-spread anchors) and decode
 // thumbnails (detected-focal lookups) without carrying their own pins.
 pub use chrono;

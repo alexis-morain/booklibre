@@ -19,7 +19,9 @@ pub fn parse(s: &str) -> Option<[f64; 3]> {
         return None;
     }
     let composante = |i: usize| -> Option<f64> {
-        u8::from_str_radix(hex.get(i..i + 2)?, 16).ok().map(|v| f64::from(v) / 255.0)
+        u8::from_str_radix(hex.get(i..i + 2)?, 16)
+            .ok()
+            .map(|v| f64::from(v) / 255.0)
     };
     Some([composante(0)?, composante(2)?, composante(4)?])
 }
@@ -28,7 +30,11 @@ pub fn parse(s: &str) -> Option<[f64; 3]> {
 /// sRGB aux composantes entre 0 et 1.
 pub fn luminance(rgb: [f64; 3]) -> f64 {
     let lin = |c: f64| {
-        if c <= 0.04045 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
+        if c <= 0.04045 {
+            c / 12.92
+        } else {
+            ((c + 0.055) / 1.055).powf(2.4)
+        }
     };
     0.2126 * lin(rgb[0]) + 0.7152 * lin(rgb[1]) + 0.0722 * lin(rgb[2])
 }
@@ -51,7 +57,8 @@ pub const CONTRASTE_MIN: f64 = 4.5;
 /// sombre et le papier trop clair —, si bien que la règle revient à prendre la
 /// plus contrastée ; le seuil dit pourquoi l'encre reste sur un fond clair.
 pub fn encre_lisible(fond: [f64; 3], encre: [f64; 3], papier: [f64; 3]) -> [f64; 3] {
-    if contraste(fond, encre) >= CONTRASTE_MIN || contraste(fond, encre) >= contraste(fond, papier) {
+    if contraste(fond, encre) >= CONTRASTE_MIN || contraste(fond, encre) >= contraste(fond, papier)
+    {
         encre
     } else {
         papier
@@ -112,7 +119,9 @@ mod tests {
     /// par indices d'octets y casserait une frontière de caractère.
     #[test]
     fn tout_le_reste_rend_none() {
-        for s in ["", "#", "000000", "#abc", "#1234567", "#12345g", "rouge", "#ééé", "# 12345", "#-12345"] {
+        for s in [
+            "", "#", "000000", "#abc", "#1234567", "#12345g", "rouge", "#ééé", "# 12345", "#-12345",
+        ] {
             assert_eq!(parse(s), None, "{s:?}");
         }
     }

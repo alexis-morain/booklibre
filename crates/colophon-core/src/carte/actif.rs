@@ -112,7 +112,12 @@ pub fn ecrire_partie(sortie: &mut Vec<u8>, points: &[(i32, i32)]) {
     ecrire_varint(&mut corps, points.len() as u64);
     ecrire_varint(&mut corps, zigzag(points[0].0));
     ecrire_varint(&mut corps, zigzag(points[0].1));
-    for v in [points[0].0 - mnx, mxx - points[0].0, points[0].1 - mny, mxy - points[0].1] {
+    for v in [
+        points[0].0 - mnx,
+        mxx - points[0].0,
+        points[0].1 - mny,
+        mxy - points[0].1,
+    ] {
         ecrire_varint(&mut corps, v as u64);
     }
     for w in points.windows(2) {
@@ -137,11 +142,15 @@ impl<'a> Actif<'a> {
         let mut pos = 9 + n * 9;
         let mut couches = Vec::new();
         for i in 0..n {
-            let e = octets.get(9 + i * 9..18 + i * 9).ok_or("actif de carte tronqué")?;
+            let e = octets
+                .get(9 + i * 9..18 + i * 9)
+                .ok_or("actif de carte tronqué")?;
             let couche = Couche::depuis_code(e[0]).ok_or("actif de carte : couche inconnue")?;
             let parties = u32::from_le_bytes([e[1], e[2], e[3], e[4]]);
             let longueur = u32::from_le_bytes([e[5], e[6], e[7], e[8]]) as usize;
-            let corps = octets.get(pos..pos + longueur).ok_or("actif de carte tronqué")?;
+            let corps = octets
+                .get(pos..pos + longueur)
+                .ok_or("actif de carte tronqué")?;
             couches.push((couche, parties, corps));
             pos += longueur;
         }
@@ -152,16 +161,24 @@ impl<'a> Actif<'a> {
     }
 
     pub fn nombre_de_parties(&self, c: Couche) -> usize {
-        self.couches.iter().find(|k| k.0 == c).map_or(0, |k| k.1 as usize)
+        self.couches
+            .iter()
+            .find(|k| k.0 == c)
+            .map_or(0, |k| k.1 as usize)
     }
 
     pub fn octets(&self, c: Couche) -> usize {
-        self.couches.iter().find(|k| k.0 == c).map_or(0, |k| k.2.len())
+        self.couches
+            .iter()
+            .find(|k| k.0 == c)
+            .map_or(0, |k| k.2.len())
     }
 
     /// Les parties d'une couche, dans l'ordre où elles ont été écrites.
     pub fn parties(&self, c: Couche) -> Parties<'a> {
-        Parties { reste: self.couches.iter().find(|k| k.0 == c).map_or(&[], |k| k.2) }
+        Parties {
+            reste: self.couches.iter().find(|k| k.0 == c).map_or(&[], |k| k.2),
+        }
     }
 }
 
@@ -200,7 +217,15 @@ impl<'a> Iterator for Parties<'a> {
                 lire_varint(corps, &mut p)? as i32,
                 lire_varint(corps, &mut p)? as i32,
             );
-            Ok((Partie { boite: [x0 - a, y0 - c, x0 + b, y0 + d], n, depart: (x0, y0), deltas: &corps[p..] }, fin))
+            Ok((
+                Partie {
+                    boite: [x0 - a, y0 - c, x0 + b, y0 + d],
+                    n,
+                    depart: (x0, y0),
+                    deltas: &corps[p..],
+                },
+                fin,
+            ))
         };
         match lire() {
             Ok((partie, fin)) => {
@@ -237,14 +262,25 @@ mod tests {
 
     #[test]
     fn une_partie_fait_l_aller_retour_avec_sa_boite() {
-        let pts = vec![(1_800_000, -900_000), (-1_800_000, 900_000), (5, 7), (5, 7), (-3, 0)];
+        let pts = vec![
+            (1_800_000, -900_000),
+            (-1_800_000, 900_000),
+            (5, 7),
+            (5, 7),
+            (-3, 0),
+        ];
         let mut corps = Vec::new();
         ecrire_partie(&mut corps, &pts);
         ecrire_partie(&mut corps, &[(10, 20), (11, 21)]);
         let mut it = Parties { reste: &corps };
         let p = it.next().unwrap().unwrap();
         assert_eq!(p.boite, [-1_800_000, -900_000, 1_800_000, 900_000]);
-        let relus: Vec<(i32, i32)> = p.points().unwrap().iter().map(|(x, y)| ((x * ECHELLE).round() as i32, (y * ECHELLE).round() as i32)).collect();
+        let relus: Vec<(i32, i32)> = p
+            .points()
+            .unwrap()
+            .iter()
+            .map(|(x, y)| ((x * ECHELLE).round() as i32, (y * ECHELLE).round() as i32))
+            .collect();
         assert_eq!(relus, pts);
         assert_eq!(it.next().unwrap().unwrap().boite, [10, 20, 11, 21]);
         assert!(it.next().is_none());

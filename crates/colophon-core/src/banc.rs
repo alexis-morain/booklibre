@@ -43,7 +43,11 @@ const LEGENDE_DU_BANC: &str = "Le banc";
 
 /// The album files a bench directory contributes: the composed album and
 /// the two alternative proposals, when their files are still beside it.
-const VARIANTES: [&str; 3] = ["album.json", "album.autre-rythme.json", "album.resserree.json"];
+const VARIANTES: [&str; 3] = [
+    "album.json",
+    "album.autre-rythme.json",
+    "album.resserree.json",
+];
 
 #[derive(Debug, Serialize)]
 pub struct RapportBanc {
@@ -78,7 +82,10 @@ pub fn banc(dirs: &[PathBuf], progress: &dyn Fn(String)) -> Result<RapportBanc> 
     let candidats = gabarit::combinaisons();
     let mut etats: Vec<Etat> = candidats
         .iter()
-        .map(|_| Etat { jeux: BTreeSet::new(), defaut: None })
+        .map(|_| Etat {
+            jeux: BTreeSet::new(),
+            defaut: None,
+        })
         .collect();
     let mut jeux: BTreeSet<String> = BTreeSet::new();
     let mut albums = 0usize;
@@ -98,7 +105,11 @@ pub fn banc(dirs: &[PathBuf], progress: &dyn Fn(String)) -> Result<RapportBanc> 
             }
             let mut srcs: Vec<String> = charges
                 .iter()
-                .flat_map(|(_, a)| a.spreads.iter().flat_map(|s| s.slots.iter().map(|sl| sl.src.clone())))
+                .flat_map(|(_, a)| {
+                    a.spreads
+                        .iter()
+                        .flat_map(|s| s.slots.iter().map(|sl| sl.src.clone()))
+                })
                 .collect();
             srcs.sort();
             srcs.dedup();
@@ -272,7 +283,9 @@ fn assignation(
     }
     let mut ci: Vec<usize> = (0..n).collect();
     ci.sort_by(|&a, &b| {
-        (cells[a].w / cells[a].h).partial_cmp(&(cells[b].w / cells[b].h)).unwrap()
+        (cells[a].w / cells[a].h)
+            .partial_cmp(&(cells[b].w / cells[b].h))
+            .unwrap()
     });
     let mut pi: Vec<usize> = (0..n).collect();
     pi.sort_by(|&a, &b| {
@@ -301,10 +314,8 @@ fn assignation(
         let (vw, vh) = (cell.w / s, cell.h / s);
         let mut focal = slot.focal;
         for (axe, total, visible) in [(0usize, info.w, vw), (1usize, info.h, vh)] {
-            let extent =
-                crate::layout::face_extent_dims(&info.faces, info.w, info.h, axe == 0);
-            let (point, ok) =
-                crate::layout::safe_focal_axis(total, visible, extent, focal[axe]);
+            let extent = crate::layout::face_extent_dims(&info.faces, info.w, info.h, axe == 0);
+            let (point, ok) = crate::layout::safe_focal_axis(total, visible, extent, focal[axe]);
             if !ok {
                 return None;
             }
@@ -312,7 +323,11 @@ fn assignation(
         }
         out[ci[k]] = Some(Slot::new(slot.src.clone(), focal));
     }
-    Some(out.into_iter().map(|s| s.expect("chaque case est servie")).collect())
+    Some(
+        out.into_iter()
+            .map(|s| s.expect("chaque case est servie"))
+            .collect(),
+    )
 }
 
 #[cfg(test)]
@@ -321,7 +336,11 @@ mod tests {
     use crate::model::{Size, Spread};
 
     fn geom_album() -> (Album, SpreadGeometry) {
-        let album = Album::new("banc", Path::new("/nulle-part"), Size { w: 210.0, h: 210.0 });
+        let album = Album::new(
+            "banc",
+            Path::new("/nulle-part"),
+            Size { w: 210.0, h: 210.0 },
+        );
         let g = pdf::geometry(&album);
         (album, g)
     }
@@ -335,7 +354,9 @@ mod tests {
             phash: seed.wrapping_mul(0xc2b2_ae3d_27d4_eb4f) | 0xf0f0,
             colorsig: {
                 let mut c = [0u8; 12];
-                c.iter_mut().enumerate().for_each(|(i, v)| *v = ((seed * 37 + i as u64 * 61) % 251) as u8);
+                c.iter_mut()
+                    .enumerate()
+                    .for_each(|(i, v)| *v = ((seed * 37 + i as u64 * 61) % 251) as u8);
                 c
             },
             score: 1.0 + seed as f64 * 0.01,
@@ -348,7 +369,10 @@ mod tests {
     fn planche(srcs: &[&str], template: &str, caption: Option<&str>) -> Spread {
         Spread {
             template: template.into(),
-            slots: srcs.iter().map(|s| Slot::new((*s).into(), [0.5, 0.42])).collect(),
+            slots: srcs
+                .iter()
+                .map(|s| Slot::new((*s).into(), [0.5, 0.42]))
+                .collect(),
             caption: caption.map(str::to_string),
             text: None,
             edited: false,
@@ -379,7 +403,10 @@ mod tests {
             planche(&[&noms[6], &noms[7]], "duo_portrait", None),
         ];
         let base = audit::compteurs(&album, &infos, &g);
-        assert!(base.all().iter().all(|c| c.passes()), "le terrain doit être vert");
+        assert!(
+            base.all().iter().all(|c| c.passes()),
+            "le terrain doit être vert"
+        );
         (album, infos, g)
     }
 
@@ -391,8 +418,14 @@ mod tests {
         let pano = gabarit::parse_genere("g_1x1n_1x1n").unwrap();
         assert!(essaie_sur_planche(&album, &infos, &g, &pano, 1).is_none());
         let duo = gabarit::parse_genere("g_1x1q_1x1q").unwrap();
-        assert!(matches!(essaie_sur_planche(&album, &infos, &g, &duo, 1), Some(Ok(()))));
-        assert!(essaie_sur_planche(&album, &infos, &g, &duo, 0).is_none(), "capacité 2 sur une planche de 1");
+        assert!(matches!(
+            essaie_sur_planche(&album, &infos, &g, &duo, 1),
+            Some(Ok(()))
+        ));
+        assert!(
+            essaie_sur_planche(&album, &infos, &g, &duo, 0).is_none(),
+            "capacité 2 sur une planche de 1"
+        );
     }
 
     /// A cell under the resolution floor is not assignable: the bench never
@@ -416,7 +449,10 @@ mod tests {
         let (album, infos, g) = terrain();
         let bande = gabarit::parse_genere("g_1x1q_1x1q_b8").unwrap();
         assert!(
-            matches!(essaie_sur_planche(&album, &infos, &g, &bande, 2), Some(Ok(()))),
+            matches!(
+                essaie_sur_planche(&album, &infos, &g, &bande, 2),
+                Some(Ok(()))
+            ),
             "la bande sur une planche muette doit passer par la légende du banc"
         );
     }
@@ -436,7 +472,9 @@ mod tests {
         // Full bleed on the recto covers the low caption spots and the high
         // ones on that page; free ratio on the verso covers the left ones.
         let etouffe = gabarit::parse_genere("g_p_p").unwrap();
-        album.spreads.insert(1, planche(&["p1.jpg", "p2.jpg"], "duo", Some("Chapitre")));
+        album
+            .spreads
+            .insert(1, planche(&["p1.jpg", "p2.jpg"], "duo", Some("Chapitre")));
         let base = audit::compteurs(&album, &infos, &g);
         assert!(
             base.all().iter().all(|c| c.passes()),

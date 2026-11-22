@@ -100,7 +100,11 @@ pub struct Reglages {
 
 impl Default for Reglages {
     fn default() -> Self {
-        Reglages { limites: Limites::default(), pause: Duration::from_millis(120), attente: Duration::from_secs(2) }
+        Reglages {
+            limites: Limites::default(),
+            pause: Duration::from_millis(120),
+            attente: Duration::from_secs(2),
+        }
     }
 }
 
@@ -144,7 +148,10 @@ impl Erreur {
         match self {
             Erreur::Url(_) => "url",
             Erreur::Reseau(_) => "reseau",
-            Erreur::Statut { statut, quoi: "voyage" } if matches!(statut, 401 | 403 | 404) => "prive",
+            Erreur::Statut {
+                statut,
+                quoi: "voyage",
+            } if matches!(statut, 401 | 403 | 404) => "prive",
             Erreur::Statut { statut, .. } if *statut == 429 || *statut >= 500 => "indisponible",
             Erreur::Statut { .. } => "statut",
             Erreur::TropGros(_) => "trop_gros",
@@ -160,7 +167,9 @@ impl Erreur {
 /// Une erreur d'écriture, le disque plein nommé à part (`ENOSPC` sous Unix,
 /// `ERROR_DISK_FULL` et `ERROR_HANDLE_DISK_FULL` sous Windows).
 fn disque(e: &std::io::Error) -> Erreur {
-    if e.kind() == std::io::ErrorKind::StorageFull || matches!(e.raw_os_error(), Some(28 | 112 | 39)) {
+    if e.kind() == std::io::ErrorKind::StorageFull
+        || matches!(e.raw_os_error(), Some(28 | 112 | 39))
+    {
         Erreur::DisquePlein
     } else {
         Erreur::Disque(e.to_string())
@@ -207,7 +216,10 @@ const JETON_MAX: usize = 128;
 
 pub fn analyser_url(url: &str) -> Result<Lien, Erreur> {
     let refus = |m: &str| Erreur::Url(m.to_string());
-    let reste = url.trim().strip_prefix("https://").ok_or_else(|| refus("https:// attendu"))?;
+    let reste = url
+        .trim()
+        .strip_prefix("https://")
+        .ok_or_else(|| refus("https:// attendu"))?;
     let reste = reste.split('#').next().unwrap_or("");
     let (chemin, requete) = match reste.split_once('?') {
         Some((c, r)) => (c, r),
@@ -229,12 +241,19 @@ pub fn analyser_url(url: &str) -> Result<Lien, Erreur> {
     if chiffres.is_empty() || !(suite.is_empty() || suite.starts_with('-')) {
         return Err(refus("le numéro du voyage manque"));
     }
-    let id: u64 = chiffres.parse().map_err(|_| refus("numéro de voyage trop grand"))?;
+    let id: u64 = chiffres
+        .parse()
+        .map_err(|_| refus("numéro de voyage trop grand"))?;
     let jeton = requete
         .split('&')
         .find_map(|p| p.strip_prefix("s="))
         .map(|j| {
-            if j.is_empty() || j.len() > JETON_MAX || !j.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_') {
+            if j.is_empty()
+                || j.len() > JETON_MAX
+                || !j
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+            {
                 Err(refus("le jeton de partage (s=) est illisible"))
             } else {
                 Ok(j.to_string())
@@ -261,7 +280,10 @@ pub trait Transport {
 
 /// `Booklibre/<version> (+https://booklibre.app)` : qui frappe à la porte.
 pub fn agent_utilisateur() -> String {
-    format!("Booklibre/{} (+https://booklibre.app)", env!("CARGO_PKG_VERSION"))
+    format!(
+        "Booklibre/{} (+https://booklibre.app)",
+        env!("CARGO_PKG_VERSION")
+    )
 }
 
 /// Le transport réel : le même `ureq` et le même TLS que le relais. Pas de
@@ -320,7 +342,8 @@ pub struct Converti {
 }
 
 fn objet<'a>(v: &'a Value, chemin: &str) -> Result<&'a Map<String, Value>, Erreur> {
-    v.as_object().ok_or_else(|| inconnu(format!("{chemin} n'est plus un objet")))
+    v.as_object()
+        .ok_or_else(|| inconnu(format!("{chemin} n'est plus un objet")))
 }
 
 /// Une chaîne optionnelle : absente ou nulle, c'est `None` ; d'un autre type,
@@ -336,18 +359,27 @@ fn texte_opt(o: &Map<String, Value>, cle: &str, chemin: &str) -> Result<Option<S
 fn nombre_opt(o: &Map<String, Value>, cle: &str, chemin: &str) -> Result<Option<f64>, Erreur> {
     match o.get(cle) {
         None | Some(Value::Null) => Ok(None),
-        Some(v) => v.as_f64().map(Some).ok_or_else(|| inconnu(format!("{chemin}.{cle} n'est plus un nombre"))),
+        Some(v) => v
+            .as_f64()
+            .map(Some)
+            .ok_or_else(|| inconnu(format!("{chemin}.{cle} n'est plus un nombre"))),
     }
 }
 
 fn instant(v: &Value, chemin: &str) -> Result<DateTime<Utc>, Erreur> {
-    let s = v.as_str().ok_or_else(|| inconnu(format!("{chemin} n'est plus une date")))?;
+    let s = v
+        .as_str()
+        .ok_or_else(|| inconnu(format!("{chemin} n'est plus une date")))?;
     DateTime::parse_from_rfc3339(s)
         .map(|d| d.with_timezone(&Utc))
         .map_err(|_| inconnu(format!("{chemin} n'est plus une date lisible")))
 }
 
-fn instant_opt(o: &Map<String, Value>, cle: &str, chemin: &str) -> Result<Option<DateTime<Utc>>, Erreur> {
+fn instant_opt(
+    o: &Map<String, Value>,
+    cle: &str,
+    chemin: &str,
+) -> Result<Option<DateTime<Utc>>, Erreur> {
     match o.get(cle) {
         None | Some(Value::Null) => Ok(None),
         Some(v) => instant(v, &format!("{chemin}.{cle}")).map(Some),
@@ -355,8 +387,10 @@ fn instant_opt(o: &Map<String, Value>, cle: &str, chemin: &str) -> Result<Option
 }
 
 fn coordonnees(l: &Map<String, Value>, chemin: &str) -> Result<(f64, f64), Erreur> {
-    let lat = nombre_opt(l, "lat", chemin)?.ok_or_else(|| inconnu(format!("{chemin}.lat manque")))?;
-    let lon = nombre_opt(l, "lon", chemin)?.ok_or_else(|| inconnu(format!("{chemin}.lon manque")))?;
+    let lat =
+        nombre_opt(l, "lat", chemin)?.ok_or_else(|| inconnu(format!("{chemin}.lat manque")))?;
+    let lon =
+        nombre_opt(l, "lon", chemin)?.ok_or_else(|| inconnu(format!("{chemin}.lon manque")))?;
     if !(-90.0..=90.0).contains(&lat) || !(-180.0..=180.0).contains(&lon) {
         return Err(inconnu(format!("{chemin} sort du globe")));
     }
@@ -366,14 +400,20 @@ fn coordonnees(l: &Map<String, Value>, chemin: &str) -> Result<(f64, f64), Erreu
 /// Une adresse de photo : https, un hôte de la liste, une extension d'image
 /// connue. Rend l'extension.
 fn extension_photo(url: &str, chemin: &str) -> Result<&'static str, Erreur> {
-    let reste = url.strip_prefix("https://").ok_or_else(|| inconnu(format!("{chemin} n'est pas en https")))?;
+    let reste = url
+        .strip_prefix("https://")
+        .ok_or_else(|| inconnu(format!("{chemin} n'est pas en https")))?;
     let (hote, suite) = reste.split_once('/').unwrap_or((reste, ""));
     if !HOTES_PHOTOS.contains(&hote) {
         return Err(inconnu(format!("{chemin} vient d'un hôte inconnu")));
     }
     let chemin_url = suite.split(['?', '#']).next().unwrap_or("");
     let nom = chemin_url.rsplit('/').next().unwrap_or("");
-    match nom.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).as_deref() {
+    match nom
+        .rsplit_once('.')
+        .map(|(_, e)| e.to_ascii_lowercase())
+        .as_deref()
+    {
         Some("jpg") | Some("jpeg") => Ok("jpg"),
         Some("png") => Ok("png"),
         _ => Err(inconnu(format!("{chemin} ne dit pas son format"))),
@@ -383,7 +423,12 @@ fn extension_photo(url: &str, chemin: &str) -> Result<&'static str, Erreur> {
 /// Les huit premiers caractères alphanumériques d'un uuid de média : de quoi
 /// rendre le nom stable sans jamais y mettre un séparateur.
 fn court(uuid: &str) -> String {
-    let c: String = uuid.chars().filter(char::is_ascii_alphanumeric).take(8).collect::<String>().to_ascii_lowercase();
+    let c: String = uuid
+        .chars()
+        .filter(char::is_ascii_alphanumeric)
+        .take(8)
+        .collect::<String>()
+        .to_ascii_lowercase();
     if c.is_empty() {
         "x".to_string()
     } else {
@@ -427,10 +472,19 @@ pub fn convertir(json: &Value, id: u64, limites: &Limites) -> Result<Converti, E
         let nom = texte_opt(o, "name", &chemin)?
             .or(texte_opt(o, "display_name", &chemin)?)
             .ok_or_else(|| inconnu(format!("{chemin} n'a pas de nom")))?;
-        let debut = instant(o.get("start_time").ok_or_else(|| inconnu(format!("{chemin}.start_time manque")))?, &format!("{chemin}.start_time"))?;
+        let debut = instant(
+            o.get("start_time")
+                .ok_or_else(|| inconnu(format!("{chemin}.start_time manque")))?,
+            &format!("{chemin}.start_time"),
+        )?;
         let fin = instant_opt(o, "end_time", &chemin)?;
-        let fuseau = texte_opt(o, "timezone_id", &chemin)?.ok_or_else(|| inconnu(format!("{chemin}.timezone_id manque")))?;
-        let lieu_json = objet(o.get("location").ok_or_else(|| inconnu(format!("{chemin}.location manque")))?, &format!("{chemin}.location"))?;
+        let fuseau = texte_opt(o, "timezone_id", &chemin)?
+            .ok_or_else(|| inconnu(format!("{chemin}.timezone_id manque")))?;
+        let lieu_json = objet(
+            o.get("location")
+                .ok_or_else(|| inconnu(format!("{chemin}.location manque")))?,
+            &format!("{chemin}.location"),
+        )?;
         let (lat, lon) = coordonnees(lieu_json, &format!("{chemin}.location"))?;
         let lieu = Lieu {
             lat,
@@ -443,7 +497,10 @@ pub fn convertir(json: &Value, id: u64, limites: &Limites) -> Result<Converti, E
         };
         let condition = texte_opt(o, "weather_condition", &chemin)?;
         let temperature = nombre_opt(o, "weather_temperature", &chemin)?;
-        let meteo = (condition.is_some() || temperature.is_some()).then_some(Meteo { condition, temperature });
+        let meteo = (condition.is_some() || temperature.is_some()).then_some(Meteo {
+            condition,
+            temperature,
+        });
 
         let medias = match o.get("media") {
             None | Some(Value::Null) => &[][..],
@@ -521,11 +578,23 @@ pub fn convertir(json: &Value, id: u64, limites: &Limites) -> Result<Converti, E
             if couverture.is_none() && couverture_url.as_deref() == Some(url.as_str()) {
                 couverture = Some(fichier.clone());
             }
-            if cover_par_etape.is_none() && !uuid.is_empty() && b.cover.as_deref() == Some(uuid.as_str()) {
+            if cover_par_etape.is_none()
+                && !uuid.is_empty()
+                && b.cover.as_deref() == Some(uuid.as_str())
+            {
                 cover_par_etape = Some(fichier.clone());
             }
-            b.etape.photos.push(Photo { fichier: fichier.clone(), largeur: 0, hauteur: 0 });
-            a_prendre.push(APrendre { etape: i, photo: n, fichier, url });
+            b.etape.photos.push(Photo {
+                fichier: fichier.clone(),
+                largeur: 0,
+                hauteur: 0,
+            });
+            a_prendre.push(APrendre {
+                etape: i,
+                photo: n,
+                fichier,
+                url,
+            });
         }
         etapes.push(b.etape);
     }
@@ -548,9 +617,12 @@ pub fn convertir(json: &Value, id: u64, limites: &Limites) -> Result<Converti, E
     let segments = segments(racine, &rang_par_uuid)?;
     let trace = trace(racine, limites)?;
 
-    let debut = instant_opt(racine, "start_date", "voyage")?.or_else(|| etapes.first().map(|e| e.debut));
-    let fin = instant_opt(racine, "end_date", "voyage")?.or_else(|| etapes.last().map(|e| e.fin.unwrap_or(e.debut)));
-    let fuseau = texte_opt(racine, "timezone_id", "voyage")?.or_else(|| etapes.first().map(|e| e.fuseau.clone()));
+    let debut =
+        instant_opt(racine, "start_date", "voyage")?.or_else(|| etapes.first().map(|e| e.debut));
+    let fin = instant_opt(racine, "end_date", "voyage")?
+        .or_else(|| etapes.last().map(|e| e.fin.unwrap_or(e.debut)));
+    let fuseau = texte_opt(racine, "timezone_id", "voyage")?
+        .or_else(|| etapes.first().map(|e| e.fuseau.clone()));
     let distance_km = nombre_opt(racine, "total_km", "voyage")?.filter(|d| *d >= 0.0);
 
     let voyage = Voyage {
@@ -578,7 +650,10 @@ pub fn convertir(json: &Value, id: u64, limites: &Limites) -> Result<Converti, E
 
 /// Les trajets faits (`past_zelda_steps`) ; les trajets prévus ne sont pas
 /// un voyage vécu.
-fn segments(racine: &Map<String, Value>, rang_par_uuid: &std::collections::HashMap<String, usize>) -> Result<Vec<Segment>, Erreur> {
+fn segments(
+    racine: &Map<String, Value>,
+    rang_par_uuid: &std::collections::HashMap<String, usize>,
+) -> Result<Vec<Segment>, Erreur> {
     let liste = match racine.get("route_segments") {
         None | Some(Value::Null) => return Ok(Vec::new()),
         Some(Value::Array(a)) => a,
@@ -596,9 +671,14 @@ fn segments(racine: &Map<String, Value>, rang_par_uuid: &std::collections::HashM
             if o.get(type_cle).and_then(Value::as_str) != Some("step") {
                 return None;
             }
-            o.get(uuid_cle).and_then(Value::as_str).and_then(|u| rang_par_uuid.get(u)).copied()
+            o.get(uuid_cle)
+                .and_then(Value::as_str)
+                .and_then(|u| rang_par_uuid.get(u))
+                .copied()
         };
-        let polyligne = texte_opt(o, "route", &chemin)?.and_then(|r| decoder_polyligne(&r)).unwrap_or_default();
+        let polyligne = texte_opt(o, "route", &chemin)?
+            .and_then(|r| decoder_polyligne(&r))
+            .unwrap_or_default();
         out.push(Segment {
             mode,
             de: bout("start_object_type", "start_object_uuid"),
@@ -626,10 +706,20 @@ fn trace(racine: &Map<String, Value>, limites: &Limites) -> Result<Vec<PointDeTr
         .map(|(i, p)| {
             let chemin = format!("zelda_steps[{i}]");
             let o = objet(p, &chemin)?;
-            let lieu = objet(o.get("location").ok_or_else(|| inconnu(format!("{chemin}.location manque")))?, &format!("{chemin}.location"))?;
+            let lieu = objet(
+                o.get("location")
+                    .ok_or_else(|| inconnu(format!("{chemin}.location manque")))?,
+                &format!("{chemin}.location"),
+            )?;
             let (lat, lon) = coordonnees(lieu, &format!("{chemin}.location"))?;
-            let t = o.get("time").ok_or_else(|| inconnu(format!("{chemin}.time manque")))?;
-            Ok(PointDeTrace { lat, lon, instant: instant(t, &format!("{chemin}.time"))? })
+            let t = o
+                .get("time")
+                .ok_or_else(|| inconnu(format!("{chemin}.time manque")))?;
+            Ok(PointDeTrace {
+                lat,
+                lon,
+                instant: instant(t, &format!("{chemin}.time"))?,
+            })
         })
         .collect()
 }
@@ -695,7 +785,13 @@ struct Demandeur<'a> {
 impl Demandeur<'_> {
     /// Une requête, jusqu'à [`ESSAIS`] fois sur une erreur de réseau, un 5xx
     /// ou un 429, avec une attente qui double. Jamais sur un 4xx.
-    fn prendre(&self, url: &str, plafond: u64, quoi: &'static str, depasse: &'static str) -> Result<Vec<u8>, Erreur> {
+    fn prendre(
+        &self,
+        url: &str,
+        plafond: u64,
+        quoi: &'static str,
+        depasse: &'static str,
+    ) -> Result<Vec<u8>, Erreur> {
         if self.deja.replace(true) {
             std::thread::sleep(self.pause);
         }
@@ -716,7 +812,10 @@ impl Demandeur<'_> {
                 })
                 .and_then(|r| {
                     if r.statut == 429 || r.statut >= 500 {
-                        Err(Erreur::Statut { statut: r.statut, quoi })
+                        Err(Erreur::Statut {
+                            statut: r.statut,
+                            quoi,
+                        })
                     } else {
                         Ok(r)
                     }
@@ -732,7 +831,10 @@ impl Demandeur<'_> {
             }
         };
         if r.statut != 200 {
-            return Err(Erreur::Statut { statut: r.statut, quoi });
+            return Err(Erreur::Statut {
+                statut: r.statut,
+                quoi,
+            });
         }
         if r.corps.len() as u64 > plafond {
             return Err(Erreur::TropGros(depasse));
@@ -785,15 +887,22 @@ pub fn importer_annulable(
         annuler,
     };
 
-    let mut api = format!("{API}/trips/{}?polarsteps_api_version={VERSION_API}", lien.id);
+    let mut api = format!(
+        "{API}/trips/{}?polarsteps_api_version={VERSION_API}",
+        lien.id
+    );
     if let Some(j) = &lien.jeton {
         api.push_str("&s=");
         api.push_str(j);
     }
     let corps = demandeur.prendre(&api, limites.reponse, "voyage", "la réponse du voyage")?;
-    let json: Value = serde_json::from_slice(&corps).map_err(|_| inconnu("la réponse n'est pas du JSON"))?;
+    let json: Value =
+        serde_json::from_slice(&corps).map_err(|_| inconnu("la réponse n'est pas du JSON"))?;
     drop(corps);
-    let Converti { mut voyage, a_prendre } = convertir(&json, lien.id, limites)?;
+    let Converti {
+        mut voyage,
+        a_prendre,
+    } = convertir(&json, lien.id, limites)?;
     drop(json);
 
     std::fs::create_dir_all(vers).map_err(|e| disque(&e))?;

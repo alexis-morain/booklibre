@@ -128,7 +128,6 @@ pub struct Police {
     pub nom: String,
 }
 
-
 /// One photograph's adjustments: exposure, contrast, black and white.
 /// The transform these numbers name is defined once, in [`crate::reglage`],
 /// and it is the CSS filter formula — which is what lets the editor show it
@@ -343,9 +342,11 @@ impl Objet {
     /// emitter cannot each pick their own.
     pub fn interligne(&self) -> f64 {
         match &self.contenu {
-            Contenu::Texte { taille_pt, interligne_mm, .. } => {
-                interligne_mm.unwrap_or(taille_pt / (72.0 / 25.4) * 1.35)
-            }
+            Contenu::Texte {
+                taille_pt,
+                interligne_mm,
+                ..
+            } => interligne_mm.unwrap_or(taille_pt / (72.0 / 25.4) * 1.35),
             // An ornament sets no line. Zero rather than an `Option`: every
             // caller of this asks "how far down is the next baseline", and an
             // ornament's answer is "there is no next baseline".
@@ -378,7 +379,13 @@ pub struct Slot {
 
 impl Slot {
     pub fn new(src: String, focal: [f64; 2]) -> Self {
-        Self { src, focal, zoom: 1.0, caption: None, mention: None }
+        Self {
+            src,
+            focal,
+            zoom: 1.0,
+            caption: None,
+            mention: None,
+        }
     }
 }
 
@@ -520,12 +527,7 @@ pub const SCHEMA: u32 = 4;
 /// the formula gives 0,5 — the centre, which is exactly what "the whole axis
 /// shows" means. The value stored under schema 1 was dead data; this reads
 /// it as what it always meant.
-pub fn point_from_room(
-    cell_ratio: f64,
-    image_ratio: f64,
-    focal: [f64; 2],
-    zoom: f64,
-) -> [f64; 2] {
+pub fn point_from_room(cell_ratio: f64, image_ratio: f64, focal: [f64; 2], zoom: f64) -> [f64; 2] {
     if !(cell_ratio > 0.0) || !(image_ratio > 0.0) {
         return focal;
     }
@@ -596,8 +598,7 @@ mod tests {
             postscript: "HelveticaNeue".into(),
             nom: "Helvetica Neue Regular".into(),
         });
-        let back: Album =
-            serde_json::from_str(&serde_json::to_string(&album).unwrap()).unwrap();
+        let back: Album = serde_json::from_str(&serde_json::to_string(&album).unwrap()).unwrap();
         let p = back.police.expect("la police survit");
         assert_eq!(p.fichier, "police.ttf");
         assert_eq!(p.postscript, "HelveticaNeue");
@@ -614,7 +615,6 @@ mod tests {
         assert!(ancien.police.is_none());
     }
 
-
     /// Le fond de la couverture est additif : une couverture d'avant se relit
     /// sans lui et n'en écrit pas, une valeur gâtée se lit `None` sans casser
     /// l'ouverture.
@@ -625,7 +625,10 @@ mod tests {
         assert!(ancien.fond.is_none() && ancien.fond_rgb().is_none());
         assert!(!serde_json::to_string(&ancien).unwrap().contains("fond"));
 
-        let noir = Cover { fond: Some("#1a1a1a".into()), ..ancien.clone() };
+        let noir = Cover {
+            fond: Some("#1a1a1a".into()),
+            ..ancien.clone()
+        };
         let ecrit = serde_json::to_string(&noir).unwrap();
         assert!(ecrit.contains(r##""fond":"#1a1a1a""##), "{ecrit}");
         let relu: Cover = serde_json::from_str(&ecrit).unwrap();
@@ -635,7 +638,11 @@ mod tests {
         let gate: Cover = serde_json::from_str(r#"{ "title": "t", "fond": "noir" }"#)
             .expect("une couleur gâtée ne ferme pas l'album");
         assert_eq!(gate.fond_rgb(), None);
-        assert_eq!(gate.fond.as_deref(), Some("noir"), "la valeur reste, réparable à la main");
+        assert_eq!(
+            gate.fond.as_deref(),
+            Some("noir"),
+            "la valeur reste, réparable à la main"
+        );
     }
 
     /// La couleur et la police d'un objet sont additives comme `album.police` :
@@ -651,7 +658,10 @@ mod tests {
         .expect("un objet d'avant s'ouvre tel quel");
         assert!(ancien.couleur.is_none() && ancien.police.is_none());
         let ecrit = serde_json::to_string(&ancien).unwrap();
-        assert!(!ecrit.contains("couleur") && !ecrit.contains("police"), "{ecrit}");
+        assert!(
+            !ecrit.contains("couleur") && !ecrit.contains("police"),
+            "{ecrit}"
+        );
 
         let police = Police {
             fichier: "objet-Didot-Bold.ttf".into(),
@@ -668,19 +678,32 @@ mod tests {
         assert_eq!(relu.police_texte(), Some(&police));
         assert!(relu.rgb().is_some());
 
-        let gate = Objet { couleur: Some("terracotta".into()), ..ancien.clone() };
+        let gate = Objet {
+            couleur: Some("terracotta".into()),
+            ..ancien.clone()
+        };
         let relu: Objet = serde_json::from_str(&serde_json::to_string(&gate).unwrap()).unwrap();
-        assert_eq!(relu.rgb(), None, "une couleur illisible retombe, elle ne casse rien");
+        assert_eq!(
+            relu.rgb(),
+            None,
+            "une couleur illisible retombe, elle ne casse rien"
+        );
 
         let ornement = Objet {
-            contenu: Contenu::Ornement { pack: "colophon".into(), id: "fleuron-1".into() },
+            contenu: Contenu::Ornement {
+                pack: "colophon".into(),
+                id: "fleuron-1".into(),
+            },
             police: Some(police),
             ..ancien
         };
-        let relu: Objet =
-            serde_json::from_str(&serde_json::to_string(&ornement).unwrap()).unwrap();
+        let relu: Objet = serde_json::from_str(&serde_json::to_string(&ornement).unwrap()).unwrap();
         assert!(relu.police.is_some(), "le champ se lit");
-        assert_eq!(relu.police_texte(), None, "mais un ornement ne dessine aucun glyphe");
+        assert_eq!(
+            relu.police_texte(),
+            None,
+            "mais un ornement ne dessine aucun glyphe"
+        );
     }
 
     /// The adjustments table survives the round trip, and an album without
@@ -692,18 +715,33 @@ mod tests {
         assert!(album.reglages.is_empty());
         album.reglages.insert(
             "a.jpg".into(),
-            Reglage { expo: 0.5, contraste: -0.25, nb: true },
+            Reglage {
+                expo: 0.5,
+                contraste: -0.25,
+                nb: true,
+            },
         );
-        let back: Album =
-            serde_json::from_str(&serde_json::to_string(&album).unwrap()).unwrap();
+        let back: Album = serde_json::from_str(&serde_json::to_string(&album).unwrap()).unwrap();
         let r = back.reglages.get("a.jpg").expect("l'entrée survit");
         assert_eq!(r.expo, 0.5);
         assert_eq!(r.contraste, -0.25);
         assert!(r.nb);
         // A hand-repaired entry may name one field only: the others default.
         let partiel: Reglage = serde_json::from_str(r#"{ "nb": true }"#).unwrap();
-        assert_eq!(partiel, Reglage { expo: 0.0, contraste: 0.0, nb: true });
-        assert!(Reglage { expo: 0.0, contraste: 0.0, nb: false }.est_identite());
+        assert_eq!(
+            partiel,
+            Reglage {
+                expo: 0.0,
+                contraste: 0.0,
+                nb: true
+            }
+        );
+        assert!(Reglage {
+            expo: 0.0,
+            contraste: 0.0,
+            nb: false
+        }
+        .est_identite());
         assert!(!partiel.est_identite());
     }
 
@@ -727,11 +765,15 @@ mod tests {
                 let got = point_from_room(rw / rh, iw / ih, f, zoom);
                 assert!(
                     (got[0] - attendu[0]).abs() < 1e-9,
-                    "zoom {zoom} focal {f:?} : x {} attendu {}", got[0], attendu[0]
+                    "zoom {zoom} focal {f:?} : x {} attendu {}",
+                    got[0],
+                    attendu[0]
                 );
                 assert!(
                     (got[1] - attendu[1]).abs() < 1e-9,
-                    "zoom {zoom} focal {f:?} : y {} attendu {}", got[1], attendu[1]
+                    "zoom {zoom} focal {f:?} : y {} attendu {}",
+                    got[1],
+                    attendu[1]
                 );
             }
         }
@@ -753,11 +795,7 @@ mod tests {
     /// l'ancien sens de `focal`.
     #[test]
     fn un_album_neuf_porte_le_schema_courant() {
-        let a = Album::new(
-            "t",
-            std::path::Path::new("/p"),
-            Size { w: 210.0, h: 210.0 },
-        );
+        let a = Album::new("t", std::path::Path::new("/p"), Size { w: 210.0, h: 210.0 });
         assert_eq!(a.version, SCHEMA);
     }
 
@@ -777,10 +815,12 @@ mod tests {
             locked: false,
             objets: Vec::new(),
         });
-        let back: Album =
-            serde_json::from_str(&serde_json::to_string(&album).unwrap()).unwrap();
+        let back: Album = serde_json::from_str(&serde_json::to_string(&album).unwrap()).unwrap();
         assert_eq!(back.spreads[0].slots[0].zoom, 1.8);
-        assert_eq!(back.spreads[0].slots[0].caption.as_deref(), Some("la plage"));
+        assert_eq!(
+            back.spreads[0].slots[0].caption.as_deref(),
+            Some("la plage")
+        );
         assert!(back.spreads[0].edited);
     }
 }
@@ -843,7 +883,6 @@ impl Album {
             legendes: None,
             chiffres: false,
         }
-
     }
 
     /// Portrait, landscape or square page. Drives the template choice.

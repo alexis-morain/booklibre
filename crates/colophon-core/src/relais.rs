@@ -35,7 +35,11 @@ const SANDBOX: &str = "https://colophon-relais-sandbox.alexis-c1f.workers.dev";
 /// `reel` qu'elle a reçu, et **rien** sans l'un ni l'autre. Une fonction
 /// plutôt que des `cfg` : le gate tourne en debug, et c'est ainsi qu'un test
 /// y tient aussi la valeur de la release.
-pub const fn url_pour(debug: bool, sandbox: bool, reel: Option<&'static str>) -> Option<&'static str> {
+pub const fn url_pour(
+    debug: bool,
+    sandbox: bool,
+    reel: Option<&'static str>,
+) -> Option<&'static str> {
     if debug || sandbox {
         Some(SANDBOX)
     } else {
@@ -109,7 +113,9 @@ pub const fn reel_valide(reel: Option<&'static str>) -> Result<Option<&'static s
         } else if c.is_ascii_alphanumeric() || c == b'-' {
             precedent_point = false;
         } else {
-            return Err("COLOPHON_RELAIS_REEL : un hôte seul, sans chemin, port, identifiants ni requête");
+            return Err(
+                "COLOPHON_RELAIS_REEL : un hôte seul, sans chemin, port, identifiants ni requête",
+            );
         }
         i += 1;
     }
@@ -219,10 +225,19 @@ pub trait Transport {
     /// Un GET, rendu en statut et corps.
     fn get(&self, url: &str, bearer: Option<&Secret>) -> Result<(u16, String), String>;
     /// Un POST JSON, rendu en statut et corps.
-    fn post_json(&self, url: &str, bearer: Option<&Secret>, corps: &Value) -> Result<(u16, String), String>;
+    fn post_json(
+        &self,
+        url: &str,
+        bearer: Option<&Secret>,
+        corps: &Value,
+    ) -> Result<(u16, String), String>;
     /// Un PUT du fichier en flux, `Content-Length` annoncé. Rend le statut et
     /// l'ETag. `progression` reçoit les octets déjà partis.
-    fn put_fichier(&self, envoi: &Envoi<'_>, progression: &dyn Fn(u64)) -> Result<(u16, Option<String>), String>;
+    fn put_fichier(
+        &self,
+        envoi: &Envoi<'_>,
+        progression: &dyn Fn(u64),
+    ) -> Result<(u16, Option<String>), String>;
 }
 
 /// Le transport réel, synchrone, TLS par rustls : le même `ureq` que
@@ -267,7 +282,9 @@ impl<R: std::io::Read> std::io::Read for Compteur<R> {
     fn read(&mut self, tampon: &mut [u8]) -> std::io::Result<usize> {
         let n = self.lecteur.read(tampon)?;
         self.lus += n as u64;
-        if self.lus != self.signale && (self.lus - self.signale >= PAS_DE_PROGRESSION || self.lus >= self.total || n == 0) {
+        if self.lus != self.signale
+            && (self.lus - self.signale >= PAS_DE_PROGRESSION || self.lus >= self.total || n == 0)
+        {
             self.signale = self.lus;
             let _ = self.canal.send(self.lus);
         }
@@ -275,7 +292,9 @@ impl<R: std::io::Read> std::io::Read for Compteur<R> {
     }
 }
 
-fn texte_de(r: Result<ureq::http::Response<ureq::Body>, ureq::Error>) -> Result<(u16, String), String> {
+fn texte_de(
+    r: Result<ureq::http::Response<ureq::Body>, ureq::Error>,
+) -> Result<(u16, String), String> {
     let mut r = r.map_err(|e| e.to_string())?;
     let statut = r.status().as_u16();
     let texte = r.body_mut().read_to_string().map_err(|e| e.to_string())?;
@@ -291,21 +310,42 @@ impl Transport for Reseau {
         texte_de(req.call())
     }
 
-    fn post_json(&self, url: &str, bearer: Option<&Secret>, corps: &Value) -> Result<(u16, String), String> {
-        let mut req = self.json.post(url).header("Content-Type", "application/json");
+    fn post_json(
+        &self,
+        url: &str,
+        bearer: Option<&Secret>,
+        corps: &Value,
+    ) -> Result<(u16, String), String> {
+        let mut req = self
+            .json
+            .post(url)
+            .header("Content-Type", "application/json");
         if let Some(s) = bearer {
             req = req.header("Authorization", format!("Bearer {}", s.0));
         }
         texte_de(req.send(corps.to_string()))
     }
 
-    fn put_fichier(&self, envoi: &Envoi<'_>, progression: &dyn Fn(u64)) -> Result<(u16, Option<String>), String> {
+    fn put_fichier(
+        &self,
+        envoi: &Envoi<'_>,
+        progression: &dyn Fn(u64),
+    ) -> Result<(u16, Option<String>), String> {
         let fichier = std::fs::File::open(envoi.chemin).map_err(|e| e.to_string())?;
         // Le compteur est possédé par le corps, qui part dans un autre fil :
         // les octets lus reviennent par un canal, relevé ici pendant l'envoi.
         let (canal, rx) = std::sync::mpsc::channel::<u64>();
-        let corps = Compteur { lecteur: fichier, lus: 0, signale: 0, total: envoi.octets, canal };
-        let mut req = self.envoi.put(envoi.url).header("Content-Length", envoi.octets.to_string());
+        let corps = Compteur {
+            lecteur: fichier,
+            lus: 0,
+            signale: 0,
+            total: envoi.octets,
+            canal,
+        };
+        let mut req = self
+            .envoi
+            .put(envoi.url)
+            .header("Content-Length", envoi.octets.to_string());
         for (nom, valeur) in envoi.entetes {
             req = req.header(nom.as_str(), valeur.as_str());
         }
@@ -320,7 +360,11 @@ impl Transport for Reseau {
         })?;
         let mut r = r.map_err(|e| e.to_string())?;
         let statut = r.status().as_u16();
-        let etag = r.headers().get("etag").and_then(|v| v.to_str().ok()).map(str::to_string);
+        let etag = r
+            .headers()
+            .get("etag")
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_string);
         let _ = r.body_mut().read_to_string();
         Ok((statut, etag))
     }
@@ -342,7 +386,11 @@ pub enum Erreur {
     /// Le dépôt refuse le PUT d'un fichier.
     Depot { fichier: &'static str, statut: u16 },
     /// L'ETag que le dépôt rend n'est pas le MD5 du fichier envoyé.
-    Etag { fichier: &'static str, md5: String, etag: Option<String> },
+    Etag {
+        fichier: &'static str,
+        md5: String,
+        etag: Option<String>,
+    },
     /// Un fichier du dossier préparé ne se lit pas.
     Fichier(String),
     /// Le dossier préparé est fait pour un autre papier que celui du relais.
@@ -443,7 +491,10 @@ pub struct Televersement {
 
 impl fmt::Debug for Televersement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Televersement").field("url", &"***").field("entetes", &self.entetes).finish()
+        f.debug_struct("Televersement")
+            .field("url", &"***")
+            .field("entetes", &self.entetes)
+            .finish()
     }
 }
 
@@ -570,7 +621,13 @@ pub fn acquittement_pour(
     if pages.len() > ACQUITTEMENT_MAX {
         return Err(Erreur::AcquittementTropLong(pages.len()));
     }
-    let de = |q: QuelFichier| pages.iter().filter(|p| p.fichier == q).map(|p| [p.page, p.ppi]).collect();
+    let de = |q: QuelFichier| {
+        pages
+            .iter()
+            .filter(|p| p.fichier == q)
+            .map(|p| [p.page, p.ppi])
+            .collect()
+    };
     Ok(Some(Acquittement {
         version: ACQUITTEMENT_VERSION,
         seuil_ppi,
@@ -602,8 +659,11 @@ impl Demande {
         }
         let fichier = |nom: &str| -> Result<Fichier, Erreur> {
             let chemin = dossier.join(nom);
-            let octets = std::fs::metadata(&chemin).map_err(|e| Erreur::Fichier(format!("{nom} : {e}")))?.len();
-            let md5 = md5_du_fichier(&chemin).map_err(|e| Erreur::Fichier(format!("{nom} : {e:#}")))?;
+            let octets = std::fs::metadata(&chemin)
+                .map_err(|e| Erreur::Fichier(format!("{nom} : {e}")))?
+                .len();
+            let md5 =
+                md5_du_fichier(&chemin).map_err(|e| Erreur::Fichier(format!("{nom} : {e:#}")))?;
             Ok(Fichier { md5, octets })
         };
         Ok(Demande {
@@ -639,7 +699,11 @@ fn code_d_erreur(texte: &str) -> String {
     serde_json::from_str::<Value>(texte)
         .ok()
         .and_then(|v| v["erreur"].as_str().map(str::to_string))
-        .filter(|e| !e.is_empty() && e.len() <= 64 && e.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'))
+        .filter(|e| {
+            !e.is_empty()
+                && e.len() <= 64
+                && e.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+        })
         .unwrap_or_else(|| "illisible".to_string())
 }
 
@@ -656,13 +720,19 @@ impl Relais<'_> {
     }
 
     /// Rend le corps d'un 2xx, ou l'erreur typée de tout autre statut.
-    fn verdict(r: Result<(u16, String), String>, secret: Option<&Secret>) -> Result<String, Erreur> {
+    fn verdict(
+        r: Result<(u16, String), String>,
+        secret: Option<&Secret>,
+    ) -> Result<String, Erreur> {
         let masque = |t: &str| secret.map_or(t.to_string(), |s| s.masquer(t));
         let (statut, texte) = r.map_err(|e| Erreur::Reseau(masque(&e)))?;
         if (200..300).contains(&statut) {
             Ok(texte)
         } else {
-            Err(Erreur::Relais { statut, erreur: masque(&code_d_erreur(&texte)) })
+            Err(Erreur::Relais {
+                statut,
+                erreur: masque(&code_d_erreur(&texte)),
+            })
         }
     }
 
@@ -671,7 +741,10 @@ impl Relais<'_> {
     }
 
     fn post(&self, chemin: &str, secret: Option<&Secret>, corps: &Value) -> Result<String, Erreur> {
-        Self::verdict(self.transport.post_json(&self.url(chemin), secret, corps), secret)
+        Self::verdict(
+            self.transport.post_json(&self.url(chemin), secret, corps),
+            secret,
+        )
     }
 
     /// `GET /v1/countries` : les pays ouverts à la commande.
@@ -712,13 +785,20 @@ impl Relais<'_> {
         struct R {
             url: String,
         }
-        let texte = self.post(&format!("/v1/orders/{id}/payment"), Some(secret), &json!({ "niveau": niveau }))?;
+        let texte = self.post(
+            &format!("/v1/orders/{id}/payment"),
+            Some(secret),
+            &json!({ "niveau": niveau }),
+        )?;
         Ok(lire::<R>(&texte, Some(secret))?.url)
     }
 
     /// `GET /v1/orders/{id}` : l'état, le mode, le dernier code.
     pub fn etat(&self, id: &str, secret: &Secret) -> Result<Etat, Erreur> {
-        lire(&self.get(&format!("/v1/orders/{id}"), Some(secret))?, Some(secret))
+        lire(
+            &self.get(&format!("/v1/orders/{id}"), Some(secret))?,
+            Some(secret),
+        )
     }
 
     /// `POST /v1/orders/{id}/cancel`. Rend le nouvel état
@@ -746,7 +826,11 @@ impl Relais<'_> {
         let masque = |t: &str| secret.masquer(t);
         let (statut, texte) = self
             .transport
-            .post_json(&self.url(&format!("/v1/orders/{id}/abandon")), Some(secret), &json!({}))
+            .post_json(
+                &self.url(&format!("/v1/orders/{id}/abandon")),
+                Some(secret),
+                &json!({}),
+            )
             .map_err(|e| Erreur::Reseau(masque(&e)))?;
         let hors_contrat = || Erreur::Reponse(format!("abandon : réponse hors contrat ({statut})"));
         match statut {
@@ -766,7 +850,10 @@ impl Relais<'_> {
             }
             502 if code_d_erreur(&texte) == "stripe_injoignable" => Ok(Abandon::StripeInjoignable),
             404 => Ok(Abandon::Inconnue),
-            _ => Err(Erreur::Relais { statut, erreur: masque(&code_d_erreur(&texte)) }),
+            _ => Err(Erreur::Relais {
+                statut,
+                erreur: masque(&code_d_erreur(&texte)),
+            }),
         }
     }
 }
@@ -794,17 +881,31 @@ pub fn televerser(
         .map(|(k, v)| (k.to_ascii_lowercase(), v.clone()))
         .filter(|(k, _)| ENTETES_PERMIS.contains(&k.as_str()))
         .collect();
-    let envoi = Envoi { url: &t.url, entetes: &entetes, chemin, octets: fichier.octets };
+    let envoi = Envoi {
+        url: &t.url,
+        entetes: &entetes,
+        chemin,
+        octets: fichier.octets,
+    };
     // Une erreur de transport peut recopier l'URL, qui porte une signature.
     let (statut, etag) = transport
         .put_fichier(&envoi, progression)
         .map_err(|e| Erreur::Reseau(e.replace(&t.url, "<url de dépôt>")))?;
     if !(200..300).contains(&statut) {
-        return Err(Erreur::Depot { fichier: nom, statut });
+        return Err(Erreur::Depot {
+            fichier: nom,
+            statut,
+        });
     }
-    let lu = etag.as_deref().map(|e| e.trim_matches('"').to_ascii_lowercase());
+    let lu = etag
+        .as_deref()
+        .map(|e| e.trim_matches('"').to_ascii_lowercase());
     if lu.as_deref() != Some(fichier.md5.as_str()) {
-        return Err(Erreur::Etag { fichier: nom, md5: fichier.md5.clone(), etag: lu });
+        return Err(Erreur::Etag {
+            fichier: nom,
+            md5: fichier.md5.clone(),
+            etag: lu,
+        });
     }
     Ok(())
 }
@@ -818,7 +919,9 @@ fn url_de_depot(url: &str) -> bool {
     let hote = reste.split(['/', '?', '#']).next().unwrap_or("");
     hote.len() > HOTE_R2.len()
         && hote.ends_with(HOTE_R2)
-        && hote.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '.')
+        && hote
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '.')
 }
 
 /// Pose les deux fichiers du dossier préparé, le gros d'abord.
@@ -831,11 +934,23 @@ pub fn envoyer(
     progression: &dyn Fn(Quel, u64, u64),
 ) -> Result<(), Erreur> {
     for (quel, t, nom, f) in [
-        (Quel::Interieur, &televersements.interieur, LIVRAISON_INTERIEUR, &demande.interieur),
-        (Quel::Couverture, &televersements.couverture, LIVRAISON_COUVERTURE, &demande.couverture),
+        (
+            Quel::Interieur,
+            &televersements.interieur,
+            LIVRAISON_INTERIEUR,
+            &demande.interieur,
+        ),
+        (
+            Quel::Couverture,
+            &televersements.couverture,
+            LIVRAISON_COUVERTURE,
+            &demande.couverture,
+        ),
     ] {
         progression(quel, 0, f.octets);
-        televerser(transport, quel, t, &dossier.join(nom), f, &|n| progression(quel, n, f.octets))?;
+        televerser(transport, quel, t, &dossier.join(nom), f, &|n| {
+            progression(quel, n, f.octets)
+        })?;
     }
     Ok(())
 }
@@ -864,7 +979,13 @@ mod tests {
     impl Faux {
         fn new(reponses: &[(u16, &str)]) -> Faux {
             Faux {
-                reponses: RefCell::new(reponses.iter().rev().map(|(s, t)| (*s, t.to_string())).collect()),
+                reponses: RefCell::new(
+                    reponses
+                        .iter()
+                        .rev()
+                        .map(|(s, t)| (*s, t.to_string()))
+                        .collect(),
+                ),
                 recu: RefCell::new(vec![]),
                 puts: RefCell::new(vec![]),
                 etag: None,
@@ -872,9 +993,24 @@ mod tests {
             }
         }
 
-        fn repondre(&self, methode: &str, url: &str, bearer: Option<&Secret>, corps: Value) -> Result<(u16, String), String> {
-            self.recu.borrow_mut().push((methode.into(), url.into(), bearer.map(|s| s.0.clone()), corps));
-            Ok(self.reponses.borrow_mut().pop().expect("une réponse prévue"))
+        fn repondre(
+            &self,
+            methode: &str,
+            url: &str,
+            bearer: Option<&Secret>,
+            corps: Value,
+        ) -> Result<(u16, String), String> {
+            self.recu.borrow_mut().push((
+                methode.into(),
+                url.into(),
+                bearer.map(|s| s.0.clone()),
+                corps,
+            ));
+            Ok(self
+                .reponses
+                .borrow_mut()
+                .pop()
+                .expect("une réponse prévue"))
         }
     }
 
@@ -882,12 +1018,28 @@ mod tests {
         fn get(&self, url: &str, bearer: Option<&Secret>) -> Result<(u16, String), String> {
             self.repondre("GET", url, bearer, Value::Null)
         }
-        fn post_json(&self, url: &str, bearer: Option<&Secret>, corps: &Value) -> Result<(u16, String), String> {
+        fn post_json(
+            &self,
+            url: &str,
+            bearer: Option<&Secret>,
+            corps: &Value,
+        ) -> Result<(u16, String), String> {
             self.repondre("POST", url, bearer, corps.clone())
         }
-        fn put_fichier(&self, envoi: &Envoi<'_>, progression: &dyn Fn(u64)) -> Result<(u16, Option<String>), String> {
-            let nom = envoi.chemin.file_name().unwrap().to_string_lossy().to_string();
-            self.puts.borrow_mut().push((nom, envoi.entetes.clone(), envoi.octets));
+        fn put_fichier(
+            &self,
+            envoi: &Envoi<'_>,
+            progression: &dyn Fn(u64),
+        ) -> Result<(u16, Option<String>), String> {
+            let nom = envoi
+                .chemin
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .to_string();
+            self.puts
+                .borrow_mut()
+                .push((nom, envoi.entetes.clone(), envoi.octets));
             progression(envoi.octets);
             Ok((self.statut_put, self.etag.clone()))
         }
@@ -898,12 +1050,24 @@ mod tests {
     struct Coupe;
     impl Transport for Coupe {
         fn get(&self, url: &str, bearer: Option<&Secret>) -> Result<(u16, String), String> {
-            Err(format!("connexion refusée vers {url} avec Bearer {}", bearer.map(|s| s.0.as_str()).unwrap_or("")))
+            Err(format!(
+                "connexion refusée vers {url} avec Bearer {}",
+                bearer.map(|s| s.0.as_str()).unwrap_or("")
+            ))
         }
-        fn post_json(&self, url: &str, bearer: Option<&Secret>, _: &Value) -> Result<(u16, String), String> {
+        fn post_json(
+            &self,
+            url: &str,
+            bearer: Option<&Secret>,
+            _: &Value,
+        ) -> Result<(u16, String), String> {
             self.get(url, bearer)
         }
-        fn put_fichier(&self, envoi: &Envoi<'_>, _: &dyn Fn(u64)) -> Result<(u16, Option<String>), String> {
+        fn put_fichier(
+            &self,
+            envoi: &Envoi<'_>,
+            _: &dyn Fn(u64),
+        ) -> Result<(u16, Option<String>), String> {
             Err(format!("connexion refusée vers {}", envoi.url))
         }
     }
@@ -935,8 +1099,14 @@ mod tests {
             pages: 96,
             pays: "FR".into(),
             etat_region: None,
-            interieur: Fichier { md5: "275947b4f9a7958287828b9f6470d3ec".into(), octets: 94_980_105 },
-            couverture: Fichier { md5: "4eb4a8769a7ecc552c53ea6bb051a1a8".into(), octets: 4_870_674 },
+            interieur: Fichier {
+                md5: "275947b4f9a7958287828b9f6470d3ec".into(),
+                octets: 94_980_105,
+            },
+            couverture: Fichier {
+                md5: "4eb4a8769a7ecc552c53ea6bb051a1a8".into(),
+                octets: 4_870_674,
+            },
             acquittement: None,
         }
     }
@@ -956,17 +1126,27 @@ mod tests {
         let i = QuelFichier::Interieur;
         let c = QuelFichier::Couverture;
         let pages = vec![page(i, 5, 180), page(i, 13, 201), page(c, 1, 190)];
-        let a = acquittement_pour(&pages, 250, true, "2026-10-20T14:03:12Z").unwrap().unwrap();
+        let a = acquittement_pour(&pages, 250, true, "2026-10-20T14:03:12Z")
+            .unwrap()
+            .unwrap();
         assert_eq!(
             serde_json::to_string(&a).unwrap(),
             r#"{"version":1,"seuil_ppi":250,"coche_le":"2026-10-20T14:03:12Z","interieur":[[5,180],[13,201]],"couverture":[[1,190]]}"#
         );
-        assert_eq!(acquittement_pour(&pages, 250, false, "x"), Err(Erreur::AcquittementManquant));
+        assert_eq!(
+            acquittement_pour(&pages, 250, false, "x"),
+            Err(Erreur::AcquittementManquant)
+        );
         assert_eq!(acquittement_pour(&[], 250, false, "x"), Ok(None));
         assert_eq!(acquittement_pour(&[], 250, true, "x"), Ok(None));
         let trop: Vec<PageSousSeuil> = (1..=201).map(|p| page(i, p, 100)).collect();
-        assert_eq!(acquittement_pour(&trop, 250, true, "x"), Err(Erreur::AcquittementTropLong(201)));
-        assert!(acquittement_pour(&trop[..200], 250, true, "x").unwrap().is_some());
+        assert_eq!(
+            acquittement_pour(&trop, 250, true, "x"),
+            Err(Erreur::AcquittementTropLong(201))
+        );
+        assert!(acquittement_pour(&trop[..200], 250, true, "x")
+            .unwrap()
+            .is_some());
 
         // Dans la demande : absent sans acquittement, compact avec.
         let mut d = demande();
@@ -993,8 +1173,14 @@ mod tests {
         assert_eq!(url_pour(false, false, None), None);
         assert_eq!(mode_pour(false, false, None), None);
         // Avec, la release parle au relais réel, et à lui seul.
-        assert_eq!(url_pour(false, false, Some("https://relais.exemple.fr")), Some("https://relais.exemple.fr"));
-        assert_eq!(mode_pour(false, false, Some("https://relais.exemple.fr")), Some(Mode::Reel));
+        assert_eq!(
+            url_pour(false, false, Some("https://relais.exemple.fr")),
+            Some("https://relais.exemple.fr")
+        );
+        assert_eq!(
+            mode_pour(false, false, Some("https://relais.exemple.fr")),
+            Some(Mode::Reel)
+        );
         // Le debug reste au sandbox, variables posées ou non.
         for reel in [None, Some("https://relais.exemple.fr")] {
             for sandbox in [false, true] {
@@ -1002,7 +1188,10 @@ mod tests {
                 assert_eq!(mode_pour(true, sandbox, reel), Some(Mode::Sandbox));
             }
         }
-        assert_eq!(RELAIS_URL, url_pour(cfg!(debug_assertions), SANDBOX_EN_RELEASE, REEL));
+        assert_eq!(
+            RELAIS_URL,
+            url_pour(cfg!(debug_assertions), SANDBOX_EN_RELEASE, REEL)
+        );
     }
 
     /// Une release branchée sur le sandbox : le produit final, optimisé et
@@ -1016,7 +1205,10 @@ mod tests {
         assert_eq!(sandbox_valide(None), Ok(false));
         assert_eq!(sandbox_valide(Some("1")), Ok(true));
         for refusee in ["", "0", "oui", "true", " 1", "11"] {
-            assert!(sandbox_valide(Some(refusee)).is_err(), "{refusee:?} est acceptée");
+            assert!(
+                sandbox_valide(Some(refusee)).is_err(),
+                "{refusee:?} est acceptée"
+            );
         }
         // Les deux à la fois : on ne sait plus à qui parle la release.
         assert!(relais_unique(true, Some("https://relais.exemple.fr")).is_err());
@@ -1027,8 +1219,14 @@ mod tests {
     #[test]
     fn le_relais_reel_compile_est_https_et_un_hote_seul() {
         assert_eq!(reel_valide(None), Ok(None));
-        assert_eq!(reel_valide(Some("https://relais.colophon.fr")), Ok(Some("https://relais.colophon.fr")));
-        assert_eq!(reel_valide(Some("https://relais-1.exemple")), Ok(Some("https://relais-1.exemple")));
+        assert_eq!(
+            reel_valide(Some("https://relais.colophon.fr")),
+            Ok(Some("https://relais.colophon.fr"))
+        );
+        assert_eq!(
+            reel_valide(Some("https://relais-1.exemple")),
+            Ok(Some("https://relais-1.exemple"))
+        );
         for refusee in [
             "http://relais.colophon.fr",
             "https://relais.colophon.fr/",
@@ -1044,7 +1242,10 @@ mod tests {
             " https://relais.colophon.fr",
             "relais.colophon.fr",
         ] {
-            assert!(reel_valide(Some(refusee)).is_err(), "{refusee:?} est acceptée");
+            assert!(
+                reel_valide(Some(refusee)).is_err(),
+                "{refusee:?} est acceptée"
+            );
         }
     }
 
@@ -1061,18 +1262,37 @@ mod tests {
             (404, r#"{"erreur": "introuvable"}"#),
             (404, "pas de corps lisible"),
         ]);
-        let r = Relais { base: BASE, transport: &t };
+        let r = Relais {
+            base: BASE,
+            transport: &t,
+        };
         let s = secret();
-        assert_eq!(r.abandonner("abc", &s), Ok(Abandon::Fait("abandonnee".into())));
+        assert_eq!(
+            r.abandonner("abc", &s),
+            Ok(Abandon::Fait("abandonnee".into()))
+        );
         assert_eq!(r.abandonner("abc", &s), Ok(Abandon::Fait("purgee".into())));
-        assert_eq!(r.abandonner("abc", &s), Ok(Abandon::Avancee("payee".into())));
-        assert_eq!(r.abandonner("abc", &s), Ok(Abandon::Avancee("attente_paiement".into())));
+        assert_eq!(
+            r.abandonner("abc", &s),
+            Ok(Abandon::Avancee("payee".into()))
+        );
+        assert_eq!(
+            r.abandonner("abc", &s),
+            Ok(Abandon::Avancee("attente_paiement".into()))
+        );
         assert_eq!(r.abandonner("abc", &s), Ok(Abandon::StripeInjoignable));
         assert_eq!(r.abandonner("abc", &s), Ok(Abandon::Inconnue));
         assert_eq!(r.abandonner("abc", &s), Ok(Abandon::Inconnue));
         let recu = t.recu.borrow();
-        assert_eq!((recu[0].0.as_str(), recu[0].1.as_str()), ("POST", "https://relais.exemple/v1/orders/abc/abandon"));
-        assert_eq!(recu[0].2.as_deref(), Some(SECRET), "le secret part en bearer");
+        assert_eq!(
+            (recu[0].0.as_str(), recu[0].1.as_str()),
+            ("POST", "https://relais.exemple/v1/orders/abc/abandon")
+        );
+        assert_eq!(
+            recu[0].2.as_deref(),
+            Some(SECRET),
+            "le secret part en bearer"
+        );
         assert_eq!(recu[0].3, json!({}), "corps vide");
         drop(recu);
 
@@ -1087,15 +1307,39 @@ mod tests {
             (502, "<html>Bad gateway</html>"),
             (500, r#"{"erreur": "interne"}"#),
         ]);
-        let r = Relais { base: BASE, transport: &t };
+        let r = Relais {
+            base: BASE,
+            transport: &t,
+        };
         assert!(matches!(r.abandonner("a", &s), Err(Erreur::Reponse(_))));
         assert!(matches!(r.abandonner("a", &s), Err(Erreur::Reponse(_))));
-        assert_eq!(r.abandonner("a", &s), Err(Erreur::Relais { statut: 409, erreur: "etat".into() }));
+        assert_eq!(
+            r.abandonner("a", &s),
+            Err(Erreur::Relais {
+                statut: 409,
+                erreur: "etat".into()
+            })
+        );
         assert!(matches!(r.abandonner("a", &s), Err(Erreur::Reponse(_))));
         assert!(matches!(r.abandonner("a", &s), Err(Erreur::Reponse(_))));
-        assert_eq!(r.abandonner("a", &s), Err(Erreur::Relais { statut: 502, erreur: "illisible".into() }));
-        assert_eq!(r.abandonner("a", &s), Err(Erreur::Relais { statut: 500, erreur: "interne".into() }));
-        let coupe = Relais { base: BASE, transport: &Coupe };
+        assert_eq!(
+            r.abandonner("a", &s),
+            Err(Erreur::Relais {
+                statut: 502,
+                erreur: "illisible".into()
+            })
+        );
+        assert_eq!(
+            r.abandonner("a", &s),
+            Err(Erreur::Relais {
+                statut: 500,
+                erreur: "interne".into()
+            })
+        );
+        let coupe = Relais {
+            base: BASE,
+            transport: &Coupe,
+        };
         let e = coupe.abandonner("a", &s).unwrap_err();
         assert!(matches!(e, Erreur::Reseau(_)));
         assert!(!e.to_string().contains(SECRET), "{e}");
@@ -1113,7 +1357,15 @@ mod tests {
         let d = demande();
         let mut f = Faux::new(&[]);
         f.etag = Some(format!("\"{}\"", d.interieur.md5));
-        televerser(&f, Quel::Interieur, &t, Path::new("album-print.pdf"), &d.interieur, &|_| {}).unwrap();
+        televerser(
+            &f,
+            Quel::Interieur,
+            &t,
+            Path::new("album-print.pdf"),
+            &d.interieur,
+            &|_| {},
+        )
+        .unwrap();
         let recus: Vec<String> = f.puts.borrow()[0].1.keys().cloned().collect();
         assert_eq!(recus, ["content-md5", "content-type"]);
 
@@ -1130,26 +1382,56 @@ mod tests {
         ] {
             t.url = url.to_string();
             let f = Faux::new(&[]);
-            let e = televerser(&f, Quel::Interieur, &t, Path::new("album-print.pdf"), &d.interieur, &|_| {}).unwrap_err();
-            assert_eq!(e, Erreur::UrlDeDepot { fichier: "album-print.pdf" }, "{url}");
+            let e = televerser(
+                &f,
+                Quel::Interieur,
+                &t,
+                Path::new("album-print.pdf"),
+                &d.interieur,
+                &|_| {},
+            )
+            .unwrap_err();
+            assert_eq!(
+                e,
+                Erreur::UrlDeDepot {
+                    fichier: "album-print.pdf"
+                },
+                "{url}"
+            );
             assert!(f.puts.borrow().is_empty(), "{url} a été envoyée");
         }
     }
 
     #[test]
     fn les_pays_viennent_du_relais_sans_secret() {
-        let t = Faux::new(&[(200, r#"{"mode": "sandbox", "pays": [{"code": "FR", "nom": "France", "require_state": false}]}"#)]);
-        let p = Relais { base: BASE, transport: &t }.pays().unwrap();
+        let t = Faux::new(&[(
+            200,
+            r#"{"mode": "sandbox", "pays": [{"code": "FR", "nom": "France", "require_state": false}]}"#,
+        )]);
+        let p = Relais {
+            base: BASE,
+            transport: &t,
+        }
+        .pays()
+        .unwrap();
         assert_eq!(p[0].code, "FR");
         assert!(p[0].etats.is_empty());
         let r = t.recu.borrow();
-        assert_eq!((r[0].0.as_str(), r[0].1.as_str(), r[0].2.as_deref()), ("GET", "https://relais.exemple/v1/countries", None));
+        assert_eq!(
+            (r[0].0.as_str(), r[0].1.as_str(), r[0].2.as_deref()),
+            ("GET", "https://relais.exemple/v1/countries", None)
+        );
     }
 
     #[test]
     fn la_creation_envoie_la_liste_blanche_du_relais_et_rien_d_autre() {
         let t = Faux::new(&[(201, &creation())]);
-        let i = Relais { base: "https://relais.exemple/", transport: &t }.creer(&demande()).unwrap();
+        let i = Relais {
+            base: "https://relais.exemple/",
+            transport: &t,
+        }
+        .creer(&demande())
+        .unwrap();
         assert_eq!(i.id, "zNRsXsjGDfnOhog10i579Q");
         assert_eq!(i.mode, Mode::Sandbox);
         assert_eq!(i.grille.len(), 2);
@@ -1173,21 +1455,38 @@ mod tests {
     fn le_secret_part_en_bearer_jamais_dans_l_url() {
         let t = Faux::new(&[
             (200, r#"{"etat": "attente_paiement"}"#),
-            (200, r#"{"url": "https://checkout.stripe.com/c/pay/cs_test_x"}"#),
-            (200, r#"{"etat": "commandee", "mode": "sandbox", "dernier_code": 501}"#),
+            (
+                200,
+                r#"{"url": "https://checkout.stripe.com/c/pay/cs_test_x"}"#,
+            ),
+            (
+                200,
+                r#"{"etat": "commandee", "mode": "sandbox", "dernier_code": 501}"#,
+            ),
             (200, r#"{"etat": "annulee"}"#),
         ]);
-        let r = Relais { base: BASE, transport: &t };
+        let r = Relais {
+            base: BASE,
+            transport: &t,
+        };
         let s = secret();
         assert_eq!(r.fichiers("abc", &s).unwrap(), "attente_paiement");
-        assert_eq!(r.paiement("abc", &s, "cp_ground").unwrap(), "https://checkout.stripe.com/c/pay/cs_test_x");
+        assert_eq!(
+            r.paiement("abc", &s, "cp_ground").unwrap(),
+            "https://checkout.stripe.com/c/pay/cs_test_x"
+        );
         assert_eq!(
             r.etat("abc", &s).unwrap(),
-            Etat { etat: "commandee".into(), mode: Mode::Sandbox, dernier_code: Some(501) }
+            Etat {
+                etat: "commandee".into(),
+                mode: Mode::Sandbox,
+                dernier_code: Some(501)
+            }
         );
         assert_eq!(r.annuler("abc", &s).unwrap(), "annulee");
         let recu = t.recu.borrow();
-        let chemins: Vec<(&str, &str)> = recu.iter().map(|x| (x.0.as_str(), x.1.as_str())).collect();
+        let chemins: Vec<(&str, &str)> =
+            recu.iter().map(|x| (x.0.as_str(), x.1.as_str())).collect();
         assert_eq!(
             chemins,
             [
@@ -1202,29 +1501,61 @@ mod tests {
             assert!(!x.1.contains(SECRET));
         }
         assert_eq!(recu[1].3, json!({"niveau": "cp_ground"}));
-        assert_eq!(recu[0].3, json!({}), "un corps JSON vide : le relais exige le type");
+        assert_eq!(
+            recu[0].3,
+            json!({}),
+            "un corps JSON vide : le relais exige le type"
+        );
     }
 
     #[test]
     fn un_refus_devient_le_champ_erreur_du_relais_et_rien_d_autre() {
         let t = Faux::new(&[
             (409, r#"{"erreur": "trop_tard"}"#),
-            (422, r#"{"erreur": "fichiers", "raison": "md5", "fichier": "interieur"}"#),
+            (
+                422,
+                r#"{"erreur": "fichiers", "raison": "md5", "fichier": "interieur"}"#,
+            ),
             (404, r#"{"erreur": "introuvable"}"#),
             (502, "<html>Bad gateway</html>"),
         ]);
-        let r = Relais { base: BASE, transport: &t };
+        let r = Relais {
+            base: BASE,
+            transport: &t,
+        };
         let s = secret();
-        assert_eq!(r.annuler("a", &s).unwrap_err(), Erreur::Relais { statut: 409, erreur: "trop_tard".into() });
-        assert_eq!(r.fichiers("a", &s).unwrap_err(), Erreur::Relais { statut: 422, erreur: "fichiers".into() });
+        assert_eq!(
+            r.annuler("a", &s).unwrap_err(),
+            Erreur::Relais {
+                statut: 409,
+                erreur: "trop_tard".into()
+            }
+        );
+        assert_eq!(
+            r.fichiers("a", &s).unwrap_err(),
+            Erreur::Relais {
+                statut: 422,
+                erreur: "fichiers".into()
+            }
+        );
         assert_eq!(r.etat("a", &s).unwrap_err().code(), Some("introuvable"));
-        assert_eq!(r.etat("a", &s).unwrap_err(), Erreur::Relais { statut: 502, erreur: "illisible".into() });
+        assert_eq!(
+            r.etat("a", &s).unwrap_err(),
+            Erreur::Relais {
+                statut: 502,
+                erreur: "illisible".into()
+            }
+        );
         assert!(matches!(r.pays_avec(&Coupe), Err(Erreur::Reseau(_))));
     }
 
     impl Relais<'_> {
         fn pays_avec(&self, t: &dyn Transport) -> Result<Vec<Pays>, Erreur> {
-            Relais { base: self.base, transport: t }.pays()
+            Relais {
+                base: self.base,
+                transport: t,
+            }
+            .pays()
         }
     }
 
@@ -1234,10 +1565,18 @@ mod tests {
         assert_eq!(format!("{s:?}"), "***");
         assert_eq!(s.to_string(), "***");
         let t = Faux::new(&[(201, &creation())]);
-        let i = Relais { base: BASE, transport: &t }.creer(&demande()).unwrap();
+        let i = Relais {
+            base: BASE,
+            transport: &t,
+        }
+        .creer(&demande())
+        .unwrap();
         let vu = format!("{i:?}");
         assert!(!vu.contains(SECRET), "{vu}");
-        assert!(!vu.contains("X-Amz-Signature"), "l'URL de dépôt se tait aussi : {vu}");
+        assert!(
+            !vu.contains("X-Amz-Signature"),
+            "l'URL de dépôt se tait aussi : {vu}"
+        );
 
         // Le relais recopie le secret dans son refus, le transport dans son
         // message, un corps illisible le porte : aucune erreur ne le cite.
@@ -1248,19 +1587,33 @@ mod tests {
             (200, &format!(r#"{{"etat": 3, "x": "{SECRET}"}}"#)),
             (200, &format!(r#"{{"id": "{SECRET}"}}"#)),
         ]);
-        let r = Relais { base: BASE, transport: &t };
+        let r = Relais {
+            base: BASE,
+            transport: &t,
+        };
         let mut erreurs = vec![
             r.etat("a", &s).unwrap_err(),
             r.etat("a", &s).unwrap_err(),
             r.fichiers("a", &s).unwrap_err(),
             r.creer(&demande()).unwrap_err(),
         ];
-        let coupe = Relais { base: BASE, transport: &Coupe };
+        let coupe = Relais {
+            base: BASE,
+            transport: &Coupe,
+        };
         erreurs.push(coupe.etat("a", &s).unwrap_err());
         erreurs.push(coupe.paiement("a", &s, "cp_ground").unwrap_err());
         let tv = i.televersements.interieur.clone();
         erreurs.push(
-            televerser(&Coupe, Quel::Interieur, &tv, Path::new("album-print.pdf"), &demande().interieur, &|_| {}).unwrap_err(),
+            televerser(
+                &Coupe,
+                Quel::Interieur,
+                &tv,
+                Path::new("album-print.pdf"),
+                &demande().interieur,
+                &|_| {},
+            )
+            .unwrap_err(),
         );
         for e in &erreurs {
             for interdit in [SECRET, "X-Amz-Signature"] {
@@ -1277,31 +1630,84 @@ mod tests {
         let mut t = Faux::new(&[]);
         t.etag = Some("\"275947B4F9A7958287828B9F6470D3EC\"".into());
         let dossier = Path::new("/nulle/part");
-        televerser(&t, Quel::Interieur, &i.televersements.interieur, &dossier.join("album-print.pdf"), &d.interieur, &|_| {})
-            .unwrap();
+        televerser(
+            &t,
+            Quel::Interieur,
+            &i.televersements.interieur,
+            &dossier.join("album-print.pdf"),
+            &d.interieur,
+            &|_| {},
+        )
+        .unwrap();
         let puts = t.puts.borrow();
         assert_eq!(puts[0].0, "album-print.pdf");
-        assert_eq!(puts[0].1.get("content-md5").map(String::as_str), Some("J1lHtPmnlYKHgoufZHDT7A=="));
+        assert_eq!(
+            puts[0].1.get("content-md5").map(String::as_str),
+            Some("J1lHtPmnlYKHgoufZHDT7A==")
+        );
         assert_eq!(puts[0].2, 94_980_105);
         drop(puts);
 
         // Un autre ETag, ou aucun : refusé.
         t.etag = Some("\"00000000000000000000000000000000\"".into());
-        let e = televerser(&t, Quel::Interieur, &i.televersements.interieur, dossier, &d.interieur, &|_| {}).unwrap_err();
-        assert!(matches!(e, Erreur::Etag { fichier: "album-print.pdf", .. }), "{e:?}");
+        let e = televerser(
+            &t,
+            Quel::Interieur,
+            &i.televersements.interieur,
+            dossier,
+            &d.interieur,
+            &|_| {},
+        )
+        .unwrap_err();
+        assert!(
+            matches!(
+                e,
+                Erreur::Etag {
+                    fichier: "album-print.pdf",
+                    ..
+                }
+            ),
+            "{e:?}"
+        );
         t.etag = None;
         assert!(matches!(
-            televerser(&t, Quel::Couverture, &i.televersements.couverture, dossier, &d.couverture, &|_| {}),
+            televerser(
+                &t,
+                Quel::Couverture,
+                &i.televersements.couverture,
+                dossier,
+                &d.couverture,
+                &|_| {}
+            ),
             Err(Erreur::Etag { etag: None, .. })
         ));
         // Un ETag de multipart, suffixé, n'est jamais un MD5.
         t.etag = Some("\"275947b4f9a7958287828b9f6470d3ec-2\"".into());
-        assert!(televerser(&t, Quel::Interieur, &i.televersements.interieur, dossier, &d.interieur, &|_| {}).is_err());
+        assert!(televerser(
+            &t,
+            Quel::Interieur,
+            &i.televersements.interieur,
+            dossier,
+            &d.interieur,
+            &|_| {}
+        )
+        .is_err());
         // Un refus du dépôt.
         t.statut_put = 403;
         assert_eq!(
-            televerser(&t, Quel::Interieur, &i.televersements.interieur, dossier, &d.interieur, &|_| {}).unwrap_err(),
-            Erreur::Depot { fichier: "album-print.pdf", statut: 403 }
+            televerser(
+                &t,
+                Quel::Interieur,
+                &i.televersements.interieur,
+                dossier,
+                &d.interieur,
+                &|_| {}
+            )
+            .unwrap_err(),
+            Erreur::Depot {
+                fichier: "album-print.pdf",
+                statut: 403
+            }
         );
     }
 
@@ -1311,13 +1717,26 @@ mod tests {
         fn get(&self, u: &str, b: Option<&Secret>) -> Result<(u16, String), String> {
             self.0.get(u, b)
         }
-        fn post_json(&self, u: &str, b: Option<&Secret>, c: &Value) -> Result<(u16, String), String> {
+        fn post_json(
+            &self,
+            u: &str,
+            b: Option<&Secret>,
+            c: &Value,
+        ) -> Result<(u16, String), String> {
             self.0.post_json(u, b, c)
         }
-        fn put_fichier(&self, e: &Envoi<'_>, p: &dyn Fn(u64)) -> Result<(u16, Option<String>), String> {
+        fn put_fichier(
+            &self,
+            e: &Envoi<'_>,
+            p: &dyn Fn(u64),
+        ) -> Result<(u16, Option<String>), String> {
             self.0.put_fichier(e, p)?;
             let d = demande();
-            let md5 = if e.chemin.ends_with("album-print.pdf") { d.interieur.md5 } else { d.couverture.md5 };
+            let md5 = if e.chemin.ends_with("album-print.pdf") {
+                d.interieur.md5
+            } else {
+                d.couverture.md5
+            };
             Ok((200, Some(format!("\"{md5}\""))))
         }
     }
@@ -1327,9 +1746,13 @@ mod tests {
         let i: Intention = serde_json::from_str(&creation()).unwrap();
         let t = DepotJuste(Faux::new(&[]));
         let vu = RefCell::new(vec![]);
-        envoyer(&t, &i.televersements, Path::new("/dossier"), &demande(), &|q, n, total| {
-            vu.borrow_mut().push((q, n, total))
-        })
+        envoyer(
+            &t,
+            &i.televersements,
+            Path::new("/dossier"),
+            &demande(),
+            &|q, n, total| vu.borrow_mut().push((q, n, total)),
+        )
         .unwrap();
         let noms: Vec<String> = t.0.puts.borrow().iter().map(|p| p.0.clone()).collect();
         assert_eq!(noms, ["album-print.pdf", "album-cover.pdf"]);
@@ -1346,17 +1769,36 @@ mod tests {
 
     #[test]
     fn la_demande_lit_les_deux_fichiers_et_refuse_un_autre_papier() {
-        let dir = std::env::temp_dir().join(format!("colophon-relais-demande-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("colophon-relais-demande-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join(LIVRAISON_INTERIEUR), b"abc").unwrap();
         std::fs::write(dir.join(LIVRAISON_COUVERTURE), b"").unwrap();
         let d = Demande::du_dossier(&dir, Some(PAPIER), "carre-21", 96, "FR", None).unwrap();
         // Les vecteurs de la RFC 1321.
-        assert_eq!(d.interieur, Fichier { md5: "900150983cd24fb0d6963f7d28e17f72".into(), octets: 3 });
-        assert_eq!(d.couverture, Fichier { md5: "d41d8cd98f00b204e9800998ecf8427e".into(), octets: 0 });
-        assert_eq!(Demande::du_dossier(&dir, Some("pageblock_90"), "carre-21", 96, "FR", None), Err(Erreur::Papier));
-        assert_eq!(Demande::du_dossier(&dir, None, "carre-21", 96, "FR", None), Err(Erreur::Papier));
+        assert_eq!(
+            d.interieur,
+            Fichier {
+                md5: "900150983cd24fb0d6963f7d28e17f72".into(),
+                octets: 3
+            }
+        );
+        assert_eq!(
+            d.couverture,
+            Fichier {
+                md5: "d41d8cd98f00b204e9800998ecf8427e".into(),
+                octets: 0
+            }
+        );
+        assert_eq!(
+            Demande::du_dossier(&dir, Some("pageblock_90"), "carre-21", 96, "FR", None),
+            Err(Erreur::Papier)
+        );
+        assert_eq!(
+            Demande::du_dossier(&dir, None, "carre-21", 96, "FR", None),
+            Err(Erreur::Papier)
+        );
         std::fs::remove_file(dir.join(LIVRAISON_COUVERTURE)).unwrap();
         assert!(matches!(
             Demande::du_dossier(&dir, Some(PAPIER), "carre-21", 96, "FR", None),
@@ -1376,7 +1818,9 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let chemin = dir.join(LIVRAISON_INTERIEUR);
-        let contenu: Vec<u8> = (0..(3 * PAS_DE_PROGRESSION + 17)).map(|i| (i % 251) as u8).collect();
+        let contenu: Vec<u8> = (0..(3 * PAS_DE_PROGRESSION + 17))
+            .map(|i| (i % 251) as u8)
+            .collect();
         std::fs::write(&chemin, &contenu).unwrap();
 
         let ecoute = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
@@ -1395,7 +1839,11 @@ mod tests {
             }
             let longueur: usize = entetes
                 .iter()
-                .find_map(|l| l.to_ascii_lowercase().strip_prefix("content-length: ").map(|v| v.parse().unwrap()))
+                .find_map(|l| {
+                    l.to_ascii_lowercase()
+                        .strip_prefix("content-length: ")
+                        .map(|v| v.parse().unwrap())
+                })
                 .expect("Content-Length");
             let mut corps = vec![0u8; longueur];
             lecteur.read_exact(&mut corps).unwrap();
@@ -1405,17 +1853,40 @@ mod tests {
         });
 
         let mut entetes = BTreeMap::new();
-        entetes.insert("content-md5".to_string(), "J1lHtPmnlYKHgoufZHDT7A==".to_string());
+        entetes.insert(
+            "content-md5".to_string(),
+            "J1lHtPmnlYKHgoufZHDT7A==".to_string(),
+        );
         let url = format!("http://127.0.0.1:{port}/depot/x");
-        let envoi = Envoi { url: &url, entetes: &entetes, chemin: &chemin, octets: contenu.len() as u64 };
+        let envoi = Envoi {
+            url: &url,
+            entetes: &entetes,
+            chemin: &chemin,
+            octets: contenu.len() as u64,
+        };
         let vu = RefCell::new(vec![]);
-        let (statut, etag) = Reseau::default().put_fichier(&envoi, &|n| vu.borrow_mut().push(n)).unwrap();
+        let (statut, etag) = Reseau::default()
+            .put_fichier(&envoi, &|n| vu.borrow_mut().push(n))
+            .unwrap();
         let (recu, corps) = serveur.join().unwrap();
         assert_eq!((statut, etag.as_deref()), (200, Some("\"cafe\"")));
         assert!(recu[0].starts_with("PUT /depot/x "), "{recu:?}");
-        assert!(recu.iter().any(|l| l.eq_ignore_ascii_case(&format!("content-length: {}", contenu.len()))), "{recu:?}");
-        assert!(recu.iter().any(|l| l.eq_ignore_ascii_case("content-md5: J1lHtPmnlYKHgoufZHDT7A==")), "{recu:?}");
-        assert!(!recu.iter().any(|l| l.to_ascii_lowercase().starts_with("transfer-encoding")), "{recu:?}");
+        assert!(
+            recu.iter()
+                .any(|l| l.eq_ignore_ascii_case(&format!("content-length: {}", contenu.len()))),
+            "{recu:?}"
+        );
+        assert!(
+            recu.iter()
+                .any(|l| l.eq_ignore_ascii_case("content-md5: J1lHtPmnlYKHgoufZHDT7A==")),
+            "{recu:?}"
+        );
+        assert!(
+            !recu
+                .iter()
+                .any(|l| l.to_ascii_lowercase().starts_with("transfer-encoding")),
+            "{recu:?}"
+        );
         assert_eq!(corps, contenu);
         let vu = vu.into_inner();
         assert_eq!(vu.last(), Some(&(contenu.len() as u64)));
@@ -1445,7 +1916,11 @@ mod tests {
             }
             let longueur: usize = entetes
                 .iter()
-                .find_map(|l| l.to_ascii_lowercase().strip_prefix("content-length: ").map(|v| v.parse().unwrap()))
+                .find_map(|l| {
+                    l.to_ascii_lowercase()
+                        .strip_prefix("content-length: ")
+                        .map(|v| v.parse().unwrap())
+                })
                 .unwrap_or(0);
             let mut corps = vec![0u8; longueur];
             lecteur.read_exact(&mut corps).unwrap();
@@ -1461,12 +1936,28 @@ mod tests {
         });
         let base = format!("http://127.0.0.1:{port}");
         let reseau = Reseau::default();
-        let rendu = Relais { base: &base, transport: &reseau }.abandonner("abc", &secret());
+        let rendu = Relais {
+            base: &base,
+            transport: &reseau,
+        }
+        .abandonner("abc", &secret());
         let (recu, corps) = serveur.join().unwrap();
         assert_eq!(rendu, Ok(Abandon::Fait("abandonnee".into())));
-        assert!(recu[0].starts_with("POST /v1/orders/abc/abandon "), "{recu:?}");
-        assert!(recu.iter().any(|l| l.eq_ignore_ascii_case("content-type: application/json")), "{recu:?}");
-        assert!(recu.iter().any(|l| l == &format!("authorization: Bearer {SECRET}") || l == &format!("Authorization: Bearer {SECRET}")), "{recu:?}");
+        assert!(
+            recu[0].starts_with("POST /v1/orders/abc/abandon "),
+            "{recu:?}"
+        );
+        assert!(
+            recu.iter()
+                .any(|l| l.eq_ignore_ascii_case("content-type: application/json")),
+            "{recu:?}"
+        );
+        assert!(
+            recu.iter()
+                .any(|l| l == &format!("authorization: Bearer {SECRET}")
+                    || l == &format!("Authorization: Bearer {SECRET}")),
+            "{recu:?}"
+        );
         assert_eq!(corps, "{}");
     }
 
@@ -1490,14 +1981,22 @@ mod tests {
             .ok()
             .or(RELAIS_URL.map(str::to_string))
             .expect("aucune adresse de relais : build de debug, ou COLOPHON_RELAIS");
-        let papier = std::env::var("COLOPHON_PAPIER").map(std::path::PathBuf::from).unwrap_or_else(|_| {
-            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.albums/papier")
-        });
+        let papier = std::env::var("COLOPHON_PAPIER")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|_| {
+                std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.albums/papier")
+            });
         let profil = PrinterProfile::par_id("cloudprinter").unwrap();
         let fiche = crate::prevol::prevol(&papier, profil).unwrap().fiche;
-        let format = crate::format::nom(crate::model::Size { w: fiche.format_page_mm[0], h: fiche.format_page_mm[1] });
+        let format = crate::format::nom(crate::model::Size {
+            w: fiche.format_page_mm[0],
+            h: fiche.format_page_mm[1],
+        });
         let reseau = Reseau::default();
-        let r = Relais { base: &base, transport: &reseau };
+        let r = Relais {
+            base: &base,
+            transport: &reseau,
+        };
         let ms = |t: Instant| t.elapsed().as_millis() as u64;
         let debut = Instant::now();
         let mut mesure = json!({
@@ -1510,7 +2009,8 @@ mod tests {
 
         let t = Instant::now();
         let pays = r.pays().unwrap();
-        mesure["pays"] = json!({"ms": ms(t), "codes": pays.iter().map(|p| p.code.clone()).collect::<Vec<_>>()});
+        mesure["pays"] =
+            json!({"ms": ms(t), "codes": pays.iter().map(|p| p.code.clone()).collect::<Vec<_>>()});
 
         let t = Instant::now();
         let demande = Demande::du_dossier(
@@ -1532,8 +2032,18 @@ mod tests {
         });
 
         for (quel, tv, nom, f) in [
-            (Quel::Interieur, &i.televersements.interieur, LIVRAISON_INTERIEUR, &demande.interieur),
-            (Quel::Couverture, &i.televersements.couverture, LIVRAISON_COUVERTURE, &demande.couverture),
+            (
+                Quel::Interieur,
+                &i.televersements.interieur,
+                LIVRAISON_INTERIEUR,
+                &demande.interieur,
+            ),
+            (
+                Quel::Couverture,
+                &i.televersements.couverture,
+                LIVRAISON_COUVERTURE,
+                &demande.couverture,
+            ),
         ] {
             let t = Instant::now();
             let derniere = RefCell::new(0u64);
@@ -1561,7 +2071,11 @@ mod tests {
         let niveau = i.grille[0].niveau.clone();
         let t = Instant::now();
         let url = r.paiement(&i.id, &i.secret, &niveau).unwrap();
-        let hote = url.strip_prefix("https://").and_then(|u| u.split('/').next()).unwrap_or("").to_string();
+        let hote = url
+            .strip_prefix("https://")
+            .and_then(|u| u.split('/').next())
+            .unwrap_or("")
+            .to_string();
         mesure["paiement"] = json!({
             "ms": ms(t), "niveau": niveau, "url_https": url.starts_with("https://"), "hote": hote,
             "ouverte": false, "payee": false,
@@ -1590,7 +2104,9 @@ mod tests {
 
         let mut texte = serde_json::to_string_pretty(&mesure).unwrap();
         texte = texte.replace(&i.secret.0, "***").replace(&url, "***");
-        assert!(!texte.contains("X-Amz-") && !texte.contains("cs_test_") && !texte.contains("cs_live_"));
+        assert!(
+            !texte.contains("X-Amz-") && !texte.contains("cs_test_") && !texte.contains("cs_live_")
+        );
         let sortie = std::env::var("COLOPHON_MESURE").unwrap_or_else(|_| "/dev/null".into());
         std::fs::write(&sortie, texte + "\n").unwrap();
         assert_eq!(etat, "attente_paiement");

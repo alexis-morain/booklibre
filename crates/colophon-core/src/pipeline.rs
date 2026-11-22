@@ -291,11 +291,15 @@ pub fn thin_twins(chapter: &mut Chapter) -> Vec<DropPair> {
 pub fn chapters(photos: Vec<Photo>) -> Vec<Chapter> {
     let mut chapters: Vec<Chapter> = Vec::new();
     for p in photos {
-        let new_chapter = chapters.last().is_none_or(|c| {
-            (p.meta.taken - c.end).num_hours() >= CHAPTER_GAP_HOURS
-        });
+        let new_chapter = chapters
+            .last()
+            .is_none_or(|c| (p.meta.taken - c.end).num_hours() >= CHAPTER_GAP_HOURS);
         if new_chapter {
-            chapters.push(Chapter { start: p.meta.taken, end: p.meta.taken, photos: vec![p] });
+            chapters.push(Chapter {
+                start: p.meta.taken,
+                end: p.meta.taken,
+                photos: vec![p],
+            });
         } else {
             let c = chapters.last_mut().unwrap();
             c.end = p.meta.taken;
@@ -350,7 +354,10 @@ pub fn merge_chapters(mut chapters: Vec<Chapter>, max: usize) -> Vec<Chapter> {
 /// Split a total photo budget across chapters, proportional to the square
 /// root of their size: big events get more room, small ones still exist.
 pub fn allocate_budget(chapters: &[Chapter], total: usize) -> Vec<usize> {
-    let weights: Vec<f64> = chapters.iter().map(|c| (c.photos.len() as f64).sqrt()).collect();
+    let weights: Vec<f64> = chapters
+        .iter()
+        .map(|c| (c.photos.len() as f64).sqrt())
+        .collect();
     let sum: f64 = weights.iter().sum();
     chapters
         .iter()
@@ -410,7 +417,10 @@ pub fn cap_chapter(chapter: &mut Chapter, max: usize) {
         }
     }
     keep.sort();
-    chapter.photos = keep.into_iter().map(|i| chapter.photos[i].clone()).collect();
+    chapter.photos = keep
+        .into_iter()
+        .map(|i| chapter.photos[i].clone())
+        .collect();
 }
 
 #[cfg(test)]
@@ -423,11 +433,8 @@ mod tests {
         Photo {
             path: PathBuf::from(name),
             meta: PhotoMeta {
-                taken: NaiveDateTime::parse_from_str(
-                    "2013-10-27 15:34:11",
-                    "%Y-%m-%d %H:%M:%S",
-                )
-                .unwrap(),
+                taken: NaiveDateTime::parse_from_str("2013-10-27 15:34:11", "%Y-%m-%d %H:%M:%S")
+                    .unwrap(),
                 taken_reliable: true,
                 orientation: 1,
                 gps: None,
@@ -468,7 +475,10 @@ mod tests {
         let one_star = photo("une.jpg", 40.0, Some(1));
         let unrated = photo("aucune.jpg", 40.0, None);
         assert!(one_star.effective_score() > unrated.effective_score());
-        assert_eq!(unrated.effective_score(), photo("x.jpg", 40.0, Some(0)).effective_score());
+        assert_eq!(
+            unrated.effective_score(),
+            photo("x.jpg", 40.0, Some(0)).effective_score()
+        );
     }
 
     /// An explicit no is honoured: rejected photos leave before anything is
@@ -520,7 +530,10 @@ mod tests {
         };
         assert!(empreinte_est_un_signal(&n(3, 2)));
         assert!(!empreinte_est_un_signal(&n(2, 3)));
-        assert!(!empreinte_est_un_signal(&n(2, 2)), "l'égalité ne décide pas");
+        assert!(
+            !empreinte_est_un_signal(&n(2, 2)),
+            "l'égalité ne décide pas"
+        );
         assert!(!empreinte_est_un_signal(&n(0, 0)));
     }
 
@@ -536,11 +549,13 @@ mod tests {
             ],
             start: NaiveDateTime::parse_from_str("2013-10-27 15:00:00", "%Y-%m-%d %H:%M:%S")
                 .unwrap(),
-            end: NaiveDateTime::parse_from_str("2013-10-27 16:00:00", "%Y-%m-%d %H:%M:%S")
-                .unwrap(),
+            end: NaiveDateTime::parse_from_str("2013-10-27 16:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
         };
         // Every photo here shares one hash, so only the score separates them.
         cap_chapter(&mut chapter, 2);
-        assert!(chapter.photos.iter().any(|p| p.path == PathBuf::from("etoilee.jpg")));
+        assert!(chapter
+            .photos
+            .iter()
+            .any(|p| p.path == PathBuf::from("etoilee.jpg")));
     }
 }

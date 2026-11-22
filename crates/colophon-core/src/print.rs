@@ -86,7 +86,8 @@ fn jpeg_sof(data: &[u8]) -> Option<(u32, u32, u8)> {
 /// `image` ships tolerates a marker soup in the middle of a scan and returns
 /// pixels — so the walk alone is kept.
 pub(crate) fn jpeg_entier(data: &[u8]) -> Result<()> {
-    let tronque = || anyhow::anyhow!("JPEG tronqué : le fichier n'atteint pas son marqueur de fin d'image");
+    let tronque =
+        || anyhow::anyhow!("JPEG tronqué : le fichier n'atteint pas son marqueur de fin d'image");
     if data.len() < 4 || data[0] != 0xFF || data[1] != 0xD8 {
         anyhow::bail!("JPEG illisible : pas de marqueur de début d'image");
     }
@@ -115,7 +116,10 @@ pub(crate) fn jpeg_entier(data: &[u8]) -> Result<()> {
                 let len = usize::from(data[i]) << 8 | usize::from(data[i + 1]);
                 i += len;
                 loop {
-                    let Some(pos) = data.get(i..).and_then(|r| r.iter().position(|b| *b == 0xFF)) else {
+                    let Some(pos) = data
+                        .get(i..)
+                        .and_then(|r| r.iter().position(|b| *b == 0xFF))
+                    else {
                         return Err(tronque());
                     };
                     i += pos;
@@ -192,7 +196,14 @@ pub(crate) fn print_asset(
                 // The bytes travel untouched, profile segments included;
                 // the PDF only has to say which space they are in.
                 let icc = crate::icc::du_jpeg(&data);
-                return Ok(pdf::JpegAsset { data, width: w, height: h, focal, zoom, icc });
+                return Ok(pdf::JpegAsset {
+                    data,
+                    width: w,
+                    height: h,
+                    focal,
+                    zoom,
+                    icc,
+                });
             }
         }
     }
@@ -240,7 +251,14 @@ pub(crate) fn print_asset(
     image::codecs::jpeg::JpegEncoder::new_with_quality(&mut data, JPEG_QUALITY)
         .encode_image(&rgb)
         .with_context(|| format!("réencodage de {}", src.display()))?;
-    Ok(pdf::JpegAsset { data, width: rgb.width(), height: rgb.height(), focal, zoom, icc })
+    Ok(pdf::JpegAsset {
+        data,
+        width: rgb.width(),
+        height: rgb.height(),
+        focal,
+        zoom,
+        icc,
+    })
 }
 
 /// The caller decided to abandon a long render. Checked between photos, so
@@ -314,7 +332,12 @@ pub fn render_print_pdf(
         let scene = scene::Scene::of(spread, &g);
         let mut assets = Vec::with_capacity(spread.slots.len());
         for object in &scene.objects {
-            let scene::Role::Photo { src, focal, zoom, .. } = &object.role else { continue };
+            let scene::Role::Photo {
+                src, focal, zoom, ..
+            } = &object.role
+            else {
+                continue;
+            };
             anyhow::ensure!(!cancel(), "export annulé");
             let path = root.join(src);
             let orientation = meta::read(&path).orientation;
@@ -324,9 +347,15 @@ pub fn render_print_pdf(
             // downscale it to fill a cell three millimetres narrower than the
             // one it lands in.
             let rect = imposition::rect_exporte(object, &g, pli);
-            let asset =
-                print_asset(&path, orientation, &rect, *focal, *zoom, album.reglages.get(src))
-                    .with_context(|| format!("planche {} : {}", i + 1, src))?;
+            let asset = print_asset(
+                &path,
+                orientation,
+                &rect,
+                *focal,
+                *zoom,
+                album.reglages.get(src),
+            )
+            .with_context(|| format!("planche {} : {}", i + 1, src))?;
             assets.push(asset);
             done += 1;
             progress(&format!("render: {done}/{total}"));
@@ -378,8 +407,7 @@ pub(crate) fn poser_pdf(writer: pdf::PdfWriter, out: &Path) -> Result<PathBuf> {
         let _ = fs::remove_file(&tmp);
         saved?;
     }
-    fs::rename(&tmp, out)
-        .with_context(|| format!("renommage vers {}", out.display()))?;
+    fs::rename(&tmp, out).with_context(|| format!("renommage vers {}", out.display()))?;
     Ok(out.to_path_buf())
 }
 
@@ -390,7 +418,9 @@ fn ecrire_par_le_temporaire(writer: pdf::PdfWriter, out: &Path) -> Result<PathBu
     let tmp = std::env::temp_dir().join(format!(
         "colophon-export-{}-{}.pdf.part",
         std::process::id(),
-        out.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default()
+        out.file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default()
     ));
     let rendu = writer.save(&tmp).and_then(|()| {
         let mut source = fs::File::open(&tmp).context("relecture du PDF temporaire")?;
@@ -410,7 +440,12 @@ mod tests {
     use super::*;
 
     fn rect(w: f64, h: f64) -> pdf::Rect {
-        pdf::Rect { x: 0.0, y: 0.0, w, h }
+        pdf::Rect {
+            x: 0.0,
+            y: 0.0,
+            w,
+            h,
+        }
     }
 
     #[test]
@@ -419,8 +454,8 @@ mod tests {
         let r = rect(100.0, 100.0);
         assert!(print_scale(&r, 3000, 2000) < 1.0); // 45 Mpx-class: downscale
         assert!(print_scale(&r, 1000, 1000) > 1.0); // small original: keep
-        // Cover-crop picks the tighter side: a wide slot over a tall image
-        // is governed by the width.
+                                                    // Cover-crop picks the tighter side: a wide slot over a tall image
+                                                    // is governed by the width.
         let wide = rect(200.0, 50.0);
         let f = print_scale(&wide, 2000, 4000);
         assert!((f - (200.0 / 2000.0) * PRINT_DPI / 25.4).abs() < 1e-9);
@@ -453,7 +488,11 @@ mod tests {
             locked: false,
             objets: Vec::new(),
         });
-        fs::write(dir.join("album.json"), serde_json::to_string(&album).unwrap()).unwrap();
+        fs::write(
+            dir.join("album.json"),
+            serde_json::to_string(&album).unwrap(),
+        )
+        .unwrap();
 
         let dest = dir.join("dest");
         fs::create_dir_all(&dest).unwrap();
@@ -493,7 +532,11 @@ mod tests {
             locked: false,
             objets: Vec::new(),
         });
-        fs::write(dir.join("album.json"), serde_json::to_string(&album).unwrap()).unwrap();
+        fs::write(
+            dir.join("album.json"),
+            serde_json::to_string(&album).unwrap(),
+        )
+        .unwrap();
 
         // A two-file supplier, so this test stays about the interior render
         // and nothing else.
@@ -502,7 +545,10 @@ mod tests {
         let err = render_print_pdf(&dir, profil, &out, &|_| {}, &|| true).unwrap_err();
         assert!(err.to_string().contains("annulé"), "{err}");
         assert!(!out.exists(), "un export annulé ne doit rien écrire");
-        assert!(!out.with_extension("pdf.part").exists(), "pas de .part orphelin");
+        assert!(
+            !out.with_extension("pdf.part").exists(),
+            "pas de .part orphelin"
+        );
 
         // Same folder, no cancellation: the file lands, atomically.
         render_print_pdf(&dir, profil, &out, &|_| {}, &|| false).unwrap();
@@ -546,7 +592,11 @@ mod tests {
         };
         album.spreads.push(planche("full1", &["a.jpg"])); // pleine page au recto
         album.spreads.push(planche("duo", &["b.jpg", "c.jpg"])); // une de chaque côté
-        fs::write(dir.join("album.json"), serde_json::to_string(&album).unwrap()).unwrap();
+        fs::write(
+            dir.join("album.json"),
+            serde_json::to_string(&album).unwrap(),
+        )
+        .unwrap();
 
         let out = dir.join("album-print.pdf");
         let profil = PrinterProfile::par_id("cloudprinter").unwrap();
@@ -588,7 +638,11 @@ mod tests {
             assert!((mm(&media[2]) - 216.0).abs() < 0.01, "p{n} : {:?}", media);
             assert!((mm(&media[3]) - 216.0).abs() < 0.01, "p{n} : {:?}", media);
             let trim = page.get(b"TrimBox").unwrap().as_array().unwrap();
-            assert!((mm(&trim[2]) - mm(&trim[0]) - 210.0).abs() < 0.01, "p{n} : {:?}", trim);
+            assert!(
+                (mm(&trim[2]) - mm(&trim[0]) - 210.0).abs() < 0.01,
+                "p{n} : {:?}",
+                trim
+            );
         }
 
         fs::remove_dir_all(&dir).ok();
@@ -661,7 +715,11 @@ mod tests {
         let octets = fs::read(&entier).unwrap();
         let tronque = dir.join("tronque.jpg");
         fs::write(&tronque, &octets[..octets.len() * 35 / 100]).unwrap();
-        assert_eq!(jpeg_sof(&fs::read(&tronque).unwrap()), Some((400, 300, 3)), "l'en-tête est intact");
+        assert_eq!(
+            jpeg_sof(&fs::read(&tronque).unwrap()),
+            Some((400, 300, 3)),
+            "l'en-tête est intact"
+        );
 
         // Passthrough slot: the whole file goes as-is, the truncated one is refused by name.
         let a = print_asset(&entier, 1, &rect(200.0, 150.0), [0.5, 0.5], 1.0, None).unwrap();
@@ -678,15 +736,24 @@ mod tests {
         // file cut right after its APP1 must not pass on that account.
         let mut rembourre = octets.clone();
         rembourre.extend(std::iter::repeat_n(b' ', 60));
-        assert!(jpeg_entier(&rembourre).is_ok(), "le rembourrage après EOI est légal");
+        assert!(
+            jpeg_entier(&rembourre).is_ok(),
+            "le rembourrage après EOI est légal"
+        );
         let mut avec_vignette = vec![0xFF, 0xD8, 0xFF, 0xE1];
         let app1 = [b"Exif\0\0".to_vec(), octets.clone()].concat();
         let len = (app1.len() + 2) as u16;
         avec_vignette.extend(len.to_be_bytes());
         avec_vignette.extend(&app1);
-        assert!(jpeg_entier(&avec_vignette).is_err(), "l'EOI de la vignette EXIF ne compte pas");
+        assert!(
+            jpeg_entier(&avec_vignette).is_err(),
+            "l'EOI de la vignette EXIF ne compte pas"
+        );
         avec_vignette.extend(&octets[2..]);
-        assert!(jpeg_entier(&avec_vignette).is_ok(), "le même fichier entier passe");
+        assert!(
+            jpeg_entier(&avec_vignette).is_ok(),
+            "le même fichier entier passe"
+        );
 
         fs::remove_dir_all(&dir).ok();
     }
@@ -719,7 +786,10 @@ mod tests {
             let data = fs::read(f).unwrap();
             if let Err(e) = jpeg_entier(&data) {
                 refus += 1;
-                let queue: Vec<String> = data[data.len().saturating_sub(16)..].iter().map(|b| format!("{b:02x}")).collect();
+                let queue: Vec<String> = data[data.len().saturating_sub(16)..]
+                    .iter()
+                    .map(|b| format!("{b:02x}"))
+                    .collect();
                 eprintln!("  refusé : {} ({e}) queue {}", f.display(), queue.join(" "));
             }
         }
@@ -760,10 +830,13 @@ mod tests {
             .save_with_format(&src, image::ImageFormat::Jpeg)
             .unwrap();
 
-        let r = crate::model::Reglage { expo: 0.5, contraste: 0.0, nb: false };
+        let r = crate::model::Reglage {
+            expo: 0.5,
+            contraste: 0.0,
+            nb: false,
+        };
         let plain = print_asset(&src, 1, &rect(200.0, 150.0), [0.5, 0.5], 1.0, None).unwrap();
-        let regle =
-            print_asset(&src, 1, &rect(200.0, 150.0), [0.5, 0.5], 1.0, Some(&r)).unwrap();
+        let regle = print_asset(&src, 1, &rect(200.0, 150.0), [0.5, 0.5], 1.0, Some(&r)).unwrap();
         assert_ne!(plain.data, regle.data, "un réglage doit changer les octets");
         // No passthrough under an adjustment, even though the file was
         // eligible: the dimensions still match (no downscale needed here).

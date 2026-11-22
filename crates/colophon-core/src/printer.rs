@@ -78,7 +78,12 @@ pub struct Bleed {
 
 impl Bleed {
     pub const fn uniforme(mm: f64) -> Self {
-        Self { haut: mm, bas: mm, exterieur: mm, dos: mm }
+        Self {
+            haut: mm,
+            bas: mm,
+            exterieur: mm,
+            dos: mm,
+        }
     }
 
     pub const fn aucun() -> Self {
@@ -184,7 +189,11 @@ impl PrinterProfile {
     pub fn dos_mm(&self, pages: usize, grammage: f64) -> Option<f64> {
         match self.dos {
             Dos::Fourni => None,
-            Dos::Calcule { mm_par_feuille, constante_mm, .. } => {
+            Dos::Calcule {
+                mm_par_feuille,
+                constante_mm,
+                ..
+            } => {
                 // A sheet is two pages; the reference weight of the coefficient
                 // is 150 g/m², so a heavier paper thickens the spine pro rata.
                 let feuilles = pages as f64 / 2.0;
@@ -447,7 +456,10 @@ mod tests {
         for (pages, gsm) in [(24usize, 150.0), (96, 150.0), (200, 170.0), (96, 200.0)] {
             let leur = gsm * BULK_MCS * (pages as f64 / 2.0) / 1000.0 + 2.0 * CARTON_MM;
             let notre = cp.dos_mm(pages, gsm).unwrap();
-            assert!((notre - leur).abs() < 1e-9, "{pages} p à {gsm} g : {notre} ≠ {leur}");
+            assert!(
+                (notre - leur).abs() < 1e-9,
+                "{pages} p à {gsm} g : {notre} ≠ {leur}"
+            );
         }
     }
 
@@ -469,7 +481,10 @@ mod tests {
             ..PrinterProfile::par_id("cloudprinter").unwrap().clone()
         };
         let dos = mcg.dos_mm(100, 200.0).unwrap();
-        assert!((dos - 14.0).abs() < 1e-9, "leur gabarit annonce 14,00 mm, on rend {dos}");
+        assert!(
+            (dos - 14.0).abs() < 1e-9,
+            "leur gabarit annonce 14,00 mm, on rend {dos}"
+        );
     }
 
     /// The three case-wrap cotes are the supplier's, never the renderer's:
@@ -479,7 +494,10 @@ mod tests {
     fn only_a_case_wrap_supplier_carries_the_three_cotes() {
         let cp = PrinterProfile::par_id("cloudprinter").unwrap();
         assert_eq!((cp.rempli_mm, cp.debord_mm, cp.mors_mm), (18.0, 3.0, 5.0));
-        for p in PrinterProfile::tous().iter().filter(|p| p.id != "cloudprinter") {
+        for p in PrinterProfile::tous()
+            .iter()
+            .filter(|p| p.id != "cloudprinter")
+        {
             assert_eq!(
                 (p.rempli_mm, p.debord_mm, p.mors_mm),
                 (0.0, 0.0, 0.0),
@@ -554,7 +572,11 @@ mod tests {
     fn provisional_profiles_carry_their_reservations() {
         for p in PrinterProfile::tous() {
             if p.certitude == Certitude::Provisoire {
-                assert!(!p.reserves.is_empty(), "{} ne dit pas ce qu'il attend", p.id);
+                assert!(
+                    !p.reserves.is_empty(),
+                    "{} ne dit pas ce qu'il attend",
+                    p.id
+                );
             }
         }
         // And a spine whose coefficient the supplier has written down says
@@ -568,6 +590,10 @@ mod tests {
             Dos::Fourni => panic!("Cloudprinter calcule son dos"),
         }
         assert_eq!(cp.certitude, Certitude::Provisoire);
-        assert!(!cp.reserves.iter().any(|r| r.contains("0,80")), "{:?}", cp.reserves);
+        assert!(
+            !cp.reserves.iter().any(|r| r.contains("0,80")),
+            "{:?}",
+            cp.reserves
+        );
     }
 }

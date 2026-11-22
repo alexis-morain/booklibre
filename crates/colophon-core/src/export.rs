@@ -158,8 +158,7 @@ pub fn empreinte_album(album: &Album) -> String {
 pub fn empreinte(octets: &[u8]) -> [u8; 16] {
     let mut out = [0u8; 16];
     for round in 0..2usize {
-        let mut h: u64 =
-            0xcbf2_9ce4_8422_2325 ^ (round as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+        let mut h: u64 = 0xcbf2_9ce4_8422_2325 ^ (round as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
         for b in octets {
             h ^= u64::from(*b);
             h = h.wrapping_mul(0x100_0000_01b3);
@@ -224,7 +223,13 @@ pub fn preparer(
     .context("album.json illisible")?;
     fs::create_dir_all(dest).with_context(|| format!("création de {}", dest.display()))?;
 
-    crate::print::render_print_pdf(dir, profil, &dest.join(LIVRAISON_INTERIEUR), progress, cancel)?;
+    crate::print::render_print_pdf(
+        dir,
+        profil,
+        &dest.join(LIVRAISON_INTERIEUR),
+        progress,
+        cancel,
+    )?;
     noter(dest, &album, LIVRAISON_INTERIEUR, profil.id)?;
     progress("cover: couverture");
     crate::cover::render_cover_pdf(dir, profil, &dest.join(LIVRAISON_COUVERTURE))
@@ -264,7 +269,12 @@ fn empreintes_fichier(chemin: &Path, nom: &'static str) -> Result<Livre> {
         md5.update(t);
         sha.update(t);
     })?;
-    Ok(Livre { nom, octets, sha256: hex(&sha.finish()), md5: hex(&md5.finish()) })
+    Ok(Livre {
+        nom,
+        octets,
+        sha256: hex(&sha.finish()),
+        md5: hex(&md5.finish()),
+    })
 }
 
 /// Le MD5 d'un fichier livré, en hexadécimal : le `md5sum` que la commande
@@ -337,7 +347,11 @@ fn fiche_txt(album: &Album, profil: &PrinterProfile, r: &PrevolReport, livres: &
         mm(b.dos, 1)
     ));
     if let Some([w, h]) = f.feuille_couverture_mm {
-        l.push(format!("Feuille de couverture : {} × {} mm", mm(w, 2), mm(h, 2)));
+        l.push(format!(
+            "Feuille de couverture : {} × {} mm",
+            mm(w, 2),
+            mm(h, 2)
+        ));
     }
     if let Some(d) = f.dos_mm {
         l.push(format!(
@@ -407,7 +421,9 @@ impl Md5 {
     pub fn update(&mut self, donnees: &[u8]) {
         self.octets = self.octets.wrapping_add(donnees.len() as u64);
         let etat = &mut self.etat;
-        par_blocs(&mut self.bloc, &mut self.rempli, donnees, |b| md5_bloc(etat, b));
+        par_blocs(&mut self.bloc, &mut self.rempli, donnees, |b| {
+            md5_bloc(etat, b)
+        });
     }
 
     pub fn finish(mut self) -> [u8; 16] {
@@ -416,8 +432,12 @@ impl Md5 {
         let bits = self.octets.wrapping_mul(8);
         let queue = bourrage(self.octets);
         let etat = &mut self.etat;
-        par_blocs(&mut self.bloc, &mut self.rempli, &queue, |b| md5_bloc(etat, b));
-        par_blocs(&mut self.bloc, &mut self.rempli, &bits.to_le_bytes(), |b| md5_bloc(etat, b));
+        par_blocs(&mut self.bloc, &mut self.rempli, &queue, |b| {
+            md5_bloc(etat, b)
+        });
+        par_blocs(&mut self.bloc, &mut self.rempli, &bits.to_le_bytes(), |b| {
+            md5_bloc(etat, b)
+        });
         let mut out = [0u8; 16];
         for (i, mot) in self.etat.iter().enumerate() {
             out[i * 4..i * 4 + 4].copy_from_slice(&mot.to_le_bytes());
@@ -437,22 +457,81 @@ const MD5_S: [u32; 64] = [
 /// `T[i] = ⌊2³² × |sin(i + 1)|⌋`, recopiée de la RFC plutôt que recalculée :
 /// un sinus en virgule flottante n'a pas à décider d'une empreinte.
 const MD5_T: [u32; 64] = [
-    0xd76a_a478, 0xe8c7_b756, 0x2420_70db, 0xc1bd_ceee, 0xf57c_0faf, 0x4787_c62a, 0xa830_4613,
-    0xfd46_9501, 0x6980_98d8, 0x8b44_f7af, 0xffff_5bb1, 0x895c_d7be, 0x6b90_1122, 0xfd98_7193,
-    0xa679_438e, 0x49b4_0821, 0xf61e_2562, 0xc040_b340, 0x265e_5a51, 0xe9b6_c7aa, 0xd62f_105d,
-    0x0244_1453, 0xd8a1_e681, 0xe7d3_fbc8, 0x21e1_cde6, 0xc337_07d6, 0xf4d5_0d87, 0x455a_14ed,
-    0xa9e3_e905, 0xfcef_a3f8, 0x676f_02d9, 0x8d2a_4c8a, 0xfffa_3942, 0x8771_f681, 0x6d9d_6122,
-    0xfde5_380c, 0xa4be_ea44, 0x4bde_cfa9, 0xf6bb_4b60, 0xbebf_bc70, 0x289b_7ec6, 0xeaa1_27fa,
-    0xd4ef_3085, 0x0488_1d05, 0xd9d4_d039, 0xe6db_99e5, 0x1fa2_7cf8, 0xc4ac_5665, 0xf429_2244,
-    0x432a_ff97, 0xab94_23a7, 0xfc93_a039, 0x655b_59c3, 0x8f0c_cc92, 0xffef_f47d, 0x8584_5dd1,
-    0x6fa8_7e4f, 0xfe2c_e6e0, 0xa301_4314, 0x4e08_11a1, 0xf753_7e82, 0xbd3a_f235, 0x2ad7_d2bb,
+    0xd76a_a478,
+    0xe8c7_b756,
+    0x2420_70db,
+    0xc1bd_ceee,
+    0xf57c_0faf,
+    0x4787_c62a,
+    0xa830_4613,
+    0xfd46_9501,
+    0x6980_98d8,
+    0x8b44_f7af,
+    0xffff_5bb1,
+    0x895c_d7be,
+    0x6b90_1122,
+    0xfd98_7193,
+    0xa679_438e,
+    0x49b4_0821,
+    0xf61e_2562,
+    0xc040_b340,
+    0x265e_5a51,
+    0xe9b6_c7aa,
+    0xd62f_105d,
+    0x0244_1453,
+    0xd8a1_e681,
+    0xe7d3_fbc8,
+    0x21e1_cde6,
+    0xc337_07d6,
+    0xf4d5_0d87,
+    0x455a_14ed,
+    0xa9e3_e905,
+    0xfcef_a3f8,
+    0x676f_02d9,
+    0x8d2a_4c8a,
+    0xfffa_3942,
+    0x8771_f681,
+    0x6d9d_6122,
+    0xfde5_380c,
+    0xa4be_ea44,
+    0x4bde_cfa9,
+    0xf6bb_4b60,
+    0xbebf_bc70,
+    0x289b_7ec6,
+    0xeaa1_27fa,
+    0xd4ef_3085,
+    0x0488_1d05,
+    0xd9d4_d039,
+    0xe6db_99e5,
+    0x1fa2_7cf8,
+    0xc4ac_5665,
+    0xf429_2244,
+    0x432a_ff97,
+    0xab94_23a7,
+    0xfc93_a039,
+    0x655b_59c3,
+    0x8f0c_cc92,
+    0xffef_f47d,
+    0x8584_5dd1,
+    0x6fa8_7e4f,
+    0xfe2c_e6e0,
+    0xa301_4314,
+    0x4e08_11a1,
+    0xf753_7e82,
+    0xbd3a_f235,
+    0x2ad7_d2bb,
     0xeb86_d391,
 ];
 
 fn md5_bloc(etat: &mut [u32; 4], bloc: &[u8; 64]) {
     let mut x = [0u32; 16];
     for (i, m) in x.iter_mut().enumerate() {
-        *m = u32::from_le_bytes([bloc[i * 4], bloc[i * 4 + 1], bloc[i * 4 + 2], bloc[i * 4 + 3]]);
+        *m = u32::from_le_bytes([
+            bloc[i * 4],
+            bloc[i * 4 + 1],
+            bloc[i * 4 + 2],
+            bloc[i * 4 + 3],
+        ]);
     }
     let [mut a, mut b, mut c, mut d] = *etat;
     for i in 0..64 {
@@ -496,8 +575,14 @@ impl Sha256 {
     pub fn new() -> Self {
         Sha256 {
             etat: [
-                0x6a09_e667, 0xbb67_ae85, 0x3c6e_f372, 0xa54f_f53a, 0x510e_527f, 0x9b05_688c,
-                0x1f83_d9ab, 0x5be0_cd19,
+                0x6a09_e667,
+                0xbb67_ae85,
+                0x3c6e_f372,
+                0xa54f_f53a,
+                0x510e_527f,
+                0x9b05_688c,
+                0x1f83_d9ab,
+                0x5be0_cd19,
             ],
             bloc: [0; 64],
             rempli: 0,
@@ -508,7 +593,9 @@ impl Sha256 {
     pub fn update(&mut self, donnees: &[u8]) {
         self.octets = self.octets.wrapping_add(donnees.len() as u64);
         let etat = &mut self.etat;
-        par_blocs(&mut self.bloc, &mut self.rempli, donnees, |b| sha256_bloc(etat, b));
+        par_blocs(&mut self.bloc, &mut self.rempli, donnees, |b| {
+            sha256_bloc(etat, b)
+        });
     }
 
     pub fn finish(mut self) -> [u8; 32] {
@@ -516,8 +603,12 @@ impl Sha256 {
         let bits = self.octets.wrapping_mul(8);
         let queue = bourrage(self.octets);
         let etat = &mut self.etat;
-        par_blocs(&mut self.bloc, &mut self.rempli, &queue, |b| sha256_bloc(etat, b));
-        par_blocs(&mut self.bloc, &mut self.rempli, &bits.to_be_bytes(), |b| sha256_bloc(etat, b));
+        par_blocs(&mut self.bloc, &mut self.rempli, &queue, |b| {
+            sha256_bloc(etat, b)
+        });
+        par_blocs(&mut self.bloc, &mut self.rempli, &bits.to_be_bytes(), |b| {
+            sha256_bloc(etat, b)
+        });
         let mut out = [0u8; 32];
         for (i, mot) in self.etat.iter().enumerate() {
             out[i * 4..i * 4 + 4].copy_from_slice(&mot.to_be_bytes());
@@ -528,27 +619,89 @@ impl Sha256 {
 
 /// Les 64 constantes de FIPS 180-4 § 4.2.2.
 const SHA256_K: [u32; 64] = [
-    0x428a_2f98, 0x7137_4491, 0xb5c0_fbcf, 0xe9b5_dba5, 0x3956_c25b, 0x59f1_11f1, 0x923f_82a4,
-    0xab1c_5ed5, 0xd807_aa98, 0x1283_5b01, 0x2431_85be, 0x550c_7dc3, 0x72be_5d74, 0x80de_b1fe,
-    0x9bdc_06a7, 0xc19b_f174, 0xe49b_69c1, 0xefbe_4786, 0x0fc1_9dc6, 0x240c_a1cc, 0x2de9_2c6f,
-    0x4a74_84aa, 0x5cb0_a9dc, 0x76f9_88da, 0x983e_5152, 0xa831_c66d, 0xb003_27c8, 0xbf59_7fc7,
-    0xc6e0_0bf3, 0xd5a7_9147, 0x06ca_6351, 0x1429_2967, 0x27b7_0a85, 0x2e1b_2138, 0x4d2c_6dfc,
-    0x5338_0d13, 0x650a_7354, 0x766a_0abb, 0x81c2_c92e, 0x9272_2c85, 0xa2bf_e8a1, 0xa81a_664b,
-    0xc24b_8b70, 0xc76c_51a3, 0xd192_e819, 0xd699_0624, 0xf40e_3585, 0x106a_a070, 0x19a4_c116,
-    0x1e37_6c08, 0x2748_774c, 0x34b0_bcb5, 0x391c_0cb3, 0x4ed8_aa4a, 0x5b9c_ca4f, 0x682e_6ff3,
-    0x748f_82ee, 0x78a5_636f, 0x84c8_7814, 0x8cc7_0208, 0x90be_fffa, 0xa450_6ceb, 0xbef9_a3f7,
+    0x428a_2f98,
+    0x7137_4491,
+    0xb5c0_fbcf,
+    0xe9b5_dba5,
+    0x3956_c25b,
+    0x59f1_11f1,
+    0x923f_82a4,
+    0xab1c_5ed5,
+    0xd807_aa98,
+    0x1283_5b01,
+    0x2431_85be,
+    0x550c_7dc3,
+    0x72be_5d74,
+    0x80de_b1fe,
+    0x9bdc_06a7,
+    0xc19b_f174,
+    0xe49b_69c1,
+    0xefbe_4786,
+    0x0fc1_9dc6,
+    0x240c_a1cc,
+    0x2de9_2c6f,
+    0x4a74_84aa,
+    0x5cb0_a9dc,
+    0x76f9_88da,
+    0x983e_5152,
+    0xa831_c66d,
+    0xb003_27c8,
+    0xbf59_7fc7,
+    0xc6e0_0bf3,
+    0xd5a7_9147,
+    0x06ca_6351,
+    0x1429_2967,
+    0x27b7_0a85,
+    0x2e1b_2138,
+    0x4d2c_6dfc,
+    0x5338_0d13,
+    0x650a_7354,
+    0x766a_0abb,
+    0x81c2_c92e,
+    0x9272_2c85,
+    0xa2bf_e8a1,
+    0xa81a_664b,
+    0xc24b_8b70,
+    0xc76c_51a3,
+    0xd192_e819,
+    0xd699_0624,
+    0xf40e_3585,
+    0x106a_a070,
+    0x19a4_c116,
+    0x1e37_6c08,
+    0x2748_774c,
+    0x34b0_bcb5,
+    0x391c_0cb3,
+    0x4ed8_aa4a,
+    0x5b9c_ca4f,
+    0x682e_6ff3,
+    0x748f_82ee,
+    0x78a5_636f,
+    0x84c8_7814,
+    0x8cc7_0208,
+    0x90be_fffa,
+    0xa450_6ceb,
+    0xbef9_a3f7,
     0xc671_78f2,
 ];
 
 fn sha256_bloc(etat: &mut [u32; 8], bloc: &[u8; 64]) {
     let mut w = [0u32; 64];
     for i in 0..16 {
-        w[i] = u32::from_be_bytes([bloc[i * 4], bloc[i * 4 + 1], bloc[i * 4 + 2], bloc[i * 4 + 3]]);
+        w[i] = u32::from_be_bytes([
+            bloc[i * 4],
+            bloc[i * 4 + 1],
+            bloc[i * 4 + 2],
+            bloc[i * 4 + 3],
+        ]);
     }
     for i in 16..64 {
         let s0 = w[i - 15].rotate_right(7) ^ w[i - 15].rotate_right(18) ^ (w[i - 15] >> 3);
         let s1 = w[i - 2].rotate_right(17) ^ w[i - 2].rotate_right(19) ^ (w[i - 2] >> 10);
-        w[i] = w[i - 16].wrapping_add(s0).wrapping_add(w[i - 7]).wrapping_add(s1);
+        w[i] = w[i - 16]
+            .wrapping_add(s0)
+            .wrapping_add(w[i - 7])
+            .wrapping_add(s1);
     }
     let [mut a, mut b, mut c, mut d, mut e, mut f, mut g, mut h] = *etat;
     for i in 0..64 {
@@ -631,7 +784,10 @@ mod tests {
             ("a", "0cc175b9c0f1b6a831c399e269772661"),
             ("abc", "900150983cd24fb0d6963f7d28e17f72"),
             ("message digest", "f96b697d7cb7938d525a2f31aaf161d0"),
-            ("abcdefghijklmnopqrstuvwxyz", "c3fcd3d76192e4007dfb496cca67e13b"),
+            (
+                "abcdefghijklmnopqrstuvwxyz",
+                "c3fcd3d76192e4007dfb496cca67e13b",
+            ),
             (
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
                 "d174ab98d277d9f5a5611c2c9f419d9f",
@@ -706,7 +862,11 @@ mod tests {
     }
 
     fn album() -> Album {
-        let mut a = Album::new("Corse", Path::new("/photos/corse"), Size { w: 210.0, h: 210.0 });
+        let mut a = Album::new(
+            "Corse",
+            Path::new("/photos/corse"),
+            Size { w: 210.0, h: 210.0 },
+        );
         for i in 0..4 {
             a.spreads.push(Spread {
                 template: "solo".into(),
@@ -722,8 +882,7 @@ mod tests {
     }
 
     fn dossier(nom: &str) -> PathBuf {
-        let d = std::env::temp_dir()
-            .join(format!("colophon-export-{nom}-{}", std::process::id()));
+        let d = std::env::temp_dir().join(format!("colophon-export-{nom}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&d);
         fs::create_dir_all(&d).unwrap();
         d
@@ -740,7 +899,11 @@ mod tests {
 
         let mut ailleurs = a.clone();
         ailleurs.root = "/Volumes/disque-externe/corse".into();
-        assert_eq!(empreinte_album(&ailleurs), reference, "le dossier des photos");
+        assert_eq!(
+            empreinte_album(&ailleurs),
+            reference,
+            "le dossier des photos"
+        );
 
         let mut migre = a.clone();
         migre.version = SCHEMA + 7;
@@ -751,7 +914,11 @@ mod tests {
         // simple ouverture dans l'éditeur.
         let json = serde_json::to_string_pretty(&a).unwrap();
         let relu: Album = serde_json::from_str(&json).unwrap();
-        assert_eq!(empreinte_album(&relu), reference, "l'aller-retour par le disque");
+        assert_eq!(
+            empreinte_album(&relu),
+            reference,
+            "l'aller-retour par le disque"
+        );
     }
 
     /// Une famille de changement par test, parce qu'une seule assertion
@@ -783,7 +950,11 @@ mod tests {
         let mut b = a.clone();
         b.reglages.insert(
             "1.jpg".into(),
-            Reglage { expo: 0.3, contraste: 0.0, nb: false },
+            Reglage {
+                expo: 0.3,
+                contraste: 0.0,
+                nb: false,
+            },
         );
         assert_ne!(empreinte_album(&b), empreinte_album(&a));
     }
@@ -889,7 +1060,11 @@ mod tests {
             fond: None,
             ..Default::default()
         });
-        fs::write(dir.join("album.json"), serde_json::to_string_pretty(&a).unwrap()).unwrap();
+        fs::write(
+            dir.join("album.json"),
+            serde_json::to_string_pretty(&a).unwrap(),
+        )
+        .unwrap();
         dir
     }
 
@@ -910,10 +1085,29 @@ mod tests {
             .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
             .collect();
         poses.sort();
-        assert_eq!(poses, ["album-cover.pdf", "album-print.pdf", "export.json", "fiche.txt"]);
-        assert_eq!(p.fichiers, ["album-print.pdf", "album-cover.pdf", "export.json", "fiche.txt"]);
+        assert_eq!(
+            poses,
+            [
+                "album-cover.pdf",
+                "album-print.pdf",
+                "export.json",
+                "fiche.txt"
+            ]
+        );
+        assert_eq!(
+            p.fichiers,
+            [
+                "album-print.pdf",
+                "album-cover.pdf",
+                "export.json",
+                "fiche.txt"
+            ]
+        );
         for absent in [LIVRAISON_INTERIEUR, LIVRAISON_COUVERTURE, NOM, FICHE] {
-            assert!(!dir.join(absent).exists(), "{absent} écrit à côté de l'album");
+            assert!(
+                !dir.join(absent).exists(),
+                "{absent} écrit à côté de l'album"
+            );
         }
 
         assert!(p.rapport.ok, "{:?}", p.rapport.defauts);
@@ -948,7 +1142,10 @@ mod tests {
         for f in [LIVRAISON_INTERIEUR, LIVRAISON_COUVERTURE] {
             let octets = fs::read(dest.join(f)).unwrap();
             assert!(fiche.contains(&md5_hex(&octets)), "MD5 de {f} :\n{fiche}");
-            assert!(fiche.contains(&sha256_hex(&octets)), "SHA-256 de {f} :\n{fiche}");
+            assert!(
+                fiche.contains(&sha256_hex(&octets)),
+                "SHA-256 de {f} :\n{fiche}"
+            );
         }
         assert!(!fiche.contains('—'), "pas de tiret cadratin");
 
@@ -956,15 +1153,26 @@ mod tests {
         // après la préparation, les deux fichiers sont périmés.
         let mut retouche = album.clone();
         retouche.title = "Corse, 2013".into();
-        fs::write(dir.join("album.json"), serde_json::to_string_pretty(&retouche).unwrap())
-            .unwrap();
+        fs::write(
+            dir.join("album.json"),
+            serde_json::to_string_pretty(&retouche).unwrap(),
+        )
+        .unwrap();
         let r = crate::prevol::prevol_dossier(&dir, &dest, cp).unwrap();
-        let perimes: Vec<_> = r.defauts.iter().filter(|d| d.regle == "fichier_perime").collect();
+        let perimes: Vec<_> = r
+            .defauts
+            .iter()
+            .filter(|d| d.regle == "fichier_perime")
+            .collect();
         assert_eq!(perimes.len(), 2, "{:?}", r.defauts);
         // Alors que le prévol de l'album seul, qui ne voit aucun fichier à
         // côté de lui, n'a rien à en dire.
         let seul = crate::prevol::prevol(&dir, cp).unwrap();
-        assert!(!seul.defauts.iter().any(|d| d.regle.starts_with("fichier_")), "{:?}", seul.defauts);
+        assert!(
+            !seul.defauts.iter().any(|d| d.regle.starts_with("fichier_")),
+            "{:?}",
+            seul.defauts
+        );
 
         let _ = fs::remove_dir_all(&dir);
     }

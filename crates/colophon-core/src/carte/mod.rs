@@ -57,7 +57,11 @@ use std::sync::OnceLock;
 /// porte aucune, ou quand le fichier manque ou ne se lit pas : une carte sans
 /// voyage ne dessine rien, et le prévol le dit.
 pub fn voyage_de(album: &crate::model::Album) -> Option<Voyage> {
-    let porte = album.spreads.iter().any(|s| s.objets.iter().any(|o| matches!(o.contenu, crate::model::Contenu::Carte { .. })));
+    let porte = album.spreads.iter().any(|s| {
+        s.objets
+            .iter()
+            .any(|o| matches!(o.contenu, crate::model::Contenu::Carte { .. }))
+    });
     if !porte {
         return None;
     }
@@ -68,9 +72,13 @@ pub fn voyage_de(album: &crate::model::Album) -> Option<Voyage> {
 /// C'est ce que l'écran lit, du même `dessiner` que le PDF, et il n'en dessine
 /// jamais d'autre. Une plage que le voyage ne tient plus est absente : l'écran
 /// la dit vide, comme le prévol.
-pub fn dessins_de_l_album(album: &crate::model::Album) -> std::collections::BTreeMap<String, Dessin> {
+pub fn dessins_de_l_album(
+    album: &crate::model::Album,
+) -> std::collections::BTreeMap<String, Dessin> {
     let mut sortie = std::collections::BTreeMap::new();
-    let Some(voyage) = voyage_de(album) else { return sortie };
+    let Some(voyage) = voyage_de(album) else {
+        return sortie;
+    };
     for o in album.spreads.iter().flat_map(|s| s.objets.iter()) {
         if let crate::model::Contenu::Carte { debut, fin } = o.contenu {
             let cle = format!("{debut}-{fin}");
@@ -136,18 +144,36 @@ pub enum Style {
     /// Les chemins sont fermés, à remplir.
     Remplir,
     /// Les chemins sont ouverts (ou fermés), à tracer ; `pointille` : plein, vide.
-    Tracer { epaisseur_mm: f64, pointille: Option<[f64; 2]> },
+    Tracer {
+        epaisseur_mm: f64,
+        pointille: Option<[f64; 2]>,
+    },
 }
 
 impl Role {
     pub fn style(self) -> Style {
         match self {
             Role::Terre | Role::Lacs => Style::Remplir,
-            Role::Rivieres => Style::Tracer { epaisseur_mm: 0.08, pointille: None },
-            Role::Frontieres => Style::Tracer { epaisseur_mm: 0.10, pointille: None },
-            Role::Cotes => Style::Tracer { epaisseur_mm: 0.15, pointille: None },
-            Role::Trace => Style::Tracer { epaisseur_mm: 0.50, pointille: None },
-            Role::Vol => Style::Tracer { epaisseur_mm: 0.40, pointille: Some([1.2, 0.9]) },
+            Role::Rivieres => Style::Tracer {
+                epaisseur_mm: 0.08,
+                pointille: None,
+            },
+            Role::Frontieres => Style::Tracer {
+                epaisseur_mm: 0.10,
+                pointille: None,
+            },
+            Role::Cotes => Style::Tracer {
+                epaisseur_mm: 0.15,
+                pointille: None,
+            },
+            Role::Trace => Style::Tracer {
+                epaisseur_mm: 0.50,
+                pointille: None,
+            },
+            Role::Vol => Style::Tracer {
+                epaisseur_mm: 0.40,
+                pointille: Some([1.2, 0.9]),
+            },
             Role::Reperes => Style::Remplir,
         }
     }
@@ -194,7 +220,13 @@ pub struct Calque {
 
 impl Calque {
     pub fn de(role: Role, chemins: Vec<Chemin>) -> Self {
-        Calque { role, style: role.style(), encre: role.encre(), contour_mm: role.contour_mm(), chemins }
+        Calque {
+            role,
+            style: role.style(),
+            encre: role.encre(),
+            contour_mm: role.contour_mm(),
+            chemins,
+        }
     }
 }
 
@@ -263,10 +295,38 @@ impl Dessin {
                 Chemin {
                     segments: vec![
                         Segment::Vers { x: x + r, y },
-                        Segment::Courbe { x1: x + r, y1: y + c, x2: x + c, y2: y + r, x, y: y + r },
-                        Segment::Courbe { x1: x - c, y1: y + r, x2: x - r, y2: y + c, x: x - r, y },
-                        Segment::Courbe { x1: x - r, y1: y - c, x2: x - c, y2: y - r, x, y: y - r },
-                        Segment::Courbe { x1: x + c, y1: y - r, x2: x + r, y2: y - c, x: x + r, y },
+                        Segment::Courbe {
+                            x1: x + r,
+                            y1: y + c,
+                            x2: x + c,
+                            y2: y + r,
+                            x,
+                            y: y + r,
+                        },
+                        Segment::Courbe {
+                            x1: x - c,
+                            y1: y + r,
+                            x2: x - r,
+                            y2: y + c,
+                            x: x - r,
+                            y,
+                        },
+                        Segment::Courbe {
+                            x1: x - r,
+                            y1: y - c,
+                            x2: x - c,
+                            y2: y - r,
+                            x,
+                            y: y - r,
+                        },
+                        Segment::Courbe {
+                            x1: x + c,
+                            y1: y - r,
+                            x2: x + r,
+                            y2: y - c,
+                            x: x + r,
+                            y,
+                        },
                         Segment::Ferme,
                     ],
                     evenodd: false,
@@ -286,10 +346,17 @@ impl Dessin {
 
     /// Tous les points de tous les chemins, et les repères.
     pub fn points(&self) -> impl Iterator<Item = (f64, f64)> + '_ {
-        let chemins = self.calques.iter().flat_map(|c| c.chemins.iter()).flat_map(|c| c.segments.iter()).filter_map(|s| match *s {
-            Segment::Vers { x, y } | Segment::Ligne { x, y } | Segment::Courbe { x, y, .. } => Some((x, y)),
-            Segment::Ferme => None,
-        });
+        let chemins = self
+            .calques
+            .iter()
+            .flat_map(|c| c.chemins.iter())
+            .flat_map(|c| c.segments.iter())
+            .filter_map(|s| match *s {
+                Segment::Vers { x, y } | Segment::Ligne { x, y } | Segment::Courbe { x, y, .. } => {
+                    Some((x, y))
+                }
+                Segment::Ferme => None,
+            });
         chemins.chain(self.reperes.iter().map(|r| (r.x, r.y)))
     }
 
@@ -299,7 +366,12 @@ impl Dessin {
             .iter()
             .filter(|c| matches!(c.role, Role::Trace | Role::Vol))
             .flat_map(|c| c.chemins.iter())
-            .map(|c| c.segments.iter().filter(|s| !matches!(s, Segment::Ferme)).count())
+            .map(|c| {
+                c.segments
+                    .iter()
+                    .filter(|s| !matches!(s, Segment::Ferme))
+                    .count()
+            })
             .sum()
     }
 
@@ -354,7 +426,9 @@ impl Fnv {
 
 fn actif() -> Result<&'static Actif<'static>, Erreur> {
     static LU: OnceLock<Result<Actif<'static>, String>> = OnceLock::new();
-    LU.get_or_init(|| Actif::lire(ACTIF)).as_ref().map_err(|e| Erreur::Actif(e.clone()))
+    LU.get_or_init(|| Actif::lire(ACTIF))
+        .as_ref()
+        .map_err(|e| Erreur::Actif(e.clone()))
 }
 
 /// La longitude médiane circulaire : parmi les longitudes données, celle qui
@@ -381,7 +455,9 @@ pub fn centre_du_monde(points: &[P]) -> f64 {
     let mut lons: Vec<f64> = points.iter().map(|&(_, lon)| envelopper(lon)).collect();
     lons.sort_by(|a, b| a.partial_cmp(b).unwrap());
     lons.dedup();
-    let Some(&premier) = lons.first() else { return 0.0 };
+    let Some(&premier) = lons.first() else {
+        return 0.0;
+    };
     // Le vide qui suit chaque longitude, en tournant ; le dernier boucle sur le premier.
     let (mut meilleur, mut debut) = (f64::MIN, premier);
     for (i, &l) in lons.iter().enumerate() {
@@ -409,11 +485,19 @@ struct Cadre {
 
 impl Cadre {
     fn mm(&self, p: P) -> P {
-        (r3((p.0 - self.x0) * self.echelle), r3((self.y1 - p.1) * self.echelle))
+        (
+            r3((p.0 - self.x0) * self.echelle),
+            r3((self.y1 - p.1) * self.echelle),
+        )
     }
 
     fn rect(&self) -> Rect {
-        Rect { x0: 0.0, y0: 0.0, x1: self.largeur, y1: self.hauteur }
+        Rect {
+            x0: 0.0,
+            y0: 0.0,
+            x1: self.largeur,
+            y1: self.hauteur,
+        }
     }
 }
 
@@ -445,7 +529,14 @@ fn cadre(proj: &Projection, points: &[P]) -> Cadre {
         oy = oy.clamp(-dh, dh - h);
     }
     let echelle = COTE_MM / w.max(h);
-    Cadre { x0: ox, y1: oy + h, echelle, largeur: r3(w * echelle), hauteur: r3(h * echelle), plan: (ox, oy, ox + w, oy + h) }
+    Cadre {
+        x0: ox,
+        y1: oy + h,
+        echelle,
+        largeur: r3(w * echelle),
+        hauteur: r3(h * echelle),
+        plan: (ox, oy, ox + w, oy + h),
+    }
 }
 
 /// Le fond d'une couche : ce que l'emprise touche, coupé aux coutures, projeté,
@@ -459,9 +550,16 @@ struct Fond<'a> {
 
 impl Fond<'_> {
     fn touche(&self, boite: [i32; 4]) -> bool {
-        let Some((lo, hi, la0, la1)) = self.fenetre else { return true };
+        let Some((lo, hi, la0, la1)) = self.fenetre else {
+            return true;
+        };
         let e = ECHELLE;
-        let (a, b, c, d) = (boite[0] as f64 / e, boite[2] as f64 / e, boite[1] as f64 / e, boite[3] as f64 / e);
+        let (a, b, c, d) = (
+            boite[0] as f64 / e,
+            boite[2] as f64 / e,
+            boite[1] as f64 / e,
+            boite[3] as f64 / e,
+        );
         if d < la0 || c > la1 {
             return false;
         }
@@ -482,7 +580,10 @@ impl Fond<'_> {
             }
             let pts = partie.points().map_err(Erreur::Actif)?;
             for morceau in decouper_fuseau(&pts, self.proj.lon0(), surface) {
-                let plan: Vec<P> = morceau.iter().map(|&(lon, lat)| self.cadre.mm(self.proj.projeter(lon, lat))).collect();
+                let plan: Vec<P> = morceau
+                    .iter()
+                    .map(|&(lon, lat)| self.cadre.mm(self.proj.projeter(lon, lat)))
+                    .collect();
                 let rect = self.cadre.rect();
                 if surface {
                     let p = arrondir(&rect.polygone(&plan));
@@ -518,18 +619,28 @@ fn dedoublonner(p: &[P]) -> Vec<P> {
 }
 
 fn aire(p: &[P]) -> f64 {
-    (0..p.len()).map(|i| p[i].0 * p[(i + 1) % p.len()].1 - p[(i + 1) % p.len()].0 * p[i].1).sum::<f64>() / 2.0
+    (0..p.len())
+        .map(|i| p[i].0 * p[(i + 1) % p.len()].1 - p[(i + 1) % p.len()].0 * p[i].1)
+        .sum::<f64>()
+        / 2.0
 }
 
 fn chemin(p: &[P], ferme: bool) -> Chemin {
     let mut segments = Vec::with_capacity(p.len() + 1);
     for (i, &(x, y)) in p.iter().enumerate() {
-        segments.push(if i == 0 { Segment::Vers { x, y } } else { Segment::Ligne { x, y } });
+        segments.push(if i == 0 {
+            Segment::Vers { x, y }
+        } else {
+            Segment::Ligne { x, y }
+        });
     }
     if ferme {
         segments.push(Segment::Ferme);
     }
-    Chemin { segments, evenodd: false }
+    Chemin {
+        segments,
+        evenodd: false,
+    }
 }
 
 /// La carte des étapes `plage` du voyage (les rangs hors du voyage sont
@@ -581,12 +692,20 @@ pub fn dessiner(voyage: &Voyage, plage: Range<usize>) -> Result<Dessin, Erreur> 
     let mut lon0 = longitude_mediane(&lons);
     let (mut niveau, mut lat_mid) = etendue(lon0);
     if niveau == Niveau::Monde {
-        lon0 = centre_du_monde(&etapes.iter().map(|e| (e.lieu.lat, e.lieu.lon)).collect::<Vec<P>>());
+        lon0 = centre_du_monde(
+            &etapes
+                .iter()
+                .map(|e| (e.lieu.lat, e.lieu.lon))
+                .collect::<Vec<P>>(),
+        );
         (niveau, lat_mid) = etendue(lon0);
     }
     let proj = match niveau {
         Niveau::Ville => Projection::Mercator { lon0 },
-        Niveau::Region => Projection::Equirectangulaire { lon0, lat_ref: lat_mid },
+        Niveau::Region => Projection::Equirectangulaire {
+            lon0,
+            lat_ref: lat_mid,
+        },
         Niveau::Monde => Projection::EqualEarth { lon0 },
     };
 
@@ -595,14 +714,24 @@ pub fn dessiner(voyage: &Voyage, plage: Range<usize>) -> Result<Dessin, Erreur> 
     for p in &pieces {
         let contour: Vec<P> = p.points.iter().map(|&(lat, lon)| (lon, lat)).collect();
         for m in decouper_fuseau(&contour, lon0, false) {
-            let pts = m.iter().map(|&(lon, lat)| proj.projeter(lon, lat)).collect();
+            let pts = m
+                .iter()
+                .map(|&(lon, lat)| proj.projeter(lon, lat))
+                .collect();
             plan_pieces.push((if p.vol { Role::Vol } else { Role::Trace }, pts));
         }
     }
-    let plan_etapes: Vec<P> = etapes.iter().map(|e| proj.projeter(envelopper(e.lieu.lon - lon0), e.lieu.lat)).collect();
+    let plan_etapes: Vec<P> = etapes
+        .iter()
+        .map(|e| proj.projeter(envelopper(e.lieu.lon - lon0), e.lieu.lat))
+        .collect();
 
     // L'emprise : les étapes et le tracé.
-    let tous: Vec<P> = plan_etapes.iter().copied().chain(plan_pieces.iter().flat_map(|p| p.1.iter().copied())).collect();
+    let tous: Vec<P> = plan_etapes
+        .iter()
+        .copied()
+        .chain(plan_pieces.iter().flat_map(|p| p.1.iter().copied()))
+        .collect();
     let cadre = cadre(&proj, &tous);
     let rect = cadre.rect();
 
@@ -614,13 +743,26 @@ pub fn dessiner(voyage: &Voyage, plage: Range<usize>) -> Result<Dessin, Erreur> 
             let (a, b) = (proj.inverse(x0, y0), proj.inverse(x1, y1));
             a.zip(b).map(|((lo0, la0), (lo1, la1))| {
                 let pad = 0.02 * (lo1 - lo0).abs().max(la1 - la0);
-                (lo0.min(lo1) - pad, lo0.max(lo1) + pad, la0.min(la1) - pad, la0.max(la1) + pad)
+                (
+                    lo0.min(lo1) - pad,
+                    lo0.max(lo1) + pad,
+                    la0.min(la1) - pad,
+                    la0.max(la1) + pad,
+                )
             })
         }
     };
-    let fond = Fond { proj: &proj, cadre: &cadre, fenetre };
+    let fond = Fond {
+        proj: &proj,
+        cadre: &cadre,
+        fenetre,
+    };
     let couches: &[(Couche, Role)] = if niveau == Niveau::Monde {
-        &[(Couche::Terre50, Role::Terre), (Couche::Frontieres50, Role::Frontieres), (Couche::Cotes50, Role::Cotes)]
+        &[
+            (Couche::Terre50, Role::Terre),
+            (Couche::Frontieres50, Role::Frontieres),
+            (Couche::Cotes50, Role::Cotes),
+        ]
     } else {
         &[
             (Couche::Terre10, Role::Terre),
@@ -643,7 +785,9 @@ pub fn dessiner(voyage: &Voyage, plage: Range<usize>) -> Result<Dessin, Erreur> 
             continue;
         }
         match en_mm.last_mut() {
-            Some((r, dernier)) if r == role && dist(*dernier.last().unwrap(), pts[0]) <= 0.5 => dernier.extend_from_slice(&pts[1..]),
+            Some((r, dernier)) if r == role && dist(*dernier.last().unwrap(), pts[0]) <= 0.5 => {
+                dernier.extend_from_slice(&pts[1..])
+            }
             _ => en_mm.push((*role, pts)),
         }
     }
@@ -653,7 +797,9 @@ pub fn dessiner(voyage: &Voyage, plage: Range<usize>) -> Result<Dessin, Erreur> 
             .iter()
             .flat_map(|(role, pts)| {
                 let simple = arrondir(&douglas_peucker(pts, tolerance));
-                rect.ligne(&simple).into_iter().map(move |l| (*role, arrondir(&l)))
+                rect.ligne(&simple)
+                    .into_iter()
+                    .map(move |l| (*role, arrondir(&l)))
             })
             .collect();
         let n: usize = s.iter().map(|p| p.1.len()).sum();
@@ -663,7 +809,11 @@ pub fn dessiner(voyage: &Voyage, plage: Range<usize>) -> Result<Dessin, Erreur> 
         tolerance *= 1.5;
     };
     for role in [Role::Trace, Role::Vol] {
-        let chemins: Vec<Chemin> = simplifie.iter().filter(|(r, _)| *r == role).map(|(_, p)| chemin(p, false)).collect();
+        let chemins: Vec<Chemin> = simplifie
+            .iter()
+            .filter(|(r, _)| *r == role)
+            .map(|(_, p)| chemin(p, false))
+            .collect();
         if !chemins.is_empty() {
             calques.push(Calque::de(role, chemins));
         }
@@ -674,11 +824,21 @@ pub fn dessiner(voyage: &Voyage, plage: Range<usize>) -> Result<Dessin, Erreur> 
         .enumerate()
         .map(|(i, &p)| {
             let (x, y) = cadre.mm(p);
-            Repere { etape: plage.start + i, x: x.clamp(0.0, cadre.largeur), y: y.clamp(0.0, cadre.hauteur) }
+            Repere {
+                etape: plage.start + i,
+                x: x.clamp(0.0, cadre.largeur),
+                y: y.clamp(0.0, cadre.hauteur),
+            }
         })
         .collect();
 
-    Ok(Dessin { viewbox: [0.0, 0.0, cadre.largeur, cadre.hauteur], niveau, projection: proj, calques, reperes })
+    Ok(Dessin {
+        viewbox: [0.0, 0.0, cadre.largeur, cadre.hauteur],
+        niveau,
+        projection: proj,
+        calques,
+        reperes,
+    })
 }
 
 fn dist(a: P, b: P) -> f64 {

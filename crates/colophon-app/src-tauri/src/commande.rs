@@ -65,7 +65,10 @@ pub struct IntentionVue {
 
 /// Les quatre états que plus rien ne fait bouger (la machine du relais).
 pub fn terminal(etat: &str) -> bool {
-    matches!(etat, "echec_remboursee" | "annulee" | "purgee" | "abandonnee")
+    matches!(
+        etat,
+        "echec_remboursee" | "annulee" | "purgee" | "abandonnee"
+    )
 }
 
 impl Stock {
@@ -86,7 +89,11 @@ impl Stock {
         // Un nom par écriture : deux écritures ne partagent jamais leur
         // fichier temporaire.
         static RANG: AtomicU64 = AtomicU64::new(0);
-        let tmp = dir.join(format!("{FICHIER}.{}.{}.tmp", std::process::id(), RANG.fetch_add(1, Ordering::Relaxed)));
+        let tmp = dir.join(format!(
+            "{FICHIER}.{}.{}.tmp",
+            std::process::id(),
+            RANG.fetch_add(1, Ordering::Relaxed)
+        ));
         let texte = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
         let mut o = std::fs::OpenOptions::new();
         o.write(true).create_new(true);
@@ -110,7 +117,10 @@ impl Stock {
     }
 
     pub fn trouver(&self, id: &str) -> Result<&IntentionGardee, String> {
-        self.intentions.iter().find(|i| i.id == id).ok_or_else(|| "commande inconnue".to_string())
+        self.intentions
+            .iter()
+            .find(|i| i.id == id)
+            .ok_or_else(|| "commande inconnue".to_string())
     }
 
     /// Pose l'état relu d'une intention. Un état terminal ne revient jamais
@@ -155,7 +165,11 @@ impl Stock {
 }
 
 /// Lit, change et réécrit `commande.json` sous `verrou`.
-pub fn modifier<T>(verrou: &Mutex<()>, dir: &Path, f: impl FnOnce(&mut Stock) -> Result<T, String>) -> Result<T, String> {
+pub fn modifier<T>(
+    verrou: &Mutex<()>,
+    dir: &Path,
+    f: impl FnOnce(&mut Stock) -> Result<T, String>,
+) -> Result<T, String> {
     let _tenu = verrou.lock().unwrap_or_else(|e| e.into_inner());
     let mut s = Stock::lire(dir)?;
     let r = f(&mut s)?;
@@ -189,7 +203,10 @@ pub fn relire(
             })
             .collect()
     };
-    let lus: Vec<_> = a_lire.iter().map(|i| (i.id.clone(), relais.etat(&i.id, &i.secret))).collect();
+    let lus: Vec<_> = a_lire
+        .iter()
+        .map(|i| (i.id.clone(), relais.etat(&i.id, &i.secret)))
+        .collect();
     let mut erreur = None;
     modifier(verrou, dir, |s| {
         for (id, lu) in lus {
@@ -266,7 +283,11 @@ pub fn abandonner(
         let _tenu = verrou.lock().unwrap_or_else(|e| e.into_inner());
         Stock::lire(dir)
             .ok()
-            .and_then(|s| s.intentions.into_iter().find(|i| i.id == id && Some(i.mode) == mode))
+            .and_then(|s| {
+                s.intentions
+                    .into_iter()
+                    .find(|i| i.id == id && Some(i.mode) == mode)
+            })
             .ok_or(RefusAbandon::Inconnue)?
     };
     match relais.abandonner(&i.id, &i.secret) {
@@ -306,13 +327,20 @@ pub struct Jeton<'a> {
 impl EnCours {
     pub fn prendre(&self, id: &str) -> Option<Jeton<'_>> {
         let mut g = self.0.lock().unwrap_or_else(|e| e.into_inner());
-        g.insert(id.to_string()).then(|| Jeton { en_cours: self, id: id.to_string() })
+        g.insert(id.to_string()).then(|| Jeton {
+            en_cours: self,
+            id: id.to_string(),
+        })
     }
 }
 
 impl Drop for Jeton<'_> {
     fn drop(&mut self) {
-        self.en_cours.0.lock().unwrap_or_else(|e| e.into_inner()).remove(&self.id);
+        self.en_cours
+            .0
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(&self.id);
     }
 }
 
@@ -367,28 +395,45 @@ mod tests {
     #[test]
     fn le_stock_s_ecrit_en_0600_et_se_relit() {
         let dir = dossier("0600");
-        assert!(Stock::lire(&dir).unwrap().intentions.is_empty(), "absent, le stock est vide");
-        let mut s = Stock { intentions: vec![gardee("a", "attente_paiement")] };
+        assert!(
+            Stock::lire(&dir).unwrap().intentions.is_empty(),
+            "absent, le stock est vide"
+        );
+        let mut s = Stock {
+            intentions: vec![gardee("a", "attente_paiement")],
+        };
         s.poser("a", "commandee", Some(501));
         s.ecrire(&dir).unwrap();
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let mode = std::fs::metadata(dir.join(FICHIER)).unwrap().permissions().mode();
+            let mode = std::fs::metadata(dir.join(FICHIER))
+                .unwrap()
+                .permissions()
+                .mode();
             assert_eq!(mode & 0o777, 0o600);
         }
         let relu = Stock::lire(&dir).unwrap();
         assert_eq!(relu.intentions, s.intentions);
-        assert_eq!(relu.intentions[0].secret, Secret::new(SECRET), "le secret survit à la relecture");
+        assert_eq!(
+            relu.intentions[0].secret,
+            Secret::new(SECRET),
+            "le secret survit à la relecture"
+        );
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
     fn la_fenetre_ne_voit_jamais_le_secret() {
-        let s = Stock { intentions: vec![gardee("a", "commandee"), gardee("b", "attente_paiement")] };
+        let s = Stock {
+            intentions: vec![gardee("a", "commandee"), gardee("b", "attente_paiement")],
+        };
         let vue = serde_json::to_string(&s.vue(Some(Mode::Sandbox))).unwrap();
         assert!(!vue.contains(SECRET), "{vue}");
-        assert!(vue.find("\"b\"").unwrap() < vue.find("\"a\"").unwrap(), "la plus récente d'abord");
+        assert!(
+            vue.find("\"b\"").unwrap() < vue.find("\"a\"").unwrap(),
+            "la plus récente d'abord"
+        );
         assert!(!format!("{s:?}").contains(SECRET));
         assert!(!format!("{:?}", s.trouver("a").unwrap()).contains(SECRET));
         assert_eq!(s.trouver("z").unwrap_err(), "commande inconnue");
@@ -399,7 +444,15 @@ mod tests {
         for e in ["echec_remboursee", "annulee", "purgee", "abandonnee"] {
             assert!(terminal(e), "{e}");
         }
-        for e in ["attente_fichiers", "attente_paiement", "payee", "commandee", "remboursement_en_cours", "annulation_en_cours", "inconnu"] {
+        for e in [
+            "attente_fichiers",
+            "attente_paiement",
+            "payee",
+            "commandee",
+            "remboursement_en_cours",
+            "annulation_en_cours",
+            "inconnu",
+        ] {
             assert!(!terminal(e), "{e}");
         }
     }
@@ -408,7 +461,9 @@ mod tests {
     fn la_liste_ne_montre_que_le_mode_du_relais_compile() {
         let mut reel = gardee("r", "commandee");
         reel.mode = Mode::Reel;
-        let s = Stock { intentions: vec![gardee("s", "commandee"), reel] };
+        let s = Stock {
+            intentions: vec![gardee("s", "commandee"), reel],
+        };
         let ids = |m| s.vue(m).into_iter().map(|v| v.id).collect::<Vec<_>>();
         assert_eq!(ids(Some(Mode::Sandbox)), ["s"]);
         assert_eq!(ids(Some(Mode::Reel)), ["r"]);
@@ -430,7 +485,11 @@ mod tests {
         // Un fichier de S-s3 sans niveau se relit.
         assert_eq!(Stock::lire(&dir).unwrap().intentions[0].niveau, None);
         modifier(&verrou, &dir, |s| {
-            s.intentions.iter_mut().find(|i| i.id == "a").unwrap().niveau = Some("cp_ground".into());
+            s.intentions
+                .iter_mut()
+                .find(|i| i.id == "a")
+                .unwrap()
+                .niveau = Some("cp_ground".into());
             s.oublier("b");
             Ok(())
         })
@@ -438,8 +497,15 @@ mod tests {
         let v = Stock::lire(&dir).unwrap().vue(Some(Mode::Sandbox));
         assert_eq!(v.len(), 1);
         assert_eq!(v[0].niveau.as_deref(), Some("cp_ground"));
-        let restes: Vec<_> = std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().file_name()).collect();
-        assert_eq!(restes, [std::ffi::OsString::from(FICHIER)], "aucun fichier temporaire ne traîne");
+        let restes: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
+        assert_eq!(
+            restes,
+            [std::ffi::OsString::from(FICHIER)],
+            "aucun fichier temporaire ne traîne"
+        );
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -454,9 +520,17 @@ mod tests {
         fn get(&self, _: &str, _: Option<&Secret>) -> Result<(u16, String), String> {
             self.entre.send(()).unwrap();
             self.feu.recv().unwrap();
-            Ok((200, r#"{"etat": "commandee", "mode": "sandbox", "dernier_code": 1}"#.into()))
+            Ok((
+                200,
+                r#"{"etat": "commandee", "mode": "sandbox", "dernier_code": 1}"#.into(),
+            ))
         }
-        fn post_json(&self, _: &str, _: Option<&Secret>, _: &serde_json::Value) -> Result<(u16, String), String> {
+        fn post_json(
+            &self,
+            _: &str,
+            _: Option<&Secret>,
+            _: &serde_json::Value,
+        ) -> Result<(u16, String), String> {
             unreachable!()
         }
         fn put_fichier(
@@ -482,11 +556,17 @@ mod tests {
         .unwrap();
         let (entre_tx, entre_rx) = std::sync::mpsc::channel();
         let (feu_tx, feu_rx) = std::sync::mpsc::channel();
-        let bloque = Bloque { entre: entre_tx, feu: feu_rx };
+        let bloque = Bloque {
+            entre: entre_tx,
+            feu: feu_rx,
+        };
         std::thread::scope(|sc| {
             let (verrou, dir) = (&verrou, &dir);
             let lecture = sc.spawn(move || {
-                let relais = Relais { base: "https://relais.exemple", transport: &bloque };
+                let relais = Relais {
+                    base: "https://relais.exemple",
+                    transport: &bloque,
+                };
                 relire(verrou, dir, &relais, Some(Mode::Sandbox), None)
             });
             entre_rx.recv().unwrap();
@@ -500,9 +580,15 @@ mod tests {
             assert_eq!(lecture.join().unwrap().unwrap(), None);
         });
         let s = Stock::lire(&dir).unwrap();
-        let etats: Vec<(&str, &str, Option<i64>)> =
-            s.intentions.iter().map(|i| (i.id.as_str(), i.etat.as_str(), i.dernier_code)).collect();
-        assert_eq!(etats, [("a", "commandee", Some(1)), ("b", "attente_fichiers", None)]);
+        let etats: Vec<(&str, &str, Option<i64>)> = s
+            .intentions
+            .iter()
+            .map(|i| (i.id.as_str(), i.etat.as_str(), i.dernier_code))
+            .collect();
+        assert_eq!(
+            etats,
+            [("a", "commandee", Some(1)), ("b", "attente_fichiers", None)]
+        );
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -513,7 +599,10 @@ mod tests {
         assert!(envois.prendre("a").is_none(), "le second est refusé");
         assert!(envois.prendre("b").is_some(), "une autre intention passe");
         drop(premier);
-        assert!(envois.prendre("a").is_some(), "le marqueur tombe avec l'envoi");
+        assert!(
+            envois.prendre("a").is_some(),
+            "le marqueur tombe avec l'envoi"
+        );
     }
 
     /// Un relais qui rend une réponse fixée, ou rien, et compte ses appels :
@@ -526,10 +615,17 @@ mod tests {
 
     impl Fixe {
         fn etat(etat: &str) -> Fixe {
-            Fixe::rend(Ok((200, format!(r#"{{"etat": "{etat}", "mode": "sandbox"}}"#))))
+            Fixe::rend(Ok((
+                200,
+                format!(r#"{{"etat": "{etat}", "mode": "sandbox"}}"#),
+            )))
         }
         fn rend(reponse: Result<(u16, String), String>) -> Fixe {
-            Fixe { reponse, appels: std::cell::Cell::new(0), abandons: std::cell::Cell::new(0) }
+            Fixe {
+                reponse,
+                appels: std::cell::Cell::new(0),
+                abandons: std::cell::Cell::new(0),
+            }
         }
     }
 
@@ -538,7 +634,12 @@ mod tests {
             self.appels.set(self.appels.get() + 1);
             self.reponse.clone()
         }
-        fn post_json(&self, url: &str, _: Option<&Secret>, _: &serde_json::Value) -> Result<(u16, String), String> {
+        fn post_json(
+            &self,
+            url: &str,
+            _: Option<&Secret>,
+            _: &serde_json::Value,
+        ) -> Result<(u16, String), String> {
             assert!(url.ends_with("/v1/orders/a/abandon"), "{url}");
             self.abandons.set(self.abandons.get() + 1);
             self.reponse.clone()
@@ -555,13 +656,33 @@ mod tests {
     /// Un stock d'une intention `a` dans l'état local `etat`, et son dossier.
     fn stock_a(nom: &str, etat: &str) -> std::path::PathBuf {
         let dir = dossier(nom);
-        Stock { intentions: vec![gardee("a", etat)] }.ecrire(&dir).unwrap();
+        Stock {
+            intentions: vec![gardee("a", etat)],
+        }
+        .ecrire(&dir)
+        .unwrap();
         dir
     }
 
-    fn abandon_avec(dir: &Path, t: &dyn Transport, envois: &EnCours, abandons: &EnCours) -> Result<(), RefusAbandon> {
-        let relais = Relais { base: "https://relais.exemple", transport: t };
-        abandonner(&Mutex::new(()), dir, &relais, Some(Mode::Sandbox), envois, abandons, "a")
+    fn abandon_avec(
+        dir: &Path,
+        t: &dyn Transport,
+        envois: &EnCours,
+        abandons: &EnCours,
+    ) -> Result<(), RefusAbandon> {
+        let relais = Relais {
+            base: "https://relais.exemple",
+            transport: t,
+        };
+        abandonner(
+            &Mutex::new(()),
+            dir,
+            &relais,
+            Some(Mode::Sandbox),
+            envois,
+            abandons,
+            "a",
+        )
     }
 
     fn abandon(dir: &Path, t: &Fixe) -> Result<(), RefusAbandon> {
@@ -569,7 +690,12 @@ mod tests {
     }
 
     fn reste(dir: &Path) -> Option<String> {
-        Stock::lire(dir).unwrap().intentions.into_iter().find(|i| i.id == "a").map(|i| i.etat)
+        Stock::lire(dir)
+            .unwrap()
+            .intentions
+            .into_iter()
+            .find(|i| i.id == "a")
+            .map(|i| i.etat)
     }
 
     #[test]
@@ -584,28 +710,54 @@ mod tests {
             let dir = stock_a(&format!("abandon-{nom}"), "attente_paiement");
             let t = Fixe::rend(Ok((reponse.0, reponse.1.into())));
             assert_eq!(abandon(&dir, &t), Ok(()), "{nom}");
-            assert_eq!((t.abandons.get(), t.appels.get()), (1, 0), "la route, et aucune relecture");
+            assert_eq!(
+                (t.abandons.get(), t.appels.get()),
+                (1, 0),
+                "la route, et aucune relecture"
+            );
             assert_eq!(reste(&dir), None, "{nom}");
         }
         // 409 : payée ou au-delà, gardée, avec l'état relu posé.
         let dir = stock_a("abandon-409", "attente_paiement");
-        let t = Fixe::rend(Ok((409, r#"{"erreur": "avancee", "etat": "payee"}"#.into())));
-        assert_eq!(abandon(&dir, &t), Err(RefusAbandon::Avancee("payee".into())));
+        let t = Fixe::rend(Ok((
+            409,
+            r#"{"erreur": "avancee", "etat": "payee"}"#.into(),
+        )));
+        assert_eq!(
+            abandon(&dir, &t),
+            Err(RefusAbandon::Avancee("payee".into()))
+        );
         assert_eq!(reste(&dir).as_deref(), Some("payee"));
         // 502, le réseau, tout le reste : rien n'est prouvé, gardée telle quelle.
         for (nom, reponse) in [
-            ("502", Ok((502, r#"{"erreur": "stripe_injoignable"}"#.to_string()))),
-            ("502-html", Ok((502, "<html>Bad gateway</html>".to_string()))),
+            (
+                "502",
+                Ok((502, r#"{"erreur": "stripe_injoignable"}"#.to_string())),
+            ),
+            (
+                "502-html",
+                Ok((502, "<html>Bad gateway</html>".to_string())),
+            ),
             ("500", Ok((500, r#"{"erreur": "interne"}"#.to_string()))),
-            ("200-hors-contrat", Ok((200, r#"{"etat": "attente_paiement"}"#.to_string()))),
+            (
+                "200-hors-contrat",
+                Ok((200, r#"{"etat": "attente_paiement"}"#.to_string())),
+            ),
             ("dns", Err("dns".to_string())),
         ] {
             let dir = stock_a(&format!("abandon-{nom}"), "attente_paiement");
-            assert_eq!(abandon(&dir, &Fixe::rend(reponse)), Err(RefusAbandon::Injoignable), "{nom}");
+            assert_eq!(
+                abandon(&dir, &Fixe::rend(reponse)),
+                Err(RefusAbandon::Injoignable),
+                "{nom}"
+            );
             assert_eq!(reste(&dir).as_deref(), Some("attente_paiement"), "{nom}");
         }
         assert_eq!(RefusAbandon::Injoignable.to_string(), "abandon_injoignable");
-        assert_eq!(RefusAbandon::Avancee("payee".into()).to_string(), "abandon_refuse payee");
+        assert_eq!(
+            RefusAbandon::Avancee("payee".into()).to_string(),
+            "abandon_refuse payee"
+        );
     }
 
     #[test]
@@ -632,7 +784,9 @@ mod tests {
             serde_json::json!([{"id": "a", "mode": "sandbox", "etat": "attente_paiement", "dernier_code": null, "niveau": "cp_ground", "date": "2026-10-10"}])
         );
         s.ecrire(&dir).unwrap();
-        assert!(!std::fs::read_to_string(dir.join(FICHIER)).unwrap().contains("paiement_ouvert_le"));
+        assert!(!std::fs::read_to_string(dir.join(FICHIER))
+            .unwrap()
+            .contains("paiement_ouvert_le"));
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -642,7 +796,10 @@ mod tests {
         let dir = stock_a("abandon-envoi", "attente_fichiers");
         let jeton = envois.prendre("a").unwrap();
         let t = Fixe::rend(Ok((200, r#"{"etat": "abandonnee"}"#.into())));
-        assert_eq!(abandon_avec(&dir, &t, &envois, &EnCours::default()), Err(RefusAbandon::EnvoiEnCours));
+        assert_eq!(
+            abandon_avec(&dir, &t, &envois, &EnCours::default()),
+            Err(RefusAbandon::EnvoiEnCours)
+        );
         assert_eq!(t.abandons.get(), 0);
         assert_eq!(reste(&dir).as_deref(), Some("attente_fichiers"));
         drop(jeton);
@@ -660,10 +817,16 @@ mod tests {
         assert_eq!(refus, RefusAbandon::AbandonEnCours);
         assert_eq!(refus.to_string(), "abandon_en_cours");
         assert_eq!(t.abandons.get(), 0, "le second ne part pas au relais");
-        assert!(envois.prendre("a").is_some(), "il ne tient pas le marqueur d'envoi");
+        assert!(
+            envois.prendre("a").is_some(),
+            "il ne tient pas le marqueur d'envoi"
+        );
         drop(premier);
         assert_eq!(abandon_avec(&dir, &t, &envois, &abandons), Ok(()));
-        assert!(abandons.prendre("a").is_some(), "le marqueur tombe avec l'abandon");
+        assert!(
+            abandons.prendre("a").is_some(),
+            "le marqueur tombe avec l'abandon"
+        );
     }
 
     /// Un relais qui tient l'abandon : il signale qu'il est entré, attend le
@@ -677,7 +840,12 @@ mod tests {
         fn get(&self, _: &str, _: Option<&Secret>) -> Result<(u16, String), String> {
             unreachable!()
         }
-        fn post_json(&self, _: &str, _: Option<&Secret>, _: &serde_json::Value) -> Result<(u16, String), String> {
+        fn post_json(
+            &self,
+            _: &str,
+            _: Option<&Secret>,
+            _: &serde_json::Value,
+        ) -> Result<(u16, String), String> {
             self.entre.send(()).unwrap();
             self.feu.recv().unwrap();
             Ok((200, r#"{"etat": "abandonnee"}"#.into()))
@@ -701,12 +869,26 @@ mod tests {
         let verrou = Mutex::new(());
         let (entre_tx, entre_rx) = std::sync::mpsc::channel();
         let (feu_tx, feu_rx) = std::sync::mpsc::channel();
-        let tenu = AbandonTenu { entre: entre_tx, feu: feu_rx };
+        let tenu = AbandonTenu {
+            entre: entre_tx,
+            feu: feu_rx,
+        };
         std::thread::scope(|sc| {
             let (verrou, dir) = (&verrou, &dir);
             let abandon = sc.spawn(move || {
-                let relais = Relais { base: "https://relais.exemple", transport: &tenu };
-                abandonner(verrou, dir, &relais, Some(Mode::Sandbox), &EnCours::default(), &EnCours::default(), "a")
+                let relais = Relais {
+                    base: "https://relais.exemple",
+                    transport: &tenu,
+                };
+                abandonner(
+                    verrou,
+                    dir,
+                    &relais,
+                    Some(Mode::Sandbox),
+                    &EnCours::default(),
+                    &EnCours::default(),
+                    "a",
+                )
             });
             entre_rx.recv().unwrap();
             let garde = verrou.lock().unwrap();
@@ -717,7 +899,10 @@ mod tests {
             s.poser("a", "payee", None);
             s.ecrire(dir).unwrap();
             drop(garde);
-            assert_eq!(abandon.join().unwrap(), Err(RefusAbandon::Avancee("payee".into())));
+            assert_eq!(
+                abandon.join().unwrap(),
+                Err(RefusAbandon::Avancee("payee".into()))
+            );
         });
         assert_eq!(reste(&dir).as_deref(), Some("payee"), "gardée");
         std::fs::remove_dir_all(&dir).unwrap();
@@ -728,9 +913,16 @@ mod tests {
         let dir = dossier("relire-mode");
         let mut reel = gardee("r", "attente_paiement");
         reel.mode = Mode::Reel;
-        Stock { intentions: vec![gardee("s", "attente_paiement"), reel] }.ecrire(&dir).unwrap();
+        Stock {
+            intentions: vec![gardee("s", "attente_paiement"), reel],
+        }
+        .ecrire(&dir)
+        .unwrap();
         let t = Fixe::etat("payee");
-        let relais = Relais { base: "https://relais.exemple", transport: &t };
+        let relais = Relais {
+            base: "https://relais.exemple",
+            transport: &t,
+        };
         let verrou = Mutex::new(());
         relire(&verrou, &dir, &relais, Some(Mode::Sandbox), None).unwrap();
         assert_eq!(t.appels.get(), 1, "seule l'intention du sandbox part");
@@ -738,7 +930,12 @@ mod tests {
         assert_eq!(t.appels.get(), 1, "même nommée, celle du réel ne part pas");
         relire(&verrou, &dir, &relais, None, None).unwrap();
         assert_eq!(t.appels.get(), 1, "sans relais, rien ne part");
-        let etats: Vec<String> = Stock::lire(&dir).unwrap().intentions.into_iter().map(|i| i.etat).collect();
+        let etats: Vec<String> = Stock::lire(&dir)
+            .unwrap()
+            .intentions
+            .into_iter()
+            .map(|i| i.etat)
+            .collect();
         assert_eq!(etats, ["payee", "attente_paiement"]);
         std::fs::remove_dir_all(&dir).unwrap();
     }
@@ -746,13 +943,20 @@ mod tests {
     #[test]
     fn un_etat_terminal_ne_revient_jamais_en_arriere() {
         for terminal in ["annulee", "echec_remboursee", "purgee"] {
-            let mut s = Stock { intentions: vec![gardee("a", terminal)] };
+            let mut s = Stock {
+                intentions: vec![gardee("a", terminal)],
+            };
             s.poser("a", "commandee", Some(15));
             assert_eq!(s.intentions[0].etat, terminal);
             s.poser("a", "purgee", None);
-            assert_eq!(s.intentions[0].etat, "purgee", "d'un terminal à un autre, oui");
+            assert_eq!(
+                s.intentions[0].etat, "purgee",
+                "d'un terminal à un autre, oui"
+            );
         }
-        let mut s = Stock { intentions: vec![gardee("a", "commandee")] };
+        let mut s = Stock {
+            intentions: vec![gardee("a", "commandee")],
+        };
         s.poser("a", "annulee", None);
         assert_eq!(s.intentions[0].etat, "annulee");
     }
@@ -768,7 +972,10 @@ mod tests {
         let dir = dossier("verrou");
         let verrou = Mutex::new(());
         modifier(&verrou, &dir, |_| {
-            assert!(verrou.try_lock().is_err(), "le verrou est tenu pendant la modification");
+            assert!(
+                verrou.try_lock().is_err(),
+                "le verrou est tenu pendant la modification"
+            );
             Ok(())
         })
         .unwrap();
@@ -796,7 +1003,12 @@ mod tests {
             premiere.join().unwrap().unwrap();
             seconde.join().unwrap().unwrap();
         });
-        let mut ids: Vec<String> = Stock::lire(&dir).unwrap().intentions.into_iter().map(|i| i.id).collect();
+        let mut ids: Vec<String> = Stock::lire(&dir)
+            .unwrap()
+            .intentions
+            .into_iter()
+            .map(|i| i.id)
+            .collect();
         ids.sort();
         assert_eq!(ids, ["a", "b"]);
         std::fs::remove_dir_all(&dir).unwrap();
@@ -808,8 +1020,15 @@ mod tests {
         // Le fichier final est un dossier non vide : le `rename` échoue.
         std::fs::create_dir_all(dir.join(FICHIER).join("plein")).unwrap();
         assert!(Stock::default().ecrire(&dir).is_err());
-        let restes: Vec<_> = std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().file_name()).collect();
-        assert_eq!(restes, [std::ffi::OsString::from(FICHIER)], "seul le dossier piège reste");
+        let restes: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
+        assert_eq!(
+            restes,
+            [std::ffi::OsString::from(FICHIER)],
+            "seul le dossier piège reste"
+        );
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

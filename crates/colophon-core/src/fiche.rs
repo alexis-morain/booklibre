@@ -189,10 +189,22 @@ mod tests {
     #[test]
     fn un_src_qui_n_est_pas_un_nom_est_refuse() {
         let root = Path::new("/tmp/photos");
-        for mauvais in ["", ".", "..", "a/b.jpg", "a\\b.jpg", "../x.jpg", "/etc/passwd", "a\0b"] {
+        for mauvais in [
+            "",
+            ".",
+            "..",
+            "a/b.jpg",
+            "a\\b.jpg",
+            "../x.jpg",
+            "/etc/passwd",
+            "a\0b",
+        ] {
             assert!(original(root, mauvais).is_err(), "{mauvais:?} a passé");
         }
-        assert_eq!(original(root, "IMG_2193.jpg").unwrap(), root.join("IMG_2193.jpg"));
+        assert_eq!(
+            original(root, "IMG_2193.jpg").unwrap(),
+            root.join("IMG_2193.jpg")
+        );
     }
 
     /// A symbolic link inside the folder that points outside it passes
@@ -211,10 +223,16 @@ mod tests {
         std::os::unix::fs::symlink(dehors.join("secret.jpg"), root.join("lien.jpg")).unwrap();
 
         assert!(original(&root, "lien.jpg").is_ok(), "un lien est un nom");
-        assert!(a_reveler(&root, "lien.jpg").is_err(), "le lien sort du dossier");
+        assert!(
+            a_reveler(&root, "lien.jpg").is_err(),
+            "le lien sort du dossier"
+        );
         let vraie = a_reveler(&root, "vraie.jpg").unwrap();
         assert!(vraie.starts_with(root.canonicalize().unwrap()));
-        assert!(a_reveler(&root, "absente.jpg").is_err(), "un fichier absent ne se révèle pas");
+        assert!(
+            a_reveler(&root, "absente.jpg").is_err(),
+            "un fichier absent ne se révèle pas"
+        );
         let _ = fs::remove_dir_all(&base);
     }
 
@@ -283,7 +301,11 @@ mod tests {
             .save(root.join("nette.png"))
             .unwrap();
         let rayures = image::ImageBuffer::from_fn(64, 48, |x, _| {
-            image::Rgb(if x % 2 == 0 { [0u8, 0, 0] } else { [255, 255, 255] })
+            image::Rgb(if x % 2 == 0 {
+                [0u8, 0, 0]
+            } else {
+                [255, 255, 255]
+            })
         });
         rayures.save(cache.join("v-nette.png")).unwrap();
         fs::write(dir.join("thumbs.json"), r#"{"nette.png":"v-nette.png"}"#).unwrap();
@@ -349,11 +371,23 @@ mod tests {
 
     #[test]
     fn l_appareil_ne_repete_pas_sa_marque() {
-        assert_eq!(appareil(Some("Canon"), Some("Canon EOS 5D")).as_deref(), Some("Canon EOS 5D"));
-        assert_eq!(appareil(Some("NIKON CORPORATION"), Some("NIKON D750")).as_deref(), Some("NIKON D750"));
-        assert_eq!(appareil(Some("Apple"), Some("iPhone 13")).as_deref(), Some("Apple iPhone 13"));
+        assert_eq!(
+            appareil(Some("Canon"), Some("Canon EOS 5D")).as_deref(),
+            Some("Canon EOS 5D")
+        );
+        assert_eq!(
+            appareil(Some("NIKON CORPORATION"), Some("NIKON D750")).as_deref(),
+            Some("NIKON D750")
+        );
+        assert_eq!(
+            appareil(Some("Apple"), Some("iPhone 13")).as_deref(),
+            Some("Apple iPhone 13")
+        );
         assert_eq!(appareil(Some("Apple"), None).as_deref(), Some("Apple"));
-        assert_eq!(appareil(None, Some("iPhone 13")).as_deref(), Some("iPhone 13"));
+        assert_eq!(
+            appareil(None, Some("iPhone 13")).as_deref(),
+            Some("iPhone 13")
+        );
         assert_eq!(appareil(None, None), None);
     }
 
@@ -363,7 +397,11 @@ mod tests {
         let paris = lieu_de(Some((48.8566, 2.3522))).expect("Paris est dans l'atlas");
         assert_eq!(paris.nom, "Paris");
         assert_eq!(paris.pays, "FR");
-        assert_eq!(lieu_de(Some((0.0, -30.0))), None, "l'Atlantique n'a pas de ville");
+        assert_eq!(
+            lieu_de(Some((0.0, -30.0))),
+            None,
+            "l'Atlantique n'a pas de ville"
+        );
         assert_eq!(lieu_de(None), None);
     }
 }

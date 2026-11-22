@@ -104,9 +104,15 @@ pub fn empreinte(img: &DynamicImage) -> Empreinte {
     let variance = s.iter().map(|p| (*p as f32 - moyenne).powi(2)).sum::<f32>() / n;
     let ecart = variance.sqrt();
     if ecart < 2.0 {
-        return Empreinte { v: vec![0.0; s.len()], plate: true };
+        return Empreinte {
+            v: vec![0.0; s.len()],
+            plate: true,
+        };
     }
-    Empreinte { v: s.iter().map(|p| (*p as f32 - moyenne) / ecart).collect(), plate: false }
+    Empreinte {
+        v: s.iter().map(|p| (*p as f32 - moyenne) / ecart).collect(),
+        plate: false,
+    }
 }
 
 /// 0 pour deux images identiques, ~1,4 pour deux images sans rapport.
@@ -148,7 +154,9 @@ pub struct Original {
 /// Le décalage `+02:00` d'`OffsetTimeOriginal`, en secondes.
 fn decalage_exif(chemin: &Path) -> Option<i32> {
     let f = std::fs::File::open(chemin).ok()?;
-    let exif = exif::Reader::new().read_from_container(&mut std::io::BufReader::new(f)).ok()?;
+    let exif = exif::Reader::new()
+        .read_from_container(&mut std::io::BufReader::new(f))
+        .ok()?;
     let champ = exif.get_field(exif::Tag::OffsetTimeOriginal, exif::In::PRIMARY)?;
     let texte = champ.display_value().to_string();
     let texte = texte.trim().trim_matches('"');
@@ -187,7 +195,10 @@ pub fn indexer(
     progres: &(dyn Fn(usize, usize) + Sync),
     annuler: &(dyn Fn() -> bool + Sync),
 ) -> Result<(Vec<Original>, usize, usize)> {
-    let exclus: Vec<PathBuf> = exclus.iter().filter_map(|e| e.canonicalize().ok()).collect();
+    let exclus: Vec<PathBuf> = exclus
+        .iter()
+        .filter_map(|e| e.canonicalize().ok())
+        .collect();
     let balayage = scan::scan(dossier);
     let heic_illisibles = balayage.skipped_heic;
     let fichiers: Vec<PathBuf> = balayage
@@ -241,7 +252,10 @@ pub struct Vignette {
 
 /// La fenêtre d'une étape : de son début à sa fin (au moins un jour), plus la
 /// marge d'un boîtier mal réglé.
-pub fn fenetre_de(debut: DateTime<Utc>, fin: Option<DateTime<Utc>>) -> (DateTime<Utc>, DateTime<Utc>) {
+pub fn fenetre_de(
+    debut: DateTime<Utc>,
+    fin: Option<DateTime<Utc>>,
+) -> (DateTime<Utc>, DateTime<Utc>) {
     let marge = chrono::Duration::seconds(MARGE_HORAIRE_S);
     let au_moins = debut + chrono::Duration::seconds(DUREE_ETAPE_MIN_S);
     let fin = fin.map_or(au_moins, |f| f.max(au_moins));
@@ -318,7 +332,12 @@ pub enum Verdict {
 }
 
 fn est_jpeg(p: &Path) -> bool {
-    matches!(p.extension().map(|e| e.to_string_lossy().to_lowercase()).as_deref(), Some("jpg" | "jpeg"))
+    matches!(
+        p.extension()
+            .map(|e| e.to_string_lossy().to_lowercase())
+            .as_deref(),
+        Some("jpg" | "jpeg")
+    )
 }
 
 /// Ce qui remplace : un JPEG (copié) ou un format qu'on réécrit en JPEG
@@ -337,7 +356,9 @@ fn deux_meilleurs(mut c: Vec<(usize, f32)>) -> Option<((usize, f32), Option<f32>
 
 /// Le verdict d'une vignette. Pur : ni disque, ni horloge.
 pub fn apparier_une(v: &Vignette, originaux: &[Original]) -> Verdict {
-    let Some(emp) = &v.empreinte else { return Verdict::Refus(Raison::Illisible) };
+    let Some(emp) = &v.empreinte else {
+        return Verdict::Refus(Raison::Illisible);
+    };
     let compatibles = |o: &Original| ratio_compatible(v.largeur, v.hauteur, o.largeur, o.hauteur);
     let dist = |i: usize, o: &Original| (i, distance(emp, &o.empreinte));
 
@@ -346,7 +367,9 @@ pub fn apparier_une(v: &Vignette, originaux: &[Original]) -> Verdict {
         .iter()
         .enumerate()
         .filter(|(_, o)| compatibles(o))
-        .filter(|(_, o)| instant_de(o, &v.fuseau).is_some_and(|t| t >= v.fenetre.0 && t <= v.fenetre.1))
+        .filter(|(_, o)| {
+            instant_de(o, &v.fuseau).is_some_and(|t| t >= v.fenetre.0 && t <= v.fenetre.1)
+        })
         .map(|(i, o)| dist(i, o))
         .collect();
     let mut dernier_refus = Raison::SansOriginal;
@@ -354,7 +377,12 @@ pub fn apparier_une(v: &Vignette, originaux: &[Original]) -> Verdict {
         if d <= SEUIL_HEURE {
             let marge = suivant.map(|s| s - d);
             if marge.is_none_or(|m| m >= MARGE_HEURE) {
-                return Verdict::Sur(Appariement { original: i, distance: d, marge, methode: Methode::Heure });
+                return Verdict::Sur(Appariement {
+                    original: i,
+                    distance: d,
+                    marge,
+                    methode: Methode::Heure,
+                });
             }
             // Deux candidats se ressemblent : le dossier entier ne fera pas
             // mieux, il aura les mêmes.
@@ -363,13 +391,22 @@ pub fn apparier_une(v: &Vignette, originaux: &[Original]) -> Verdict {
     }
 
     // 2. Sans l'heure : tout le dossier, plus sévère.
-    let tous: Vec<(usize, f32)> =
-        originaux.iter().enumerate().filter(|(_, o)| compatibles(o)).map(|(i, o)| dist(i, o)).collect();
+    let tous: Vec<(usize, f32)> = originaux
+        .iter()
+        .enumerate()
+        .filter(|(_, o)| compatibles(o))
+        .map(|(i, o)| dist(i, o))
+        .collect();
     if let Some(((i, d), suivant)) = deux_meilleurs(tous) {
         if d <= SEUIL_IMAGE {
             let marge = suivant.map(|s| s - d);
             if marge.is_none_or(|m| m >= MARGE_IMAGE) {
-                return Verdict::Sur(Appariement { original: i, distance: d, marge, methode: Methode::Image });
+                return Verdict::Sur(Appariement {
+                    original: i,
+                    distance: d,
+                    marge,
+                    methode: Methode::Image,
+                });
             }
             dernier_refus = Raison::Ambigu;
         }
@@ -381,7 +418,10 @@ pub fn apparier_une(v: &Vignette, originaux: &[Original]) -> Verdict {
 /// que d'un original (remplaçable, plus grand) et celui qui dépend des autres
 /// vignettes (deux vignettes, un même original : aucune des deux).
 pub fn apparier(vignettes: &[Vignette], originaux: &[Original]) -> Vec<Verdict> {
-    let mut verdicts: Vec<Verdict> = vignettes.par_iter().map(|v| apparier_une(v, originaux)).collect();
+    let mut verdicts: Vec<Verdict> = vignettes
+        .par_iter()
+        .map(|v| apparier_une(v, originaux))
+        .collect();
     for (v, verdict) in vignettes.iter().zip(verdicts.iter_mut()) {
         if let Verdict::Sur(a) = *verdict {
             let o = &originaux[a.original];
@@ -446,7 +486,9 @@ pub struct Correspondance {
 
 pub fn lire_correspondance(dossier: &Path) -> Option<Correspondance> {
     let texte = std::fs::read_to_string(dossier.join(FICHIER)).ok()?;
-    serde_json::from_str(&texte).ok().filter(|c: &Correspondance| c.version <= VERSION)
+    serde_json::from_str(&texte)
+        .ok()
+        .filter(|c: &Correspondance| c.version <= VERSION)
 }
 
 fn ecrire_correspondance(dossier: &Path, c: &Correspondance) -> Result<()> {
@@ -458,7 +500,11 @@ fn ecrire_correspondance(dossier: &Path, c: &Correspondance) -> Result<()> {
 
 /// Le dossier voisin où partent les vignettes remplacées.
 pub fn dossier_des_vignettes(dossier: &Path) -> Result<PathBuf> {
-    let nom = dossier.file_name().context("dossier sans nom")?.to_string_lossy().to_string();
+    let nom = dossier
+        .file_name()
+        .context("dossier sans nom")?
+        .to_string_lossy()
+        .to_string();
     Ok(dossier.with_file_name(format!("{nom}-vignettes")))
 }
 
@@ -502,7 +548,11 @@ fn deplacer(de: &Path, vers: &Path) -> std::io::Result<()> {
 }
 
 /// Les vignettes d'un voyage : celles de `voyage.json`, lues une fois.
-fn vignettes_du_voyage(dossier: &Path, voyage: &Voyage, deja: &[String]) -> Vec<(Vignette, String)> {
+fn vignettes_du_voyage(
+    dossier: &Path,
+    voyage: &Voyage,
+    deja: &[String],
+) -> Vec<(Vignette, String)> {
     let mut v = Vec::new();
     for e in &voyage.etapes {
         let fenetre = fenetre_de(e.debut, e.fin);
@@ -510,7 +560,9 @@ fn vignettes_du_voyage(dossier: &Path, voyage: &Voyage, deja: &[String]) -> Vec<
             if deja.contains(&p.fichier) {
                 continue;
             }
-            let emp = image::open(dossier.join(&p.fichier)).ok().map(|i| empreinte(&i));
+            let emp = image::open(dossier.join(&p.fichier))
+                .ok()
+                .map(|i| empreinte(&i));
             v.push((
                 Vignette {
                     fichier: p.fichier.clone(),
@@ -532,8 +584,11 @@ fn vignettes_du_voyage(dossier: &Path, voyage: &Voyage, deja: &[String]) -> Vec<
 /// image et croirait la photo encore petite.
 fn rafraichir_cache(album: &Path, dossier: &Path, fichiers: &[String]) -> Result<()> {
     let chemin = album.join("thumbs.json");
-    let Ok(texte) = std::fs::read_to_string(&chemin) else { return Ok(()) };
-    let mut index: BTreeMap<String, String> = serde_json::from_str(&texte).context("thumbs.json illisible")?;
+    let Ok(texte) = std::fs::read_to_string(&chemin) else {
+        return Ok(());
+    };
+    let mut index: BTreeMap<String, String> =
+        serde_json::from_str(&texte).context("thumbs.json illisible")?;
     let cache = thumb::ThumbCache::new(album)?;
     for f in fichiers {
         if !index.contains_key(f) {
@@ -557,9 +612,16 @@ fn rafraichir_cache(album: &Path, dossier: &Path, fichiers: &[String]) -> Result
 /// rejets sont des décisions que l'original ne change pas.
 fn ecartees_pour_la_taille(album: Option<&Path>) -> Vec<String> {
     let Some(a) = album else { return Vec::new() };
-    let Ok(t) = std::fs::read_to_string(a.join("curation.json")) else { return Vec::new() };
+    let Ok(t) = std::fs::read_to_string(a.join("curation.json")) else {
+        return Vec::new();
+    };
     serde_json::from_str::<Vec<crate::model::Discard>>(&t)
-        .map(|d| d.into_iter().filter(|x| matches!(x.reason.as_str(), "definition" | "hors_budget")).map(|x| x.src).collect())
+        .map(|d| {
+            d.into_iter()
+                .filter(|x| matches!(x.reason.as_str(), "definition" | "hors_budget"))
+                .map(|x| x.src)
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -584,7 +646,12 @@ fn segment_exif(heure: NaiveDateTime, decalage_s: Option<i32>) -> Vec<u8> {
     let mut tiff = b"II*\0".to_vec();
     tiff.extend(8u32.to_le_bytes());
     tiff.extend(1u16.to_le_bytes());
-    for v in [0x8769u16.to_le_bytes().as_slice(), &4u16.to_le_bytes(), &1u32.to_le_bytes(), &exif_ifd.to_le_bytes()] {
+    for v in [
+        0x8769u16.to_le_bytes().as_slice(),
+        &4u16.to_le_bytes(),
+        &1u32.to_le_bytes(),
+        &exif_ifd.to_le_bytes(),
+    ] {
         tiff.extend(v);
     }
     tiff.extend(0u32.to_le_bytes());
@@ -620,10 +687,15 @@ fn ecrire_jpeg(o: &Original, vers: &Path) -> Result<()> {
     for (x, y, p) in rgba.enumerate_pixels() {
         let a = u32::from(p.0[3]);
         let sur_blanc = |c: u8| ((u32::from(c) * a + 255 * (255 - a) + 127) / 255) as u8;
-        rgb.put_pixel(x, y, image::Rgb([sur_blanc(p.0[0]), sur_blanc(p.0[1]), sur_blanc(p.0[2])]));
+        rgb.put_pixel(
+            x,
+            y,
+            image::Rgb([sur_blanc(p.0[0]), sur_blanc(p.0[1]), sur_blanc(p.0[2])]),
+        );
     }
     let mut jpeg = Vec::new();
-    image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jpeg, QUALITE_JPEG).encode_image(&rgb)?;
+    image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jpeg, QUALITE_JPEG)
+        .encode_image(&rgb)?;
     let mut out = vec![0xFF, 0xD8];
     if let Some(h) = o.heure {
         out.extend(segment_exif(h, o.decalage_s));
@@ -652,17 +724,32 @@ pub fn remplacer(
         remplacements: Vec::new(),
         refus: Vec::new(),
     });
-    let deja: Vec<String> = corr.remplacements.iter().map(|r| r.fichier.clone()).collect();
+    let deja: Vec<String> = corr
+        .remplacements
+        .iter()
+        .map(|r| r.fichier.clone())
+        .collect();
     let sous_seuil_avant = voyage.bilan().photos_sous_seuil;
 
-    let (index, illisibles, heic_illisibles) = indexer(originaux, &[dossier.to_path_buf(), archive.clone()], progres, annuler)?;
+    let (index, illisibles, heic_illisibles) = indexer(
+        originaux,
+        &[dossier.to_path_buf(), archive.clone()],
+        progres,
+        annuler,
+    )?;
     let vignettes = vignettes_du_voyage(dossier, &voyage, &deja);
     let seules: Vec<Vignette> = vignettes.iter().map(|(v, _)| v.clone()).collect();
     let verdicts = apparier(&seules, &index);
 
     std::fs::create_dir_all(&archive).with_context(|| format!("créer {}", archive.display()))?;
     let ecartees = ecartees_pour_la_taille(album);
-    let mut rapport = Rapport { deja: deja.len(), illisibles, heic_illisibles, sous_seuil_avant, ..Rapport::default() };
+    let mut rapport = Rapport {
+        deja: deja.len(),
+        illisibles,
+        heic_illisibles,
+        sous_seuil_avant,
+        ..Rapport::default()
+    };
     let mut refus = Vec::new();
     let mut changes = Vec::new();
     for ((v, etape), verdict) in vignettes.iter().zip(&verdicts) {
@@ -670,16 +757,19 @@ pub fn remplacer(
             break;
         }
         match verdict {
-            Verdict::Refus(raison) => {
-                refus.push(Refus { fichier: v.fichier.clone(), etape: etape.clone(), raison: *raison })
-            }
+            Verdict::Refus(raison) => refus.push(Refus {
+                fichier: v.fichier.clone(),
+                etape: etape.clone(),
+                raison: *raison,
+            }),
             Verdict::Sur(a) => {
                 let o = &index[a.original];
                 let cible = dossier.join(&v.fichier);
                 let part = dossier.join(format!("{}.part", v.fichier));
                 let rangee = archive.join(&v.fichier);
                 if est_jpeg(&o.chemin) {
-                    std::fs::copy(&o.chemin, &part).with_context(|| format!("copier {}", o.chemin.display()))?;
+                    std::fs::copy(&o.chemin, &part)
+                        .with_context(|| format!("copier {}", o.chemin.display()))?;
                 } else {
                     if let Err(e) = ecrire_jpeg(o, &part) {
                         let _ = std::fs::remove_file(&part);
@@ -741,7 +831,8 @@ pub fn remplacer(
 /// Rend les vignettes : chaque fichier remplacé redevient ce qu'il était,
 /// `voyage.json` retrouve ses dimensions, la correspondance disparaît.
 pub fn retablir(dossier: &Path, album: Option<&Path>) -> Result<Retablissement> {
-    let corr = lire_correspondance(dossier).context("aucun remplacement à rétablir (originaux.json absent)")?;
+    let corr = lire_correspondance(dossier)
+        .context("aucun remplacement à rétablir (originaux.json absent)")?;
     let mut voyage = super::lire(dossier).map_err(|e| anyhow::anyhow!("{e}"))?;
     let archive = dossier_des_vignettes(dossier)?;
     let mut rendues = 0;
@@ -753,7 +844,11 @@ pub fn retablir(dossier: &Path, album: Option<&Path>) -> Result<Retablissement> 
         }
         let rangee = archive.join(&r.fichier);
         if !rangee.exists() {
-            bail!("la vignette {} n'est plus dans {}", r.fichier, archive.display());
+            bail!(
+                "la vignette {} n'est plus dans {}",
+                r.fichier,
+                archive.display()
+            );
         }
         let cible = dossier.join(&r.fichier);
         std::fs::rename(&rangee, &cible).or_else(|_| {
@@ -775,5 +870,7 @@ pub fn retablir(dossier: &Path, album: Option<&Path>) -> Result<Retablissement> 
     if let Some(a) = album {
         rafraichir_cache(a, dossier, &fichiers)?;
     }
-    Ok(Retablissement { vignettes_rendues: rendues })
+    Ok(Retablissement {
+        vignettes_rendues: rendues,
+    })
 }

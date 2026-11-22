@@ -93,7 +93,9 @@ pub fn faits(
                 debut = Some(debut.map_or(d, |x: chrono::NaiveDate| x.min(d)));
                 fin = Some(fin.map_or(d, |x: chrono::NaiveDate| x.max(d)));
             }
-            let Some(modele) = p.meta.model.as_ref().map(|m| m.trim()) else { continue };
+            let Some(modele) = p.meta.model.as_ref().map(|m| m.trim()) else {
+                continue;
+            };
             if modele.is_empty() {
                 continue;
             }
@@ -286,7 +288,10 @@ mod tests {
         let en = texte(&f, trim(), 150.0, "0.9.0", Langue::En);
         assert!(fr.ends_with("Cartes réalisées avec Natural Earth."), "{fr}");
         assert!(en.ends_with("Maps made with Natural Earth."), "{en}");
-        assert_eq!(fr.replace("\nCartes réalisées avec Natural Earth.", ""), sans_fr);
+        assert_eq!(
+            fr.replace("\nCartes réalisées avec Natural Earth.", ""),
+            sans_fr
+        );
     }
 
     #[test]
@@ -398,8 +403,13 @@ mod tests {
         };
         for (nom, w, h, _) in crate::format::FORMATS {
             for langue in [Langue::Fr, Langue::En] {
-                let mut a = crate::model::Album::new("t", std::path::Path::new("/p"), Size { w: *w, h: *h });
-                a.spreads.push(spread(&plein, a.trim_mm, 150.0, "0.9.0", langue));
+                let mut a = crate::model::Album::new(
+                    "t",
+                    std::path::Path::new("/p"),
+                    Size { w: *w, h: *h },
+                );
+                a.spreads
+                    .push(spread(&plein, a.trim_mm, 150.0, "0.9.0", langue));
                 let g = crate::pdf::geometry(&a);
                 let at = crate::pdf::colophon_anchor(&g);
                 // From the first baseline to the trimmed edge of the recto page.
@@ -412,7 +422,9 @@ mod tests {
                     );
                 }
                 // And the block has to stop above the bottom of the page.
-                let lignes = texte(&plein, a.trim_mm, 150.0, "0.9.0", langue).lines().count();
+                let lignes = texte(&plein, a.trim_mm, 150.0, "0.9.0", langue)
+                    .lines()
+                    .count();
                 let bas = at.y - (lignes - 1) as f64 * LEADING_MM;
                 assert!(bas > g.bleed, "{nom} : le bloc descend sous la coupe");
             }
@@ -437,11 +449,21 @@ mod tests {
             "{t}"
         );
         assert!(t.contains("Porto-Vecchio and Bonifacio."), "{t}");
-        assert!(t.contains("Composed on 17 August 2026 with Booklibre 1.0.0."), "{t}");
+        assert!(
+            t.contains("Composed on 17 August 2026 with Booklibre 1.0.0."),
+            "{t}"
+        );
         // « Colophon » n'y est plus que le titre de la page, son nom de métier.
         assert_eq!(t.matches("Colophon").count(), 1, "{t}");
         assert!(t.contains("210 × 210 mm, 150 g/m\u{b2} paper."), "{t}");
-        for mot in ["papier", "Composé", " et ", "photographies", "prises", "octobre"] {
+        for mot in [
+            "papier",
+            "Composé",
+            " et ",
+            "photographies",
+            "prises",
+            "octobre",
+        ] {
             assert!(!t.contains(mot), "« {mot} » dans la page anglaise : {t}");
         }
         let mut un = faits_test();

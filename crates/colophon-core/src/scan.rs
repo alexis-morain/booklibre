@@ -64,7 +64,12 @@ pub fn scan(root: &Path) -> ScanResult {
         }
     }
     images.sort();
-    ScanResult { images, skipped_heic, skipped_raw, skipped_other }
+    ScanResult {
+        images,
+        skipped_heic,
+        skipped_raw,
+        skipped_other,
+    }
 }
 
 #[cfg(test)]
@@ -80,7 +85,15 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("colophon-scan-raw-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        for nom in ["a.CR3", "b.nef", "c.orf", "c.orf.xmp", "d.jpg", "e.heic", "f.bmp"] {
+        for nom in [
+            "a.CR3",
+            "b.nef",
+            "c.orf",
+            "c.orf.xmp",
+            "d.jpg",
+            "e.heic",
+            "f.bmp",
+        ] {
             std::fs::write(dir.join(nom), b"pas une image").unwrap();
         }
         let r = scan(&dir);

@@ -16,7 +16,8 @@ pub const RAYON_KM: f64 = 6371.0088;
 pub fn haversine_km(a: P, b: P) -> f64 {
     let (la1, lo1) = (a.0.to_radians(), a.1.to_radians());
     let (la2, lo2) = (b.0.to_radians(), b.1.to_radians());
-    let h = ((la2 - la1) / 2.0).sin().powi(2) + la1.cos() * la2.cos() * ((lo2 - lo1) / 2.0).sin().powi(2);
+    let h = ((la2 - la1) / 2.0).sin().powi(2)
+        + la1.cos() * la2.cos() * ((lo2 - lo1) / 2.0).sin().powi(2);
     2.0 * RAYON_KM * h.sqrt().min(1.0).asin()
 }
 
@@ -68,8 +69,15 @@ pub fn arc_grand_cercle(a: P, b: P) -> Vec<P> {
     for i in 0..=n {
         let t = i as f64 / n as f64;
         let (ca, cb) = (((1.0 - t) * delta).sin() / sin_d, (t * delta).sin() / sin_d);
-        let p = [ca * va[0] + cb * vb[0], ca * va[1] + cb * vb[1], ca * va[2] + cb * vb[2]];
-        sortie.push((p[2].clamp(-1.0, 1.0).asin().to_degrees(), p[1].atan2(p[0]).to_degrees()));
+        let p = [
+            ca * va[0] + cb * vb[0],
+            ca * va[1] + cb * vb[1],
+            ca * va[2] + cb * vb[2],
+        ];
+        sortie.push((
+            p[2].clamp(-1.0, 1.0).asin().to_degrees(),
+            p[1].atan2(p[0]).to_degrees(),
+        ));
     }
     // Les extrémités exactes, pas leur reconstruction.
     sortie[0] = a;
@@ -115,7 +123,12 @@ pub fn douglas_peucker(points: &[P], tol: f64) -> Vec<P> {
             pile.push((rang, j));
         }
     }
-    points.iter().zip(&garde).filter(|(_, g)| **g).map(|(p, _)| *p).collect()
+    points
+        .iter()
+        .zip(&garde)
+        .filter(|(_, g)| **g)
+        .map(|(p, _)| *p)
+        .collect()
 }
 
 /// Rogne une ligne ouverte contre le demi-plan `f(p) >= 0` (`f` affine) : les
@@ -184,7 +197,11 @@ pub struct Rect {
 impl Rect {
     pub fn polygone(&self, points: &[P]) -> Vec<P> {
         let mut p = rogner_polygone(points, |p| p.0 - self.x0);
-        for f in [|r: &Rect, p: P| r.x1 - p.0, |r: &Rect, p: P| p.1 - r.y0, |r: &Rect, p: P| r.y1 - p.1] {
+        for f in [
+            |r: &Rect, p: P| r.x1 - p.0,
+            |r: &Rect, p: P| p.1 - r.y0,
+            |r: &Rect, p: P| r.y1 - p.1,
+        ] {
             if p.is_empty() {
                 break;
             }
@@ -195,8 +212,15 @@ impl Rect {
 
     pub fn ligne(&self, points: &[P]) -> Vec<Vec<P>> {
         let mut morceaux = rogner_ligne(points, |p| p.0 - self.x0);
-        for f in [|r: &Rect, p: P| r.x1 - p.0, |r: &Rect, p: P| p.1 - r.y0, |r: &Rect, p: P| r.y1 - p.1] {
-            morceaux = morceaux.iter().flat_map(|m| rogner_ligne(m, |q| f(self, q))).collect();
+        for f in [
+            |r: &Rect, p: P| r.x1 - p.0,
+            |r: &Rect, p: P| p.1 - r.y0,
+            |r: &Rect, p: P| r.y1 - p.1,
+        ] {
+            morceaux = morceaux
+                .iter()
+                .flat_map(|m| rogner_ligne(m, |q| f(self, q)))
+                .collect();
         }
         morceaux
     }
@@ -237,14 +261,23 @@ pub fn decouper_fuseau(contour: &[P], lon0: f64, ferme: bool) -> Vec<Vec<P>> {
     if contour.is_empty() {
         return Vec::new();
     }
-    let (mn, mx) = contour.iter().fold((f64::MAX, f64::MIN), |(a, b), p| (a.min(p.0), b.max(p.0)));
+    let (mn, mx) = contour
+        .iter()
+        .fold((f64::MAX, f64::MIN), |(a, b), p| (a.min(p.0), b.max(p.0)));
     let kmin = ((mn - lon0 - 180.0) / 360.0).ceil() as i64;
     let kmax = ((mx - lon0 + 180.0) / 360.0).floor() as i64;
     let mut sortie = Vec::new();
     for k in kmin..=kmax {
-        let (lo, hi) = (lon0 - 180.0 + 360.0 * k as f64, lon0 + 180.0 + 360.0 * k as f64);
+        let (lo, hi) = (
+            lon0 - 180.0 + 360.0 * k as f64,
+            lon0 + 180.0 + 360.0 * k as f64,
+        );
         let decalage = -lon0 - 360.0 * k as f64;
-        let ramener = |m: Vec<P>| m.into_iter().map(|p| (p.0 + decalage, p.1)).collect::<Vec<P>>();
+        let ramener = |m: Vec<P>| {
+            m.into_iter()
+                .map(|p| (p.0 + decalage, p.1))
+                .collect::<Vec<P>>()
+        };
         if ferme {
             let p = if mn >= lo && mx <= hi {
                 contour.to_vec()
@@ -291,35 +324,56 @@ mod tests {
             [la.cos() * lo.cos(), la.cos() * lo.sin(), la.sin()]
         };
         let (va, vb) = (v(a), v(b));
-        let n = [va[1] * vb[2] - va[2] * vb[1], va[2] * vb[0] - va[0] * vb[2], va[0] * vb[1] - va[1] * vb[0]];
+        let n = [
+            va[1] * vb[2] - va[2] * vb[1],
+            va[2] * vb[0] - va[0] * vb[2],
+            va[0] * vb[1] - va[1] * vb[0],
+        ];
         let norme = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
         for p in &arc {
             let w = v(*p);
-            assert!((w[0] * n[0] + w[1] * n[1] + w[2] * n[2]).abs() / norme < 1e-9, "{p:?} hors du plan");
+            assert!(
+                (w[0] * n[0] + w[1] * n[1] + w[2] * n[2]).abs() / norme < 1e-9,
+                "{p:?} hors du plan"
+            );
         }
         // Le milieu de Paris-Tokyo passe bien au nord des deux villes.
         let haut = arc.iter().map(|p| p.0).fold(f64::MIN, f64::max);
         assert!(haut > 55.0, "le grand cercle Paris-Tokyo monte à {haut}°");
         let pas: Vec<f64> = arc.windows(2).map(|w| haversine_km(w[0], w[1])).collect();
-        let (mn, mx) = pas.iter().fold((f64::MAX, f64::MIN), |(a, b), d| (a.min(*d), b.max(*d)));
+        let (mn, mx) = pas
+            .iter()
+            .fold((f64::MAX, f64::MIN), |(a, b), d| (a.min(*d), b.max(*d)));
         assert!(mx - mn < 1.0, "pas inégaux : {mn} à {mx}");
     }
 
     #[test]
     fn un_arc_a_travers_l_antimeridien_garde_des_longitudes_continues() {
         let arc = arc_grand_cercle((34.0, -118.0), (-17.7, 177.4));
-        assert!(arc.windows(2).all(|w| (w[1].1 - w[0].1).abs() < 10.0), "saut de longitude : {arc:?}");
-        assert!(arc.last().unwrap().1 < -180.0, "la fin est déroulée au-delà de -180");
+        assert!(
+            arc.windows(2).all(|w| (w[1].1 - w[0].1).abs() < 10.0),
+            "saut de longitude : {arc:?}"
+        );
+        assert!(
+            arc.last().unwrap().1 < -180.0,
+            "la fin est déroulée au-delà de -180"
+        );
     }
 
     #[test]
     fn rogner_une_ligne_et_un_polygone_contre_un_demi_plan() {
         let l = vec![(-1.0, 0.0), (3.0, 0.0), (3.0, 1.0), (-1.0, 1.0)];
         let m = rogner_ligne(&l, |p| p.0);
-        assert_eq!(m, vec![vec![(0.0, 0.0), (3.0, 0.0), (3.0, 1.0), (0.0, 1.0)]]);
+        assert_eq!(
+            m,
+            vec![vec![(0.0, 0.0), (3.0, 0.0), (3.0, 1.0), (0.0, 1.0)]]
+        );
         // La ligne sort par la droite et revient : deux morceaux, rien ne les relie.
         let m = rogner_ligne(&l, |p| 2.0 - p.0);
-        assert_eq!(m, vec![vec![(-1.0, 0.0), (2.0, 0.0)], vec![(2.0, 1.0), (-1.0, 1.0)]]);
+        assert_eq!(
+            m,
+            vec![vec![(-1.0, 0.0), (2.0, 0.0)], vec![(2.0, 1.0), (-1.0, 1.0)]]
+        );
         let c = vec![(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)];
         let r = rogner_polygone(&c, |p| 2.0 - p.0);
         assert_eq!(r.iter().map(|p| p.0).fold(f64::MIN, f64::max), 2.0);
@@ -348,7 +402,10 @@ mod tests {
         let b = decouper_fuseau(&ouest, 179.0, true);
         let bornes = |v: &Vec<Vec<P>>| {
             let p: Vec<&P> = v.iter().flatten().collect();
-            (p.iter().map(|p| p.0).fold(f64::MAX, f64::min), p.iter().map(|p| p.0).fold(f64::MIN, f64::max))
+            (
+                p.iter().map(|p| p.0).fold(f64::MAX, f64::min),
+                p.iter().map(|p| p.0).fold(f64::MIN, f64::max),
+            )
         };
         assert_eq!(bornes(&a), (-1.0, 1.0));
         assert_eq!(bornes(&b), (1.0, 3.0));
@@ -361,18 +418,35 @@ mod tests {
         let m = decouper_fuseau(&c, 0.0, true);
         assert_eq!(m.len(), 2);
         for morceau in &m {
-            let sur_la_coupe: Vec<f64> = morceau.iter().filter(|p| (p.0.abs() - 180.0).abs() < 1e-9).map(|p| p.1).collect();
-            assert!(sur_la_coupe.len() >= 20, "la coupe de 20° doit porter un point par degré : {sur_la_coupe:?}");
+            let sur_la_coupe: Vec<f64> = morceau
+                .iter()
+                .filter(|p| (p.0.abs() - 180.0).abs() < 1e-9)
+                .map(|p| p.1)
+                .collect();
+            assert!(
+                sur_la_coupe.len() >= 20,
+                "la coupe de 20° doit porter un point par degré : {sur_la_coupe:?}"
+            );
         }
     }
 
     #[test]
     fn le_rectangle_rogne_et_ne_laisse_rien_dehors() {
-        let r = Rect { x0: 0.0, y0: 0.0, x1: 10.0, y1: 10.0 };
+        let r = Rect {
+            x0: 0.0,
+            y0: 0.0,
+            x1: 10.0,
+            y1: 10.0,
+        };
         let grand = vec![(-5.0, -5.0), (15.0, -5.0), (15.0, 15.0), (-5.0, 15.0)];
         let p = r.polygone(&grand);
-        assert!(p.iter().all(|q| (0.0..=10.0).contains(&q.0) && (0.0..=10.0).contains(&q.1)));
-        let aire: f64 = (0..p.len()).map(|i| p[i].0 * p[(i + 1) % p.len()].1 - p[(i + 1) % p.len()].0 * p[i].1).sum::<f64>() / 2.0;
+        assert!(p
+            .iter()
+            .all(|q| (0.0..=10.0).contains(&q.0) && (0.0..=10.0).contains(&q.1)));
+        let aire: f64 = (0..p.len())
+            .map(|i| p[i].0 * p[(i + 1) % p.len()].1 - p[(i + 1) % p.len()].0 * p[i].1)
+            .sum::<f64>()
+            / 2.0;
         assert_eq!(aire.abs(), 100.0);
         let l = r.ligne(&[(-5.0, 5.0), (15.0, 5.0)]);
         assert_eq!(l, vec![vec![(0.0, 5.0), (10.0, 5.0)]]);
