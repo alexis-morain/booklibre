@@ -1,0 +1,5 @@
+# Commits that only reformat code. GitHub skips them in blame; locally:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# cargo fmt --all (#157)
+57098cff765fcaf8b27a0a6100d423400330b878
