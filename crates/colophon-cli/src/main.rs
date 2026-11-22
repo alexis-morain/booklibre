@@ -188,7 +188,7 @@ struct Cli {
 
     /// Importe un voyage depuis son lien public (`polarsteps.com/<qui>/<id>-<nom>`,
     /// avec son `?s=…` pour un voyage privé) : les photos et un voyage.json
-    /// dans --voyage-vers, puis le bilan. Une requête à la fois, un voyage
+    /// dans --voyage-vers, puis le bilan. Quatre photos à la fois, un voyage
     /// par lien collé. Absent de la version Mac App Store.
     #[arg(long, value_name = "URL", requires = "voyage_vers")]
     voyage_importer: Option<String>,

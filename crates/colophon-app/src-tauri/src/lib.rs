@@ -3957,13 +3957,13 @@ mod tests {
     mod voyage {
         use super::*;
         use colophon_core::voyage::lien::{Reglages, Reponse, Transport};
-        use std::cell::Cell;
+        use std::sync::atomic::{AtomicUsize, Ordering};
 
         /// Rend toujours le même statut, et compte les demandes.
-        struct Statut(u16, Cell<usize>);
+        struct Statut(u16, AtomicUsize);
         impl Transport for Statut {
             fn get(&self, _url: &str, _plafond: u64) -> Result<Reponse, String> {
-                self.1.set(self.1.get() + 1);
+                self.1.fetch_add(1, Ordering::Relaxed);
                 Ok(Reponse {
                     statut: self.0,
                     corps: Vec::new(),
@@ -3991,7 +3991,7 @@ mod tests {
 
         #[test]
         fn un_lien_invalide_ne_touche_ni_le_reseau_ni_le_disque() {
-            let t = Statut(200, Cell::new(0));
+            let t = Statut(200, AtomicUsize::new(0));
             let e = importer_un_voyage(
                 "https://example.com/x",
                 &propose(),
@@ -4003,12 +4003,12 @@ mod tests {
             )
             .unwrap_err();
             assert_eq!(e.genre, "url");
-            assert_eq!(t.1.get(), 0);
+            assert_eq!(t.1.load(Ordering::Relaxed), 0);
         }
 
         #[test]
         fn un_dossier_que_l_app_n_a_pas_propose_est_refuse_avant_le_reseau() {
-            let t = Statut(200, Cell::new(0));
+            let t = Statut(200, AtomicUsize::new(0));
             for d in [
                 "/Users/test/Documents",
                 "/Users/test/Pictures/Colophon/../x",
@@ -4026,12 +4026,12 @@ mod tests {
                 .unwrap_err();
                 assert_eq!(e.genre, "dossier", "{d}");
             }
-            assert_eq!(t.1.get(), 0);
+            assert_eq!(t.1.load(Ordering::Relaxed), 0);
         }
 
         #[test]
         fn un_voyage_prive_se_dit_sans_nouvelle_tentative_et_un_5xx_se_retente() {
-            let t = Statut(404, Cell::new(0));
+            let t = Statut(404, AtomicUsize::new(0));
             let e = importer_un_voyage(
                 LIEN,
                 &propose(),
@@ -4044,8 +4044,8 @@ mod tests {
             .unwrap_err();
             assert_eq!(e.genre, "prive");
             assert!(e.detail.contains("lien de partage"), "{}", e.detail);
-            assert_eq!(t.1.get(), 1);
-            let t = Statut(503, Cell::new(0));
+            assert_eq!(t.1.load(Ordering::Relaxed), 1);
+            let t = Statut(503, AtomicUsize::new(0));
             let e = importer_un_voyage(
                 LIEN,
                 &propose(),
@@ -4057,7 +4057,7 @@ mod tests {
             )
             .unwrap_err();
             assert_eq!(e.genre, "indisponible");
-            assert_eq!(t.1.get(), 3);
+            assert_eq!(t.1.load(Ordering::Relaxed), 3);
         }
     }
 }

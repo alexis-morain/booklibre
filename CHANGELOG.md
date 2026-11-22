@@ -26,6 +26,15 @@ sur la page des releases.
 
 ### Added
 
+- Importing a trip from its link is about four times faster. Photos now download four at a
+  time instead of one (measured on a 1,546-photo trip: about 3.5 photos per second before,
+  about 14 after, 110 seconds instead of 7 minutes, no error and no refusal from the
+  server). The trip's own request stays alone, each download keeps its 120 ms courtesy
+  pause, and a "too many requests" answer brings the whole import back to one download at a
+  time. Cancelling stops new downloads within a fraction of a second and the import resumes
+  where it stopped. The import screen shows the time left next to the photo count ("about
+  3 min left", "less than a minute left"), from the recent pace, only after a few photos, and
+  it goes quiet when nothing arrives.
 - Replace a trip's thumbnails with your original photos. A trip imported from its link
   only has 960 px thumbnails, almost all too small to print sharp. In the import summary,
   and in Page, Dates and places, "Photos d'origine" lets you pick the folder of your
