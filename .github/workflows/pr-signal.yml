@@ -1,0 +1,17 @@
+name: pr-signal
+
+# Ne fait rien, vite : sa fin déclenche `triage.yml` (workflow_run) dès
+# l'ouverture ou la mise à jour d'une PR, sans attendre la CI complète.
+# Aucun checkout, aucun code de la PR, jeton en lecture.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions: {}
+
+jobs:
+  signal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: echo "PR ${{ github.event.pull_request.number }}"

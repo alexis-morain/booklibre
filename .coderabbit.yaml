@@ -1,5 +1,5 @@
-# Second avis sur les PR. Sous 10 étoiles, CodeRabbit ne relit que sur
-# demande : `@coderabbitai review` dans la PR.
+# Second avis sur les PR : CodeRabbit relit seul chaque PR ouverte (vu le
+# 21/11 sur la #100 de permis-cotier). Relancer : `@coderabbitai full review`.
 language: en-US
 reviews:
   profile: chill
