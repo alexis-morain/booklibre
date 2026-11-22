@@ -139,6 +139,8 @@ sur la page des releases.
 - The Windows updater now unpacks updates with zip 9 (tauri-plugin-updater 2.14.1, Tauri 2.12).
   This closes six RustSec advisories on zip 4.6.1, none of them reachable before the update's
   signature is checked against our key. The updater also refuses non-canonical signatures now.
+- url 2.5.9 (RUSTSEC-2026-0592: stack overflow in `Url::origin()` on nested `blob:` URLs). Our
+  code never calls `Url::origin()`; the bump keeps the audit clean.
 
 ## [1.2.0] - 2026-10-31
 
