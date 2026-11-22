@@ -134,6 +134,12 @@ sur la page des releases.
   are left in the reserve" for photos that now have their original: it counts the ones still
   too small, and the line about the reserve names the button in quotes ("Recomposer l'album").
 
+### Security
+
+- The Windows updater now unpacks updates with zip 9 (tauri-plugin-updater 2.14.1, Tauri 2.12).
+  This closes six RustSec advisories on zip 4.6.1, none of them reachable before the update's
+  signature is checked against our key. The updater also refuses non-canonical signatures now.
+
 ## [1.2.0] - 2026-10-31
 
 ### Changed
