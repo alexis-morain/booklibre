@@ -22,6 +22,10 @@ fi
 # du pack. Ses tests sont en bibliothèque standard, donc ils tournent partout.
 "$PY" scripts/ornement-normaliser.py --test
 
+# L'envoi au Mac App Store (mas.sh valider|envoyer) : ce qui se teste sans
+# réseau ni clé, en bibliothèque standard aussi.
+"$PY" scripts/asc-envoi.py --test
+
 cargo build --release
 cargo test --workspace
 
