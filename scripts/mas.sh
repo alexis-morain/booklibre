@@ -4,8 +4,15 @@
 #   mas.sh build              Booklibre.app universel, bac à sable, sans updater
 #   mas.sh build --essai      la même, signée ad hoc même si les identités existent
 #   mas.sh pkg                le .pkg signé « 3rd Party Mac Developer Installer »
-#   mas.sh valider            xcrun altool --validate-app sur le .pkg
-#   mas.sh envoyer --oui      xcrun altool --upload-app, geste d'Alexis
+#   mas.sh valider            vérifie le .pkg et le numéro de build, sans rien envoyer
+#   mas.sh envoyer --oui      envoie le .pkg par l'API App Store Connect, geste d'Alexis
+#
+# `valider` et `envoyer` passent par `scripts/asc-envoi.py` (API buildUploads) :
+# `xcrun altool` est cassé depuis Xcode 27.2. L'API n'a pas d'équivalent de
+# `--validate-app` : `valider` vérifie la signature du .pkg, le profil et le bac
+# à sable de l'app qu'il porte, la clé d'API, l'app chez Apple et un numéro de
+# build neuf et croissant. Les contrôles d'Apple sur le binaire ne tournent plus
+# qu'à l'envoi, et `envoyer` en affiche le verdict.
 #
 # Le numéro de build (`CFBundleVersion`) doit être unique et croissant d'un
 # envoi à l'autre ; la version affichée reste celle de `tauri.conf.json`. Il
@@ -14,7 +21,9 @@
 #
 # Les identités et la clé d'API se lisent dans le .env de gestion
 # (`APPLE_MAS_APP`, `APPLE_MAS_INSTALLER`, `APPLE_MAS_API_KEY_ID`,
-# `APPLE_MAS_API_ISSUER`, `COLOPHON_MAS_PROFIL`), ou dans l'environnement qui
+# `APPLE_MAS_API_ISSUER`, `COLOPHON_MAS_PROFIL`, et le fichier .p8 dans
+# `APPLE_MAS_API_KEY_PATH` ou `ASC_KEY_PATH`, à défaut
+# ~/.appstoreconnect/private_keys/AuthKey_<id>.p8), ou dans l'environnement qui
 # les a déjà, et ne s'affichent jamais. Sans identité ni profil, `build`
 # produit quand même une app **signée ad hoc** sous bac à sable pour l'essai
 # local, et le dit : les deux identifiants (`application-identifier`,
@@ -195,22 +204,28 @@ pkg() {
   echo "mas : $PKG"
 }
 
-# altool lit la clé .p8 dans ~/.appstoreconnect/private_keys/ ; on ne la passe
-# jamais en argument.
-altool() {
-  local action="$1" id emetteur
+# La clé passe au script par l'environnement de ce seul processus, jamais en
+# argument ni à l'écran.
+api() {
+  local action="$1" id emetteur cle
   id="$(lire APPLE_MAS_API_KEY_ID)"; emetteur="$(lire APPLE_MAS_API_ISSUER)"
   [ -n "$id" ] && [ -n "$emetteur" ] || echouer "APPLE_MAS_API_KEY_ID et APPLE_MAS_API_ISSUER manquent"
+  cle="$(lire APPLE_MAS_API_KEY_PATH)"
+  [ -n "$cle" ] || cle="$(lire ASC_KEY_PATH)"
+  [ -n "$cle" ] || cle="$HOME/.appstoreconnect/private_keys/AuthKey_$id.p8"
+  cle="${cle/#\~/$HOME}"
+  [ -f "$cle" ] || echouer "aucune clé .p8 : poser APPLE_MAS_API_KEY_PATH"
   [ -f "$PKG" ] || echouer "pas de .pkg : mas.sh pkg d'abord"
-  xcrun altool "$action" --type macos -f "$PKG" --apiKey "$id" --apiIssuer "$emetteur"
+  APPLE_MAS_API_KEY_ID="$id" APPLE_MAS_API_ISSUER="$emetteur" APPLE_MAS_API_KEY_PATH="$cle" \
+    python3 scripts/asc-envoi.py "$action" "$PKG"
 }
 
 case "${1:-}" in
   build) build "${2:-}" ;;
   pkg) pkg ;;
-  valider) altool --validate-app ;;
+  valider) api valider ;;
   envoyer)
     [ "${2:-}" = "--oui" ] || echouer "l'envoi est le geste d'Alexis : mas.sh envoyer --oui"
-    altool --upload-app ;;
+    api envoyer ;;
   *) echo "usage : mas.sh build [--essai]|pkg|valider|envoyer --oui" >&2; exit 2 ;;
 esac

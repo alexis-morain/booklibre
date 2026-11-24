@@ -1937,7 +1937,12 @@ Un dossier déplacé, le marque-page le suit : `open_album` réécrit alors `alb
 `revoir_dossier` est un code `refus-revoir:…` que `racine.ts` traduit en phrase.
 **Une app signée « Apple Distribution » ne se lance pas sur ce Mac** (AMFI, « No matching
 profile found ») : l'essai à l'écran se fait par `mas.sh build --essai`, ad hoc même quand le
-`.env` porte les identités. Le `CFBundleVersion` est le nombre de commits de `HEAD`
+`.env` porte les identités. **`valider` et `envoyer` passent par l'API `buildUploads`**
+(`scripts/asc-envoi.py`, bibliothèque standard, jeton ES256 signé par `openssl`, tests au gate) :
+`xcrun altool` est cassé depuis Xcode 27.2. L'API n'a pas d'équivalent de `--validate-app` :
+`valider` vérifie la signature Installer du .pkg, le profil et le bac à sable de l'app qu'il
+porte, la clé, l'app chez Apple et un build neuf et croissant ; les refus d'Apple sur le binaire
+n'arrivent qu'à l'envoi (buildUpload FAILED, messages affichés). Le `CFBundleVersion` est le nombre de commits de `HEAD`
 (`COLOPHON_MAS_BUILD` le force) : unique et croissant si l'on envoie depuis `main` à jour.
 Ouvrir, révéler, naviguer passent par NSWorkspace en `mas`, par `open` ailleurs. Les droits
 sont exactement ceux de `entitlements.mas.plist`, un test les compte ; **`network.client` y est
