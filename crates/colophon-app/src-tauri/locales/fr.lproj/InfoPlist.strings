@@ -1,0 +1,2 @@
+/* Phrase de la demande d’accès à Photos, refus Apple 5.1.1(ii) du 23/11. */
+"NSPhotoLibraryUsageDescription" = "Booklibre lit les photos de l’album que vous choisissez et les copie dans un dossier de vos Images, pour les mettre en page dans un livre photo prêt à imprimer. Par exemple, si vous choisissez l’album « Été 2026 », ses photos sont copiées dans Images/Colophon/Été 2026, puis les pages sont composées. Rien n’est jamais modifié ni supprimé dans votre photothèque.";

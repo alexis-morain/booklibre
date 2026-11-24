@@ -3937,6 +3937,43 @@ mod tests {
         assert!(mas.contains("public.app-category.photography"));
     }
 
+    /// Refus Apple 5.1.1(ii) du 23/11 : la phrase doit dire l'usage et en
+    /// donner un exemple, dans la langue de la personne. Une phrase par
+    /// langue (InfoPlist.strings), jamais les deux collées ; Info.plist
+    /// porte l'anglaise, celle des langues sans traduction.
+    #[test]
+    fn la_phrase_de_la_phototheque_parle_une_langue_et_donne_un_exemple() {
+        let plist = |p: &str| {
+            p.split("<key>NSPhotoLibraryUsageDescription</key>")
+                .nth(1)
+                .and_then(|r| r.split("<string>").nth(1))
+                .and_then(|r| r.split("</string>").next())
+                .map(str::to_string)
+                .unwrap()
+        };
+        let strings = |p: &str| {
+            p.split("\"NSPhotoLibraryUsageDescription\" = \"")
+                .nth(1)
+                .and_then(|r| r.split("\";").next())
+                .map(str::to_string)
+                .unwrap()
+        };
+        let en = strings(&fichier("locales/en.lproj/InfoPlist.strings"));
+        let fr = strings(&fichier("locales/fr.lproj/InfoPlist.strings"));
+        assert_eq!(plist(&fichier("Info.plist")).replace("&apos;", "'"), en);
+        assert!(en.contains("For example"), "{en}");
+        assert!(fr.contains("Par exemple"), "{fr}");
+        for p in [&en, &fr] {
+            assert!(!p.contains(" — "), "deux langues collées : {p}");
+            assert!(!p.contains('"'), "guillemet droit dans un .strings : {p}");
+        }
+        let conf = fichier("tauri.conf.json");
+        for langue in ["en", "fr"] {
+            let cle = format!("\"Resources/{langue}.lproj/InfoPlist.strings\": \"locales/{langue}.lproj/InfoPlist.strings\"");
+            assert!(conf.contains(&cle), "{cle}");
+        }
+    }
+
     /// Les polices de la personne sont proposées par le DMG, pas par la
     /// version App Store. Tourne dans les deux saveurs, et dit l'inverse
     /// selon celle qui est compilée.

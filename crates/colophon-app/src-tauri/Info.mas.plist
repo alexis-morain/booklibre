@@ -17,7 +17,7 @@
        est le seul endroit où la vérité peut être rétablie, et c'est elle que
        l'utilisateur lit vraiment. Voir src/photos.m, colophon_photos_demander. -->
   <key>NSPhotoLibraryUsageDescription</key>
-  <string>Booklibre copie les photos de l’album que vous choisissez dans un dossier, pour en composer un livre. Il ne modifie ni ne supprime jamais rien dans votre photothèque. — Booklibre copies the photos of the album you pick into a folder, to compose a book from them. It never changes or deletes anything in your photo library.</string>
+  <string>Booklibre reads the photos of the album you choose and copies them to a folder in your Pictures, to lay them out in a print-ready photo book. For example, if you choose your “Summer 2026” album, its photos are copied to Pictures/Colophon/Summer 2026 and the pages are composed from them. Nothing in your photo library is ever changed or deleted.</string>
   <key>ITSAppUsesNonExemptEncryption</key>
   <false/>
   <key>LSApplicationCategoryType</key>

@@ -44,7 +44,11 @@
     "targets": ["app", "dmg", "msi"],
     "macOS": {
       "minimumSystemVersion": "11.0",
-      "entitlements": "entitlements.plist"
+      "entitlements": "entitlements.plist",
+      "files": {
+        "Resources/en.lproj/InfoPlist.strings": "locales/en.lproj/InfoPlist.strings",
+        "Resources/fr.lproj/InfoPlist.strings": "locales/fr.lproj/InfoPlist.strings"
+      }
     },
     "windows": {
       "wix": {

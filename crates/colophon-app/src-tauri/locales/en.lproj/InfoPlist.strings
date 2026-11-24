@@ -1,0 +1,2 @@
+/* Phrase de la demande d’accès à Photos, refus Apple 5.1.1(ii) du 23/11. Info.plist porte la même. */
+"NSPhotoLibraryUsageDescription" = "Booklibre reads the photos of the album you choose and copies them to a folder in your Pictures, to lay them out in a print-ready photo book. For example, if you choose your “Summer 2026” album, its photos are copied to Pictures/Colophon/Summer 2026 and the pages are composed from them. Nothing in your photo library is ever changed or deleted.";
