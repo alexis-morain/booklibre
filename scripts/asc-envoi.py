@@ -162,10 +162,24 @@ def numero_libre(versions_deja_envoyees, build):
         raise Refus(f"le build {build} est plus petit que le dernier envoyé ({max(nombres)})")
 
 
-def verifier_app(info, signature_pkg, a_un_profil, bac_a_sable):
-    """Ce que le .pkg doit porter pour partir. Rend (bundle, version, build)."""
-    if INSTALLEUR not in signature_pkg:
+def verifier_signature(code, sortie):
+    """La sortie de `pkgutil --check-signature` : signée, rien de périmé ni de
+    révoqué, et le certificat de tête est l'Installer du Store. Un certificat
+    Mac App Store se dit « issued by Apple (Development) », jamais « trusted by
+    macOS » : c'est normal, Apple re-signe au Store."""
+    statut = next((l.strip() for l in sortie.splitlines() if l.strip().startswith("Status:")), "")
+    if code != 0 or not statut.startswith("Status: signed") or any(
+            m in statut for m in ("expired", "revoked", "untrusted", "invalid")):
+        raise Refus(f"la signature du .pkg ne tient pas : {statut or 'pas de statut'}")
+    tete = next((l.strip() for l in sortie.splitlines() if l.strip().startswith("1. ")), "")
+    if not tete.startswith(f"1. {INSTALLEUR}:"):
         raise Refus(f"le .pkg n'est pas signé « {INSTALLEUR} »")
+
+
+def verifier_app(info, signature_pkg, a_un_profil, bac_a_sable):
+    """Ce que le .pkg doit porter pour partir. `signature_pkg` est le couple
+    (code, sortie) de pkgutil. Rend (bundle, version, build)."""
+    verifier_signature(*signature_pkg)
     if not a_un_profil:
         raise Refus("l'app du .pkg n'embarque pas de profil : signée ad hoc, elle ne part pas chez Apple")
     if not bac_a_sable:
@@ -224,7 +238,8 @@ def client_depuis_env():
 
 def lire_pkg(pkg):
     """Ouvre le .pkg et lit l'app qu'il installe, sans rien supposer."""
-    sig = subprocess.run(["pkgutil", "--check-signature", pkg], capture_output=True, text=True).stdout
+    r = subprocess.run(["pkgutil", "--check-signature", pkg], capture_output=True, text=True)
+    sig = (r.returncode, r.stdout)
     tmp = tempfile.mkdtemp(prefix="mas-pkg-")
     try:
         sortie = os.path.join(tmp, "x")
@@ -269,6 +284,18 @@ def valider(pkg, client):
 
 
 def envoyer(pkg, client, attendre=time.sleep, delai=30, essais=60):
+    # Une copie privée : ce qui est validé est ce qui part, même si un
+    # `mas.sh pkg` réécrit le fichier pendant l'envoi.
+    tmp = tempfile.mkdtemp(prefix="mas-envoi-")
+    try:
+        copie = os.path.join(tmp, os.path.basename(pkg))
+        shutil.copyfile(pkg, copie)
+        return _envoyer(copie, client, attendre, delai, essais)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _envoyer(pkg, client, attendre, delai, essais):
     app_id, version, build = valider(pkg, client)
     with open(pkg, "rb") as f:
         octets = f.read()
@@ -384,13 +411,21 @@ def tests():
 
     # L'app du .pkg.
     info = {"CFBundleIdentifier": "fr.morain.colophon", "CFBundleShortVersionString": "1.2.0", "CFBundleVersion": "229"}
-    sig = f"Status: signed by a certificate trusted by macOS\n   1. {INSTALLEUR}: X (ABC)\n"
-    assert verifier_app(info, sig, True, True) == ("fr.morain.colophon", "1.2.0", "229")
-    refuse(lambda: verifier_app(info, "Status: no signature", True, True), INSTALLEUR)
-    refuse(lambda: verifier_app(info, sig, False, True), "profil")
-    refuse(lambda: verifier_app(info, sig, True, False), "app-sandbox")
-    refuse(lambda: verifier_app(dict(info, CFBundleVersion="1.2"), sig, True, True), "entier")
-    refuse(lambda: verifier_app({}, sig, True, True), "Info.plist")
+    # La sortie de pkgutil sur le .pkg du build 228 (24/11), équipe masquée.
+    sig = (f'Package "Booklibre.pkg":\n   Status: signed by a developer certificate issued by Apple (Development)\n'
+           f"   Certificate Chain:\n    1. {INSTALLEUR}: X (ABC)\n       Expires: 2027-10-16\n    2. Apple Worldwide Developer Relations\n")
+    assert verifier_app(info, (0, sig), True, True) == ("fr.morain.colophon", "1.2.0", "229")
+    refuse(lambda: verifier_app(info, (1, sig), True, True), "signature du .pkg")
+    refuse(lambda: verifier_app(info, (0, 'Package "x":\n   Status: no signature\n'), True, True), "signature du .pkg")
+    perime = sig.replace("Status: signed by a developer certificate issued by Apple (Development)",
+                         "Status: signed by a certificate that has since expired")
+    refuse(lambda: verifier_app(info, (0, perime), True, True), "signature du .pkg")
+    autre = sig.replace(f"1. {INSTALLEUR}", "1. Developer ID Installer").replace("2. Apple", f"2. {INSTALLEUR}")
+    refuse(lambda: verifier_app(info, (0, autre), True, True), INSTALLEUR)
+    refuse(lambda: verifier_app(info, (0, sig), False, True), "profil")
+    refuse(lambda: verifier_app(info, (0, sig), True, False), "app-sandbox")
+    refuse(lambda: verifier_app(dict(info, CFBundleVersion="1.2"), (0, sig), True, True), "entier")
+    refuse(lambda: verifier_app({}, (0, sig), True, True), "Info.plist")
     print("asc-envoi : tests ok")
 
 
