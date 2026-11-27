@@ -9,6 +9,7 @@ import { Ornement, setOrnements } from "./ornement";
 import { Album, Discard, Legendes, OpenedAlbum, Police, Spread } from "./album";
 import type { BilanComposition } from "./voyage";
 
+import { albumDOrigine, texteDemo } from "./demo";
 import { Dump, setGeometrie, setGeometrieFormat } from "./geometrie";
 import { Lang, langue, t } from "./i18n";
 import type { IntentionVue, Offre, Pays, Progres } from "./commande";
@@ -874,6 +875,8 @@ export async function ecrireAlbum(album: Album): Promise<void> {
 /** The album as it opened, for « Revenir à l'ouverture de la séance ». The
  *  harness keeps no copy. */
 export async function albumOuverture(): Promise<Album> {
+  // La démo repart de son enregistrement : c'est l'album « d'ouverture ».
+  if (import.meta.env.VITE_DEMO === "1") return (await albumDOrigine()) as Album;
   if (!inTauri) throw new Error("le harnais ne garde pas de copie d'ouverture");
   return invoke<Album>("album_ouverture");
 }
@@ -1133,6 +1136,9 @@ export async function checkUpdate(): Promise<{
 export type AboutData = { version: string; notices: string };
 
 export async function aboutData(): Promise<AboutData> {
+  if (import.meta.env.VITE_DEMO === "1") {
+    return { version: "demo", notices: texteDemo("apropos.demo") };
+  }
   if (!inTauri) {
     return {
       version: "dev",

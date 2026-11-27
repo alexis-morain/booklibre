@@ -24,3 +24,7 @@ __pycache__/
 # Le profil d'approvisionnement de la version Mac App Store : `scripts/mas.sh`
 # le copie depuis $COLOPHON_MAS_PROFIL le temps d'une construction.
 /crates/colophon-app/src-tauri/embedded.provisionprofile
+
+# Le build web de la démo et ses enregistrements (scripts/demo.sh)
+/crates/colophon-app/dist-demo
+/crates/colophon-app/demo-data
