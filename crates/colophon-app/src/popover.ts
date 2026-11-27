@@ -36,6 +36,18 @@ export function placerSous(
   return { left, top };
 }
 
+/** Un panneau qui s'ouvre vers la gauche depuis un bouton de la colonne de
+ *  droite : sous le bouton, bord droit sur le sien, et pas plus haut que ce
+ *  qui reste de la fenêtre. Position fixe : la colonne défile, et un panneau
+ *  absolu y serait coupé à son bord gauche. */
+export function placerAGauche(
+  ancre: Boite,
+  fenetre: { w: number; h: number },
+): { top: number; right: number; maxHeight: number } {
+  const top = ancre.bottom + 6;
+  return { top, right: Math.max(ECART, fenetre.w - ancre.right), maxHeight: Math.max(120, fenetre.h - top - ECART) };
+}
+
 /** Le rectangle droit qui contient des points : l'emprise d'un objet tourné. */
 export function enveloppe(points: { x: number; y: number }[]): Boite {
   const xs = points.map((p) => p.x);

@@ -2,7 +2,7 @@
 // quand le bas de la fenêtre est proche, et jamais hors de la fenêtre.
 
 import { describe, expect, it } from "vitest";
-import { enveloppe, largeurLegende, placerSous } from "./popover";
+import { enveloppe, largeurLegende, placerAGauche, placerSous } from "./popover";
 
 const FENETRE = { w: 900, h: 620 };
 
@@ -72,5 +72,16 @@ describe("enveloppe", () => {
         { x: 0, y: 10 },
       ]),
     ).toEqual({ left: 0, top: 0, right: 20, bottom: 20 });
+  });
+});
+
+describe("placerAGauche", () => {
+  it("s'ouvre sous le bouton, bord droit sur le sien", () => {
+    const r = placerAGauche({ left: 1253, top: 165, right: 1394, bottom: 192 }, { w: 1440, h: 900 });
+    expect(r).toEqual({ top: 198, right: 46, maxHeight: 694 });
+  });
+
+  it("ne descend jamais sous 120 px de haut", () => {
+    expect(placerAGauche({ left: 0, top: 0, right: 100, bottom: 880 }, { w: 400, h: 900 }).maxHeight).toBe(120);
   });
 });
