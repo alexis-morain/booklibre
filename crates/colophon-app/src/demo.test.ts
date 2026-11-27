@@ -2,7 +2,7 @@
 // pas, un manifeste d'enregistrements à sa place.
 
 import { describe, expect, it } from "vitest";
-import { cleDeRoute, DEMO_EN, DEMO_FR, LIEN_TELECHARGER, repondre, type Manifeste } from "./demo";
+import { cleDeRoute, DEMO_EN, DEMO_FR, lienTelecharger, premierCoupDOeil, repondre, texteDemo, type Manifeste } from "./demo";
 
 const url = (s: string) => new URL(s, "http://demo.test");
 
@@ -122,7 +122,28 @@ describe("les textes de la démo", () => {
     }
   });
 
-  it("n'envoient que vers la page de téléchargement", () => {
-    expect(LIEN_TELECHARGER).toBe("https://booklibre.app/");
+  it("envoient vers l'ancre de téléchargement, dans la langue de l'interface", () => {
+    expect(lienTelecharger("fr")).toBe("https://booklibre.app/fr/#get");
+    expect(lienTelecharger("en")).toBe("https://booklibre.app/#get");
+  });
+
+  it("remplissent les trous du crédit", () => {
+    expect(texteDemo("bandeau.credit", "en", { auteur: "A B", licence: "CC BY-SA 4.0" })).toBe("Photos: A B, CC BY-SA 4.0");
+  });
+
+  it("n'annoncent plus de vidéo sur l'écran mobile", () => {
+    expect(Object.keys(DEMO_FR)).not.toContain("mobile.video");
+    expect(DEMO_FR["mobile.texte"]).not.toMatch(/vidéo/);
+  });
+});
+
+describe("premierCoupDOeil", () => {
+  const p = (...n: number[]) => n.map((k) => ({ slots: new Array(k).fill(0) }));
+  it("saute la page vide et prend la première planche de deux photos ou plus", () => {
+    expect(premierCoupDOeil(p(0, 1, 3, 2))).toBe(2);
+  });
+  it("se rabat sur la première planche à une photo, puis sur la première", () => {
+    expect(premierCoupDOeil(p(0, 1, 1))).toBe(1);
+    expect(premierCoupDOeil(p(0, 0))).toBe(0);
   });
 });

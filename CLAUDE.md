@@ -1878,7 +1878,11 @@ mémoire, le moteur répond 501 avec la phrase « disponible dans l'app ». Les 
 (Envoi, Recomposer, Remplir, Nouveau/Ouvrir, signaler) ouvrent la boîte de `DemoCadre.tsx`. La
 condition s'écrit **en clair** (`import.meta.env.VITE_DEMO === "1"`) à chaque site, et les phrases
 de la démo vivent dans `demo.ts`, pas dans `i18n.ts` : sans cela le build normal les garde (le test
-est un `grep` du `dist` normal). La seule police servie est Source Sans 3 (SIL OFL 1.1). Aucune
+est un `grep` du `dist` normal). La démo s'ouvre sur la première planche à deux photos (`premierCoupDOeil`), pas sur la planche 1
+(page collée dans la couverture, vide). `scripts/demo.sh <album> <sortie> [sources.json]` écrit aussi
+`credits.html` et `demo-data/credits.json` (le crédit du bandeau) depuis un fichier de sources
+hors dépôt (`demo-credits.py`) ; un PDF d'aperçu de plus de 25 Mio est allégé par pikepdf
+(`DEMO_PYTHON` choisit l'interpréteur). La seule police servie est Source Sans 3 (SIL OFL 1.1). Aucune
 requête hors du site : `fetch` refuse tout ce qui sort de l'origine.
 
 Les deux bancs à la main de la police, sur l'instance Brave de la cure : poser une vraie

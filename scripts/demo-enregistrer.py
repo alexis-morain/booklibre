@@ -93,6 +93,32 @@ def vignette_web(octets: bytes, px: int, qualite: int) -> bytes:
     return sortie.getvalue()
 
 
+def alleger_pdf(octets: bytes, qualite: int) -> bytes:
+    """Réencode les JPEG du PDF d'aperçu, comme les vignettes : le moteur les y
+    passe tels quels, et 85 photos de 1600 px font plus de 25 Mio. Même taille
+    en pixels, même espace couleur : seul le débit baisse. Demande pikepdf."""
+    try:
+        import pikepdf
+        from PIL import Image
+    except ImportError:
+        sys.exit("le PDF d'aperçu dépasse 25 Mio : pikepdf est nécessaire pour l'alléger (pip install pikepdf)")
+    pdf = pikepdf.open(io.BytesIO(octets))
+    for obj in pdf.objects:
+        if not isinstance(obj, pikepdf.Stream) or obj.get("/Subtype") != "/Image" or obj.get("/Filter") != "/DCTDecode":
+            continue
+        brut = obj.read_raw_bytes()
+        im = Image.open(io.BytesIO(brut))
+        if im.mode != "RGB":
+            continue
+        sortie = io.BytesIO()
+        im.save(sortie, "JPEG", quality=qualite, optimize=True, progressive=True)
+        if len(sortie.getvalue()) < len(brut):
+            obj.write(sortie.getvalue(), filter=pikepdf.Name.DCTDecode)
+    sortie = io.BytesIO()
+    pdf.save(sortie, compress_streams=True, object_stream_mode=pikepdf.ObjectStreamMode.generate)
+    return sortie.getvalue()
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("album", type=Path, help="dossier de l'album composé")
@@ -191,7 +217,12 @@ def main() -> None:
             print(f"photos : {len(srcs)} vignettes et fiches")
 
             # L'aperçu fidèle : le PDF de l'album, puis celui de la couverture (rendu à la demande).
-            poser("/__dev/pdf", {"quoi": "album"}, "album.pdf", h.demander("/__dev/pdf", {"quoi": "album"}), "application/pdf")
+            pdf_album = h.demander("/__dev/pdf", {"quoi": "album"})
+            if len(pdf_album) > PLAFOND:
+                avant = len(pdf_album)
+                pdf_album = alleger_pdf(pdf_album, a.qualite)
+                print(f"PDF d'aperçu allégé : {avant / 2**20:.1f} -> {len(pdf_album) / 2**20:.1f} Mio")
+            poser("/__dev/pdf", {"quoi": "album"}, "album.pdf", pdf_album, "application/pdf")
             h.demander("/__dev/couverture", {"profil": "cloudprinter"}, "POST")
             poser("/__dev/pdf", {"quoi": "couverture"}, "couverture.pdf",
                   h.demander("/__dev/pdf", {"quoi": "couverture"}), "application/pdf")

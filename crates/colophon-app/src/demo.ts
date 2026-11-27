@@ -16,9 +16,19 @@
 
 import { langue, type Lang } from "./i18n";
 
-export const LIEN_TELECHARGER = "https://booklibre.app/";
-/** Un emplacement : la page de la vidéo n'existe pas encore. */
-export const LIEN_VIDEO = "https://booklibre.app/";
+/** La page de téléchargement du site, dans la langue de l'interface. */
+export function lienTelecharger(l: Lang = langue()): string {
+  return l === "fr" ? "https://booklibre.app/fr/#get" : "https://booklibre.app/#get";
+}
+
+/** Au démarrage la démo n'ouvre pas la planche 1, page collée dans la
+ *  couverture et vide : la première planche qui porte au moins deux photos,
+ *  à défaut une seule, à défaut la première. */
+export function premierCoupDOeil(planches: { slots: unknown[] }[]): number {
+  const i = planches.findIndex((p) => p.slots.length >= 2);
+  if (i >= 0) return i;
+  return Math.max(0, planches.findIndex((p) => p.slots.length >= 1));
+}
 
 /** Les largeurs sous lesquelles l'éditeur n'a pas la place de se montrer. */
 export const LARGEUR_MIN = 900;
@@ -26,6 +36,8 @@ export const LARGEUR_MIN = 900;
 export const DEMO_FR = {
   "bandeau.texte": "Démo : rien n’est enregistré",
   "bandeau.lien": "Télécharger Booklibre",
+  "bandeau.credit": "Photos : {auteur}, {licence}",
+  "bandeau.credits": "crédits",
   "refus.titre": "Disponible dans l’app",
   "refus.lien": "Télécharger Booklibre",
   "refus.export":
@@ -45,17 +57,18 @@ export const DEMO_FR = {
     "Rendre une planche à l’automatique relit la composition d’origine, que seule l’application garde. Téléchargement : booklibre.app",
   "mobile.titre": "La démo est faite pour un ordinateur",
   "mobile.texte":
-    "L’éditeur d’album a besoin d’un grand écran et d’une souris. Regardez la vidéo, ou téléchargez Booklibre pour Mac et Windows.",
-  "mobile.video": "Voir la vidéo",
+    "L’éditeur d’album a besoin d’un grand écran et d’une souris. Téléchargez Booklibre pour Mac et Windows.",
   "mobile.telecharger": "Télécharger Booklibre",
   "fidele.demo": "Aperçu fidèle : le PDF enregistré de la démo, sans vos modifications",
   "apropos.demo":
-    "Démo en ligne. Photos : domaine public (CC0), auteurs et adresses dans SOURCES.md. Police : Source Sans 3, SIL Open Font License 1.1. Aucune police du système n’est embarquée.",
+    "Démo en ligne. Photos : voir la page des crédits. Police : Source Sans 3, SIL Open Font License 1.1. Aucune police du système n’est embarquée.",
 };
 
 export const DEMO_EN: typeof DEMO_FR = {
   "bandeau.texte": "Demo: nothing is saved",
   "bandeau.lien": "Download Booklibre",
+  "bandeau.credit": "Photos: {auteur}, {licence}",
+  "bandeau.credits": "credits",
   "refus.titre": "Available in the app",
   "refus.lien": "Download Booklibre",
   "refus.export":
@@ -75,12 +88,11 @@ export const DEMO_EN: typeof DEMO_FR = {
     "Handing a spread back to automatic reads the original composition, which only the app keeps. Download: booklibre.app",
   "mobile.titre": "The demo is made for a computer",
   "mobile.texte":
-    "The album editor needs a large screen and a mouse. Watch the video, or download Booklibre for Mac and Windows.",
-  "mobile.video": "Watch the video",
+    "The album editor needs a large screen and a mouse. Download Booklibre for Mac and Windows.",
   "mobile.telecharger": "Download Booklibre",
   "fidele.demo": "Faithful preview: the demo’s saved PDF, without your edits",
   "apropos.demo":
-    "Online demo. Photos: public domain (CC0), authors and addresses in SOURCES.md. Typeface: Source Sans 3, SIL Open Font License 1.1. No system font is embedded.",
+    "Online demo. Photos: see the credits page. Typeface: Source Sans 3, SIL Open Font License 1.1. No system font is embedded.",
 };
 
 export type CleDemo = keyof typeof DEMO_FR;
@@ -94,8 +106,9 @@ export type Quoi =
   | "stockage"
   | "origine";
 
-export function texteDemo(cle: CleDemo, l: Lang = langue()): string {
-  return (l === "en" ? DEMO_EN : DEMO_FR)[cle];
+export function texteDemo(cle: CleDemo, l: Lang = langue(), params?: Record<string, string>): string {
+  const texte = (l === "en" ? DEMO_EN : DEMO_FR)[cle];
+  return params ? texte.replace(/\{(\w+)\}/g, (m, k) => params[k] ?? m) : texte;
 }
 
 /** Le manifeste que `scripts/demo-enregistrer.py` écrit : chaque requête

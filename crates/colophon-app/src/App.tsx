@@ -197,7 +197,7 @@ import { LegendeQualite } from "./LegendeQualite";
 import { PrixLivre, QuestionAccueil } from "./ChoixImpression";
 import { chargerTarifs, pagesDuLivre, useLimitePages } from "./impression";
 import { BoutonCommander } from "./BoutonCommander";
-import { demoRefus, texteDemo } from "./demo";
+import { demoRefus, premierCoupDOeil, texteDemo } from "./demo";
 import { loadThumb, resetThumbs } from "./thumbs";
 import "./styles.css";
 
@@ -726,7 +726,7 @@ export default function App() {
     setEchecEcriture(null);
     setHist({ album: result.album, past: [], future: [] });
     setSavedAlbum(result.album);
-    setIndex(0);
+    setIndex(import.meta.env.VITE_DEMO === "1" ? premierCoupDOeil(result.album.spreads) : 0);
     setSelected(null);
     setTriSelected(null);
     setView("livre");
