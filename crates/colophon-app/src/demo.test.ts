@@ -1,0 +1,128 @@
+// Le shim de la démo : ce que `fetch` rend quand le harnais de dev n'existe
+// pas, un manifeste d'enregistrements à sa place.
+
+import { describe, expect, it } from "vitest";
+import { cleDeRoute, DEMO_EN, DEMO_FR, LIEN_TELECHARGER, repondre, type Manifeste } from "./demo";
+
+const url = (s: string) => new URL(s, "http://demo.test");
+
+const manifeste: Manifeste = {
+  version: 1,
+  routes: {
+    [cleDeRoute("/__dev/album", new URLSearchParams())]: { f: "album.json", t: "application/json" },
+    [cleDeRoute("/__dev/thumb", new URLSearchParams({ src: "a b.jpg" }))]: { f: "t/0001.jpg", t: "image/jpeg" },
+    [cleDeRoute("/__dev/reserve", new URLSearchParams({ planche: "3", case: "2" }))]: {
+      f: "r/3-2.json",
+      t: "application/json",
+    },
+  },
+};
+
+const etat = () => ({ album: null as unknown });
+const get = (u: string, e = etat()) => repondre(manifeste, "GET", url(u), undefined, e, "fr");
+const post = (u: string, corps: string, e = etat()) => repondre(manifeste, "POST", url(u), corps, e, "fr");
+
+describe("cleDeRoute", () => {
+  it("ne dépend pas de l'ordre des paramètres", () => {
+    expect(cleDeRoute("/__dev/reserve", new URLSearchParams("planche=3&case=2"))).toBe(
+      cleDeRoute("/__dev/reserve", new URLSearchParams("case=2&planche=3")),
+    );
+  });
+
+  it("distingue deux requêtes qui ne diffèrent que par une valeur", () => {
+    expect(cleDeRoute("/__dev/thumb", new URLSearchParams("src=a"))).not.toBe(
+      cleDeRoute("/__dev/thumb", new URLSearchParams("src=b")),
+    );
+  });
+});
+
+describe("repondre : les lectures enregistrées", () => {
+  it("sert un fichier du manifeste avec son type", () => {
+    expect(get("/__dev/thumb?src=a%20b.jpg")).toMatchObject({ status: 200, type: "image/jpeg", fichier: "t/0001.jpg" });
+  });
+
+  it("retrouve une requête quel que soit l'ordre de ses paramètres", () => {
+    expect(get("/__dev/reserve?case=2&planche=3")).toMatchObject({ status: 200, fichier: "r/3-2.json" });
+  });
+
+  it("rend 404 pour ce qui n'a pas été enregistré, sans rien inventer", () => {
+    const r = get("/__dev/thumb?src=inconnue.jpg");
+    expect(r.status).toBe(404);
+    expect(r.fichier).toBeUndefined();
+  });
+});
+
+describe("repondre : l'écriture reste en mémoire", () => {
+  it("garde l'album posté et le rend au GET suivant", () => {
+    const e = etat();
+    expect(post("/__dev/album", '{"title":"modifié"}', e)).toMatchObject({ status: 200 });
+    expect(e.album).toEqual({ title: "modifié" });
+    expect(get("/__dev/album", e)).toMatchObject({ fichier: "album.json", fusionAlbum: true });
+  });
+
+  it("refuse un corps qui n'est pas du JSON et ne touche pas à la mémoire", () => {
+    const e = etat();
+    expect(post("/__dev/album", "{pas du json", e).status).toBe(500);
+    expect(e.album).toBeNull();
+  });
+});
+
+describe("repondre : ce qui demande le moteur", () => {
+  const demandes: [string, string, string][] = [
+    ["POST", "/__dev/recomposer", "recomposer"],
+    ["POST", "/__dev/preparer?profil=cloudprinter", "export"],
+    ["POST", "/__dev/preparer-commande", "export"],
+    ["GET", "/__dev/prevol?profil=cloudprinter", "export"],
+    ["GET", "/__dev/remplir", "remplir"],
+    ["GET", "/__dev/survol", "album"],
+    ["POST", "/__dev/relais/creer", "commande"],
+  ];
+
+  it.each(demandes)("%s %s répond 501 avec le message « %s » et le lien de téléchargement", (m, u, quoi) => {
+    const r = repondre(manifeste, m, url(u), "{}", etat(), "fr");
+    expect(r.status).toBe(501);
+    expect(r.corps).toBe(DEMO_FR[`refus.${quoi}` as keyof typeof DEMO_FR]);
+    expect(r.corps).toContain("booklibre.app");
+  });
+
+  it("parle anglais quand l'interface le fait", () => {
+    const r = repondre(manifeste, "GET", url("/__dev/remplir"), undefined, etat(), "en");
+    expect(r.corps).toBe(DEMO_EN["refus.remplir"]);
+  });
+
+  it("dit qu'il n'y a pas de relais plutôt que de répondre en erreur", () => {
+    expect(repondre(manifeste, "POST", url("/__dev/relais/pays"), "{}", etat(), "fr")).toMatchObject({
+      status: 200,
+      corps: "null",
+    });
+    expect(repondre(manifeste, "POST", url("/__dev/relais/tarifs-offerts"), "{}", etat(), "fr")).toMatchObject({
+      corps: "false",
+    });
+  });
+
+  it("l'aperçu de couverture est déjà enregistré : le POST répond ok", () => {
+    expect(repondre(manifeste, "POST", url("/__dev/couverture?profil=cloudprinter"), "", etat(), "fr")).toMatchObject({
+      status: 200,
+      corps: "ok",
+    });
+  });
+});
+
+describe("les textes de la démo", () => {
+  it("ont les mêmes clés en français et en anglais", () => {
+    expect(Object.keys(DEMO_EN).sort()).toEqual(Object.keys(DEMO_FR).sort());
+  });
+
+  it("ne nomment pas le logiciel Colophon, ne portent aucun tiret cadratin", () => {
+    for (const dico of [DEMO_FR, DEMO_EN]) {
+      for (const [cle, texte] of Object.entries(dico)) {
+        expect(texte, cle).not.toMatch(/Colophon/);
+        expect(texte, cle).not.toContain("—");
+      }
+    }
+  });
+
+  it("n'envoient que vers la page de téléchargement", () => {
+    expect(LIEN_TELECHARGER).toBe("https://booklibre.app/");
+  });
+});

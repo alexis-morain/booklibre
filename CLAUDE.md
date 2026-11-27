@@ -1867,6 +1867,20 @@ Scripts :
 `banc-gabarits.sh`, `mesure-cdp.mjs`, `feuille-cdp.mjs`, `police-cdp.mjs`. App :
 `npm run tauri dev`.
 
+**La démo en ligne** (`npm run build:demo` dans l'app, `scripts/demo.sh <album composé> <sortie>`) :
+la vraie interface sur un album enregistré, sans moteur ni serveur. `vite build --mode demo` pose
+`import.meta.env.VITE_DEMO` (dans `vite.config.ts`, jamais dans un `.env`), `base: '/demo/'`, sortie
+`dist-demo/`. `demo.ts` remplace `window.fetch` : les `GET /__dev/*` sortent d'un manifeste
+(`demo-data/`, écrit par `scripts/demo-enregistrer.py` en rejouant le harnais sur une copie de
+l'album, énumération déterministe, vignettes réencodées sans EXIF, GPS des fiches à deux décimales,
+échec si un chemin de la machine ou une police choisie traîne), `POST /__dev/album` reste en
+mémoire, le moteur répond 501 avec la phrase « disponible dans l'app ». Les gardes d'`App.tsx`
+(Envoi, Recomposer, Remplir, Nouveau/Ouvrir, signaler) ouvrent la boîte de `DemoCadre.tsx`. La
+condition s'écrit **en clair** (`import.meta.env.VITE_DEMO === "1"`) à chaque site, et les phrases
+de la démo vivent dans `demo.ts`, pas dans `i18n.ts` : sans cela le build normal les garde (le test
+est un `grep` du `dist` normal). La seule police servie est Source Sans 3 (SIL OFL 1.1). Aucune
+requête hors du site : `fetch` refuse tout ce qui sort de l'origine.
+
 Les deux bancs à la main de la police, sur l'instance Brave de la cure : poser une vraie
 face du Mac dans un album sans passer par la fenêtre, puis mesurer la parité écran/papier
 contre la référence du moteur.

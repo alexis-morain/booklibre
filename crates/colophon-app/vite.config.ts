@@ -763,7 +763,17 @@ function relaisDev() {
 }
 
 // https://vite.dev/config/
-export default defineConfig(async () => ({
+// `--mode demo` : le build web de la démo en ligne (`scripts/demo.sh`), servi
+// sous /demo/. Le drapeau est posé ici, jamais dans un .env : sans lui le build
+// normal ne garde rien du mode démo.
+export default defineConfig(async ({ mode }) => ({
+  ...(mode === "demo"
+    ? {
+        base: "/demo/",
+        define: { "import.meta.env.VITE_DEMO": '"1"' },
+        build: { outDir: "dist-demo", emptyOutDir: true },
+      }
+    : {}),
   plugins: [
     react(),
     geometryParity(),

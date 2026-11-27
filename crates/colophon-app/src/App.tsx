@@ -197,6 +197,7 @@ import { LegendeQualite } from "./LegendeQualite";
 import { PrixLivre, QuestionAccueil } from "./ChoixImpression";
 import { chargerTarifs, pagesDuLivre, useLimitePages } from "./impression";
 import { BoutonCommander } from "./BoutonCommander";
+import { demoRefus, texteDemo } from "./demo";
 import { loadThumb, resetThumbs } from "./thumbs";
 import "./styles.css";
 
@@ -775,7 +776,12 @@ export default function App() {
     }
   }, [adopt, ecrire, opened]);
 
-  const openAlbum = useCallback(async () => {
+  // `auto` : l'ouverture d'arrivée au harnais. La démo n'ouvre que celle-là.
+  const openAlbum = useCallback(async (auto?: boolean) => {
+    if (import.meta.env.VITE_DEMO === "1" && auto !== true) {
+      demoRefus("album");
+      return;
+    }
     const picked = await pickAlbumFolder();
     if (picked === null) return;
     if (!(await save(false))) return;
@@ -902,7 +908,9 @@ export default function App() {
       setStatus(
         inTauri
           ? t("fidele.pret")
-          : t("fidele.harnais"),
+          : import.meta.env.VITE_DEMO === "1"
+            ? texteDemo("fidele.demo")
+            : t("fidele.harnais"),
       );
     } catch (e) {
       setError(fault(t("erreur.fidele"), e));
@@ -1143,6 +1151,10 @@ export default function App() {
    *  recompose `album.json`, donc l'album tel qu'il est sur le disque, et le
    *  compte des planches gardées doit être celui qu'il lira. */
   const ouvrirRecomposer = useCallback(async () => {
+    if (import.meta.env.VITE_DEMO === "1") {
+      demoRefus("recomposer");
+      return;
+    }
     if (!hist || building) return;
     if (!(await ecrire())) return;
     setBascule("recomposer");
@@ -1303,6 +1315,10 @@ export default function App() {
   /** Back to the creation screen, once the session is written and pruned.
    *  A failed write keeps the album open: the error says why. */
   const closeAlbum = useCallback(async () => {
+    if (import.meta.env.VITE_DEMO === "1") {
+      demoRefus("album");
+      return;
+    }
     if (!(await save(false))) return;
     setHist(null);
     setOpened(null);
@@ -1385,6 +1401,10 @@ export default function App() {
    *  view knows the cover. */
   const gotoView = useCallback(
     (v: View) => {
+      if (import.meta.env.VITE_DEMO === "1" && v === "envoi") {
+        demoRefus("export");
+        return;
+      }
       // Envoi lit le disque : l'album y part sans attendre la seconde.
       if (v === "envoi") void ecrire();
       setView(v);
@@ -1572,6 +1592,10 @@ export default function App() {
    *  un seul pas d'annulation ; une pose devenue fausse entre-temps se saute
    *  et compte comme restée vide. */
   const remplirTout = async () => {
+    if (import.meta.env.VITE_DEMO === "1") {
+      demoRefus("remplir");
+      return;
+    }
     const courant = histRef.current?.album;
     if (!courant) return;
     setStatus(t("remplir.cherche"));
@@ -1709,6 +1733,10 @@ export default function App() {
       if (!album || index < 0 || (view !== "livre" && view !== "planches")) return;
       const spread = album.spreads[index];
       if (!spread) return;
+      if (import.meta.env.VITE_DEMO === "1") {
+        demoRefus("origine");
+        return;
+      }
       void (async () => {
         try {
           const origin = await originSpread(album, index);
@@ -1779,6 +1807,7 @@ export default function App() {
       setShortcuts((s) => !s);
     },
     stockage: () => {
+      if (import.meta.env.VITE_DEMO === "1") return demoRefus("stockage");
       setShortcuts(false);
       setApropos(false);
       setSignaler(null);
@@ -1825,6 +1854,7 @@ export default function App() {
     // The three report variants. A bug needs nothing; the two layout
     // complaints quote the spread on screen, the crop one its selected cell.
     "signaler-bug": () => {
+      if (import.meta.env.VITE_DEMO === "1") return demoRefus("signaler");
       setPrefs(false);
       setShortcuts(false);
       setStockage(false);
@@ -1832,6 +1862,7 @@ export default function App() {
       setSignaler("bug");
     },
     "signaler-planche": () => {
+      if (import.meta.env.VITE_DEMO === "1") return demoRefus("signaler");
       if (!album || index < 0) {
         setStatus(t("signal.planche.dabord"));
         return;
@@ -1840,6 +1871,7 @@ export default function App() {
       setSignaler("planche");
     },
     "signaler-recadrage": () => {
+      if (import.meta.env.VITE_DEMO === "1") return demoRefus("signaler");
       if (!album || index < 0 || selected === null) {
         setStatus(t("signal.case.dabord"));
         return;
@@ -2165,7 +2197,7 @@ export default function App() {
   useEffect(() => {
     if (inTauri || opened || autoOpened.current) return;
     autoOpened.current = true;
-    void openAlbum();
+    void openAlbum(true);
   }, [opened, openAlbum]);
 
   // Neighbouring spreads are fetched ahead so a page turn never flashes empty.
@@ -3014,7 +3046,7 @@ export default function App() {
   const triEntry = entries.find((e) => e.src === triSelected) ?? null;
   const listeChapitres = chapitres(album);
   const chapitreCourant = chapitreDe(listeChapitres, index);
-  const commanderOffert = relais !== null && relais.etat !== "absent";
+  const commanderOffert = import.meta.env.VITE_DEMO === "1" || (relais !== null && relais.etat !== "absent");
   /** Un chapitre se rejoint par sa première planche : en Planches on y reste,
    *  partout ailleurs on ouvre le Livre. */
   const allerAuChapitre = (debut: number) => {
@@ -3062,7 +3094,7 @@ export default function App() {
         }}
         onRecompose={() => void ouvrirRecomposer()}
         onExporter={() => gotoView("envoi")}
-        onCommander={commanderOffert ? () => gotoView("envoi") : undefined}
+        onCommander={commanderOffert ? () => (import.meta.env.VITE_DEMO === "1" ? demoRefus("commande") : gotoView("envoi")) : undefined}
         limitePages={limitePages}
       />
       {view === "tri" ? (
