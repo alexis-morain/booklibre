@@ -98,6 +98,12 @@ y compris pour une PR qui touche `layout`, `gabarit`, `audit`, `pipeline`, `prev
 les seuils. (L'ancien régime 1 — `check.sh` local avant fusion pour ces fichiers — est
 aboli depuis que le gate est portable, 27/08.)
 
+`ai-review.yml` relit les PR d'Alexis (branches du dépôt, hors `pr-*`, hors
+brouillon, 10 lignes ajoutées ou supprimées et plus) par une session Claude neuve,
+sans le contexte de la session qui a écrit : justesse d'abord, géométries jumelles
+comprises. Il commente, ne bloque rien et n'est pas un check requis ; le label
+`ai-review` redemande un passage après de nouveaux commits.
+
 ## La vague en cours
 
 **Les chantiers A à L du test à l'écran sont fusionnés (#55 à #77), avec #41 et #52.**

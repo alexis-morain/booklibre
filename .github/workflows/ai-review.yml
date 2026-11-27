@@ -1,0 +1,126 @@
+name: ai-review
+
+# Relecture automatique des PR d'Alexis par une session Claude neuve, qui n'a
+# rien vu de la session qui a écrit le code : le diff, le dépôt, CLAUDE.md et
+# CONTRIBUTING.md. Même montage que permis-cotier.
+# Elle commente et ne bloque jamais la fusion (aucun check requis ne
+# l'attend).
+#
+# Quand : à l'ouverture, à la réouverture, à la sortie de brouillon. Après de
+# nouveaux commits, poser le label `ai-review` demande un nouveau passage ; le
+# job le retire une fois fini.
+#
+# Qui : les PR d'Alexis seulement, depuis une branche de ce dépôt. Une PR de
+# fork n'a pas les secrets, et une branche `pr-<n>` porte les commits d'un
+# contributeur : ni l'une ni l'autre ne passe ici. Pour elles, `@claude` à la
+# demande (`claude.yml`).
+#
+# Ce qu'il peut faire : lire le dépôt, lire la PR, commenter. Le jeton est le
+# `GITHUB_TOKEN` du job, en lecture sur le code ; aucun outil d'écriture de
+# fichier, aucune commande hors `gh pr`.
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, labeled]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  relire:
+    # Sur `labeled`, seul le label `ai-review` posé par Alexis compte. Sinon, pas
+    # de brouillon, et pas de PR de moins de 10 lignes ajoutées ou supprimées
+    # (les expressions n'additionnent pas) : rien à y voir que la CI ne voie
+    # déjà.
+    if: >-
+      github.event.pull_request.user.login == 'alexis-morain' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !startsWith(github.event.pull_request.head.ref, 'pr-') &&
+      (
+        (github.event.action == 'labeled' && github.event.label.name == 'ai-review' && github.event.sender.login == 'alexis-morain') ||
+        (github.event.action != 'labeled' && !github.event.pull_request.draft &&
+         (github.event.pull_request.additions >= 10 || github.event.pull_request.deletions >= 10))
+      )
+    # Concurrence au niveau du job, pas du workflow : un label sans rapport
+    # lance un run dont le job est sauté, et ce run ne doit pas annuler une
+    # relecture en cours (relevé par ai-review lui-même sur permis-cotier#106).
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            DÉPÔT : ${{ github.repository }}
+            PR : ${{ github.event.pull_request.number }}
+
+            Tu es un développeur senior qui relit cette PR de Booklibre avant
+            fusion. Tu ne l'as pas écrite. Le CLAUDE.md et le CONTRIBUTING.md à
+            la racine font foi pour les conventions et l'architecture : lis la
+            partie du CLAUDE.md qui couvre les fichiers touchés (il est long,
+            cherche par section) avant de juger.
+
+            Ne crois pas la description de la PR : vérifie-la contre le code.
+            `gh pr view` et `gh pr diff` donnent la PR ; lis les fichiers du dépôt
+            pour le contexte.
+
+            Relis dans cet ordre, et passe l'essentiel de ton temps sur le 1 :
+
+            1. Justesse. Erreurs de logique, conditions fausses, `unwrap` ou
+               index qui peut paniquer sur une vraie photothèque, null ou
+               undefined non traités côté app, courses asynchrones (Tauri,
+               commandes, écouteurs), chemins d'erreur oubliés, état qui reste
+               bloqué à l'écran, chemin de fichier ou donnée perso (GPS précis,
+               nom de fichier, EXIF) qui part vers les logs, les fiches publiques
+               ou le réseau. Géométrie : les deux géométries
+               (`pdf.rs::slots_for` / `album.ts::slotsFor`, `cover.rs::geometry`
+               / `album.ts::coverSheet`) changent ensemble ou pas du tout ; le
+               linter et le composeur partagent leurs constantes dans `audit.rs`.
+            2. Conventions. Les règles et pièges du CLAUDE.md, et les « Décisions
+               à ne pas rouvrir ». `album.origin.json` n'est jamais réécrit. Rien
+               qui retouche les pixels de l'utilisateur, ajoute de la télémétrie,
+               des comptes ou une fonction captive. Les workflows de release et
+               de signature ne se touchent pas sans raison écrite.
+            3. Jugement. Sur-ingénierie, abstraction à un seul usage, changement
+               dont la portée dépasse ce que dit la description, logique sensible
+               sans test.
+
+            Règles contre le bruit :
+            - Ne remonte que ce que tu défendrais en revue. Dans le doute, tais-le.
+            - Ne remonte jamais ce que `scripts/check.sh` attrape déjà sur les
+              trois OS : compilation, `cargo test`, `tsc`, vitest, le linter
+              d'albums et ses compteurs, `cargo fmt` (autofix.ci le pousse).
+            - Pas de remarque de style ou de formatage.
+
+            Rendu, en français :
+            - un commentaire en ligne (outil inline comment) par point de la
+              catégorie 1, sur la ligne en cause ;
+            - puis un seul commentaire général avec `gh pr comment`, qui commence
+              par la ligne `<!-- ai-review -->` puis, dans cet ordre : un verdict
+              (rien à signaler / à regarder / à corriger avant fusion), les points
+              de justesse en une ligne chacun avec fichier et ligne, puis les
+              points de conventions et de jugement. Si tu n'as rien trouvé, dis-le
+              en une phrase, sans remplissage.
+
+            Tu ne modifies aucun fichier, ne pousses rien, ne fusionnes jamais.
+          claude_args: |
+            --max-turns 40
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read,Glob,Grep"
+            --disallowedTools "Edit,Write,NotebookEdit"
+
+      # Le label a servi : le retirer, pour qu'un nouveau passage se demande en
+      # le reposant.
+      - name: Retirer le label ai-review
+        if: always() && github.event.action == 'labeled'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr edit ${{ github.event.pull_request.number }} -R ${{ github.repository }} --remove-label ai-review
