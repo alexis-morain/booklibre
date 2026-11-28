@@ -146,12 +146,18 @@ impl Langue {
     }
 
     /// The dates of a chapter line: « 27 octobre – 3 novembre 2013 ». A dash,
-    /// not a sentence: the line is a heading.
+    /// not a sentence: the line is a heading. What both ends share is said
+    /// once: « 7–8 juin 2019 » inside a month, and each end keeps its year
+    /// when they differ.
     pub fn intervalle(self, d: NaiveDate, e: NaiveDate) -> String {
         if d == e {
             self.date(d, true)
-        } else {
+        } else if d.year() != e.year() {
+            format!("{} \u{2013} {}", self.date(d, true), self.date(e, true))
+        } else if d.month() != e.month() {
             format!("{} \u{2013} {}", self.date(d, false), self.date(e, true))
+        } else {
+            format!("{}\u{2013}{}", d.day(), self.date(e, true))
         }
     }
 
@@ -277,6 +283,31 @@ mod tests {
         assert_eq!(
             Langue::En.intervalle(j(2013, 10, 27), j(2013, 10, 27)),
             "27 October 2013"
+        );
+    }
+
+    /// Dans un même mois, le mois ne se dit qu'une fois : « 7–8 juin 2019 »,
+    /// pas « 7 juin – 8 juin 2019 », vu sur l'album de la démo. Le tiret
+    /// d'intervalle colle alors aux deux nombres.
+    #[test]
+    fn l_intervalle_d_un_meme_mois_ne_dit_le_mois_qu_une_fois() {
+        assert_eq!(
+            Langue::Fr.intervalle(j(2019, 6, 7), j(2019, 6, 8)),
+            "7\u{2013}8 juin 2019"
+        );
+        assert_eq!(
+            Langue::En.intervalle(j(2019, 6, 7), j(2019, 6, 16)),
+            "7\u{2013}16 June 2019"
+        );
+    }
+
+    /// À cheval sur deux années, chaque bout porte la sienne : « 27 décembre
+    /// – 3 janvier 2014 » laissait croire à décembre 2014.
+    #[test]
+    fn l_intervalle_a_cheval_sur_deux_annees_les_dit_toutes_deux() {
+        assert_eq!(
+            Langue::Fr.intervalle(j(2013, 12, 27), j(2014, 1, 3)),
+            "27 décembre 2013 \u{2013} 3 janvier 2014"
         );
     }
 

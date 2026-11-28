@@ -189,6 +189,9 @@ pub struct Composer {
     since_break: usize,
     /// Current template family and how many spreads it has held in a row.
     family_run: (String, usize),
+    /// The spread being chosen opens a chapter: it stays on the right-hand
+    /// page whatever the beat says, [`Composer::with_flip`] reads it.
+    ouverture: bool,
     geom: SpreadGeometry,
     densite: Densite,
     /// Sources left in the reserve because no cell prints them at the floor,
@@ -213,6 +216,7 @@ impl Composer {
             beat: 0,
             since_break: 0,
             family_run: (String::new(), 0),
+            ouverture: false,
             geom: pdf::geometry(album),
             densite,
             trop_petites: Vec::new(),
@@ -335,6 +339,9 @@ impl Composer {
             }
 
             // Template and orientation-true assignment; shrink until it fits.
+            // A chapter opens on the right-hand page: the alternation of
+            // single pages runs everywhere else.
+            self.ouverture = i == 0 && take == 1;
             let (name, order) = loop {
                 if take == 1 {
                     let p = &photos[i];
@@ -388,6 +395,7 @@ impl Composer {
                 }
             };
 
+            self.ouverture = false;
             let cells = pdf::slots_for(&name, take, &self.geom);
             let slots = (0..take)
                 .map(|c| {
@@ -669,10 +677,11 @@ impl Composer {
     }
 
     /// Template name for a family, flipped onto the other page on odd beats
-    /// when a verso variant exists.
+    /// when a verso variant exists, except on a chapter's opening spread.
     fn with_flip(&self, base: &str) -> String {
         let verso = format!("{base}_verso");
-        if self.beat % 2 == 1 && pdf::TEMPLATES.iter().any(|(t, _)| *t == verso) {
+        if !self.ouverture && self.beat % 2 == 1 && pdf::TEMPLATES.iter().any(|(t, _)| *t == verso)
+        {
             verso
         } else {
             base.to_string()
@@ -1189,6 +1198,43 @@ mod tests {
         let spreads = Composer::new(&album).compose(&chapter, None, std::path::Path::new("/"));
         let posees = spreads.iter().flat_map(|s| s.slots.iter()).count();
         assert_eq!(posees, 9);
+    }
+
+    /// Un chapitre s'ouvre sur la page de droite. L'alternance gauche-droite
+    /// des pages seules courait aussi sur les ouvertures : un chapitre sur
+    /// deux s'ouvrait à gauche, son titre en pied, la page d'en face blanche,
+    /// et se lisait comme une fin (vu sur l'album de la démo, planche 11).
+    #[test]
+    fn un_chapitre_s_ouvre_toujours_sur_la_page_de_droite() {
+        let album = Album::new(
+            "t",
+            std::path::Path::new("/"),
+            crate::model::Size { w: 210.0, h: 210.0 },
+        );
+        let mut composer = Composer::new(&album);
+        for (k, taille) in [9u64, 7, 10, 8, 9, 11].into_iter().enumerate() {
+            let photos: Vec<Photo> = (0..taille)
+                .map(|n| photo(100 * k as u64 + n, 4000, 3000))
+                .collect();
+            let chapter = Chapter {
+                start: photos[0].meta.taken,
+                end: photos[photos.len() - 1].meta.taken,
+                photos,
+            };
+            let spreads = composer.compose(&chapter, None, std::path::Path::new("/"));
+            let ouverture = &spreads[0];
+            assert_eq!(
+                ouverture.slots.len(),
+                1,
+                "chapitre {k} : {}",
+                ouverture.template
+            );
+            assert!(
+                !ouverture.template.ends_with("_verso"),
+                "chapitre {k} s'ouvre à gauche : {}",
+                ouverture.template
+            );
+        }
     }
 
     #[test]
