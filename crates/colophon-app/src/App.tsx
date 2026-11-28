@@ -197,7 +197,7 @@ import { LegendeQualite } from "./LegendeQualite";
 import { PrixLivre, QuestionAccueil } from "./ChoixImpression";
 import { chargerTarifs, pagesDuLivre, useLimitePages } from "./impression";
 import { BoutonCommander } from "./BoutonCommander";
-import { demoRefus, premierCoupDOeil, texteDemo } from "./demo";
+import { demoRefus, premierCoupDOeil, prioriserVignettes, texteDemo } from "./demo";
 import { loadThumb, resetThumbs } from "./thumbs";
 import "./styles.css";
 
@@ -2205,6 +2205,13 @@ export default function App() {
     if (!album) return;
     for (const i of [index + 1, index - 1, index + 2]) {
       album.spreads[i]?.slots.forEach((s) => loadThumb(s.src).catch(() => {}));
+    }
+    // En ligne, la légende de qualité a déjà mis tout l'album en file : la
+    // planche à l'écran, puis ses voisines, repassent devant.
+    if (import.meta.env.VITE_DEMO === "1") {
+      prioriserVignettes(
+        [index, index + 1, index - 1, index + 2].flatMap((i) => album.spreads[i]?.slots.map((s) => s.src) ?? []),
+      );
     }
   }, [album, index]);
 

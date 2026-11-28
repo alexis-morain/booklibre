@@ -190,6 +190,30 @@ describe("fileDernierArrive", () => {
     expect(ordre).toEqual(["a", "c", "b"]);
   });
 
+  it("fait passer devant une tâche déjà en attente qu'on redemande", async () => {
+    // La légende demande la vignette 3 tôt, elle est au fond de la pile ; la
+    // planche à l'écran la veut ensuite, mais `loadThumb` ne la redemande
+    // pas (même promesse) : sans `devant`, la 3e page tournée attendait 3 s.
+    const file = fileDernierArrive(1);
+    const ordre: string[] = [];
+    const bloque = differe();
+    const premier = file(async () => {
+      ordre.push("a");
+      await bloque.p;
+    });
+    const t = ["v3", "v2", "v1"].map((v) => file(async () => void ordre.push(v), v));
+    file.devant(["v3", "v2"]);
+    bloque.fin();
+    await Promise.all([premier, ...t]);
+    expect(ordre).toEqual(["a", "v3", "v2", "v1"]);
+  });
+
+  it("ignore ce qui n'est pas en attente", async () => {
+    const file = fileDernierArrive(1);
+    file.devant(["absent"]);
+    await expect(file(async () => 7, "x")).resolves.toBe(7);
+  });
+
   it("libère la place même quand une tâche échoue", async () => {
     const file = fileDernierArrive(1);
     await expect(file(() => Promise.reject(new Error("x")))).rejects.toThrow("x");
