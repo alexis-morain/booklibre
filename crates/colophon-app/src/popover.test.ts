@@ -2,7 +2,7 @@
 // quand le bas de la fenêtre est proche, et jamais hors de la fenêtre.
 
 import { describe, expect, it } from "vitest";
-import { enveloppe, largeurLegende, placerAGauche, placerSous } from "./popover";
+import { enveloppe, largeurLegende, placerAGauche, placerSous, styleFixeAGauche } from "./popover";
 
 const FENETRE = { w: 900, h: 620 };
 
@@ -83,5 +83,21 @@ describe("placerAGauche", () => {
 
   it("ne descend jamais sous 120 px de haut", () => {
     expect(placerAGauche({ left: 0, top: 0, right: 100, bottom: 880 }, { w: 400, h: 900 }).maxHeight).toBe(120);
+  });
+});
+
+describe("styleFixeAGauche", () => {
+  // Les deux sélecteurs de la colonne des propriétés (dispositions,
+  // ornements) se posent par lui : un seul calcul, une seule façon de ne pas
+  // être rogné par la colonne qui défile.
+  it("pose le panneau en position fixe, sous le bouton, bord droit sur le sien", () => {
+    expect(styleFixeAGauche({ left: 1281, top: 430, right: 1358, bottom: 459 }, { w: 1440, h: 900 })).toEqual({
+      position: "fixed",
+      bottom: "auto",
+      left: "auto",
+      top: 465,
+      right: 82,
+      maxHeight: 427,
+    });
   });
 });
