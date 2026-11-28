@@ -117,7 +117,10 @@ export function texteDemo(cle: CleDemo, l: Lang = langue(), params?: Record<stri
  *  rejouable (chemin et paramètres) vers un fichier de `demo-data/`. */
 export type Manifeste = {
   version: 1;
-  routes: Record<string, { f: string; t: string }>;
+  /** `langues` : ce que la composition a écrit dans le livre (titre,
+   *  chapitres, dates, colophon) existe en deux versions, et l'interface
+   *  choisit la sienne. `f` sert quand sa langue manque. */
+  routes: Record<string, { f: string; t: string; langues?: Partial<Record<Lang, string>> }>;
 };
 
 /** La clé d'une requête : le chemin et ses paramètres triés, valeurs
@@ -196,7 +199,7 @@ export function repondre(
   return {
     status: 200,
     type: route.t,
-    fichier: route.f,
+    fichier: route.langues?.[l] ?? route.f,
     fusionAlbum: chemin === "/__dev/album" && etat.album !== null ? true : undefined,
   };
 }
@@ -261,7 +264,7 @@ export async function albumDOrigine(): Promise<unknown> {
   const m = manifesteCourant;
   const route = m?.routes[cleDeRoute("/__dev/album", new URLSearchParams())];
   if (!route) throw new Error("démo sans album");
-  const r = await fetch(`${import.meta.env.BASE_URL}demo-data/${route.f}`);
+  const r = await fetch(`${import.meta.env.BASE_URL}demo-data/${route.langues?.[langue()] ?? route.f}`);
   return (await r.json()).album;
 }
 

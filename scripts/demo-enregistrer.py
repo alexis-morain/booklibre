@@ -7,6 +7,13 @@ GET que la démo rejouera, de façon déterministe : on énumère les planches, 
 cases, les photos, les formats, on ne crawle pas. Écrit `demo-data/` et son
 manifeste. Dépend de Pillow (vignettes) et de node (le serveur).
 
+Deux albums en entrée, le même livre composé deux fois, en français puis en
+anglais (`booklibre --langue`) : mêmes photos, mêmes planches, seuls les mots
+que la composition écrit diffèrent (titre, chapitres, dates, colophon). La
+démo sert celui de la langue de l'interface ; vignettes, fiches et réserves
+sont communes. Deux albums qui ne posent pas les mêmes photos aux mêmes
+places sont refusés.
+
 Ce qui ne sort JAMAIS d'ici :
 - un chemin de cette machine (JSON scrutés avant la fin, échec sinon) ;
 - l'EXIF ou le GPS d'une image (JPEG réencodés sans métadonnées, le profil
@@ -121,7 +128,8 @@ def alleger_pdf(octets: bytes, qualite: int) -> bytes:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("album", type=Path, help="dossier de l'album composé")
+    ap.add_argument("album", type=Path, help="dossier de l'album composé en français")
+    ap.add_argument("album_en", type=Path, help="dossier du même album composé en anglais")
     ap.add_argument("sortie", type=Path, help="dossier d'écriture de demo-data/")
     # 1200 px suffit à une pleine page sur un écran Retina de 1440 px, et la
     # démo charge toutes les vignettes à l'arrivée : en 1600, 25 Mo.
@@ -129,28 +137,39 @@ def main() -> None:
     ap.add_argument("--qualite", type=int, default=72)
     a = ap.parse_args()
 
-    album_dir = a.album.resolve()
-    if not (album_dir / "album.json").is_file():
-        sys.exit(f"{album_dir} n'est pas un album composé (album.json absent)")
+    albums = {"fr": a.album.resolve(), "en": a.album_en.resolve()}
+    for album_dir in albums.values():
+        if not (album_dir / "album.json").is_file():
+            sys.exit(f"{album_dir} n'est pas un album composé (album.json absent)")
+    composition = {
+        l: [(p["template"], [c["src"] for c in p["slots"]]) for p in json.loads((d / "album.json").read_text())["spreads"]]
+        for l, d in albums.items()
+    }
+    if composition["fr"] != composition["en"]:
+        sys.exit("les deux albums ne posent pas les mêmes photos aux mêmes places : ce n'est pas le même livre")
     sortie = a.sortie.resolve()
     if sortie.exists():
         shutil.rmtree(sortie)
     sortie.mkdir(parents=True)
 
-    original = json.loads((album_dir / "album.json").read_text())
-    if original.get("police"):
-        sys.exit("cet album porte une police choisie : la démo n'embarque que la face du moteur (Source Sans 3)")
+    for album_dir in albums.values():
+        if json.loads((album_dir / "album.json").read_text()).get("police"):
+            sys.exit("cet album porte une police choisie : la démo n'embarque que la face du moteur (Source Sans 3)")
 
     # Le harnais écrit album.json : on lui donne une copie, `.cache/` comprise.
     tmp = Path(tempfile.mkdtemp(prefix="demo-album-"))
-    copie = tmp / "album"
-    shutil.copytree(album_dir, copie)
-    interdits = [str(Path.home()), str(album_dir), str(copie), str(tmp)]
+    copies = {l: tmp / f"album-{l}" for l in albums}
+    for l, d in albums.items():
+        shutil.copytree(d, copies[l])
+    interdits = [str(Path.home()), str(tmp), *map(str, albums.values())]
 
     routes: dict[str, dict] = {}
     octets_total = 0
 
-    def poser(chemin: str, params: dict[str, str], nom: str, donnees: bytes, type_: str) -> None:
+    def poser(chemin: str, params: dict[str, str], nom: str, donnees: bytes, type_: str,
+              langue: str | None = None) -> None:
+        """`langue` : une réponse qui existe dans les deux langues du livre,
+        l'interface choisit la sienne (`demo.ts::repondre`)."""
         nonlocal octets_total
         if len(donnees) > PLAFOND:
             sys.exit(f"{nom} pèse {len(donnees) / 2**20:.1f} Mio : au-dessus du plafond de 25 Mio par fichier")
@@ -158,25 +177,58 @@ def main() -> None:
         cible.parent.mkdir(parents=True, exist_ok=True)
         cible.write_bytes(donnees)
         octets_total += len(donnees)
-        routes[cle_de_route(chemin, params)] = {"f": nom, "t": type_}
+        cle = cle_de_route(chemin, params)
+        if langue is None:
+            routes[cle] = {"f": nom, "t": type_}
+        else:
+            route = routes.setdefault(cle, {"f": nom, "t": type_, "langues": {}})
+            route["langues"][langue] = nom
+            if langue == "en":
+                route["f"] = nom
 
-    def poser_json(chemin, params, nom, valeur) -> None:
+    def poser_json(chemin, params, nom, valeur, langue=None) -> None:
         poser(chemin, params, nom, json.dumps(valeur, ensure_ascii=False, separators=(",", ":")).encode(),
-              "application/json")
+              "application/json", langue)
+
+    def ce_qui_change_avec_la_langue(h: Harnais, l: str) -> dict:
+        """L'album d'ouverture, les légendes proposées, les deux PDF : ce que
+        la composition a écrit dans la langue du livre."""
+        def json_de(chemin, params=None):
+            return json.loads(h.demander(chemin, params))
+
+        # L'album d'ouverture : ni le dossier de la copie ni celui des photos.
+        ouvert = json_de("/__dev/album")
+        ouvert["dir"] = "demo"
+        ouvert["album"]["root"] = "demo"
+        poser_json("/__dev/album", {}, f"album-{l}.json", ouvert, l)
+        for i, p in enumerate(ouvert["album"]["spreads"], 1):
+            if p["slots"]:
+                poser_json("/__dev/proposition", {"planche": str(i), "langue": l}, f"proposition/{i}-{l}.json",
+                           json_de("/__dev/proposition", {"planche": str(i), "langue": l}))
+        # L'aperçu fidèle : le PDF de l'album, puis celui de la couverture (rendu à la demande).
+        pdf_album = h.demander("/__dev/pdf", {"quoi": "album"})
+        if len(pdf_album) > PLAFOND:
+            avant = len(pdf_album)
+            pdf_album = alleger_pdf(pdf_album, a.qualite)
+            print(f"PDF d'aperçu ({l}) allégé : {avant / 2**20:.1f} -> {len(pdf_album) / 2**20:.1f} Mio")
+        poser("/__dev/pdf", {"quoi": "album"}, f"album-{l}.pdf", pdf_album, "application/pdf", l)
+        h.demander("/__dev/couverture", {"profil": "cloudprinter"}, "POST")
+        poser("/__dev/pdf", {"quoi": "couverture"}, f"couverture-{l}.pdf",
+              h.demander("/__dev/pdf", {"quoi": "couverture"}), "application/pdf", l)
+        print(f"livre en {l} : « {ouvert['album']['title']} »")
+        return ouvert
 
     try:
-        with Harnais(copie) as h:
+        with Harnais(copies["en"]) as h:
+            ce_qui_change_avec_la_langue(h, "en")
+        with Harnais(copies["fr"]) as h:
             def json_de(chemin, params=None):
                 return json.loads(h.demander(chemin, params))
 
             def enregistrer(chemin, params, nom):
                 poser_json(chemin, params or {}, nom, json_de(chemin, params))
 
-            # L'album d'ouverture : ni le dossier de la copie ni celui des photos.
-            ouvert = json_de("/__dev/album")
-            ouvert["dir"] = "demo"
-            ouvert["album"]["root"] = "demo"
-            poser_json("/__dev/album", {}, "album.json", ouvert)
+            ouvert = ce_qui_change_avec_la_langue(h, "fr")
             alb = ouvert["album"]
             srcs = ouvert["thumb_srcs"]
             planches = alb["spreads"]
@@ -200,8 +252,6 @@ def main() -> None:
             for i, p in enumerate(planches, 1):
                 if not p["slots"]:
                     continue
-                for langue in ("fr", "en"):
-                    enregistrer("/__dev/proposition", {"planche": str(i), "langue": langue}, f"proposition/{i}-{langue}.json")
                 enregistrer("/__dev/reserve", {"planche": str(i)}, f"reserve/{i}.json")
                 for k in range(1, len(p["slots"]) + 1):
                     enregistrer("/__dev/reserve", {"planche": str(i), "case": str(k)}, f"reserve/{i}-{k}.json")
@@ -218,16 +268,6 @@ def main() -> None:
                 poser("/__dev/thumb", {"src": src}, f"thumb/{n:04d}.jpg", vignette_web(brut, a.px, a.qualite), "image/jpeg")
             print(f"photos : {len(srcs)} vignettes et fiches")
 
-            # L'aperçu fidèle : le PDF de l'album, puis celui de la couverture (rendu à la demande).
-            pdf_album = h.demander("/__dev/pdf", {"quoi": "album"})
-            if len(pdf_album) > PLAFOND:
-                avant = len(pdf_album)
-                pdf_album = alleger_pdf(pdf_album, a.qualite)
-                print(f"PDF d'aperçu allégé : {avant / 2**20:.1f} -> {len(pdf_album) / 2**20:.1f} Mio")
-            poser("/__dev/pdf", {"quoi": "album"}, "album.pdf", pdf_album, "application/pdf")
-            h.demander("/__dev/couverture", {"profil": "cloudprinter"}, "POST")
-            poser("/__dev/pdf", {"quoi": "couverture"}, "couverture.pdf",
-                  h.demander("/__dev/pdf", {"quoi": "couverture"}), "application/pdf")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

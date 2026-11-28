@@ -1867,7 +1867,7 @@ Scripts :
 `banc-gabarits.sh`, `mesure-cdp.mjs`, `feuille-cdp.mjs`, `police-cdp.mjs`. App :
 `npm run tauri dev`.
 
-**La démo en ligne** (`npm run build:demo` dans l'app, `scripts/demo.sh <album composé> <sortie>`) :
+**La démo en ligne** (`npm run build:demo` dans l'app, `scripts/demo.sh <album-fr> <album-en> <sortie>`) :
 la vraie interface sur un album enregistré, sans moteur ni serveur. `vite build --mode demo` pose
 `import.meta.env.VITE_DEMO` (dans `vite.config.ts`, jamais dans un `.env`), `base: '/demo/'`, sortie
 `dist-demo/`. `demo.ts` remplace `window.fetch` : les `GET /__dev/*` sortent d'un manifeste
@@ -1879,7 +1879,11 @@ mémoire, le moteur répond 501 avec la phrase « disponible dans l'app ». Les 
 condition s'écrit **en clair** (`import.meta.env.VITE_DEMO === "1"`) à chaque site, et les phrases
 de la démo vivent dans `demo.ts`, pas dans `i18n.ts` : sans cela le build normal les garde (le test
 est un `grep` du `dist` normal). La démo s'ouvre sur la première planche à deux photos (`premierCoupDOeil`), pas sur la planche 1
-(page collée dans la couverture, vide). `scripts/demo.sh <album> <sortie> [sources.json]` écrit aussi
+(page collée dans la couverture, vide). Le livre existe en deux langues : le même dossier composé
+deux fois (`--langue fr`, `--langue en`, mêmes planches exigées), et les réponses qui en dépendent
+(album d'ouverture, légendes proposées, deux PDF) portent `langues` dans le manifeste, choisies par
+la langue de l'interface. En ligne, la file des vignettes (`fileDernierArrive`) remet la planche à
+l'écran devant la légende de qualité (`prioriserVignettes`). `scripts/demo.sh … [sources.json]` écrit aussi
 `credits.html` et `demo-data/credits.json` (le crédit du bandeau) depuis un fichier de sources
 hors dépôt (`demo-credits.py`) ; un PDF d'aperçu de plus de 25 Mio est allégé par pikepdf
 (`DEMO_PYTHON` choisit l'interpréteur). La seule police servie est Source Sans 3 (SIL OFL 1.1). Aucune

@@ -9,7 +9,11 @@ const url = (s: string) => new URL(s, "http://demo.test");
 const manifeste: Manifeste = {
   version: 1,
   routes: {
-    [cleDeRoute("/__dev/album", new URLSearchParams())]: { f: "album.json", t: "application/json" },
+    [cleDeRoute("/__dev/album", new URLSearchParams())]: {
+      f: "album-en.json",
+      t: "application/json",
+      langues: { fr: "album-fr.json", en: "album-en.json" },
+    },
     [cleDeRoute("/__dev/thumb", new URLSearchParams({ src: "a b.jpg" }))]: { f: "t/0001.jpg", t: "image/jpeg" },
     [cleDeRoute("/__dev/reserve", new URLSearchParams({ planche: "3", case: "2" }))]: {
       f: "r/3-2.json",
@@ -37,6 +41,12 @@ describe("cleDeRoute", () => {
 });
 
 describe("repondre : les lectures enregistrées", () => {
+  it("sert le livre écrit dans la langue de l'interface", () => {
+    const e = etat();
+    expect(repondre(manifeste, "GET", url("/__dev/album"), undefined, e, "fr").fichier).toBe("album-fr.json");
+    expect(repondre(manifeste, "GET", url("/__dev/album"), undefined, e, "en").fichier).toBe("album-en.json");
+  });
+
   it("sert un fichier du manifeste avec son type", () => {
     expect(get("/__dev/thumb?src=a%20b.jpg")).toMatchObject({ status: 200, type: "image/jpeg", fichier: "t/0001.jpg" });
   });
@@ -57,7 +67,7 @@ describe("repondre : l'écriture reste en mémoire", () => {
     const e = etat();
     expect(post("/__dev/album", '{"title":"modifié"}', e)).toMatchObject({ status: 200 });
     expect(e.album).toEqual({ title: "modifié" });
-    expect(get("/__dev/album", e)).toMatchObject({ fichier: "album.json", fusionAlbum: true });
+    expect(get("/__dev/album", e)).toMatchObject({ fichier: "album-fr.json", fusionAlbum: true });
   });
 
   it("refuse un corps qui n'est pas du JSON et ne touche pas à la mémoire", () => {
