@@ -16,12 +16,12 @@
 // the way the Composer does (`layout.rs::with_flip`). The engine's fallback
 // table is untouched; this is a display filter only.
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Album, spreadGeometry, slotsFor, Spread, templateCapacity } from "./album";
 import { gabaritsCompatibles } from "./bridge";
 import { templateChoices } from "./edits";
 import { t } from "./i18n";
-import { placerAGauche } from "./popover";
+import { usePanneauFixe } from "./panneauFixe";
 import {
   Choix,
   choixOfferts,
@@ -52,18 +52,7 @@ export function TemplatePicker({
   const root = useRef<HTMLDivElement>(null);
   // Dans la colonne des propriétés, qui défile, le panneau absolu serait
   // coupé à son bord gauche : il se pose en position fixe sous le bouton.
-  const [fixe, setFixe] = useState<React.CSSProperties | undefined>();
-  useLayoutEffect(() => {
-    const el = root.current;
-    if (!open || !el?.closest(".props")) return setFixe(undefined);
-    const b = el.getBoundingClientRect();
-    setFixe({
-      position: "fixed",
-      bottom: "auto",
-      left: "auto",
-      ...placerAGauche(b, { w: window.innerWidth, h: window.innerHeight }),
-    });
-  }, [open]);
+  const fixe = usePanneauFixe(root, open);
 
   useEffect(() => {
     if (!open) return;

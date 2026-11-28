@@ -66,3 +66,13 @@ export function basUtile(): number {
   const barre = document.querySelector(".context-line");
   return barre ? barre.getBoundingClientRect().top : window.innerHeight;
 }
+
+/** Le style d'un panneau de la colonne des propriétés (dispositions,
+ *  ornements) : fixe, posé par `placerAGauche`. En `absolute`, la colonne
+ *  qui défile le coupait à son bord gauche. */
+export function styleFixeAGauche(
+  ancre: Boite,
+  fenetre: { w: number; h: number },
+): { position: "fixed"; bottom: "auto"; left: "auto"; top: number; right: number; maxHeight: number } {
+  return { position: "fixed", bottom: "auto", left: "auto", ...placerAGauche(ancre, fenetre) };
+}

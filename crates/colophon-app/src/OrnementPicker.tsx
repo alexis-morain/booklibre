@@ -16,6 +16,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { t } from "./i18n";
+import { usePanneauFixe } from "./panneauFixe";
 import {
   attributD,
   attributViewBox,
@@ -90,6 +91,9 @@ export function OrnementPanel({
 export function OrnementPicker({ onPick }: { onPick: (o: Ornement) => void }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  // Dans la colonne des propriétés, le panneau se pose en position fixe :
+  // en absolu, la colonne qui défile le coupait (comme les dispositions).
+  const fixe = usePanneauFixe(root, open);
 
   // Échap et le clic dehors referment avant que quoi que ce soit d'autre ne
   // réagisse : c'est la même capture que le sélecteur de gabarit.
@@ -123,6 +127,7 @@ export function OrnementPicker({ onPick }: { onPick: (o: Ornement) => void }) {
       </button>
       {open && (
         <OrnementPanel
+          style={fixe}
           onPick={(o) => {
             setOpen(false);
             onPick(o);
