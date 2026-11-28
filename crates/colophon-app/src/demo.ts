@@ -226,29 +226,56 @@ export function surRefus(f: Ecouteur): () => void {
  * l'écran, demandée ensuite, attendait les quatre-vingts autres. Dernière
  * arrivée, première servie : ce qu'on regarde passe devant.
  */
-export function fileDernierArrive(max: number): <T>(tache: () => Promise<T>) => Promise<T> {
-  const attente: (() => void)[] = [];
+export type File = {
+  <T>(tache: () => Promise<T>, cle?: string): Promise<T>;
+  /** Remet sur le dessus de la pile les tâches en attente de ces clés, la
+   *  première nommée servie d'abord. `loadThumb` ne redemande jamais une
+   *  vignette déjà en route : la planche à l'écran ne peut passer devant
+   *  la légende qu'en le disant. */
+  devant(cles: string[]): void;
+};
+
+export function fileDernierArrive(max: number): File {
+  const attente: { cle?: string; go: () => void }[] = [];
   let actives = 0;
   const suivante = () => {
     if (actives >= max) return;
-    const go = attente.pop();
-    if (!go) return;
+    const t = attente.pop();
+    if (!t) return;
     actives++;
-    go();
+    t.go();
   };
-  return <T,>(tache: () => Promise<T>) =>
+  const file = (<T,>(tache: () => Promise<T>, cle?: string) =>
     new Promise<T>((resoudre, rejeter) => {
-      attente.push(() => {
-        tache()
-          .then(resoudre, rejeter)
-          .finally(() => {
-            actives--;
-            suivante();
-          });
+      attente.push({
+        cle,
+        go: () => {
+          tache()
+            .then(resoudre, rejeter)
+            .finally(() => {
+              actives--;
+              suivante();
+            });
+        },
       });
       suivante();
-    });
+    })) as File;
+  file.devant = (cles) => {
+    for (const cle of [...cles].reverse()) {
+      const i = attente.findIndex((t) => t.cle === cle);
+      if (i >= 0) attente.push(...attente.splice(i, 1));
+    }
+  };
+  return file;
 }
+
+/** Les vignettes de la planche à l'écran et de ses voisines, à servir avant
+ *  le reste. Sans effet hors de la démo installée. */
+export function prioriserVignettes(srcs: string[]): void {
+  fileCourante?.devant(srcs);
+}
+
+let fileCourante: File | null = null;
 
 // ---- l'installation -----------------------------------------------------
 
@@ -277,6 +304,7 @@ export async function installDemo(): Promise<void> {
   manifesteCourant = (await (await natif(`${base}demo-data/manifest.json`)).json()) as Manifeste;
   const manifeste = manifesteCourant;
   const vignettes = fileDernierArrive(6);
+  fileCourante = vignettes;
 
   window.fetch = async (entree, init) => {
     const requete = entree instanceof Request ? entree : null;
@@ -299,7 +327,7 @@ export async function installDemo(): Promise<void> {
         ? await vignettes(async () => {
             const brut = await lire();
             return new Response(await brut.arrayBuffer(), { status: brut.status });
-          })
+          }, url.searchParams.get("src") ?? undefined)
         : await lire();
     if (!f.ok) return new Response(`${r.fichier} : absent de la démo`, { status: 404 });
     if (r.fusionAlbum) {
