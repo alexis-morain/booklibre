@@ -2674,6 +2674,16 @@ export default function App() {
   // Hook : avant tout return anticipé (règle des hooks, app-hooks.test.ts).
   const limitePages = useLimitePages();
 
+  // La démo n'a pas d'écran d'accueil : le temps que l'album d'origine
+  // arrive, une page calme plutôt que l'accueil de l'app, qui clignotait.
+  if (import.meta.env.VITE_DEMO === "1" && !album && !error) {
+    return (
+      <div className="empty" aria-busy="true">
+        <p className="caption">{texteDemo("chargement")}</p>
+      </div>
+    );
+  }
+
   if (!album || building) {
     return (
       <>

@@ -2,7 +2,7 @@
 // pas, un manifeste d'enregistrements à sa place.
 
 import { describe, expect, it } from "vitest";
-import { cleDeRoute, DEMO_EN, DEMO_FR, lienTelecharger, premierCoupDOeil, repondre, texteDemo, type Manifeste } from "./demo";
+import { cleDeRoute, DEMO_EN, DEMO_FR, fileDernierArrive, lienTelecharger, premierCoupDOeil, repondre, texteDemo, type Manifeste } from "./demo";
 
 const url = (s: string) => new URL(s, "http://demo.test");
 
@@ -145,5 +145,54 @@ describe("premierCoupDOeil", () => {
   it("se rabat sur la première planche à une photo, puis sur la première", () => {
     expect(premierCoupDOeil(p(0, 1, 1))).toBe(1);
     expect(premierCoupDOeil(p(0, 0))).toBe(0);
+  });
+});
+
+describe("fileDernierArrive", () => {
+  // Les vignettes de la planche à l'écran sont demandées après celles que la
+  // légende de qualité réclame toutes à l'arrivée : elles doivent passer devant.
+  const differe = () => {
+    let fin!: () => void;
+    const p = new Promise<void>((r) => (fin = r));
+    return { p, fin };
+  };
+
+  it("ne lance jamais plus de tâches que permis", async () => {
+    const file = fileDernierArrive(2);
+    const d = [differe(), differe(), differe()];
+    let enCours = 0;
+    let max = 0;
+    const tous = d.map((x) =>
+      file(async () => {
+        enCours++;
+        max = Math.max(max, enCours);
+        await x.p;
+        enCours--;
+      }),
+    );
+    d.forEach((x) => x.fin());
+    await Promise.all(tous);
+    expect(max).toBe(2);
+  });
+
+  it("sert la dernière demande arrivée en premier quand une place se libère", async () => {
+    const file = fileDernierArrive(1);
+    const ordre: string[] = [];
+    const bloque = differe();
+    const premier = file(async () => {
+      ordre.push("a");
+      await bloque.p;
+    });
+    const b = file(async () => void ordre.push("b"));
+    const c = file(async () => void ordre.push("c"));
+    bloque.fin();
+    await Promise.all([premier, b, c]);
+    expect(ordre).toEqual(["a", "c", "b"]);
+  });
+
+  it("libère la place même quand une tâche échoue", async () => {
+    const file = fileDernierArrive(1);
+    await expect(file(() => Promise.reject(new Error("x")))).rejects.toThrow("x");
+    await expect(file(async () => 7)).resolves.toBe(7);
   });
 });

@@ -60,6 +60,7 @@ export const DEMO_FR = {
     "L’éditeur d’album a besoin d’un grand écran et d’une souris. Téléchargez Booklibre pour Mac et Windows.",
   "mobile.telecharger": "Télécharger Booklibre",
   "fidele.demo": "Aperçu fidèle : le PDF enregistré de la démo, sans vos modifications",
+  "chargement": "Ouverture de l’album…",
   "apropos.demo":
     "Démo en ligne. Photos : voir la page des crédits. Police : Source Sans 3, SIL Open Font License 1.1. Aucune police du système n’est embarquée.",
 };
@@ -91,6 +92,7 @@ export const DEMO_EN: typeof DEMO_FR = {
     "The album editor needs a large screen and a mouse. Download Booklibre for Mac and Windows.",
   "mobile.telecharger": "Download Booklibre",
   "fidele.demo": "Faithful preview: the demo’s saved PDF, without your edits",
+  "chargement": "Opening the album…",
   "apropos.demo":
     "Online demo. Photos: see the credits page. Typeface: Source Sans 3, SIL Open Font License 1.1. No system font is embedded.",
 };
@@ -214,6 +216,40 @@ export function surRefus(f: Ecouteur): () => void {
   return () => ecouteurs.delete(f);
 }
 
+// ---- l'ordre des vignettes ----------------------------------------------
+
+/**
+ * Une file qui ne laisse passer que `max` tâches à la fois, et sert la
+ * dernière arrivée d'abord. À l'arrivée, la légende de qualité demande les
+ * vignettes de tout l'album pour juger de leur exposition ; dans l'app elles
+ * sortent du disque, en ligne elles passent par le réseau, et la planche à
+ * l'écran, demandée ensuite, attendait les quatre-vingts autres. Dernière
+ * arrivée, première servie : ce qu'on regarde passe devant.
+ */
+export function fileDernierArrive(max: number): <T>(tache: () => Promise<T>) => Promise<T> {
+  const attente: (() => void)[] = [];
+  let actives = 0;
+  const suivante = () => {
+    if (actives >= max) return;
+    const go = attente.pop();
+    if (!go) return;
+    actives++;
+    go();
+  };
+  return <T,>(tache: () => Promise<T>) =>
+    new Promise<T>((resoudre, rejeter) => {
+      attente.push(() => {
+        tache()
+          .then(resoudre, rejeter)
+          .finally(() => {
+            actives--;
+            suivante();
+          });
+      });
+      suivante();
+    });
+}
+
 // ---- l'installation -----------------------------------------------------
 
 let manifesteCourant: Manifeste | null = null;
@@ -240,6 +276,7 @@ export async function installDemo(): Promise<void> {
   const base = import.meta.env.BASE_URL;
   manifesteCourant = (await (await natif(`${base}demo-data/manifest.json`)).json()) as Manifeste;
   const manifeste = manifesteCourant;
+  const vignettes = fileDernierArrive(6);
 
   window.fetch = async (entree, init) => {
     const requete = entree instanceof Request ? entree : null;
@@ -255,7 +292,15 @@ export async function installDemo(): Promise<void> {
     if (r.fichier === undefined) {
       return new Response(r.corps ?? "", { status: r.status, headers: { "Content-Type": r.type } });
     }
-    const f = await natif(`${base}demo-data/${r.fichier}`);
+    const lire = () => natif(`${base}demo-data/${r.fichier}`);
+    // Lue en entier dans la file : une place ne se rend qu'octets reçus.
+    const f =
+      url.pathname === "/__dev/thumb"
+        ? await vignettes(async () => {
+            const brut = await lire();
+            return new Response(await brut.arrayBuffer(), { status: brut.status });
+          })
+        : await lire();
     if (!f.ok) return new Response(`${r.fichier} : absent de la démo`, { status: 404 });
     if (r.fusionAlbum) {
       const ouvert = (await f.json()) as Record<string, unknown>;
