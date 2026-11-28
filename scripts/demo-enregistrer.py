@@ -123,7 +123,9 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("album", type=Path, help="dossier de l'album composé")
     ap.add_argument("sortie", type=Path, help="dossier d'écriture de demo-data/")
-    ap.add_argument("--px", type=int, default=1600)
+    # 1200 px suffit à une pleine page sur un écran Retina de 1440 px, et la
+    # démo charge toutes les vignettes à l'arrivée : en 1600, 25 Mo.
+    ap.add_argument("--px", type=int, default=1200)
     ap.add_argument("--qualite", type=int, default=72)
     a = ap.parse_args()
 
